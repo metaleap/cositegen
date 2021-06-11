@@ -6,37 +6,41 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"time"
 )
 
 var App struct {
-	Proj Project
-	Gui  struct {
+	StaticFilesDirPath string
+	Proj               Project
+	Gui                struct {
 		Closed bool
 		State  struct {
-			SelectedSeriesName  string
-			SelectedChapterName string
+			SelectedSeries  *Series
+			SelectedChapter *Chapter
 		}
 	}
 }
 
 func main() {
 	appInit()
-	go serveGui()
-	go openGui()
+	go httpListenAndServe()
+	go launchGui()
 	for !App.Gui.Closed {
 		time.Sleep(time.Second)
 	}
 }
 
 func appInit() {
+	App.StaticFilesDirPath = filepath.Join(os.Getenv("HOME"), "c/go/src/github.com/metaleap/cositegen/_static")
 	if err := os.Mkdir(".build", os.ModePerm); err != nil && !os.IsExist(err) {
 		panic(err)
 	}
 	App.Proj.Load("cosite.json")
 }
 
-func openGui() {
+func launchGui() {
 	if err := os.Mkdir(".csgtmp", os.ModePerm); err != nil && !os.IsExist(err) {
 		panic(err)
 	}
@@ -50,18 +54,23 @@ func openGui() {
 	App.Gui.Closed = true
 }
 
-func serveGui() {
+func httpListenAndServe() {
 	if err := (&http.Server{
 		Addr:    ":4321",
-		Handler: http.HandlerFunc(handleHttpReq),
+		Handler: http.HandlerFunc(httpHandle),
 	}).ListenAndServe(); err != nil {
 		panic(err)
 	}
 }
 
-func handleHttpReq(httpResp http.ResponseWriter, httpReq *http.Request) {
+func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
 	httpResp.Header().Add("Content-Type", "text/html")
-	_, _ = httpResp.Write([]byte("Hello, <b><u>World</u></b><hr/>" + httpReq.RequestURI))
+	switch path.Ext(httpReq.URL.Path) {
+	case ".css":
+		http.ServeFile(httpResp, httpReq, filepath.Join(App.StaticFilesDirPath, httpReq.URL.Path))
+	default:
+		_, _ = httpResp.Write(guiMain(httpReq))
+	}
 }
 
 func jsonLoad(filename string, intoPtr interface{}) {
