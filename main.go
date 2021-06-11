@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/http"
-	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -18,17 +17,15 @@ func main() {
 	for !App.Gui.BrowserClosed {
 		time.Sleep(time.Second)
 	}
+	appOnExit()
 }
 
 func launchKioskyBrowser() {
-	if err := os.Mkdir(".csgtmp", os.ModePerm); err != nil && !os.IsExist(err) {
-		panic(err)
-	}
-	cmd := exec.Command("chromium", "--new-window", "--single-process", "--user-data-dir=./.csgtmp", "--disable-extensions", "--app=http://localhost:4321")
+	cmd := exec.Command("chromium", "--new-window", "--single-process", "--user-data-dir=./.csg_gui", "--disable-extensions", "--app=http://localhost:4321")
 	if err := cmd.Start(); err != nil {
 		panic(err)
 	}
-	if err := cmd.Wait(); err != nil { //&& err.Error() != "signal: segmentation fault" {
+	if err := cmd.Wait(); err != nil {
 		panic(err)
 	}
 	App.Gui.BrowserClosed = true

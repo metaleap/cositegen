@@ -18,36 +18,36 @@ func guiMain(r *http.Request, notice string) []byte {
 	}
 
 	App.Gui.State.SelectedSeries, _ = guiGetFormSel(rVal("series"), &App.Proj).(*Series)
-	s += guiList("series", "(Series)", len(App.Proj.Series), func(i int) (string, string, bool) {
+	s += guiHtmlList("series", "(Series)", len(App.Proj.Series), func(i int) (string, string, bool) {
 		return App.Proj.Series[i].Name, App.Proj.Series[i].Title, App.Gui.State.SelectedSeries != nil && App.Proj.Series[i].Name == App.Gui.State.SelectedSeries.Name
 	})
 
 	if series := App.Gui.State.SelectedSeries; series != nil {
 		App.Gui.State.SelectedChapter, _ = guiGetFormSel(rVal("chapter"), series).(*Chapter)
-		s += guiList("chapter", "(Chapters)", len(series.Chapters), func(i int) (string, string, bool) {
+		s += guiHtmlList("chapter", "(Chapters)", len(series.Chapters), func(i int) (string, string, bool) {
 			chapter := series.Chapters[i]
 			return chapter.Name, chapter.Title, App.Gui.State.SelectedChapter != nil && App.Gui.State.SelectedChapter.Name == chapter.Name
 		})
 		if chapter := App.Gui.State.SelectedChapter; chapter != nil {
 			App.Gui.State.SelectedSheet, _ = guiGetFormSel(rVal("sheet"), chapter).(*Sheet)
-			s += guiList("sheet", "(Sheets)", len(chapter.sheets), func(i int) (string, string, bool) {
+			s += guiHtmlList("sheet", "(Sheets)", len(chapter.sheets), func(i int) (string, string, bool) {
 				sheet := chapter.sheets[i]
 				return sheet.name, sheet.name, App.Gui.State.SelectedSheet != nil && App.Gui.State.SelectedSheet.name == sheet.name
 			})
 			if sheet := App.Gui.State.SelectedSheet; sheet != nil {
 				App.Gui.State.SelectedVersion, _ = guiGetFormSel(rVal("sheetver"), sheet).(*SheetVersion)
-				s += guiList("sheetver", "(Versions)", len(sheet.versions), func(i int) (string, string, bool) {
+				s += guiHtmlList("sheetver", "(Versions)", len(sheet.versions), func(i int) (string, string, bool) {
 					sheetver := sheet.versions[i]
 					return sheetver.fileName, sheetver.name, App.Gui.State.SelectedVersion != nil && App.Gui.State.SelectedVersion.fileName == sheetver.fileName
 				})
 				if sheetver := App.Gui.State.SelectedVersion; sheetver != nil {
-					s += "<hr/>" + guiImg("/"+sheetver.fileName)
+					s += guiSheet(sheetver)
 				}
 			}
 		}
 	}
 
-	s += "<hr/>" + guiListFrom("main_action", "(Actions)", map[string]string{
+	s += "<hr/>" + guiHtmlListFrom("main_action", "(Actions)", map[string]string{
 		"regen_site": "ReGen Site",
 	})
 
@@ -58,12 +58,18 @@ func guiMain(r *http.Request, notice string) []byte {
 	return []byte(s)
 }
 
-func guiImg(uri string) string {
+func guiSheet(sv *SheetVersion) string {
+	sv.ensureFullMeta()
+	s := "<hr/>" + guiHtmlImg("/"+sv.fileName)
+	return s
+}
+
+func guiHtmlImg(uri string) string {
 	s := "<img src='" + hEsc(uri) + "'/>"
 	return s
 }
 
-func guiList(name string, noneItemFirst string, numItems int, getItem func(int) (string, string, bool)) string {
+func guiHtmlList(name string, noneItemFirst string, numItems int, getItem func(int) (string, string, bool)) string {
 	s := "<select onchange='document.getElementById(\"main_focus_id\").value = \"" + hEsc(name) + "\"; document.getElementById(\"main_form\").submit()' name='" + hEsc(name) + "' id='" + hEsc(name) + "'>"
 	if noneItemFirst != "" {
 		s += "<option value=''>" + noneItemFirst + "</option>"
@@ -79,12 +85,12 @@ func guiList(name string, noneItemFirst string, numItems int, getItem func(int) 
 	return s
 }
 
-func guiListFrom(name string, noneItemFirst string, from map[string]string) string {
+func guiHtmlListFrom(name string, noneItemFirst string, from map[string]string) string {
 	var keys, vals []string
 	for k, v := range from {
 		keys, vals = append(keys, k), append(vals, v)
 	}
-	return guiList(name, noneItemFirst, len(from), func(i int) (string, string, bool) { return keys[i], vals[i], false })
+	return guiHtmlList(name, noneItemFirst, len(from), func(i int) (string, string, bool) { return keys[i], vals[i], false })
 }
 
 func guiGetFormSel(formVal string, slice Indexed) fmt.Stringer {

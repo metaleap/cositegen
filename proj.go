@@ -16,6 +16,10 @@ type Project struct {
 	Title  string
 	Desc   string
 	Series []*Series
+
+	meta struct {
+		ContentHashes map[string]string
+	}
 }
 
 func (me *Project) At(i int) fmt.Stringer { return me.Series[i] }
@@ -46,26 +50,13 @@ func (me *Chapter) At(i int) fmt.Stringer { return me.sheets[i] }
 func (me *Chapter) Len() int              { return len(me.sheets) }
 func (me *Chapter) String() string        { return me.Name }
 
-type Sheet struct {
-	name     string
-	versions []*SheetVersion
-}
+func (me *Project) load(filename string) {
+	jsonLoad("."+filename, &me.meta, []byte("{}"))
+	if me.meta.ContentHashes == nil {
+		me.meta.ContentHashes = map[string]string{}
+	}
 
-func (me *Sheet) At(i int) fmt.Stringer { return me.versions[i] }
-func (me *Sheet) Len() int              { return len(me.versions) }
-func (me *Sheet) String() string        { return me.name }
-
-type SheetVersion struct {
-	parent      *Sheet
-	name        string
-	fileName    string
-	contentHash []byte
-}
-
-func (me *SheetVersion) String() string { return me.fileName }
-
-func (me *Project) Load(filename string) {
-	jsonLoad(filename, &App.Proj)
+	jsonLoad(filename, me, nil)
 	for _, series := range me.Series {
 		series.dirPath = series.Name
 		for _, chapter := range series.Chapters {
@@ -107,14 +98,6 @@ func (me *Project) Load(filename string) {
 					}
 					sheetver := &SheetVersion{name: versionname, parent: sheet, fileName: fname}
 					sheet.versions = append(sheet.versions, sheetver)
-					{
-						data, err := ioutil.ReadFile(sheetver.fileName)
-						if err != nil {
-							panic(err)
-						}
-						sheetver.contentHash = contentHash(data)
-						println(fmt.Sprintf("%v:\t\t%x", fname, sheetver.contentHash))
-					}
 				}
 			}
 		}

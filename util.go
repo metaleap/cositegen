@@ -13,17 +13,21 @@ func contentHash(content []byte) []byte {
 	return append(b1[:], b2[:]...)
 }
 
-func jsonLoad(filename string, intoPtr Any) {
+func jsonLoad(filename string, intoPtr Any, defaultIfNotExist []byte) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
-		panic(err)
+		if defaultIfNotExist != nil && os.IsNotExist(err) {
+			data = defaultIfNotExist
+		} else {
+			panic(err)
+		}
 	}
 	if err = json.Unmarshal(data, intoPtr); err != nil {
 		panic(err)
 	}
 }
 
-func jsonStore(filename string, obj Any) {
+func jsonSave(filename string, obj Any) {
 	data, err := json.MarshalIndent(obj, "", "  ")
 	if err != nil {
 		panic(err)

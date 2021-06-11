@@ -21,13 +21,20 @@ var App struct {
 
 func appInit() {
 	App.StaticFilesDirPath = filepath.Join(os.Getenv("HOME"), "c/go/src/github.com/metaleap/cositegen/_static")
-	if err := os.Mkdir(".build", os.ModePerm); err != nil && !os.IsExist(err) {
+	if err := os.Mkdir(".csg_meta", os.ModePerm); err != nil && !os.IsExist(err) {
+		panic(err)
+	}
+	if err := os.Mkdir(".csg_build", os.ModePerm); err != nil && !os.IsExist(err) {
 		panic(err)
 	}
 	App.Gui.State.SelectedChapter = nil
 	App.Gui.State.SelectedSheet = nil
 	App.Gui.State.SelectedSeries = nil
-	App.Proj.Load("cosite.json")
+	App.Proj.load("cosite.json")
+}
+
+func appOnExit() {
+	jsonSave(".cosite.json", &App.Proj.meta)
 }
 
 func appMainAction(name string) string {
