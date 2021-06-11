@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+type Any = interface{}
+
 var App struct {
 	StaticFilesDirPath string
 	Proj               Project
@@ -19,6 +21,7 @@ var App struct {
 		State  struct {
 			SelectedSeries  *Series
 			SelectedChapter *Chapter
+			SelectedScan    *Scan
 		}
 	}
 }
@@ -73,7 +76,7 @@ func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
 	}
 }
 
-func jsonLoad(filename string, intoPtr interface{}) {
+func jsonLoad(filename string, intoPtr Any) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(err)
@@ -83,7 +86,7 @@ func jsonLoad(filename string, intoPtr interface{}) {
 	}
 }
 
-func jsonStore(filename string, obj interface{}) {
+func jsonStore(filename string, obj Any) {
 	data, err := json.MarshalIndent(obj, "", "  ")
 	if err != nil {
 		panic(err)
