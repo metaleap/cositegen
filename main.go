@@ -39,13 +39,13 @@ func httpListenAndServe() {
 }
 
 func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
-	httpResp.Header().Add("Content-Type", "text/html")
 	switch path.Ext(httpReq.URL.Path) {
 	case ".css":
 		http.ServeFile(httpResp, httpReq, filepath.Join(App.StaticFilesDirPath, httpReq.URL.Path))
 	case ".png":
 		http.ServeFile(httpResp, httpReq, filepath.Join(".", httpReq.URL.Path))
 	default:
+		httpResp.Header().Add("Content-Type", "text/html")
 		var notice string
 		if action := httpReq.FormValue("main_action"); action != "" {
 			if notice = appMainAction(action); notice == "" {
