@@ -7,11 +7,6 @@ import (
 	"strings"
 )
 
-type Indexed interface {
-	At(int) fmt.Stringer
-	Len() int
-}
-
 type Project struct {
 	Title  string
 	Desc   string

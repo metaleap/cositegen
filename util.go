@@ -4,9 +4,17 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 )
+
+type Any = interface{}
+
+type Indexed interface {
+	At(int) fmt.Stringer
+	Len() int
+}
 
 func contentHash(content []byte) []byte {
 	b1, b2 := sha1.Sum(content), md5.Sum(content)

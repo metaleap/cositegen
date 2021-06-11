@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-type Any = interface{}
-
 func main() {
 	appInit()
 	go httpListenAndServe()
