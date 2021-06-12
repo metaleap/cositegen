@@ -3,12 +3,17 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 var App struct {
 	StaticFilesDirPath string
 	Proj               Project
-	Gui                struct {
+	BgWork             struct {
+		sync.Mutex
+		Queue []*SheetVersion
+	}
+	Gui struct {
 		BrowserClosed bool
 		State         struct {
 			SelectedSeries  *Series
@@ -21,20 +26,17 @@ var App struct {
 
 func appInit() {
 	App.StaticFilesDirPath = filepath.Join(os.Getenv("HOME"), "c/go/src/github.com/metaleap/cositegen/_static")
-	if err := os.Mkdir(".csg_meta", os.ModePerm); err != nil && !os.IsExist(err) {
-		panic(err)
-	}
-	if err := os.Mkdir(".csg_build", os.ModePerm); err != nil && !os.IsExist(err) {
-		panic(err)
-	}
+	mkDir(".csg_meta")
+	mkDir(".csg_build")
 	App.Gui.State.SelectedChapter = nil
 	App.Gui.State.SelectedSheet = nil
 	App.Gui.State.SelectedSeries = nil
-	App.Proj.load("cosite.json")
+	App.Proj.load()
+	go appBackgroundWork()
 }
 
 func appOnExit() {
-	jsonSave(".cosite.json", &App.Proj.meta)
+	App.Proj.save()
 }
 
 func appMainAction(name string) string {
@@ -45,4 +47,20 @@ func appMainAction(name string) string {
 	}
 
 	return ""
+}
+
+func appBackgroundWork() {
+	for true {
+		App.BgWork.Lock()
+		if len(App.BgWork.Queue) == 0 {
+			App.BgWork.Unlock()
+			break
+		}
+		job := App.BgWork.Queue[0]
+		App.BgWork.Queue = App.BgWork.Queue[1:]
+		App.BgWork.Unlock()
+		printLn("Background processing: " + job.fileName + "...")
+		job.ensureFullMeta(false)
+	}
+	printLn("Background processings complete.")
 }

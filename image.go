@@ -9,6 +9,8 @@ import (
 	"io"
 )
 
+// func imgPanels (bwPng )
+
 func imgToMonochrome(srcImgData io.Reader, blackIfLessThan uint8) []byte {
 	imgsrc, _, err := image.Decode(srcImgData)
 	if err != nil {

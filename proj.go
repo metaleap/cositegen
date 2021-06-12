@@ -45,13 +45,16 @@ func (me *Chapter) At(i int) fmt.Stringer { return me.sheets[i] }
 func (me *Chapter) Len() int              { return len(me.sheets) }
 func (me *Chapter) String() string        { return me.Name }
 
-func (me *Project) load(filename string) {
-	jsonLoad("."+filename, &me.meta, []byte("{}"))
+func (me *Project) save() {
+	jsonSave(".cosite.json", &App.Proj.meta)
+}
+
+func (me *Project) load() {
+	jsonLoad("cosite.json", me, nil)
+	jsonLoad(".cosite.json", &me.meta, []byte("{}"))
 	if me.meta.ContentHashes == nil {
 		me.meta.ContentHashes = map[string]string{}
 	}
-
-	jsonLoad(filename, me, nil)
 	for _, series := range me.Series {
 		series.dirPath = series.Name
 		for _, chapter := range series.Chapters {
@@ -93,6 +96,7 @@ func (me *Project) load(filename string) {
 					}
 					sheetver := &SheetVersion{name: versionname, parent: sheet, fileName: fname}
 					sheet.versions = append(sheet.versions, sheetver)
+					App.BgWork.Queue = append(App.BgWork.Queue, sheetver)
 				}
 			}
 		}

@@ -59,7 +59,7 @@ func guiMain(r *http.Request, notice string) []byte {
 }
 
 func guiSheet(sv *SheetVersion) string {
-	sv.ensureFullMeta()
+	sv.ensureFullMeta(true)
 	s := "<hr/>" + guiHtmlImg("/"+sv.fileName)
 	return s
 }

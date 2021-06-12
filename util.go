@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
+	"sync"
+	"time"
 )
 
 type Any = interface{}
@@ -14,6 +17,30 @@ type Any = interface{}
 type Indexed interface {
 	At(int) fmt.Stringer
 	Len() int
+}
+
+func mkDir(dirPath string) {
+	if err := os.Mkdir(dirPath, os.ModePerm); err != nil && !os.IsExist(err) {
+		panic(err)
+	}
+}
+
+func writeFile(fileName string, data []byte) {
+	tmpfilename := fileName + "." + strconv.FormatInt(time.Now().UnixNano(), 36)
+	if err := ioutil.WriteFile(tmpfilename, data, os.ModePerm); err != nil {
+		panic(err)
+	}
+	if err := os.Rename(tmpfilename, fileName); err != nil {
+		panic(err)
+	}
+}
+
+var stdio sync.Mutex
+
+func printLn(args ...Any) {
+	stdio.Lock()
+	fmt.Println(args...)
+	stdio.Unlock()
 }
 
 func contentHash(content []byte) []byte {
@@ -35,12 +62,10 @@ func jsonLoad(filename string, intoPtr Any, defaultIfNotExist []byte) {
 	}
 }
 
-func jsonSave(filename string, obj Any) {
+func jsonSave(fileName string, obj Any) {
 	data, err := json.MarshalIndent(obj, "", "  ")
 	if err != nil {
 		panic(err)
 	}
-	if err = ioutil.WriteFile(filename, data, os.ModePerm); err != nil {
-		panic(err)
-	}
+	writeFile(fileName, data)
 }

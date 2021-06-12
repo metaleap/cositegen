@@ -28,7 +28,18 @@ type SheetVersion struct {
 
 func (me *SheetVersion) String() string { return me.fileName }
 
-func (me *SheetVersion) ensureFullMeta() {
+func (me *SheetVersion) ensureFullMeta(removeFromWorkQueue bool) {
+	if removeFromWorkQueue {
+		App.BgWork.Lock()
+		for i, sheetver := range App.BgWork.Queue {
+			if me == sheetver {
+				App.BgWork.Queue = append(App.BgWork.Queue[:i], App.BgWork.Queue[i+1:]...)
+				break
+			}
+		}
+		App.BgWork.Unlock()
+	}
+
 	data, err := ioutil.ReadFile(me.fileName)
 	if err != nil {
 		panic(err)
@@ -39,15 +50,13 @@ func (me *SheetVersion) ensureFullMeta() {
 	}
 	oldhash := App.Proj.meta.ContentHashes[me.fileName]
 	if oldhash != "" && oldhash != me.meta.contentHash {
-		if err = os.RemoveAll(filepath.Join(".csg_meta", oldhash)); err != nil {
-			println("Failed to rm .csg_meta/" + oldhash + ": " + err.Error())
+		if err = os.RemoveAll(filepath.Join(".csg_meta", oldhash)); err != nil && !os.IsNotExist(err) {
+			printLn("Failed to rm .csg_meta/" + oldhash + ": " + err.Error())
 		}
 	}
-	metadirpath := filepath.Join(".csg_meta", me.meta.contentHash)
-	if err = os.Mkdir(metadirpath, os.ModePerm); err != nil && !os.IsExist(err) {
-		panic(err)
-	}
 	App.Proj.meta.ContentHashes[me.fileName] = me.meta.contentHash
+	metadirpath := filepath.Join(".csg_meta", me.meta.contentHash)
+	mkDir(metadirpath)
 
 	{ // ensure monochrome sheet ver
 		bwfilepath := filepath.Join(metadirpath, "bw.png")
@@ -60,9 +69,7 @@ func (me *SheetVersion) ensureFullMeta() {
 			} else {
 				data := imgToMonochrome(file, 128)
 				_ = file.Close()
-				if err := ioutil.WriteFile(bwfilepath, data, os.ModePerm); err != nil {
-					panic(err)
-				}
+				writeFile(bwfilepath, data)
 			}
 		}
 	}
