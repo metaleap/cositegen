@@ -20,7 +20,6 @@ func (me *Sheet) String() string        { return me.name }
 type SheetVerMeta struct {
 	dirPath    string
 	bwFilePath string
-	allPanels  []*ImgPanel
 
 	SrcFilePath string
 	PanelsTree  *ImgPanel `json:",omitempty"`
@@ -80,7 +79,6 @@ func (me *SheetVer) ensure(removeFromWorkQueue bool) {
 
 	me.ensureMonochrome()
 	shouldsaveprojmeta = me.ensurePanels() || shouldsaveprojmeta
-	me.meta.allPanels = me.meta.PanelsTree.gatherInto(nil)
 
 	if shouldsaveprojmeta {
 		App.Proj.save()

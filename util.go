@@ -27,6 +27,13 @@ func mkDir(dirPath string) {
 	}
 }
 
+func percent(hundred int, val int) int {
+	if hundred == 0 || val == 0 {
+		return 0
+	}
+	return 100 / (hundred / val)
+}
+
 func writeFile(fileName string, data []byte) {
 	tmpfilename := fileName + "." + strconv.FormatInt(time.Now().UnixNano(), 36)
 	if err := ioutil.WriteFile(tmpfilename, data, os.ModePerm); err != nil {

@@ -173,18 +173,17 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray, findRows bool, findCols 
 	}
 }
 
-func (me *ImgPanel) gatherInto(slice []*ImgPanel) []*ImgPanel {
+func (me *ImgPanel) iter(onPanel func(*ImgPanel)) {
 	assert(len(me.SubCols) == 0 || len(me.SubRows) == 0)
 	if len(me.SubRows) > 0 {
-		for _, row := range me.SubRows {
-			slice = append(slice, row.gatherInto(slice)...)
+		for i := range me.SubRows {
+			me.SubRows[i].iter(onPanel)
 		}
 	} else if len(me.SubCols) > 0 {
-		for _, col := range me.SubCols {
-			slice = append(slice, col.gatherInto(slice)...)
+		for i := range me.SubCols {
+			me.SubCols[i].iter(onPanel)
 		}
 	} else {
-		slice = append(slice, me)
+		onPanel(me)
 	}
-	return slice
 }

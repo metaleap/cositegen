@@ -60,32 +60,38 @@ func guiMain(r *http.Request, notice string) []byte {
 
 func guiSheet(sv *SheetVer) string {
 	sv.ensure(true)
-	s := "<hr/><h3>Full Sheet:</h3><div>" + guiHtmlImg("/"+sv.fileName) + "</div>"
-	var panelstable func(*ImgPanel) string
-	panelstable = func(panel *ImgPanel) (s string) {
+	s := "<hr/><h3>Full Sheet:</h3><div>" + guiHtmlImg("/"+sv.meta.bwFilePath) + "</div>"
+	var panelstree func(*ImgPanel) string
+	panelstree = func(panel *ImgPanel) (s string) {
 		assert(len(panel.SubCols) == 0 || len(panel.SubRows) == 0)
 		if len(panel.SubRows) > 0 {
-			s += "<table>"
+			s += "<ul>"
 			for _, row := range panel.SubRows {
-				s += "<tr><td><div>Row: " + row.Rect.String() + "</div>" + panelstable(&row) + "</td></tr>"
+				s += "<li><div>Row: " + row.Rect.String() + "</div>" + panelstree(&row) + "</li>"
 			}
-			s += "</table>"
+			s += "</ul>"
 		} else if len(panel.SubCols) > 0 {
-			s += "<table><tr>"
+			s += "<ul>"
 			for _, col := range panel.SubCols {
-				s += "<td><div>Col: " + col.Rect.String() + "</div>" + panelstable(&col) + "</td>"
+				s += "<li><div>Col: " + col.Rect.String() + "</div>" + panelstree(&col) + "</li>"
 			}
-			s += "</tr></table>"
+			s += "</ul>"
 		} else {
-			s += "<div>Panel: " + panel.Rect.String() + "</div>"
+			s += "<ul><li><div>Panel: " + panel.Rect.String() + "</div></li></ul>"
 		}
 		return
 	}
-	s += "<h3>Sheet Panel Tree:</h3><div>" + panelstable(sv.meta.PanelsTree) + "</div>"
-	// for i, panel := range sv.meta.allPanels {
-	// 	_ = panel
-	// 	s += "<h3>Panel #" + itoa(i+1) + "</h3><div class='.panel' style='background-image: url(\"/" + sv.meta.bwFilePath + "\")'></div>"
-	// }
+	s += "<h3>Sheet Panels Structure:</h3><div>" + panelstree(sv.meta.PanelsTree) + "</div>"
+	pidx := 0
+	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
+		rect := panel.Rect
+		style := `background-image: url("` + sv.meta.bwFilePath + `");`
+		style += `width: ` + itoa(rect.Max.X-rect.Min.X) + `px; height: ` + itoa(rect.Max.Y-rect.Min.Y) + `px;`
+		s += "<h3>Panel #" + itoa(pidx+1) + "</h3>"
+		s += "<div class='.panel' style='" + style + "'></div>"
+		s += rect.String()
+		pidx++
+	})
 	return s
 }
 
