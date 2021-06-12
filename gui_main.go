@@ -122,7 +122,7 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 				}
 			}
 		}
-		s += "<h3>Panel #" + itoa(pidx+1) + "</h3><div>" + rect.String() + "</div>"
+		s += "<h3>Panel #" + itoa(pidx+1) + " (" + itoa(len(panel.Areas)) + ")" + "</h3><div>" + rect.String() + "</div>"
 
 		s += "<table><tr><td>"
 		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;' onclick='toggle(\"" + pid + "cfg\")'>"
