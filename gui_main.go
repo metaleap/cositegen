@@ -135,7 +135,7 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 		s += "</div></div></td><td>"
 
 		s += "<div class='panelcfg' id='" + pid + "cfg' style='display:" + cfgdisplay + ";'>"
-		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(MaxImagePanelAreas) + ");"
+		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(MaxImagePanelAreas) + ", [\"" + strings.Join(App.Proj.PanelTextKinds, "\", \"") + "\"]);"
 		for i := 0; i < MaxImagePanelAreas; i++ {
 			area := ImgPanelArea{Data: A{}}
 			if len(panel.Areas) > i {

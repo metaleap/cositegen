@@ -3,7 +3,7 @@ function doPostBack(name) {
     document.getElementById("main_form").submit();
 }
 
-function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelAreas) {
+function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelAreas, panelTextKinds) {
     try {
         const pid = "p" + panelIdx;
         const ptext = "panel rect";

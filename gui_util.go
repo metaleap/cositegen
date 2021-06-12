@@ -34,9 +34,14 @@ func guiHtmlButton(id string, text string, attrs map[string]string) string {
 }
 
 func guiHtmlInput(inputType string, id string, value string, attrs map[string]string) string {
-	s := "<input name='" + hEsc(id) + "' id='" + hEsc(id) + "' type='" + hEsc(inputType) + "' value='" + hEsc(value) + "'"
+	if attrs == nil {
+		attrs = A{"name": id}
+	} else if attrs["name"] == "" {
+		attrs["name"] = id
+	}
+	s := "<input id='" + hEsc(id) + "' type='" + hEsc(inputType) + "' value='" + hEsc(value) + "'"
 	if inputType == "textarea" {
-		s = "<textarea name='" + hEsc(id) + "' id='" + hEsc(id) + "'"
+		s = "<textarea id='" + hEsc(id) + "'"
 	}
 	s += guiHtmlAttrs(attrs)
 	if inputType == "textarea" {
