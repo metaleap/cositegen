@@ -103,9 +103,7 @@ func (me *Project) load() {
 					}
 
 					for _, sv := range sheet.versions {
-						if sv.name == versionname {
-							panic("ASSERT")
-						}
+						assert(sv.name != versionname)
 					}
 					sheetver := &SheetVer{name: versionname, parent: sheet, fileName: fname}
 					sheet.versions = append(sheet.versions, sheetver)

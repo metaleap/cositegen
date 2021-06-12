@@ -40,15 +40,11 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray, findRows bool, findCols 
 		}
 		prevmid := area.Min.Y
 		for _, sep := range seps {
-			if !(sep[1] > sep[0]) {
-				panic("ASSERT")
-			}
+			assert(sep[1] > sep[0])
 			mid := sep[0] + ((sep[1] - sep[0]) / 2)
 			if mid-prevmid > cm {
 				rect := image.Rect(area.Min.X, prevmid, area.Max.X, mid)
-				if !rect.In(area) {
-					panic(rect.String() + " NOT IN " + area.String())
-				}
+				assert(rect.In(area))
 				ret = append(ret, rect)
 			}
 			prevmid = mid
@@ -78,15 +74,11 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray, findRows bool, findCols 
 		}
 		prevmid := area.Min.X
 		for _, sep := range seps {
-			if !(sep[1] > sep[0]) {
-				panic("ASSERT")
-			}
+			assert(sep[1] > sep[0])
 			mid := sep[0] + ((sep[1] - sep[0]) / 2)
 			if mid-prevmid > cm {
 				rect := image.Rect(prevmid, area.Min.Y, mid, area.Max.Y)
-				if !rect.In(area) {
-					panic(rect.String() + " NOT IN " + area.String())
-				}
+				assert(rect.In(area))
 				ret = append(ret, rect)
 			}
 			prevmid = mid
@@ -108,10 +100,7 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray, findRows bool, findCols 
 	if len(cols) == 1 {
 		cols = nil
 	}
-	if len(rows) > 0 && len(cols) > 0 {
-		println("ROWS", len(rows), "COLS", len(cols))
-		panic("ASSERT")
-	}
+	assert(!(len(rows) > 0 && len(cols) > 0))
 	for _, row := range rows {
 		imgpanel := ImgPanel{Rect: row}
 		imgpanel.detectSubPanels(srcImg, false, true)

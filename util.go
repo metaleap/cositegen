@@ -37,6 +37,12 @@ func writeFile(fileName string, data []byte) {
 
 var stdio sync.Mutex
 
+func assert(b bool) {
+	if !b {
+		panic("ASSERT")
+	}
+}
+
 func printLn(args ...Any) {
 	stdio.Lock()
 	fmt.Println(args...)
