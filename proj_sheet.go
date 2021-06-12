@@ -19,6 +19,8 @@ func (me *Sheet) String() string        { return me.name }
 
 type SheetVerMeta struct {
 	dirPath string
+
+	Panels *ImgPanel `json:",omitempty"`
 }
 
 type SheetVer struct {
@@ -73,7 +75,7 @@ func (me *SheetVer) ensure(removeFromWorkQueue bool) {
 	mkDir(me.meta.dirPath)
 
 	me.ensureMonochrome()
-	me.ensurePanels()
+	shouldsaveprojmeta = me.ensurePanels() || shouldsaveprojmeta
 
 	if shouldsaveprojmeta {
 		App.Proj.save()
@@ -89,13 +91,22 @@ func (me *SheetVer) ensureMonochrome() {
 		if file, err := os.Open(me.fileName); err != nil {
 			panic(err)
 		} else {
-			data := imgToMonochrome(file, 128)
-			_ = file.Close()
+			data := imgToMonochrome(file, file.Close, 128)
 			writeFile(bwfilepath, data)
 		}
 	}
 }
 
-func (me *SheetVer) ensurePanels() {
-
+func (me *SheetVer) ensurePanels() bool {
+	if me.meta.Panels == nil {
+		bwfilepath := filepath.Join(me.meta.dirPath, "bw.png")
+		if file, err := os.Open(bwfilepath); err != nil {
+			panic(err)
+		} else {
+			imgpanel := imgPanels(file, file.Close)
+			me.meta.Panels = &imgpanel
+			return true
+		}
+	}
+	return false
 }
