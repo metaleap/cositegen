@@ -1,13 +1,9 @@
 package main
 
 import (
-	"fmt"
-	"html"
 	"image"
 	"net/http"
 )
-
-var hEsc = html.EscapeString
 
 func guiMain(r *http.Request, notice string) []byte {
 	rVal := r.FormValue
@@ -41,7 +37,7 @@ func guiMain(r *http.Request, notice string) []byte {
 					return sheetver.fileName, sheetver.name, App.Gui.State.Sel.Ver != nil && App.Gui.State.Sel.Ver.fileName == sheetver.fileName
 				})
 				if sheetver := App.Gui.State.Sel.Ver; sheetver != nil {
-					s += guiSheet(sheetver)
+					s += guiSheet(sheetver, r)
 				}
 			}
 		}
@@ -50,15 +46,15 @@ func guiMain(r *http.Request, notice string) []byte {
 	s += "<hr/>" + guiHtmlListFrom("main_action", "(Actions)", A{"regen_site": "ReGen Site"})
 
 	s += "</form></body>"
-	if rVal("main_focus_id") != "main_action" {
+	if rVal("main_focus_id") != "main_action" && notice == "" {
 		s += "<script type='text/javascript'>try { document.getElementById(\"" + rVal("main_focus_id") + "\").focus(); } catch (ignore) {}</script></html>"
 	}
 	return []byte(s)
 }
 
-func guiSheet(sv *SheetVer) string {
+func guiSheet(sv *SheetVer, r *http.Request) string {
 	sv.ensure(true)
-	s := "<hr/><h3>Full Sheet:</h3><div class='fullsheet'>" + guiHtmlImg("/"+sv.meta.bwSmallFilePath) + "</div>"
+	s := "<hr/><h3>Full Sheet:</h3><div class='fullsheet'>" + guiHtmlImg("/"+sv.meta.bwSmallFilePath, nil) + "</div>"
 	var panelstree func(*ImgPanel) string
 	panelstree = func(panel *ImgPanel) (s string) {
 		assert(len(panel.SubCols) == 0 || len(panel.SubRows) == 0)
@@ -102,7 +98,11 @@ func guiSheet(sv *SheetVer) string {
 		s += "<table><tr><td>"
 		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;' onclick='toggle(\"" + pid + "cfg\")'><div style='" + style + "'></div></div>"
 		s += "</td><td>"
-		s += "<div class='panelcfg' id='" + pid + "cfg' style='display:none;'>"
+		cfgdisplay := "none"
+		if r.FormValue("main_focus_id") == pid+"save" {
+			cfgdisplay = "block"
+		}
+		s += "<div class='panelcfg' id='" + pid + "cfg' style='display:" + cfgdisplay + ";'>"
 		for i := 0; i < 8; i++ {
 			texts, rect := A{}, image.ZR
 			if len(panel.Areas) > i {
@@ -119,72 +119,10 @@ func guiSheet(sv *SheetVer) string {
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"ry1", itoa(rect.Max.Y), A{"class": "panelcfgrect"})
 			s += "</div>"
 		}
-		s += guiHtmlButton(pid+"save", "Save")
-		s += guiHtmlButton(pid+"reset", "Reset")
+		s += guiHtmlButton(pid+"save", "Save", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 		s += "</div>"
 		s += "</td></tr></table>"
 		pidx++
 	})
 	return s
-}
-
-func guiHtmlImg(uri string) string {
-	s := "<img src='" + hEsc(uri) + "'/>"
-	return s
-}
-
-func guiHtmlList(name string, noneItemFirst string, numItems int, getItem func(int) (string, string, bool)) string {
-	s := "<select onchange='doPostBack(\"" + hEsc(name) + "\");' name='" + hEsc(name) + "' id='" + hEsc(name) + "'>"
-	if noneItemFirst != "" {
-		s += "<option value=''>" + noneItemFirst + "</option>"
-	}
-	for i := 0; i < numItems; i++ {
-		value, caption, sel := getItem(i)
-		if s += "<option value='" + value + "'"; sel {
-			s += " selected"
-		}
-		s += ">" + hEsc(caption) + "</option>"
-	}
-	s += "</select>"
-	return s
-}
-
-func guiHtmlButton(id string, text string) string {
-	s := "<button id='" + hEsc(id) + "'>" + hEsc(text) + "</button>"
-	return s
-}
-
-func guiHtmlInput(inputType string, id string, value string, attrs map[string]string) string {
-	s := "<input name='" + hEsc(id) + "' id='" + hEsc(id) + "' type='" + hEsc(inputType) + "' value='" + hEsc(value) + "'"
-	if inputType == "textarea" {
-		s = "<textarea name='" + hEsc(id) + "' id='" + hEsc(id) + "'"
-	}
-	if attrs != nil {
-		for k, v := range attrs {
-			s += " " + hEsc(k) + "='" + hEsc(v) + "'"
-		}
-	}
-	if inputType == "textarea" {
-		s += ">" + hEsc(value) + "</textarea>"
-	} else {
-		s += "/>"
-	}
-	return s
-}
-
-func guiHtmlListFrom(name string, noneItemFirst string, from map[string]string) string {
-	var keys, vals []string
-	for k, v := range from {
-		keys, vals = append(keys, k), append(vals, v)
-	}
-	return guiHtmlList(name, noneItemFirst, len(from), func(i int) (string, string, bool) { return keys[i], vals[i], false })
-}
-
-func guiGetFormSel(formVal string, slice Indexed) fmt.Stringer {
-	for i, l := 0, slice.Len(); i < l; i++ {
-		if item := slice.At(i); item != nil && item.String() == formVal {
-			return item
-		}
-	}
-	return nil
 }
