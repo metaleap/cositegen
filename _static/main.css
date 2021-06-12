@@ -34,9 +34,11 @@ div.panel .panelpic {
 
 div.panel .panelrect {
     position: absolute;
-    opacity: 0.88;
+    opacity: 0.6;
     color: #000000;
     z-index: 9999;
+    text-overflow: clip;
+    overflow: hidden;
 }
 
 .col0 { background-color: darkorange; }
