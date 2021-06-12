@@ -31,7 +31,7 @@ func launchKioskyBrowser() {
 			break
 		}
 	}
-	cmd := exec.Command(cmdnames[cmdidx], "--new-window", "--single-process", "--user-data-dir=./.csg_gui", "--disable-extensions", "--app=http://localhost:4321")
+	cmd := exec.Command(cmdnames[cmdidx], "--new-window", "--single-process", "--user-data-dir=./.csg_gui", "--disable-extensions", "--app=http://localhost:4321", "--disk-cache-size=128")
 	if err := cmd.Start(); err != nil {
 		panic(err)
 	}
@@ -52,7 +52,7 @@ func httpListenAndServe() {
 
 func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
 	switch path.Ext(httpReq.URL.Path) {
-	case ".css":
+	case ".css", ".js":
 		http.ServeFile(httpResp, httpReq, filepath.Join(App.StaticFilesDirPath, httpReq.URL.Path))
 	case ".png":
 		http.ServeFile(httpResp, httpReq, filepath.Join(".", httpReq.URL.Path))

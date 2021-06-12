@@ -10,7 +10,7 @@ var hEsc = html.EscapeString
 
 func guiMain(r *http.Request, notice string) []byte {
 	rVal := r.FormValue
-	s := "<html><head><link rel='stylesheet' href='/styles.css'/>"
+	s := "<html><head><link rel='stylesheet' href='/main.css'/><script src='/main.js' type='text/javascript' language='javascript'></script>"
 	s += "</head><body><form id='main_form'><input type='hidden' name='main_focus_id' id='main_focus_id' value='" + hEsc(rVal("main_focus_id")) + "'/>"
 
 	if notice != "" {
@@ -53,14 +53,14 @@ func guiMain(r *http.Request, notice string) []byte {
 
 	s += "</form></body>"
 	if rVal("main_focus_id") != "main_action" {
-		s += "<script type='text/javascript'>try { document.getElementById(\"" + rVal("main_focus_id") + "\").focus() } catch (ignore) {}</script></html>"
+		s += "<script type='text/javascript'>try { document.getElementById(\"" + rVal("main_focus_id") + "\").focus(); } catch (ignore) {}</script></html>"
 	}
 	return []byte(s)
 }
 
 func guiSheet(sv *SheetVer) string {
 	sv.ensure(true)
-	s := "<hr/><h3>Full Sheet:</h3><div>" + guiHtmlImg("/"+sv.meta.bwSmallFilePath) + "</div>"
+	s := "<hr/><h3>Full Sheet:</h3><div class='fullsheet'>" + guiHtmlImg("/"+sv.meta.bwSmallFilePath) + "</div>"
 	var panelstree func(*ImgPanel) string
 	panelstree = func(panel *ImgPanel) (s string) {
 		assert(len(panel.SubCols) == 0 || len(panel.SubRows) == 0)
@@ -95,13 +95,19 @@ func guiSheet(sv *SheetVer) string {
 	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
 		rect := panel.Rect
 		w, h := rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y
-		s += "<h3>Panel #" + itoa(pidx+1) + "</h3><div style='display: block; zoom: " + itoa(zoom) + "%;'>"
+		s += "<h3>Panel #" + itoa(pidx+1) + "</h3><div>" + rect.String() + "</div>"
+
 		style := `background-image: url("/` + sv.meta.bwSmallFilePath + `");`
 		style += `background-size: ` + itoa(sv.meta.PanelsTree.Rect.Max.X-sv.meta.PanelsTree.Rect.Min.X) + `px ` + itoa(sv.meta.PanelsTree.Rect.Max.Y-sv.meta.PanelsTree.Rect.Min.Y) + `px;`
 		style += `width: ` + itoa(w) + `px; height: ` + itoa(h) + `px;`
 		style += `background-position: -` + itoa(rect.Min.X) + `px -` + itoa(rect.Min.Y) + `px;`
-		s += "<div class='panel' style='" + style + "'></div>"
-		s += "</div>" + rect.String()
+		s += "<table><tr><td>"
+		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;'><div style='" + style + "'></div></div>"
+		s += "</td><td>"
+		s += "<div class='panelcfg'>"
+		s += "(panel config)"
+		s += "</div>"
+		s += "</td></tr></table>"
 		pidx++
 	})
 	return s
@@ -113,7 +119,7 @@ func guiHtmlImg(uri string) string {
 }
 
 func guiHtmlList(name string, noneItemFirst string, numItems int, getItem func(int) (string, string, bool)) string {
-	s := "<select onchange='document.getElementById(\"main_focus_id\").value = \"" + hEsc(name) + "\"; document.getElementById(\"main_form\").submit()' name='" + hEsc(name) + "' id='" + hEsc(name) + "'>"
+	s := "<select onchange='doPostBack(\"" + hEsc(name) + "\");' name='" + hEsc(name) + "' id='" + hEsc(name) + "'>"
 	if noneItemFirst != "" {
 		s += "<option value=''>" + noneItemFirst + "</option>"
 	}

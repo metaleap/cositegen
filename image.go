@@ -12,7 +12,11 @@ import (
 )
 
 type ImgPanel struct {
-	Rect    image.Rectangle
+	Rect  image.Rectangle
+	Areas []struct {
+		Rect  image.Rectangle
+		Value string
+	} `json:",omitempty"`
 	SubRows []ImgPanel `json:",omitempty"`
 	SubCols []ImgPanel `json:",omitempty"`
 }
