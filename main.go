@@ -19,7 +19,18 @@ func main() {
 }
 
 func launchKioskyBrowser() {
-	cmd := exec.Command("chromium", "--new-window", "--single-process", "--user-data-dir=./.csg_gui", "--disable-extensions", "--app=http://localhost:4321")
+	var cmdidx int
+	cmdnames := []string{"chromium", "chromium-browser", "chrome", "google-chrome"}
+	for i, l := 0, len(cmdnames); i < l; i++ {
+		cmdnames = append(cmdnames, cmdnames[i]+"-stable")
+	}
+	for i, cmdname := range cmdnames {
+		if _, nope := exec.LookPath(cmdname); nope == nil {
+			cmdidx = i
+			break
+		}
+	}
+	cmd := exec.Command(cmdnames[cmdidx], "--new-window", "--single-process", "--user-data-dir=./.csg_gui", "--disable-extensions", "--app=http://localhost:4321")
 	if err := cmd.Start(); err != nil {
 		panic(err)
 	}

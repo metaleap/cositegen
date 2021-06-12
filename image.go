@@ -38,9 +38,9 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 		if laststart != -1 {
 			seps = append(seps, [2]int{laststart, area.Max.Y})
 		}
-		for _, sep := range seps {
-			// ret = append(ret, image.Rect(area.Min.X,area))
-		}
+		// for _, sep := range seps {
+		// ret = append(ret, image.Rect(area.Min.X,area))
+		// }
 
 		return
 	}
