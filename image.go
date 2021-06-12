@@ -15,6 +15,20 @@ type ImgPanel struct {
 	SubCols []ImgPanel `json:",omitempty"`
 }
 
+// returns nil if srcImgData already smaller than maxWidth
+func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int) []byte {
+	imgsrc, _, err := image.Decode(srcImgData)
+	if err != nil {
+		panic(err)
+	}
+	_ = onFileDone()
+
+	if imgsrc.Bounds().Max.X < maxWidth {
+		return nil
+	}
+	return nil
+}
+
 // returns nil if srcImgData already consists entirely of fully black or fully white pixels
 func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessThan uint8) []byte {
 	imgsrc, _, err := image.Decode(srcImgData)

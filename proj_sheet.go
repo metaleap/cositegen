@@ -18,8 +18,9 @@ func (me *Sheet) Len() int              { return len(me.versions) }
 func (me *Sheet) String() string        { return me.name }
 
 type SheetVerMeta struct {
-	dirPath    string
-	bwFilePath string
+	dirPath         string
+	bwFilePath      string
+	bwSmallFilePath string
 
 	SrcFilePath string
 	PanelsTree  *ImgPanel `json:",omitempty"`
@@ -75,6 +76,7 @@ func (me *SheetVer) ensure(removeFromWorkQueue bool) {
 	}
 	me.meta.dirPath = filepath.Join(".csg_meta", curhash)
 	me.meta.bwFilePath = filepath.Join(me.meta.dirPath, "bw.png")
+	me.meta.bwSmallFilePath = filepath.Join(me.meta.dirPath, "bwsmall.png")
 	mkDir(me.meta.dirPath)
 
 	me.ensureMonochrome()
@@ -95,6 +97,18 @@ func (me *SheetVer) ensureMonochrome() {
 		} else if data := imgToMonochrome(file, file.Close, 128); data != nil {
 			writeFile(me.meta.bwFilePath, data)
 		} else if err = os.Symlink(me.fileName, me.meta.bwFilePath); err != nil {
+			panic(err)
+		}
+	}
+	if _, err := os.Stat(me.meta.bwSmallFilePath); err != nil {
+		if !os.IsNotExist(err) {
+			panic(err)
+		}
+		if file, err := os.Open(me.meta.bwFilePath); err != nil {
+			panic(err)
+		} else if data := imgDownsized(file, file.Close, 2048); data != nil {
+			writeFile(me.meta.bwSmallFilePath, data)
+		} else if err = os.Symlink(me.meta.bwFilePath, me.meta.bwSmallFilePath); err != nil {
 			panic(err)
 		}
 	}

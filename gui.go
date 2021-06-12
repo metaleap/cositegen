@@ -60,7 +60,7 @@ func guiMain(r *http.Request, notice string) []byte {
 
 func guiSheet(sv *SheetVer) string {
 	sv.ensure(true)
-	s := "<hr/><h3>Full Sheet:</h3><div>" + guiHtmlImg("/"+sv.meta.bwFilePath) + "</div>"
+	s := "<hr/><h3>Full Sheet:</h3><div>" + guiHtmlImg("/"+sv.meta.bwSmallFilePath) + "</div>"
 	var panelstree func(*ImgPanel) string
 	panelstree = func(panel *ImgPanel) (s string) {
 		assert(len(panel.SubCols) == 0 || len(panel.SubRows) == 0)
@@ -81,30 +81,26 @@ func guiSheet(sv *SheetVer) string {
 		}
 		return
 	}
-	s += "<h3>Sheet Panels Structure:</h3><div>" + panelstree(sv.meta.PanelsTree) + "</div>"
-	pidx, maxwidth, zoomdiv := 0, 0, 1
+	s += "<h3>Sheet Panels Structure:</h3><ul><li>Sheet:" + sv.meta.PanelsTree.Rect.String() + panelstree(sv.meta.PanelsTree) + "</li></ul>"
+	pidx, maxwidth, zoom := 0, 0, 100
 	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
 		if w := panel.Rect.Max.X - panel.Rect.Min.X; w > maxwidth {
 			maxwidth = w
 		}
 	})
-	if wmax := 1500; maxwidth > wmax {
-
+	if wmax := 700; maxwidth > wmax {
+		zoomdiv := float64(maxwidth) / float64(wmax)
+		zoom = int(100.0 / zoomdiv)
 	}
 	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
 		rect := panel.Rect
 		w, h := rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y
-		s += "<h3>Panel #" + itoa(pidx+1) + "</h3>"
-		if wmax := 1000; w > wmax {
-			d := float64(w) / float64(wmax)
-			// zoom := 100.0 / (float64(w) / float64(wmax))
-			w, h = int(float64(w)/d), int(float64(h)/d)
-		}
-		style := `background-image: url("x` + sv.meta.bwFilePath + `");`
+		s += "<h3>Panel #" + itoa(pidx+1) + "</h3><div style='display: block; zoom: " + itoa(zoom) + "%;'>"
+		style := `background-image: url("/` + sv.meta.bwSmallFilePath + `");`
 		style += `width: ` + itoa(w) + `px; height: ` + itoa(h) + `px;`
 		style += `background-position: -` + itoa(rect.Min.X) + `px -` + itoa(rect.Min.Y) + `px;`
 		s += "<div class='panel' style='" + style + "'></div>"
-		s += rect.String()
+		s += "</div>" + rect.String()
 		pidx++
 	})
 	return s
