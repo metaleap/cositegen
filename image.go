@@ -11,14 +11,18 @@ import (
 	"golang.org/x/image/draw"
 )
 
+const MaxImagePanelAreas = 8
+
 type ImgPanel struct {
-	Rect  image.Rectangle
-	Areas []struct {
-		Rect image.Rectangle
-		Data map[string]string
-	} `json:",omitempty"`
-	SubRows []ImgPanel `json:",omitempty"`
-	SubCols []ImgPanel `json:",omitempty"`
+	Rect    image.Rectangle
+	Areas   []ImgPanelArea `json:",omitempty"`
+	SubRows []ImgPanel     `json:",omitempty"`
+	SubCols []ImgPanel     `json:",omitempty"`
+}
+
+type ImgPanelArea struct {
+	Data map[string]string `json:",omitempty"`
+	Rect image.Rectangle
 }
 
 // returns nil if srcImgData already smaller than maxWidth
