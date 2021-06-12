@@ -18,14 +18,12 @@ type ImgPanel struct {
 func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 	var detectRows, detectCols func(image.Rectangle) []image.Rectangle
 
-	detectRows = func(area image.Rectangle) []image.Rectangle {
+	detectRows = func(area image.Rectangle) (ret []image.Rectangle) {
 		laststart, seps := -1, [][2]int{}
-
 		for py := area.Min.Y; py < area.Max.Y; py++ {
 			isfullsep := true
 			for px := area.Min.X; px < area.Max.X; px++ {
-				col := srcImg.At(px, py).(*color.Gray)
-				if col.Y != 0 {
+				if col := srcImg.At(px, py).(*color.Gray); col.Y != 0 {
 					isfullsep = false
 					break
 				}
@@ -37,7 +35,14 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 				laststart = -1
 			}
 		}
-		return nil
+		if laststart != -1 {
+			seps = append(seps, [2]int{laststart, area.Max.Y})
+		}
+		for _, sep := range seps {
+			// ret = append(ret, image.Rect(area.Min.X,area))
+		}
+
+		return
 	}
 
 	detectCols = func(area image.Rectangle) []image.Rectangle {
