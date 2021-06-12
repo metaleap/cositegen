@@ -15,11 +15,10 @@ type ImgPanel struct {
 	SubCols []ImgPanel `json:",omitempty"`
 }
 
-func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
+func (me *ImgPanel) detectSubPanels(srcImg *image.Gray, findRows bool, findCols bool) {
 	cm := srcImg.Rect.Max.Y / 21
-	var detectRows, detectCols func(image.Rectangle) []image.Rectangle
 
-	detectRows = func(area image.Rectangle) (ret []image.Rectangle) {
+	detectRows := func(area image.Rectangle) (ret []image.Rectangle) {
 		laststart, seps := -1, [][2]int{}
 		for py := area.Min.Y; py < area.Max.Y; py++ {
 			isfullsep := true
@@ -39,33 +38,89 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 		if laststart != -1 {
 			seps = append(seps, [2]int{laststart, area.Max.Y})
 		}
-		var prevmid int
+		prevmid := area.Min.Y
 		for _, sep := range seps {
+			if !(sep[1] > sep[0]) {
+				panic("ASSERT")
+			}
 			mid := sep[0] + ((sep[1] - sep[0]) / 2)
 			if mid-prevmid > cm {
-				ret = append(ret, image.Rect(area.Min.X, prevmid, area.Max.X, mid))
+				rect := image.Rect(area.Min.X, prevmid, area.Max.X, mid)
+				if !rect.In(area) {
+					panic(rect.String() + " NOT IN " + area.String())
+				}
+				ret = append(ret, rect)
 			}
 			prevmid = mid
 		}
 		return
 	}
 
-	detectCols = func(area image.Rectangle) []image.Rectangle {
+	detectCols := func(area image.Rectangle) (ret []image.Rectangle) {
+		laststart, seps := -1, [][2]int{}
 		for px := area.Min.X; px < area.Max.X; px++ {
+			isfullsep := true
+			for py := area.Min.Y; py < area.Max.Y; py++ {
+				if col := srcImg.At(px, py).(color.Gray); col.Y != 0 {
+					isfullsep = false
+					break
+				}
+			}
+			if isfullsep && laststart == -1 {
+				laststart = px
+			} else if (!isfullsep) && laststart != -1 {
+				seps = append(seps, [2]int{laststart, px})
+				laststart = -1
+			}
 		}
-		return nil
+		if laststart != -1 {
+			seps = append(seps, [2]int{laststart, area.Max.X})
+		}
+		prevmid := area.Min.X
+		for _, sep := range seps {
+			if !(sep[1] > sep[0]) {
+				panic("ASSERT")
+			}
+			mid := sep[0] + ((sep[1] - sep[0]) / 2)
+			if mid-prevmid > cm {
+				rect := image.Rect(prevmid, area.Min.Y, mid, area.Max.Y)
+				if !rect.In(area) {
+					panic(rect.String() + " NOT IN " + area.String())
+				}
+				ret = append(ret, rect)
+			}
+			prevmid = mid
+		}
+		return
 	}
 
 	me.SubCols, me.SubRows = nil, nil
-	rows, cols := detectRows(me.Rect), detectCols(me.Rect)
+	var rows, cols []image.Rectangle
+	if findRows {
+		rows = detectRows(me.Rect)
+	}
+	if findCols {
+		cols = detectCols(me.Rect)
+	}
+	if len(rows) == 1 {
+		rows = nil
+	}
+	if len(cols) == 1 {
+		cols = nil
+	}
 	if len(rows) > 0 && len(cols) > 0 {
+		println("ROWS", len(rows), "COLS", len(cols))
 		panic("ASSERT")
 	}
 	for _, row := range rows {
-		me.SubRows = append(me.SubRows, ImgPanel{Rect: row})
+		imgpanel := ImgPanel{Rect: row}
+		imgpanel.detectSubPanels(srcImg, false, true)
+		me.SubRows = append(me.SubRows, imgpanel)
 	}
 	for _, col := range cols {
-		me.SubCols = append(me.SubCols, ImgPanel{Rect: col})
+		imgpanel := ImgPanel{Rect: col}
+		imgpanel.detectSubPanels(srcImg, true, false)
+		me.SubCols = append(me.SubCols, imgpanel)
 	}
 }
 
@@ -76,7 +131,7 @@ func imgPanels(srcImgData io.Reader, onFileDone func() error) ImgPanel {
 	}
 	_ = onFileDone()
 	ret := ImgPanel{Rect: imgsrc.Bounds()}
-	ret.detectSubPanels(imgsrc.(*image.Gray))
+	ret.detectSubPanels(imgsrc.(*image.Gray), true, true)
 	return ret
 }
 
