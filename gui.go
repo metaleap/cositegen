@@ -97,6 +97,7 @@ func guiSheet(sv *SheetVer) string {
 		w, h := rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y
 		s += "<h3>Panel #" + itoa(pidx+1) + "</h3><div style='display: block; zoom: " + itoa(zoom) + "%;'>"
 		style := `background-image: url("/` + sv.meta.bwSmallFilePath + `");`
+		style += `background-size: ` + itoa(sv.meta.PanelsTree.Rect.Max.X-sv.meta.PanelsTree.Rect.Min.X) + `px ` + itoa(sv.meta.PanelsTree.Rect.Max.Y-sv.meta.PanelsTree.Rect.Min.Y) + `px;`
 		style += `width: ` + itoa(w) + `px; height: ` + itoa(h) + `px;`
 		style += `background-position: -` + itoa(rect.Min.X) + `px -` + itoa(rect.Min.Y) + `px;`
 		s += "<div class='panel' style='" + style + "'></div>"

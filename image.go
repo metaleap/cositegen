@@ -7,6 +7,8 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	"io"
+
+	"golang.org/x/image/draw"
 )
 
 type ImgPanel struct {
@@ -23,10 +25,18 @@ func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int) [
 	}
 	_ = onFileDone()
 
-	if imgsrc.Bounds().Max.X < maxWidth {
+	origwidth, origheight := imgsrc.Bounds().Max.X, imgsrc.Bounds().Max.Y
+	if origwidth <= maxWidth {
 		return nil
 	}
-	return nil
+
+	imgdown := image.NewGray(image.Rect(0, 0, maxWidth, int(float64(origheight)/(float64(origwidth)/float64(maxWidth)))))
+	draw.ApproxBiLinear.Scale(imgdown, imgdown.Bounds(), imgsrc, imgsrc.Bounds(), draw.Over, nil)
+	var pngbuf bytes.Buffer
+	if err = png.Encode(&pngbuf, imgdown); err != nil {
+		panic(err)
+	}
+	return pngbuf.Bytes()
 }
 
 // returns nil if srcImgData already consists entirely of fully black or fully white pixels
