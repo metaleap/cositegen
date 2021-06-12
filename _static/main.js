@@ -6,10 +6,17 @@ function doPostBack(name) {
 function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelAreas, panelTextKinds) {
     try {
         const pid = "p" + panelIdx;
-        const ptext = "panel rect";
         const span = document.getElementById(pid + 'rects');
         span.innerHTML = "";
         for (let j = 0; j < maxImagePanelAreas; j++) {
+            var ptext = document.getElementById(pid + "t" + j + panelTextKinds[0]).value;
+            for (let ptk = 1; ptk < panelTextKinds.length; ptk++) {
+                const el = document.getElementById(pid + "t" + j + panelTextKinds[ptk]);
+                if (el == document.activeElement) {
+                    ptext = el.value;
+                    break;
+                }
+            }
             const trx0 = parseInt(document.getElementById(pid + "t" + j + "rx0").value);
             const trx1 = parseInt(document.getElementById(pid + "t" + j + "rx1").value);
             const try0 = parseInt(document.getElementById(pid + "t" + j + "ry0").value);

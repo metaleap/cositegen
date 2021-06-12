@@ -142,7 +142,7 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 				area = panel.Areas[i]
 			}
 			for _, ptk := range App.Proj.PanelTextKinds {
-				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+ptk, area.Data[ptk], A{"placeholder": ptk, "onchange": jsrefr, "class": "panelcfgtext col" + itoa(i)}) + "</div><div>"
+				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+ptk, area.Data[ptk], A{"placeholder": ptk, "onchange": jsrefr, "onfocus": jsrefr, "class": "panelcfgtext col" + itoa(i)}) + "</div><div>"
 			}
 			s += "X,Y:"
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx0", itoa(area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.X), "max": itoa(panel.Rect.Max.X)})
