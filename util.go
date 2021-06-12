@@ -14,6 +14,8 @@ import (
 
 type Any = interface{}
 
+var itoa = strconv.Itoa
+
 type Indexed interface {
 	At(int) fmt.Stringer
 	Len() int

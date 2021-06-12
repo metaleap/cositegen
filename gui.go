@@ -61,6 +61,31 @@ func guiMain(r *http.Request, notice string) []byte {
 func guiSheet(sv *SheetVer) string {
 	sv.ensure(true)
 	s := "<hr/><h3>Full Sheet:</h3><div>" + guiHtmlImg("/"+sv.fileName) + "</div>"
+	var panelstable func(*ImgPanel) string
+	panelstable = func(panel *ImgPanel) (s string) {
+		assert(len(panel.SubCols) == 0 || len(panel.SubRows) == 0)
+		if len(panel.SubRows) > 0 {
+			s += "<table>"
+			for _, row := range panel.SubRows {
+				s += "<tr><td><div>Row: " + row.Rect.String() + "</div>" + panelstable(&row) + "</td></tr>"
+			}
+			s += "</table>"
+		} else if len(panel.SubCols) > 0 {
+			s += "<table><tr>"
+			for _, col := range panel.SubCols {
+				s += "<td><div>Col: " + col.Rect.String() + "</div>" + panelstable(&col) + "</td>"
+			}
+			s += "</tr></table>"
+		} else {
+			s += "<div>Panel: " + panel.Rect.String() + "</div>"
+		}
+		return
+	}
+	s += "<h3>Sheet Panel Tree:</h3><div>" + panelstable(sv.meta.PanelsTree) + "</div>"
+	// for i, panel := range sv.meta.allPanels {
+	// 	_ = panel
+	// 	s += "<h3>Panel #" + itoa(i+1) + "</h3><div class='.panel' style='background-image: url(\"/" + sv.meta.bwFilePath + "\")'></div>"
+	// }
 	return s
 }
 

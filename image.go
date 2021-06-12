@@ -15,6 +15,7 @@ type ImgPanel struct {
 	SubCols []ImgPanel `json:",omitempty"`
 }
 
+// returns nil if srcImgData already consists entirely of fully black or fully white pixels
 func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessThan uint8) []byte {
 	imgsrc, _, err := image.Decode(srcImgData)
 	if err != nil {
@@ -22,7 +23,7 @@ func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessT
 	}
 	_ = onFileDone()
 
-	imggray := image.NewGray(image.Rect(0, 0, imgsrc.Bounds().Max.X, imgsrc.Bounds().Max.Y))
+	allbw, imggray := true, image.NewGray(image.Rect(0, 0, imgsrc.Bounds().Max.X, imgsrc.Bounds().Max.Y))
 	for px := 0; px < imgsrc.Bounds().Max.X; px++ {
 		for py := 0; py < imgsrc.Bounds().Max.Y; py++ {
 			var colbw uint8
@@ -37,6 +38,9 @@ func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessT
 			default:
 				panic(colsrc)
 			}
+			if !(colbw == 255 || colbw == 0) {
+				allbw = false
+			}
 
 			// now black&white-only
 			if colbw < blackIfLessThan {
@@ -47,6 +51,10 @@ func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessT
 
 			imggray.Set(px, py, color.Gray{Y: colbw})
 		}
+	}
+
+	if allbw {
+		return nil
 	}
 
 	var pngbuf bytes.Buffer
@@ -163,4 +171,20 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray, findRows bool, findCols 
 		imgpanel.detectSubPanels(srcImg, true, false)
 		me.SubCols = append(me.SubCols, imgpanel)
 	}
+}
+
+func (me *ImgPanel) gatherInto(slice []*ImgPanel) []*ImgPanel {
+	assert(len(me.SubCols) == 0 || len(me.SubRows) == 0)
+	if len(me.SubRows) > 0 {
+		for _, row := range me.SubRows {
+			slice = append(slice, row.gatherInto(slice)...)
+		}
+	} else if len(me.SubCols) > 0 {
+		for _, col := range me.SubCols {
+			slice = append(slice, col.gatherInto(slice)...)
+		}
+	} else {
+		slice = append(slice, me)
+	}
+	return slice
 }

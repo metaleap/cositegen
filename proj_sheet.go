@@ -18,10 +18,12 @@ func (me *Sheet) Len() int              { return len(me.versions) }
 func (me *Sheet) String() string        { return me.name }
 
 type SheetVerMeta struct {
-	dirPath string
+	dirPath    string
+	bwFilePath string
+	allPanels  []*ImgPanel
 
 	SrcFilePath string
-	Panels      *ImgPanel `json:",omitempty"`
+	PanelsTree  *ImgPanel `json:",omitempty"`
 }
 
 type SheetVer struct {
@@ -73,10 +75,12 @@ func (me *SheetVer) ensure(removeFromWorkQueue bool) {
 		App.Proj.meta.SheetVer[curhash] = me.meta
 	}
 	me.meta.dirPath = filepath.Join(".csg_meta", curhash)
+	me.meta.bwFilePath = filepath.Join(me.meta.dirPath, "bw.png")
 	mkDir(me.meta.dirPath)
 
 	me.ensureMonochrome()
 	shouldsaveprojmeta = me.ensurePanels() || shouldsaveprojmeta
+	me.meta.allPanels = me.meta.PanelsTree.gatherInto(nil)
 
 	if shouldsaveprojmeta {
 		App.Proj.save()
@@ -84,29 +88,27 @@ func (me *SheetVer) ensure(removeFromWorkQueue bool) {
 }
 
 func (me *SheetVer) ensureMonochrome() {
-	bwfilepath := filepath.Join(me.meta.dirPath, "bw.png")
-	if _, err := os.Stat(bwfilepath); err != nil {
+	if _, err := os.Stat(me.meta.bwFilePath); err != nil {
 		if !os.IsNotExist(err) {
 			panic(err)
 		}
 		if file, err := os.Open(me.fileName); err != nil {
 			panic(err)
-		} else {
-			data := imgToMonochrome(file, file.Close, 128)
-			writeFile(bwfilepath, data)
+		} else if data := imgToMonochrome(file, file.Close, 128); data != nil {
+			writeFile(me.meta.bwFilePath, data)
+		} else if err = os.Symlink(me.fileName, me.meta.bwFilePath); err != nil {
+			panic(err)
 		}
 	}
 }
 
 func (me *SheetVer) ensurePanels() bool {
-	if me.meta.Panels == nil {
-		bwfilepath := filepath.Join(me.meta.dirPath, "bw.png")
-		if file, err := os.Open(bwfilepath); err != nil {
+	if me.meta.PanelsTree == nil {
+		if file, err := os.Open(me.meta.bwFilePath); err != nil {
 			panic(err)
 		} else {
 			imgpanel := imgPanels(file, file.Close)
-			me.meta.Panels = &imgpanel
-			printLn("\t\tR:" + strconv.Itoa(len(imgpanel.SubRows)) + ", C:" + strconv.Itoa(len(imgpanel.SubCols)))
+			me.meta.PanelsTree = &imgpanel
 			return true
 		}
 	}
