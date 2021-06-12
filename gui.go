@@ -60,7 +60,7 @@ func guiMain(r *http.Request, notice string) []byte {
 
 func guiSheet(sv *SheetVer) string {
 	sv.ensure(true)
-	s := "<hr/>" + guiHtmlImg("/"+sv.fileName)
+	s := "<hr/><h3>Full Sheet:</h3><div>" + guiHtmlImg("/"+sv.fileName) + "</div>"
 	return s
 }
 
