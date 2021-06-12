@@ -14,8 +14,8 @@ import (
 type ImgPanel struct {
 	Rect  image.Rectangle
 	Areas []struct {
-		Rect  image.Rectangle
-		Value string
+		Rect image.Rectangle
+		Data map[string]string
 	} `json:",omitempty"`
 	SubRows []ImgPanel `json:",omitempty"`
 	SubCols []ImgPanel `json:",omitempty"`

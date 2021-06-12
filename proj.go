@@ -9,10 +9,10 @@ import (
 )
 
 type Project struct {
-	Title         string
-	Desc          string
-	Series        []*Series
-	MaxPanelTexts int
+	Title          string
+	Desc           string
+	Series         []*Series
+	PanelTextKinds []string
 
 	meta struct {
 		ContentHashes map[string]string

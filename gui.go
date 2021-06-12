@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"html"
+	"image"
 	"net/http"
 )
 
@@ -11,8 +12,7 @@ var hEsc = html.EscapeString
 func guiMain(r *http.Request, notice string) []byte {
 	rVal := r.FormValue
 	s := "<html><head><link rel='stylesheet' href='/main.css'/><script src='/main.js' type='text/javascript' language='javascript'></script>"
-	s += "</head><body><form id='main_form'><input type='hidden' name='main_focus_id' id='main_focus_id' value='" + hEsc(rVal("main_focus_id")) + "'/>"
-
+	s += "</head><body><form id='main_form'>" + guiHtmlInput("hidden", "main_focus_id", rVal("main_focus_id"), nil)
 	if notice != "" {
 		s += "<div class='notice'>" + hEsc(notice) + "</div>"
 	}
@@ -47,9 +47,7 @@ func guiMain(r *http.Request, notice string) []byte {
 		}
 	}
 
-	s += "<hr/>" + guiHtmlListFrom("main_action", "(Actions)", map[string]string{
-		"regen_site": "ReGen Site",
-	})
+	s += "<hr/>" + guiHtmlListFrom("main_action", "(Actions)", A{"regen_site": "ReGen Site"})
 
 	s += "</form></body>"
 	if rVal("main_focus_id") != "main_action" {
@@ -93,7 +91,7 @@ func guiSheet(sv *SheetVer) string {
 		zoom = int(100.0 / zoomdiv)
 	}
 	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
-		rect := panel.Rect
+		rect, pid := panel.Rect, "p"+itoa(pidx)
 		w, h := rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y
 		s += "<h3>Panel #" + itoa(pidx+1) + "</h3><div>" + rect.String() + "</div>"
 
@@ -102,10 +100,27 @@ func guiSheet(sv *SheetVer) string {
 		style += `width: ` + itoa(w) + `px; height: ` + itoa(h) + `px;`
 		style += `background-position: -` + itoa(rect.Min.X) + `px -` + itoa(rect.Min.Y) + `px;`
 		s += "<table><tr><td>"
-		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;'><div style='" + style + "'></div></div>"
+		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;' onclick='toggle(\"" + pid + "cfg\")'><div style='" + style + "'></div></div>"
 		s += "</td><td>"
-		s += "<div class='panelcfg'>"
-		s += "(panel config)"
+		s += "<div class='panelcfg' id='" + pid + "cfg' style='display:none;'>"
+		for i := 0; i < 8; i++ {
+			texts, rect := A{}, image.ZR
+			if len(panel.Areas) > i {
+				texts, rect = panel.Areas[i].Data, panel.Areas[i].Rect
+			}
+			for _, ptk := range App.Proj.PanelTextKinds {
+				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i), texts[ptk], A{"placeholder": ptk, "class": "panelcfgtext col" + itoa(i)}) + "</div><div>"
+			}
+			s += "Min X,Y:"
+			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx0", itoa(rect.Min.X), A{"class": "panelcfgrect"})
+			s += guiHtmlInput("number", pid+"t"+itoa(i)+"ry0", itoa(rect.Min.Y), A{"class": "panelcfgrect"})
+			s += "Max X,Y:"
+			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx1", itoa(rect.Max.X), A{"class": "panelcfgrect"})
+			s += guiHtmlInput("number", pid+"t"+itoa(i)+"ry1", itoa(rect.Max.Y), A{"class": "panelcfgrect"})
+			s += "</div>"
+		}
+		s += guiHtmlButton(pid+"save", "Save")
+		s += guiHtmlButton(pid+"reset", "Reset")
 		s += "</div>"
 		s += "</td></tr></table>"
 		pidx++
@@ -131,6 +146,29 @@ func guiHtmlList(name string, noneItemFirst string, numItems int, getItem func(i
 		s += ">" + hEsc(caption) + "</option>"
 	}
 	s += "</select>"
+	return s
+}
+
+func guiHtmlButton(id string, text string) string {
+	s := "<button id='" + hEsc(id) + "'>" + hEsc(text) + "</button>"
+	return s
+}
+
+func guiHtmlInput(inputType string, id string, value string, attrs map[string]string) string {
+	s := "<input name='" + hEsc(id) + "' id='" + hEsc(id) + "' type='" + hEsc(inputType) + "' value='" + hEsc(value) + "'"
+	if inputType == "textarea" {
+		s = "<textarea name='" + hEsc(id) + "' id='" + hEsc(id) + "'"
+	}
+	if attrs != nil {
+		for k, v := range attrs {
+			s += " " + hEsc(k) + "='" + hEsc(v) + "'"
+		}
+	}
+	if inputType == "textarea" {
+		s += ">" + hEsc(value) + "</textarea>"
+	} else {
+		s += "/>"
+	}
 	return s
 }
 

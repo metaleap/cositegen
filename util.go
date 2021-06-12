@@ -13,6 +13,7 @@ import (
 )
 
 type Any = interface{}
+type A = map[string]string
 
 var itoa = strconv.Itoa
 

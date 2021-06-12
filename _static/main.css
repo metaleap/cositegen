@@ -15,14 +15,13 @@ div.fullsheet img {
 }
 
 div.notice {
-    background-color: gold;
+    background-color: navajowhite;
     padding: 0.22em;
     margin-bottom: 0.44em;
 }
 
 div.panel {
     display: block;
-    background-color: gold;
 }
 
 div.panel div {
@@ -31,6 +30,24 @@ div.panel div {
     background-repeat: no-repeat;
 }
 
+.col0 { background-color: darkorange; }
+.col1 { background-color: chocolate; }
+.col2 { background-color: darkseagreen; }
+.col3 { background-color: deepskyblue; }
+.col4 { background-color: lightblue; }
+.col5 { background-color: lightgreen; }
+.col6 { background-color: palevioletred; }
+.col7 { background-color: gold; }
+
 div.panelcfg {
-    background-color: #aba4a0;
+    padding: 1em;
+    background-color: #dbd4d0;
+}
+
+textarea.panelcfgtext {
+    width: 99%;
+}
+
+input.panelcfgrect {
+    width: 5em;
 }
