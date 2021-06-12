@@ -82,13 +82,28 @@ func guiSheet(sv *SheetVer) string {
 		return
 	}
 	s += "<h3>Sheet Panels Structure:</h3><div>" + panelstree(sv.meta.PanelsTree) + "</div>"
-	pidx := 0
+	pidx, maxwidth, zoomdiv := 0, 0, 1
+	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
+		if w := panel.Rect.Max.X - panel.Rect.Min.X; w > maxwidth {
+			maxwidth = w
+		}
+	})
+	if wmax := 1500; maxwidth > wmax {
+
+	}
 	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
 		rect := panel.Rect
-		style := `background-image: url("` + sv.meta.bwFilePath + `");`
-		style += `width: ` + itoa(rect.Max.X-rect.Min.X) + `px; height: ` + itoa(rect.Max.Y-rect.Min.Y) + `px;`
+		w, h := rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y
 		s += "<h3>Panel #" + itoa(pidx+1) + "</h3>"
-		s += "<div class='.panel' style='" + style + "'></div>"
+		if wmax := 1000; w > wmax {
+			d := float64(w) / float64(wmax)
+			// zoom := 100.0 / (float64(w) / float64(wmax))
+			w, h = int(float64(w)/d), int(float64(h)/d)
+		}
+		style := `background-image: url("x` + sv.meta.bwFilePath + `");`
+		style += `width: ` + itoa(w) + `px; height: ` + itoa(h) + `px;`
+		style += `background-position: -` + itoa(rect.Min.X) + `px -` + itoa(rect.Min.Y) + `px;`
+		s += "<div class='panel' style='" + style + "'></div>"
 		s += rect.String()
 		pidx++
 	})

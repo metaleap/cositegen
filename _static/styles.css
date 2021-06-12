@@ -14,3 +14,10 @@ img {
     padding: 0.22em;
     margin-bottom: 0.44em;
 }
+
+.panel {
+    display: block;
+    padding: 1em;
+    background-color: red;
+    background-repeat: no-repeat;
+}
