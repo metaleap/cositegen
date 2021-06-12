@@ -10,12 +10,13 @@ import (
 )
 
 type ImgPanel struct {
-	SubCols []ImgPanel `json:",omitempty"`
-	SubRows []ImgPanel `json:",omitempty"`
 	Rect    image.Rectangle
+	SubRows []ImgPanel `json:",omitempty"`
+	SubCols []ImgPanel `json:",omitempty"`
 }
 
 func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
+	cm := srcImg.Rect.Max.Y / 21
 	var detectRows, detectCols func(image.Rectangle) []image.Rectangle
 
 	detectRows = func(area image.Rectangle) (ret []image.Rectangle) {
@@ -23,7 +24,7 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 		for py := area.Min.Y; py < area.Max.Y; py++ {
 			isfullsep := true
 			for px := area.Min.X; px < area.Max.X; px++ {
-				if col := srcImg.At(px, py).(*color.Gray); col.Y != 0 {
+				if col := srcImg.At(px, py).(color.Gray); col.Y != 0 {
 					isfullsep = false
 					break
 				}
@@ -38,10 +39,14 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 		if laststart != -1 {
 			seps = append(seps, [2]int{laststart, area.Max.Y})
 		}
-		// for _, sep := range seps {
-		// ret = append(ret, image.Rect(area.Min.X,area))
-		// }
-
+		var prevmid int
+		for _, sep := range seps {
+			mid := sep[0] + ((sep[1] - sep[0]) / 2)
+			if mid-prevmid > cm {
+				ret = append(ret, image.Rect(area.Min.X, prevmid, area.Max.X, mid))
+			}
+			prevmid = mid
+		}
 		return
 	}
 

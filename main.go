@@ -12,6 +12,7 @@ func main() {
 	appInit()
 	go httpListenAndServe()
 	go launchKioskyBrowser()
+	go appBackgroundWork()
 	for !App.Gui.BrowserClosed {
 		time.Sleep(time.Second)
 	}

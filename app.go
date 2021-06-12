@@ -34,7 +34,6 @@ func appInit() {
 	App.Gui.State.Sel.Sheet = nil
 	App.Gui.State.Sel.Series = nil
 	App.Proj.load()
-	go appBackgroundWork()
 }
 
 func appOnExit() {

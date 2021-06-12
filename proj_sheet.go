@@ -20,7 +20,8 @@ func (me *Sheet) String() string        { return me.name }
 type SheetVerMeta struct {
 	dirPath string
 
-	Panels *ImgPanel `json:",omitempty"`
+	SrcFilePath string
+	Panels      *ImgPanel `json:",omitempty"`
 }
 
 type SheetVer struct {
@@ -68,7 +69,7 @@ func (me *SheetVer) ensure(removeFromWorkQueue bool) {
 	}
 	if me.meta == nil {
 		shouldsaveprojmeta = true
-		me.meta = &SheetVerMeta{}
+		me.meta = &SheetVerMeta{SrcFilePath: me.fileName}
 		App.Proj.meta.SheetVer[curhash] = me.meta
 	}
 	me.meta.dirPath = filepath.Join(".csg_meta", curhash)
@@ -105,6 +106,7 @@ func (me *SheetVer) ensurePanels() bool {
 		} else {
 			imgpanel := imgPanels(file, file.Close)
 			me.meta.Panels = &imgpanel
+			printLn("\t\tR:" + strconv.Itoa(len(imgpanel.SubRows)) + ", C:" + strconv.Itoa(len(imgpanel.SubCols)))
 			return true
 		}
 	}
