@@ -11,15 +11,17 @@ var App struct {
 	Proj               Project
 	BgWork             struct {
 		sync.Mutex
-		Queue []*SheetVersion
+		Queue []*SheetVer
 	}
 	Gui struct {
 		BrowserClosed bool
 		State         struct {
-			SelectedSeries  *Series
-			SelectedChapter *Chapter
-			SelectedSheet   *Sheet
-			SelectedVersion *SheetVersion
+			Sel struct {
+				Series  *Series
+				Chapter *Chapter
+				Sheet   *Sheet
+				Ver     *SheetVer
+			}
 		}
 	}
 }
@@ -28,9 +30,9 @@ func appInit() {
 	App.StaticFilesDirPath = filepath.Join(os.Getenv("HOME"), "c/go/src/github.com/metaleap/cositegen/_static")
 	mkDir(".csg_meta")
 	mkDir(".csg_build")
-	App.Gui.State.SelectedChapter = nil
-	App.Gui.State.SelectedSheet = nil
-	App.Gui.State.SelectedSeries = nil
+	App.Gui.State.Sel.Chapter = nil
+	App.Gui.State.Sel.Sheet = nil
+	App.Gui.State.Sel.Series = nil
 	App.Proj.load()
 	go appBackgroundWork()
 }
@@ -60,7 +62,7 @@ func appBackgroundWork() {
 		App.BgWork.Queue = App.BgWork.Queue[1:]
 		App.BgWork.Unlock()
 		printLn("Background processing: " + job.fileName + "...")
-		job.ensureFullMeta(false)
+		job.ensure(false)
 	}
 	printLn("Background processings complete.")
 }

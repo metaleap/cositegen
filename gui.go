@@ -17,30 +17,30 @@ func guiMain(r *http.Request, notice string) []byte {
 		s += "<div class='notice'>" + hEsc(notice) + "</div>"
 	}
 
-	App.Gui.State.SelectedSeries, _ = guiGetFormSel(rVal("series"), &App.Proj).(*Series)
+	App.Gui.State.Sel.Series, _ = guiGetFormSel(rVal("series"), &App.Proj).(*Series)
 	s += guiHtmlList("series", "(Series)", len(App.Proj.Series), func(i int) (string, string, bool) {
-		return App.Proj.Series[i].Name, App.Proj.Series[i].Title, App.Gui.State.SelectedSeries != nil && App.Proj.Series[i].Name == App.Gui.State.SelectedSeries.Name
+		return App.Proj.Series[i].Name, App.Proj.Series[i].Title, App.Gui.State.Sel.Series != nil && App.Proj.Series[i].Name == App.Gui.State.Sel.Series.Name
 	})
 
-	if series := App.Gui.State.SelectedSeries; series != nil {
-		App.Gui.State.SelectedChapter, _ = guiGetFormSel(rVal("chapter"), series).(*Chapter)
+	if series := App.Gui.State.Sel.Series; series != nil {
+		App.Gui.State.Sel.Chapter, _ = guiGetFormSel(rVal("chapter"), series).(*Chapter)
 		s += guiHtmlList("chapter", "(Chapters)", len(series.Chapters), func(i int) (string, string, bool) {
 			chapter := series.Chapters[i]
-			return chapter.Name, chapter.Title, App.Gui.State.SelectedChapter != nil && App.Gui.State.SelectedChapter.Name == chapter.Name
+			return chapter.Name, chapter.Title, App.Gui.State.Sel.Chapter != nil && App.Gui.State.Sel.Chapter.Name == chapter.Name
 		})
-		if chapter := App.Gui.State.SelectedChapter; chapter != nil {
-			App.Gui.State.SelectedSheet, _ = guiGetFormSel(rVal("sheet"), chapter).(*Sheet)
+		if chapter := App.Gui.State.Sel.Chapter; chapter != nil {
+			App.Gui.State.Sel.Sheet, _ = guiGetFormSel(rVal("sheet"), chapter).(*Sheet)
 			s += guiHtmlList("sheet", "(Sheets)", len(chapter.sheets), func(i int) (string, string, bool) {
 				sheet := chapter.sheets[i]
-				return sheet.name, sheet.name, App.Gui.State.SelectedSheet != nil && App.Gui.State.SelectedSheet.name == sheet.name
+				return sheet.name, sheet.name, App.Gui.State.Sel.Sheet != nil && App.Gui.State.Sel.Sheet.name == sheet.name
 			})
-			if sheet := App.Gui.State.SelectedSheet; sheet != nil {
-				App.Gui.State.SelectedVersion, _ = guiGetFormSel(rVal("sheetver"), sheet).(*SheetVersion)
+			if sheet := App.Gui.State.Sel.Sheet; sheet != nil {
+				App.Gui.State.Sel.Ver, _ = guiGetFormSel(rVal("sheetver"), sheet).(*SheetVer)
 				s += guiHtmlList("sheetver", "(Versions)", len(sheet.versions), func(i int) (string, string, bool) {
 					sheetver := sheet.versions[i]
-					return sheetver.fileName, sheetver.name, App.Gui.State.SelectedVersion != nil && App.Gui.State.SelectedVersion.fileName == sheetver.fileName
+					return sheetver.fileName, sheetver.name, App.Gui.State.Sel.Ver != nil && App.Gui.State.Sel.Ver.fileName == sheetver.fileName
 				})
-				if sheetver := App.Gui.State.SelectedVersion; sheetver != nil {
+				if sheetver := App.Gui.State.Sel.Ver; sheetver != nil {
 					s += guiSheet(sheetver)
 				}
 			}
@@ -58,8 +58,8 @@ func guiMain(r *http.Request, notice string) []byte {
 	return []byte(s)
 }
 
-func guiSheet(sv *SheetVersion) string {
-	sv.ensureFullMeta(true)
+func guiSheet(sv *SheetVer) string {
+	sv.ensure(true)
 	s := "<hr/>" + guiHtmlImg("/"+sv.fileName)
 	return s
 }

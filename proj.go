@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -14,6 +15,7 @@ type Project struct {
 
 	meta struct {
 		ContentHashes map[string]string
+		SheetVer      map[string]*SheetVerMeta
 	}
 }
 
@@ -55,6 +57,16 @@ func (me *Project) load() {
 	if me.meta.ContentHashes == nil {
 		me.meta.ContentHashes = map[string]string{}
 	}
+	if me.meta.SheetVer == nil {
+		me.meta.SheetVer = map[string]*SheetVerMeta{}
+	}
+	for filename, contenthash := range me.meta.ContentHashes {
+		if fileinfo, err := os.Stat(filename); err != nil || fileinfo.IsDir() {
+			delete(me.meta.SheetVer, contenthash)
+			_ = os.RemoveAll(filepath.Join(".csg_meta", contenthash))
+			delete(me.meta.ContentHashes, filename)
+		}
+	}
 	for _, series := range me.Series {
 		series.dirPath = series.Name
 		for _, chapter := range series.Chapters {
@@ -94,7 +106,7 @@ func (me *Project) load() {
 							panic("ASSERT")
 						}
 					}
-					sheetver := &SheetVersion{name: versionname, parent: sheet, fileName: fname}
+					sheetver := &SheetVer{name: versionname, parent: sheet, fileName: fname}
 					sheet.versions = append(sheet.versions, sheetver)
 					App.BgWork.Queue = append(App.BgWork.Queue, sheetver)
 				}
