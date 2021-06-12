@@ -53,7 +53,7 @@ func guiMain(r *http.Request, notice string) []byte {
 
 	s += "</form></body>"
 	if rVal("main_focus_id") != "main_action" && notice == "" {
-		s += "<script type='text/javascript'>try { document.getElementById(\"" + rVal("main_focus_id") + "\").focus(); } catch (ignore) {}</script></html>"
+		s += "<script language='javascript' type='text/javascript'>try { document.getElementById(\"" + rVal("main_focus_id") + "\").focus(); } catch (ignore) {}</script></html>"
 	}
 	return []byte(s)
 }
@@ -82,12 +82,14 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 		return
 	}
 	s += "<h3>Sheet Panels Structure:</h3><ul><li>Sheet:" + sv.meta.PanelsTree.Rect.String() + panelstree(sv.meta.PanelsTree) + "</li></ul>"
-	pidx, maxwidth, zoom := 0, 0, 100
+	pidx, numpanels, maxwidth, zoom := 0, 0, 0, 100
 	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
+		numpanels++
 		if w := panel.Rect.Max.X - panel.Rect.Min.X; w > maxwidth {
 			maxwidth = w
 		}
 	})
+	jsrefr := "refreshPanelRects(" + itoa(numpanels) + ", " + itoa(MaxImagePanelAreas) + ");"
 	if wmax := 700; maxwidth > wmax {
 		zoomdiv := float64(maxwidth) / float64(wmax)
 		zoom = int(100.0 / zoomdiv)
@@ -98,15 +100,6 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
 		rect, pid := panel.Rect, "p"+itoa(pidx)
 		w, h := rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y
-		s += "<h3>Panel #" + itoa(pidx+1) + "</h3><div>" + rect.String() + "</div>"
-
-		style := `background-image: url("/` + sv.meta.bwSmallFilePath + `");`
-		style += `background-size: ` + itoa(sv.meta.PanelsTree.Rect.Max.X-sv.meta.PanelsTree.Rect.Min.X) + `px ` + itoa(sv.meta.PanelsTree.Rect.Max.Y-sv.meta.PanelsTree.Rect.Min.Y) + `px;`
-		style += `width: ` + itoa(w) + `px; height: ` + itoa(h) + `px;`
-		style += `background-position: -` + itoa(rect.Min.X) + `px -` + itoa(rect.Min.Y) + `px;`
-		s += "<table><tr><td>"
-		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;' onclick='toggle(\"" + pid + "cfg\")'><div style='" + style + "'></div></div>"
-		s += "</td><td>"
 		cfgdisplay := "none"
 		if shouldSaveMeta {
 			panel.Areas, cfgdisplay = nil, "block"
@@ -130,6 +123,18 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 				}
 			}
 		}
+		s += "<h3>Panel #" + itoa(pidx+1) + "</h3><div>" + rect.String() + "</div>"
+
+		s += "<table><tr><td>"
+		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;' onclick='toggle(\"" + pid + "cfg\")'>"
+		style := `width: ` + itoa(w) + `px; height: ` + itoa(h) + `px;`
+		s += "<div style='position:relative; " + style + "'>"
+		style += `background-image: url("/` + sv.meta.bwSmallFilePath + `");`
+		style += `background-size: ` + itoa(sv.meta.PanelsTree.Rect.Max.X-sv.meta.PanelsTree.Rect.Min.X) + `px ` + itoa(sv.meta.PanelsTree.Rect.Max.Y-sv.meta.PanelsTree.Rect.Min.Y) + `px;`
+		style += `background-position: -` + itoa(rect.Min.X) + `px -` + itoa(rect.Min.Y) + `px;`
+		s += "<div class='panelpic' style='" + style + "'></div><span id='" + pid + "rects'></span>"
+		s += "</div></div></td><td>"
+
 		s += "<div class='panelcfg' id='" + pid + "cfg' style='display:" + cfgdisplay + ";'>"
 		for i := 0; i < MaxImagePanelAreas; i++ {
 			area := ImgPanelArea{Data: A{}}
@@ -140,11 +145,11 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+ptk, area.Data[ptk], A{"placeholder": ptk, "class": "panelcfgtext col" + itoa(i)}) + "</div><div>"
 			}
 			s += "X,Y:"
-			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx0", itoa(area.Rect.Min.X), A{"class": "panelcfgrect", "min": itoa(panel.Rect.Min.X), "max": itoa(panel.Rect.Max.X)})
-			s += guiHtmlInput("number", pid+"t"+itoa(i)+"ry0", itoa(area.Rect.Min.Y), A{"class": "panelcfgrect", "min": itoa(panel.Rect.Min.Y), "max": itoa(panel.Rect.Max.Y)})
+			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx0", itoa(area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.X), "max": itoa(panel.Rect.Max.X)})
+			s += guiHtmlInput("number", pid+"t"+itoa(i)+"ry0", itoa(area.Rect.Min.Y), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.Y), "max": itoa(panel.Rect.Max.Y)})
 			s += "X,Y:"
-			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx1", itoa(area.Rect.Max.X), A{"class": "panelcfgrect", "min": itoa(panel.Rect.Min.X), "max": itoa(panel.Rect.Max.X)})
-			s += guiHtmlInput("number", pid+"t"+itoa(i)+"ry1", itoa(area.Rect.Max.Y), A{"class": "panelcfgrect", "min": itoa(panel.Rect.Min.Y), "max": itoa(panel.Rect.Max.Y)})
+			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx1", itoa(area.Rect.Max.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.X), "max": itoa(panel.Rect.Max.X)})
+			s += guiHtmlInput("number", pid+"t"+itoa(i)+"ry1", itoa(area.Rect.Max.Y), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.Y), "max": itoa(panel.Rect.Max.Y)})
 			s += "</div>"
 		}
 		s += guiHtmlButton(pid+"save", "Save", A{"onclick": "doPostBack(\"" + pid + "save\")"})
@@ -152,5 +157,6 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 		s += "</td></tr></table>"
 		pidx++
 	})
+	s += "<script language='javascript' type='text/javascript'>" + jsrefr + "</script>"
 	return
 }

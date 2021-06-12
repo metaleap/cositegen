@@ -1,6 +1,6 @@
 body {
-    background-color: #cbc4c0;
-    color: #2b2420;
+    background-color: #cfc9c8;
+    color: #2f2928;
     font-family: "Yanone Kaffeesatz", sans-serif;
     margin: 0;
 }
@@ -24,10 +24,19 @@ div.panel {
     display: block;
 }
 
-div.panel div {
-    display: block;
+div.panel .panelpic {
+    position: absolute;
+    top: 0;
+    left: 0;
     background-color: red;
     background-repeat: no-repeat;
+}
+
+div.panel .panelrect {
+    position: absolute;
+    opacity: 0.88;
+    color: #000000;
+    z-index: 9999;
 }
 
 .col0 { background-color: darkorange; }
@@ -41,7 +50,7 @@ div.panel div {
 
 div.panelcfg {
     padding: 1em;
-    background-color: #dbd4d0;
+    background-color: #efe9e8;
 }
 
 textarea.panelcfgtext {
