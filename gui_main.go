@@ -52,8 +52,8 @@ func guiMain(r *http.Request, notice string) []byte {
 	s += "<hr/>" + guiHtmlListFrom("main_action", "(Actions)", A{"regen_site": "ReGen Site"})
 
 	s += "</form></body>"
-	if rVal("main_focus_id") != "main_action" && notice == "" {
-		s += "<script language='javascript' type='text/javascript'>try { document.getElementById(\"" + rVal("main_focus_id") + "\").focus(); } catch (ignore) {}</script></html>"
+	if rfv := rVal("main_focus_id"); rfv != "" && rfv != "main_action" && notice == "" {
+		s += "<script language='javascript' type='text/javascript'>try { document.getElementById(\"" + rfv + "\").focus(); } catch (ignore) {}</script></html>"
 	}
 	return []byte(s)
 }
@@ -101,7 +101,10 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 		w, h := rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y
 		cfgdisplay := "none"
 		if shouldSaveMeta {
-			panel.Areas, cfgdisplay = nil, "block"
+			panel.Areas = nil
+			if r.FormValue("main_focus_id") == pid+"save" {
+				cfgdisplay = "block"
+			}
 			for i := 0; i < MaxImagePanelAreas; i++ {
 				hastexts, area := false, ImgPanelArea{Data: A{}}
 				for _, ptk := range App.Proj.PanelTextKinds {
@@ -135,7 +138,8 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 		s += "</div></div></td><td>"
 
 		s += "<div class='panelcfg' id='" + pid + "cfg' style='display:" + cfgdisplay + ";'>"
-		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(MaxImagePanelAreas) + ", [\"" + strings.Join(App.Proj.PanelTextKinds, "\", \"") + "\"]);"
+		jsrefr, savebtnhtml := "refreshPanelRects("+itoa(pidx)+", "+itoa(panel.Rect.Min.X)+", "+itoa(panel.Rect.Min.Y)+", "+itoa(MaxImagePanelAreas)+", [\""+strings.Join(App.Proj.PanelTextKinds, "\", \"")+"\"]);", guiHtmlButton(pid+"save", "Save changes (to all texts in all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
+		s += savebtnhtml + "<hr/>"
 		for i := 0; i < MaxImagePanelAreas; i++ {
 			area := ImgPanelArea{Data: A{}}
 			if len(panel.Areas) > i {
@@ -152,7 +156,7 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"ry1", itoa(area.Rect.Max.Y), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.Y), "max": itoa(panel.Rect.Max.Y)})
 			s += "</div>"
 		}
-		s += guiHtmlButton(pid+"save", "Save", A{"onclick": "doPostBack(\"" + pid + "save\")"})
+		s += "<hr/>" + savebtnhtml
 		s += "</div>"
 		s += "</td></tr></table>"
 		s += "<script language='javascript' type='text/javascript'>" + jsrefr + "</script>"
