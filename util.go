@@ -64,14 +64,10 @@ func contentHash(content []byte) []byte {
 	return append(b1[:], b2[:]...)
 }
 
-func jsonLoad(filename string, intoPtr Any, defaultIfNotExist []byte) {
+func jsonLoad(filename string, intoPtr Any) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
-		if defaultIfNotExist != nil && os.IsNotExist(err) {
-			data = defaultIfNotExist
-		} else {
-			panic(err)
-		}
+		panic(err)
 	}
 	if err = json.Unmarshal(data, intoPtr); err != nil {
 		panic(err)

@@ -41,14 +41,14 @@ div.panel .panelrect {
     overflow: hidden;
 }
 
-.col0 { background-color: darkorange; }
+.col0 { background-color: lightblue; }
 .col1 { background-color: chocolate; }
 .col2 { background-color: darkseagreen; }
-.col3 { background-color: deepskyblue; }
-.col4 { background-color: lightblue; }
-.col5 { background-color: lightgreen; }
-.col6 { background-color: palevioletred; }
-.col7 { background-color: gold; }
+.col3 { background-color: darkorange; }
+.col4 { background-color: deepskyblue; }
+.col5 { background-color: gold; }
+.col6 { background-color: lightgreen; }
+.col7 { background-color: palevioletred; }
 
 div.panelcfg {
     padding: 1em;

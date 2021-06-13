@@ -53,9 +53,12 @@ func (me *Project) save() {
 }
 
 func (me *Project) load() {
-	jsonLoad("cosite.json", me, nil) // TODO!!
-	_ = os.Remove(".cosite.json")    // temp
-	jsonLoad(".cosite.json", &me.meta, []byte("{}"))
+	jsonLoad("cosite.json", me)
+	if _, err := os.Stat(".cosite.json"); err == nil {
+		jsonLoad(".cosite.json", &me.meta)
+	} else if !os.IsNotExist(err) {
+		panic(err)
+	}
 	if me.meta.ContentHashes == nil {
 		me.meta.ContentHashes = map[string]string{}
 	}
