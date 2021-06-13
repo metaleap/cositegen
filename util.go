@@ -5,7 +5,6 @@ import (
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"sync"
@@ -37,7 +36,7 @@ func percent(hundred int, val int) int {
 
 func writeFile(fileName string, data []byte) {
 	tmpfilename := fileName + "." + strconv.FormatInt(time.Now().UnixNano(), 36)
-	if err := ioutil.WriteFile(tmpfilename, data, os.ModePerm); err != nil {
+	if err := os.WriteFile(tmpfilename, data, os.ModePerm); err != nil {
 		panic(err)
 	}
 	if err := os.Rename(tmpfilename, fileName); err != nil {
@@ -65,7 +64,7 @@ func contentHash(content []byte) []byte {
 }
 
 func jsonLoad(filename string, intoPtr Any) {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}

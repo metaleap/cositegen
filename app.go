@@ -29,7 +29,6 @@ var App struct {
 func appInit() {
 	App.StaticFilesDirPath = filepath.Join(os.Getenv("HOME"), "c/go/src/github.com/metaleap/cositegen/_static")
 	mkDir(".csg_meta")
-	mkDir(".csg_build")
 	App.Gui.State.Sel.Chapter = nil
 	App.Gui.State.Sel.Sheet = nil
 	App.Gui.State.Sel.Series = nil
@@ -42,12 +41,11 @@ func appOnExit() {
 
 func appMainAction(name string) string {
 	switch name {
-	case "regen_site":
-	default:
-		return "Unknown action: " + name
+	case "sitegen":
+		go siteGen()
+		return "Site rebuild kicked off. Progress printed to stdio. Result opens in new window when done."
 	}
-
-	return ""
+	return "Unknown action: " + name
 }
 
 func appBackgroundWork() {

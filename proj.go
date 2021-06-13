@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -78,7 +77,7 @@ func (me *Project) load() {
 		for _, chapter := range series.Chapters {
 			chapter.dirPath = filepath.Join(series.dirPath, chapter.Name)
 			sheetsdirpath := filepath.Join(chapter.dirPath, "sheets")
-			files, err := ioutil.ReadDir(sheetsdirpath)
+			files, err := os.ReadDir(sheetsdirpath)
 			if err != nil {
 				panic(err)
 			}

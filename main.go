@@ -19,19 +19,24 @@ func main() {
 	appOnExit()
 }
 
+var browserCmd = []string{"", "--new-window", "--single-process", "--user-data-dir=./.csg_gui", "--disable-extensions", "--disk-cache-size=128", "--app=http://localhost:4321"}
+
 func launchKioskyBrowser() {
-	var cmdidx int
-	cmdnames := []string{"chromium", "chromium-browser", "chrome", "google-chrome"}
-	for i, l := 0, len(cmdnames); i < l; i++ {
-		cmdnames = append(cmdnames, cmdnames[i]+"-stable")
-	}
-	for i, cmdname := range cmdnames {
-		if _, nope := exec.LookPath(cmdname); nope == nil {
-			cmdidx = i
-			break
+	{
+		var cmdidx int
+		cmdnames := []string{"chromium", "chromium-browser", "chrome", "google-chrome"}
+		for i, l := 0, len(cmdnames); i < l; i++ {
+			cmdnames = append(cmdnames, cmdnames[i]+"-stable")
 		}
+		for i, cmdname := range cmdnames {
+			if _, nope := exec.LookPath(cmdname); nope == nil {
+				cmdidx = i
+				break
+			}
+		}
+		browserCmd[0] = cmdnames[cmdidx]
 	}
-	cmd := exec.Command(cmdnames[cmdidx], "--new-window", "--single-process", "--user-data-dir=./.csg_gui", "--disable-extensions", "--app=http://localhost:4321", "--disk-cache-size=128")
+	cmd := exec.Command(browserCmd[0], browserCmd[1:]...)
 	if err := cmd.Start(); err != nil {
 		panic(err)
 	}

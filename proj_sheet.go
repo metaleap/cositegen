@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -49,7 +48,7 @@ func (me *SheetVer) ensure(removeFromWorkQueue bool) {
 		App.BgWork.Unlock()
 	}
 
-	data, err := ioutil.ReadFile(me.fileName)
+	data, err := os.ReadFile(me.fileName)
 	if err != nil {
 		panic(err)
 	}

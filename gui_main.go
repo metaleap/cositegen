@@ -50,7 +50,7 @@ func guiMain(r *http.Request, notice string) []byte {
 	}
 
 	s += "<hr/>" + guiHtmlListFrom("main_action", "(Actions)", A{
-		"regen_site": "ReGen Site",
+		"sitegen": "Re-generate site fully",
 	})
 
 	s += "</form></body>"
