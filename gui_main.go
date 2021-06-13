@@ -9,7 +9,7 @@ import (
 
 func guiMain(r *http.Request, notice string) []byte {
 	rVal := r.FormValue
-	s := "<html><head><link rel='stylesheet' href='/main.css'/><script src='/main.js' type='text/javascript' language='javascript'></script>"
+	s := "<!DOCTYPE html><html><head><link rel='stylesheet' type='text/css' href='/main.css'/><script src='/main.js' type='text/javascript' language='javascript'></script>"
 	s += "</head><body><form id='main_form'>" + guiHtmlInput("hidden", "main_focus_id", rVal("main_focus_id"), nil)
 	if notice != "" {
 		s += "<div class='notice'>" + hEsc(notice) + "</div>"
@@ -49,7 +49,9 @@ func guiMain(r *http.Request, notice string) []byte {
 		}
 	}
 
-	s += "<hr/>" + guiHtmlListFrom("main_action", "(Actions)", A{"regen_site": "ReGen Site"})
+	s += "<hr/>" + guiHtmlListFrom("main_action", "(Actions)", A{
+		"regen_site": "ReGen Site",
+	})
 
 	s += "</form></body>"
 	if rfv := rVal("main_focus_id"); rfv != "" && rfv != "main_action" && notice == "" {
