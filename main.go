@@ -65,7 +65,7 @@ func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
 		httpResp.Header().Add("Content-Type", "text/html")
 		var notice string
 		if action := httpReq.FormValue("main_action"); action != "" {
-			if notice = appMainAction(action); notice == "" {
+			if notice = appMainAction(action, ""); notice == "" {
 				notice = "Action '" + action + "' completed successfully."
 			}
 		}

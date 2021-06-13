@@ -39,13 +39,20 @@ func appOnExit() {
 	App.Proj.save()
 }
 
-func appMainAction(name string) string {
+var appMainActions = map[string]bool{}
+
+func appMainAction(name string, arg string) string {
+	if appMainActions[name] {
+		return "Action '" + name + "' already in progress and not yet done."
+	}
+	appMainActions[name] = true
 	switch name {
 	case "sitegen":
-		go siteGen()
-		return "Site rebuild kicked off. Progress printed to stdio. Result opens in new window when done."
+		go func() { defer func() { appMainActions[name] = false }(); siteGen() }()
+	default:
+		return "Unknown action: '" + name + "'"
 	}
-	return "Unknown action: " + name
+	return "Action '" + name + "' kicked off. Progress printed to stdio."
 }
 
 func appBackgroundWork() {
