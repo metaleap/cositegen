@@ -84,7 +84,7 @@ func siteGen() {
 								width := float64(quali) / (float64(sw) / float64(pw))
 								height := width / (float64(pw) / float64(ph))
 								w, h := int(width), int(height)
-								writeFile(".build/img/"+name, imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, 3))
+								writeFile(".build/img/"+name, imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, 3, false))
 								numpngs++
 								printLn("\t", name+" ("+time.Now().Sub(tstart).String()+")")
 								pidx++
