@@ -189,7 +189,7 @@ func sitePrepHomePage(page *PageGen, langId string) {
 }
 
 func sitePrepSheetPage(page *PageGen, langId string, quali int, series *Series, chapter *Chapter, pageNr int) {
-	page.PageContent = ""
+	page.PageContent = "<div class='sheet'><div class='panels'>"
 	var sheets []*Sheet
 	switch chapter.SheetsPerPage {
 	case 0:
@@ -209,35 +209,16 @@ func sitePrepSheetPage(page *PageGen, langId string, quali int, series *Series, 
 			}
 		}
 	}
-	type panelRow struct {
-		sheetVer *SheetVer
-		panels   []*ImgPanel
+	for _, sheet := range sheets {
+		assert(len(sheet.versions) == 1)
+		sheetver := sheet.versions[0]
+		sheetver.ensure(true)
+		pidx := 0
+		sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
+			name := App.Proj.meta.ContentHashes[sheetver.fileName] + "-" + itoa(quali) + "-" + langId + "-" + itoa(pidx)
+			page.PageContent += "<div class='panel'>" + name + "</div>"
+			pidx++
+		})
 	}
-	var rows []panelRow
-	{
-		var currow *panelRow
-		for _, sheet := range sheets {
-			assert(len(sheet.versions) == 1)
-			sv := sheet.versions[0]
-			sv.ensure(true)
-			sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
-				if currow != nil && currow.panels[0].Rect.Min.Y != panel.Rect.Min.Y {
-					currow = nil
-				}
-				if currow == nil {
-					rows = append(rows, panelRow{sheetVer: sv})
-					currow = &rows[len(rows)-1]
-					currow.panels = append(currow.panels, panel)
-				}
-			})
-		}
-	}
-	for _, row := range rows {
-		page.PageContent += "<div class='panelrow'>PANELROW<hr/>"
-		for pidx := range row.panels {
-			name := App.Proj.meta.ContentHashes[row.sheetVer.fileName] + "-" + itoa(quali) + "-" + langId + "-" + itoa(pidx)
-			page.PageContent += "PANEL<b>" + name + "</b>"
-		}
-		page.PageContent += "</div>"
-	}
+	page.PageContent += "</div></div>"
 }
