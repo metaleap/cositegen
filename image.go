@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"image"
 	"image/color"
 	_ "image/jpeg"
@@ -108,22 +109,35 @@ func imgSvg(srcImg *image.Gray, srcImgRect image.Rectangle, width int, height in
 	origwidth, origheight := srcImgRect.Max.X-srcImgRect.Min.X, srcImgRect.Max.Y-srcImgRect.Min.Y
 	assert(((width < origwidth) == (height < origheight)) &&
 		((width > origwidth) == (height > origheight)))
-	var imgresult image.Image
+	var imgdst draw.Image
 	if isnoresize := width > origwidth; isnoresize {
 		width, height = origwidth, origheight
-		imgresult = srcImg.SubImage(srcImgRect)
+		imgdst = srcImg.SubImage(srcImgRect).(draw.Image)
 	} else {
-		imgresult = image.NewGray(image.Rect(0, 0, width, height))
-		draw.ApproxBiLinear.Scale(imgresult.(draw.Image), imgresult.Bounds(), srcImg, srcImgRect, draw.Over, nil)
+		imgdst = image.NewGray(image.Rect(0, 0, width, height))
+		draw.ApproxBiLinear.Scale(imgdst, imgdst.Bounds(), srcImg, srcImgRect, draw.Over, nil)
+	}
+	border := 11
+	for px := 0; px < width; px++ {
+		for i := 0; i < border; i++ {
+			imgdst.Set(px, i, color.Black)
+			imgdst.Set(px, height-(i+1), color.Black)
+		}
+	}
+	for py := 0; py < height; py++ {
+		for i := 0; i < border; i++ {
+			imgdst.Set(i, py, color.Black)
+			imgdst.Set(width-(i+1), py, color.Black)
+		}
 	}
 	var buf bytes.Buffer
-	if err := png.Encode(&buf, imgresult); err != nil {
+	if err := png.Encode(&buf, imgdst); err != nil {
 		panic(err)
 	}
 
 	svgXml = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
 	svgXml += `<image width="` + itoa(width) + `" height="` + itoa(height) + `" xlink:href="data:image/png;base64,`
-
+	svgXml += base64.StdEncoding.EncodeToString(buf.Bytes())
 	svgXml += `"/></svg>`
 	return
 }
