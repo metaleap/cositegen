@@ -76,7 +76,7 @@ func siteGen() {
 					for lidx, lang := range App.Proj.Langs {
 						for _, quali := range App.Proj.Qualis {
 							work.Add(1)
-							func(lidx int, langName string, quali int) {
+							go func(lidx int, langName string, quali int) {
 								var pidx int
 								sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
 									if lidx == 0 || panel.HasAny(langName) {
