@@ -104,10 +104,25 @@ func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessT
 	return pngbuf.Bytes()
 }
 
-func imgSvg(srcImg *image.Gray, srcImgRect image.Rectangle, width int) (svgXml string) {
-	var newheight int
+func imgSvg(srcImg *image.Gray, srcImgRect image.Rectangle, width int, height int) (svgXml string) {
+	origwidth, origheight := srcImgRect.Max.X-srcImgRect.Min.X, srcImgRect.Max.Y-srcImgRect.Min.Y
+	assert(((width < origwidth) == (height < origheight)) &&
+		((width > origwidth) == (height > origheight)))
+	var imgresult image.Image
+	if isnoresize := width > origwidth; isnoresize {
+		width, height = origwidth, origheight
+		imgresult = srcImg.SubImage(srcImgRect)
+	} else {
+		imgresult = image.NewGray(image.Rect(0, 0, width, height))
+		draw.ApproxBiLinear.Scale(imgresult.(draw.Image), imgresult.Bounds(), srcImg, srcImgRect, draw.Over, nil)
+	}
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, imgresult); err != nil {
+		panic(err)
+	}
+
 	svgXml = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
-	svgXml += `<image width="` + itoa(width) + `" height="` + itoa(newheight) + `" xlink:href="data:image/png;base64,`
+	svgXml += `<image width="` + itoa(width) + `" height="` + itoa(height) + `" xlink:href="data:image/png;base64,`
 
 	svgXml += `"/></svg>`
 	return
