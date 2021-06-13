@@ -48,6 +48,10 @@ func siteGen() {
 		}
 	}
 
+	{
+		printLn("SiteGen: generating PNGs & SVGs...")
+	}
+
 	printLn("SiteGen: generating HTML files...")
 	tmpl, err := template.New("foo").ParseFiles("_sitetmpl/_tmpl.html")
 	if err != nil {
@@ -68,11 +72,8 @@ func siteGen() {
 		}
 	}
 
-	printLn("SiteGen: generating PNGs & SVGs...")
-
 	printLn("SiteGen: DONE!")
 	browserCmd[len(browserCmd)-1] = "--app=file://" + os.Getenv("PWD") + "/.build/index.html"
-	printLn(browserCmd)
 	cmd := exec.Command(browserCmd[0], browserCmd[1:]...)
 	if err := cmd.Run(); err != nil {
 		printLn(err)
@@ -83,27 +84,33 @@ func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, lan
 	assert((series == nil) == (chapter == nil))
 
 	name, page := "index", PageGen{
-		SiteTitle:   hEsc(App.Proj.Title),
-		SiteDesc:    hEsc(App.Proj.Desc[langId]),
-		PageTitle:   hEsc(siteGenTextStr("HomeTitle", langId)),
-		PageDesc:    hEsc(siteGenTextStr("HomeDesc", langId)),
-		PageContent: hEsc("Page contents..."),
-		FooterHtml:  siteGenTextStr("FooterHtml", langId),
-	}
-	if page.SiteDesc == "" && langId != App.Proj.Langs[0].Name {
-		page.SiteDesc = App.Proj.Desc[App.Proj.Langs[0].Name]
+		SiteTitle:  hEsc(App.Proj.Title),
+		SiteDesc:   hEsc(siteGenLocStr(App.Proj.Desc, langId)),
+		FooterHtml: siteGenTextStr("FooterHtml", langId),
 	}
 	if langId != App.Proj.Langs[0].Name {
 		name += "-" + langId
 	}
 
 	if series == nil && chapter == nil {
+		page.PageTitle = hEsc(siteGenTextStr("HomeTitle", langId))
+		page.PageDesc = hEsc(siteGenTextStr("HomeDesc", langId))
+		siteGenHomePage(&page, langId)
 		siteGenPageExecAndWrite(tmpl, name, langId, &page)
 	} else {
+		var authorinfo string
+		if series.Author != "" {
+			authorinfo = " (Story: © " + series.Author + ")"
+		}
+		page.PageTitle = hEsc(siteGenLocStr(series.Title, langId)) + ": " + hEsc(siteGenLocStr(chapter.Title, langId))
+		page.PageDesc = hEsc(siteGenLocStr(series.Desc, langId) + authorinfo)
+		siteGenSheetPage(&page, langId)
 		for _, quali := range App.Proj.Qualis {
 			name = series.Name + "-" + chapter.Name + "-" + quali.Name
 			if pageNumber != 0 {
 				name += "-p" + itoa(pageNumber)
+			} else {
+				name += "-p1"
 			}
 			name += "-" + langId
 
@@ -149,6 +156,13 @@ func siteGenPageExecAndWrite(tmpl *template.Template, name string, langId string
 	writeFile(".build/"+strings.ToLower(name)+".html", buf.Bytes())
 }
 
+func siteGenLocStr(m map[string]string, langId string) (s string) {
+	if s = m[langId]; s == "" {
+		s = m[App.Proj.Langs[0].Name]
+	}
+	return s
+}
+
 func siteGenTextStr(key string, langId string) (s string) {
 	if s = App.Proj.PageContentTexts[langId][key]; s == "" {
 		if s = App.Proj.PageContentTexts[App.Proj.Langs[0].Name][key]; s == "" {
@@ -156,4 +170,24 @@ func siteGenTextStr(key string, langId string) (s string) {
 		}
 	}
 	return s
+}
+
+func siteGenHomePage(page *PageGen, langId string) {
+	page.PageContent = ""
+	for _, series := range App.Proj.Series {
+		var authordiv string
+		if series.Author != "" {
+			authordiv = "<div class='series'>(Story: &copy; " + series.Author + ")</div>"
+		}
+		page.PageContent += "<h5 class='series'>" + hEsc(siteGenLocStr(series.Title, langId)) + "</h5><div class='series'>" + hEsc(siteGenLocStr(series.Desc, langId)) + "</div>" + authordiv
+		page.PageContent += "<ul class='series'>"
+		for _, chapter := range series.Chapters {
+			page.PageContent += "<li class='chapter'><a href='./" + series.Name + "-" + chapter.Name + "-fhd-p1-" + langId + ".html'>" + hEsc(siteGenLocStr(chapter.Title, langId)) + "</a></li>"
+		}
+		page.PageContent += "</ul>"
+	}
+}
+
+func siteGenSheetPage(page *PageGen, langId string) {
+	page.PageContent = "sheet page"
 }

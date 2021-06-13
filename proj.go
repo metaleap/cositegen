@@ -35,6 +35,7 @@ type Series struct {
 	Name     string
 	Title    map[string]string
 	Desc     map[string]string
+	Author   string
 	Chapters []*Chapter
 
 	dirPath string
