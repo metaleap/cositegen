@@ -15,7 +15,7 @@ type PageGen struct {
 	PageTitle   string
 	PageDesc    string
 	LangsList   string
-	QualiList   string
+	QualList    string
 	PagesList   string
 	PageContent string
 	FooterHtml  string
@@ -117,16 +117,16 @@ func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, lan
 			}
 			name += "-" + langId
 
-			page.QualiList = ""
+			page.QualList = ""
 			for _, q := range App.Proj.Qualis {
 				href := strings.Replace(name, "-"+quali.Name+"-", "-"+q.Name+"-", 1)
-				page.QualiList += "<option value='" + strings.ToLower(href) + "'"
+				page.QualList += "<option value='" + strings.ToLower(href) + "'"
 				if q.Name == quali.Name {
-					page.QualiList += " selected='selected'"
+					page.QualList += " selected='selected'"
 				}
-				page.QualiList += ">" + q.Name + "</option>"
+				page.QualList += ">" + q.Name + "</option>"
 			}
-			page.QualiList = "<select name='" + App.Proj.Html.IdQualiList + "' id='" + App.Proj.Html.IdQualiList + "'>" + page.QualiList + "</select>"
+			page.QualList = "<select name='" + App.Proj.Html.IdQualiList + "' id='" + App.Proj.Html.IdQualiList + "'>" + page.QualList + "</select>"
 
 			sitePrepSheetPage(&page, langId, qidx, series, chapter, pageNr)
 			siteGenPageExecAndWrite(tmpl, name, langId, &page)
@@ -251,27 +251,24 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 	iter = func(sheetVer *SheetVer, panel *ImgPanel) (s string) {
 		assert(len(panel.SubCols) == 0 || len(panel.SubRows) == 0)
 		if len(panel.SubRows) > 0 {
-			s += "<div class='trows'>"
+			s += "<div class='" + App.Proj.Html.ClsPanelRows + "'>"
 			for i := range panel.SubRows {
-				s += "<div class='trow'>" + iter(sheetVer, &panel.SubRows[i]) + "</div>"
+				s += "<div class='" + App.Proj.Html.ClsPanelRow + "'>" + iter(sheetVer, &panel.SubRows[i]) + "</div>"
 			}
 			s += "</div>"
 		} else if len(panel.SubCols) > 0 {
-			s += "<div class='tcols'>"
+			s += "<div class='" + App.Proj.Html.ClsPanelCols + "'>"
 			for i := range panel.SubCols {
 				sc := &panel.SubCols[i]
 				pw := sc.Rect.Max.X - sc.Rect.Min.X
 				sw := sheetVer.meta.PanelsTree.Rect.Max.X - sheetVer.meta.PanelsTree.Rect.Min.X
 				pp := int(99.0 / (float64(sw) / float64(pw)))
-				s += "<div class='tcol' style='width: " + itoa(pp) + "%'>" + iter(sheetVer, sc) + "</div>"
+				s += "<div class='" + App.Proj.Html.ClsPanelCol + "' style='width: " + itoa(pp) + "%'>" + iter(sheetVer, sc) + "</div>"
 			}
 			s += "</div>"
 		} else {
 			name := strings.ToLower(App.Proj.meta.ContentHashes[sheetVer.fileName] + "-" + quali.Name + "-" + langId + "-" + itoa(pidx))
-			// 		page.PageContent += "<div style='width: " + itoa(pp) + "%;' class='" + App.Proj.Html.ClsPanel + "'>"
-			// 		page.PageContent += "<img alt='" + name + "' title='" + name + "' src='../.csg_meta/" + App.Proj.meta.ContentHashes[sheetver.fileName] + "/bwsmall.png'/>"
-			// 		page.PageContent += "</div>"
-			s += "<div class='tp'><img alt='" + name + "' title='" + name + "' src='../.csg_meta/" + App.Proj.meta.ContentHashes[sheetVer.fileName] + "/bwsmall.png'/></div>"
+			s += "<div class='" + App.Proj.Html.ClsPanel + "'><img alt='" + name + "' title='" + name + "' src='../.csg_meta/" + App.Proj.meta.ContentHashes[sheetVer.fileName] + "/bwsmall.png'/></div>"
 			pidx++
 		}
 		return

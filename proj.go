@@ -22,12 +22,14 @@ type Project struct {
 	MaxImagePanelTextAreas int
 	PageContentTexts       map[string]map[string]string
 	Html                   struct {
-		IdQualiList string
-		ClsSeries   string
-		ClsChapter  string
-		ClsSheet    string
-		ClsPanels   string
-		ClsPanel    string
+		IdQualiList  string
+		ClsSeries    string
+		ClsChapter   string
+		ClsPanelCols string
+		ClsPanelCol  string
+		ClsPanelRows string
+		ClsPanelRow  string
+		ClsPanel     string
 	}
 
 	meta struct {
