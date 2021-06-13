@@ -117,17 +117,17 @@ func imgSvg(srcImg *image.Gray, srcImgRect image.Rectangle, width int, height in
 		imgdst = image.NewGray(image.Rect(0, 0, width, height))
 		draw.ApproxBiLinear.Scale(imgdst, imgdst.Bounds(), srcImg, srcImgRect, draw.Over, nil)
 	}
-	border := 11
-	for px := 0; px < width; px++ {
+	border := 3
+	for px := imgdst.Bounds().Min.X; px < imgdst.Bounds().Max.X; px++ {
 		for i := 0; i < border; i++ {
-			imgdst.Set(px, i, color.Black)
-			imgdst.Set(px, height-(i+1), color.Black)
+			imgdst.Set(px, imgdst.Bounds().Min.Y+i, color.Black)
+			imgdst.Set(px, imgdst.Bounds().Max.Y-(i+1), color.Black)
 		}
 	}
-	for py := 0; py < height; py++ {
+	for py := imgdst.Bounds().Min.Y; py < imgdst.Bounds().Max.Y; py++ {
 		for i := 0; i < border; i++ {
-			imgdst.Set(i, py, color.Black)
-			imgdst.Set(width-(i+1), py, color.Black)
+			imgdst.Set(imgdst.Bounds().Min.X+i, py, color.Black)
+			imgdst.Set(imgdst.Bounds().Max.X-(i+1), py, color.Black)
 		}
 	}
 	var buf bytes.Buffer
