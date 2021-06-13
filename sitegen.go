@@ -55,25 +55,25 @@ func siteGen() {
 	}
 
 	numsvgs, tstartsvgs := 0, time.Now()
-	for lidx, lang := range App.Proj.Langs {
-		for _, quali := range App.Proj.Qualis {
-			printLn("SiteGen: generating " + lang.Title + " " + quali.Name + " SVGs...")
-			for _, series := range App.Proj.Series {
-				for _, chapter := range series.Chapters {
-					for _, sheet := range chapter.sheets {
-						for _, sheetver := range sheet.versions {
-							sheetver.ensure(true)
-							pidx := 0
-							srcimgfile, err := os.Open(sheetver.meta.bwFilePath)
-							if err != nil {
-								panic(err)
-							}
-							imgsrc, _, err := image.Decode(srcimgfile)
-							if err != nil {
-								panic(err)
-							}
-							_ = srcimgfile.Close()
+	printLn("SiteGen: generating SVGs...")
+	for _, series := range App.Proj.Series {
+		for _, chapter := range series.Chapters {
+			for _, sheet := range chapter.sheets {
+				for _, sheetver := range sheet.versions {
+					sheetver.ensure(true)
+					pidx := 0
+					srcimgfile, err := os.Open(sheetver.meta.bwFilePath)
+					if err != nil {
+						panic(err)
+					}
+					imgsrc, _, err := image.Decode(srcimgfile)
+					if err != nil {
+						panic(err)
+					}
+					_ = srcimgfile.Close()
 
+					for lidx, lang := range App.Proj.Langs {
+						for _, quali := range App.Proj.Qualis {
 							sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
 								pidx++
 								if lidx == 0 || panel.HasAny(lang.Name) {
