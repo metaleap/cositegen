@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 )
@@ -71,10 +72,10 @@ func siteGen() {
 					}
 					_ = srcimgfile.Close()
 
-					// var work sync.WaitGroup
+					var work sync.WaitGroup
 					for lidx, lang := range App.Proj.Langs {
 						for _, quali := range App.Proj.Qualis {
-							// work.Add(1)
+							work.Add(1)
 							func(lidx int, langName string, quali int) {
 								var pidx int
 								sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
@@ -90,11 +91,11 @@ func siteGen() {
 									}
 									pidx++
 								})
-								// work.Done()
+								work.Done()
 							}(lidx, lang.Name, quali.SizeHint)
 						}
 					}
-					// work.Wait()
+					work.Wait()
 				}
 			}
 		}
