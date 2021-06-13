@@ -26,10 +26,11 @@ type SheetVerMeta struct {
 }
 
 type SheetVer struct {
-	parent   *Sheet
-	name     string
-	fileName string
-	meta     *SheetVerMeta
+	parent      *Sheet
+	name        string
+	fileName    string
+	meta        *SheetVerMeta
+	colorLayers bool
 }
 
 func (me *SheetVer) String() string { return me.fileName }

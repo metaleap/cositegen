@@ -137,20 +137,24 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 		}
 		draw.ApproxBiLinear.Scale(imgdst, imgdst.Bounds(), srcimg, srcImgRect, draw.Over, nil)
 	}
-	// if blackBorderSize > 0 {
-	// 	for px := imgdst.Bounds().Min.X; px < imgdst.Bounds().Max.X; px++ {
-	// 		for i := 0; i < blackBorderSize; i++ {
-	// 			imgdst.Set(px, imgdst.Bounds().Min.Y+i, color.Black)
-	// 			imgdst.Set(px, imgdst.Bounds().Max.Y-(i+1), color.Black)
-	// 		}
-	// 	}
-	// 	for py := imgdst.Bounds().Min.Y; py < imgdst.Bounds().Max.Y; py++ {
-	// 		for i := 0; i < blackBorderSize; i++ {
-	// 			imgdst.Set(imgdst.Bounds().Min.X+i, py, color.Black)
-	// 			imgdst.Set(imgdst.Bounds().Max.X-(i+1), py, color.Black)
-	// 		}
-	// 	}
-	// }
+	if blackBorderSize > 0 {
+		var black color.Color = color.Black
+		if transparent {
+			black = color.NRGBA{R: 0, G: 0, B: 0, A: 255}
+		}
+		for px := imgdst.Bounds().Min.X; px < imgdst.Bounds().Max.X; px++ {
+			for i := 0; i < blackBorderSize; i++ {
+				imgdst.Set(px, imgdst.Bounds().Min.Y+i, black)
+				imgdst.Set(px, imgdst.Bounds().Max.Y-(i+1), black)
+			}
+		}
+		for py := imgdst.Bounds().Min.Y; py < imgdst.Bounds().Max.Y; py++ {
+			for i := 0; i < blackBorderSize; i++ {
+				imgdst.Set(imgdst.Bounds().Min.X+i, py, black)
+				imgdst.Set(imgdst.Bounds().Max.X-(i+1), py, black)
+			}
+		}
+	}
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, imgdst); err != nil {
 		panic(err)
