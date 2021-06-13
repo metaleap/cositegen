@@ -66,6 +66,13 @@ func siteGen() {
 								if lidx == 0 || panel.HasAny(lang.Name) {
 									tstart := time.Now()
 									name := strings.ToLower(App.Proj.meta.ContentHashes[sheetver.fileName]+itoa(quali.SizeHint)+lang.Name+itoa(pidx)) + ".svg"
+									pw, sw := panel.Rect.Max.X-panel.Rect.Min.X, sheetver.meta.PanelsTree.Rect.Max.X-sheetver.meta.PanelsTree.Rect.Min.X
+									width := int(float64(quali.SizeHint) / (float64(sw) / float64(pw)))
+									if srcimgfile, err := os.Open(sheetver.meta.bwFilePath); err != nil {
+										panic(err)
+									} else {
+										writeFile(".build/img/"+name, []byte(imgSvg(srcimgfile, srcimgfile.Close, width)))
+									}
 									printLn("\t", name+" ("+time.Now().Sub(tstart).String()+")")
 								}
 							})

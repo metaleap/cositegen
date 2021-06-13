@@ -33,8 +33,13 @@ type ImgPanelArea struct {
 }
 
 // returns nil if srcImgData already smaller than maxWidth
-func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int) []byte {
-	imgsrc, _, err := image.Decode(srcImgData)
+func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int, origBytesInsteadOfNilIfAlreadySmaller bool) []byte {
+	var buf bytes.Buffer
+	srcimgdata := srcImgData
+	if origBytesInsteadOfNilIfAlreadySmaller {
+		srcimgdata = io.TeeReader(srcImgData, &buf)
+	}
+	imgsrc, _, err := image.Decode(srcimgdata)
 	if err != nil {
 		panic(err)
 	}
@@ -42,16 +47,19 @@ func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int) [
 
 	origwidth, origheight := imgsrc.Bounds().Max.X, imgsrc.Bounds().Max.Y
 	if origwidth <= maxWidth {
+		if origBytesInsteadOfNilIfAlreadySmaller {
+			return buf.Bytes()
+		}
 		return nil
 	}
 
+	buf.Reset()
 	imgdown := image.NewGray(image.Rect(0, 0, maxWidth, int(float64(origheight)/(float64(origwidth)/float64(maxWidth)))))
 	draw.ApproxBiLinear.Scale(imgdown, imgdown.Bounds(), imgsrc, imgsrc.Bounds(), draw.Over, nil)
-	var pngbuf bytes.Buffer
-	if err = png.Encode(&pngbuf, imgdown); err != nil {
+	if err = png.Encode(&buf, imgdown); err != nil {
 		panic(err)
 	}
-	return pngbuf.Bytes()
+	return buf.Bytes()
 }
 
 // returns nil if srcImgData already consists entirely of fully black or fully white pixels
@@ -103,7 +111,9 @@ func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessT
 	return pngbuf.Bytes()
 }
 
-func imgSvg(srcImgData io.Reader, width int) (svgXml string) {
+func imgSvg(srcImgData io.Reader, onFileDone func() error, width int) (svgXml string) {
+	pngdata := imgDownsized(srcImgData, onFileDone, width, true)
+	_ = pngdata
 	svgXml = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
 	// svgXml+=`<image width="100" height="100" xlink:href="data:image/png;base64,IMAGE_DATA"/>`
 	svgXml += "</svg>"
