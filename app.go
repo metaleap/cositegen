@@ -47,7 +47,7 @@ func appMainAction(name string, arg string) string {
 	}
 	appMainActions[name] = true
 	switch name {
-	case "sitegen":
+	case "SiteGen":
 		go func() { defer func() { appMainActions[name] = false }(); siteGen() }()
 	default:
 		return "Unknown action: '" + name + "'"
