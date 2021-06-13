@@ -52,6 +52,7 @@ func siteGen() {
 		}
 	}
 
+	numsvgs, tstartsvgs := 0, time.Now()
 	for lidx, lang := range App.Proj.Langs {
 		for _, quali := range App.Proj.Qualis {
 			printLn("SiteGen: generating " + lang.Title + " " + quali.Name + " SVGs...")
@@ -73,6 +74,7 @@ func siteGen() {
 									} else {
 										writeFile(".build/img/"+name, []byte(imgSvg(srcimgfile, srcimgfile.Close, width)))
 									}
+									numsvgs++
 									printLn("\t", name+" ("+time.Now().Sub(tstart).String()+")")
 								}
 							})
@@ -82,6 +84,7 @@ func siteGen() {
 			}
 		}
 	}
+	printLn("SiteGen took " + time.Now().Sub(tstartsvgs).String() + " for generating all " + itoa(numsvgs) + " SVGs")
 
 	printLn("SiteGen: generating HTML files...")
 	tmpl, err := template.New("foo").ParseFiles("_sitetmpl/_tmpl.html")
