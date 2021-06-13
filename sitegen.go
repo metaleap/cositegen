@@ -85,7 +85,7 @@ func siteGen() {
 										pw, ph, sw := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y, sheetver.meta.PanelsTree.Rect.Max.X-sheetver.meta.PanelsTree.Rect.Min.X
 										width := float64(quali) / (float64(sw) / float64(pw))
 										height := width / (float64(pw) / float64(ph))
-										writeFile(".build/img/"+name, []byte(imgSvg(imgsrc.(*image.Gray), panel.Rect, int(width), int(height))))
+										writeFile(".build/img/"+name, []byte(imgSubRectSvg(imgsrc.(*image.Gray), panel.Rect, int(width), int(height))))
 										numsvgs++
 										printLn("\t", name+" ("+time.Now().Sub(tstart).String()+")")
 									}

@@ -105,16 +105,16 @@ func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessT
 	return pngbuf.Bytes()
 }
 
-func imgSvg(srcImg *image.Gray, srcImgRect image.Rectangle, width int, height int) (svgXml string) {
+func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int) []byte {
 	origwidth, origheight := srcImgRect.Max.X-srcImgRect.Min.X, srcImgRect.Max.Y-srcImgRect.Min.Y
-	assert(((width < origwidth) == (height < origheight)) &&
-		((width > origwidth) == (height > origheight)))
+	assert(((*width < origwidth) == (*height < origheight)) &&
+		((*width > origwidth) == (*height > origheight)))
 	var imgdst draw.Image
-	if isnoresize := width > origwidth; isnoresize {
-		width, height = origwidth, origheight
+	if isnoresize := *width > origwidth; isnoresize {
+		*width, *height = origwidth, origheight
 		imgdst = srcImg.SubImage(srcImgRect).(draw.Image)
 	} else {
-		imgdst = image.NewGray(image.Rect(0, 0, width, height))
+		imgdst = image.NewGray(image.Rect(0, 0, *width, *height))
 		draw.ApproxBiLinear.Scale(imgdst, imgdst.Bounds(), srcImg, srcImgRect, draw.Over, nil)
 	}
 	border := 3
@@ -134,10 +134,14 @@ func imgSvg(srcImg *image.Gray, srcImgRect image.Rectangle, width int, height in
 	if err := png.Encode(&buf, imgdst); err != nil {
 		panic(err)
 	}
+	return buf.Bytes()
+}
 
+func imgSubRectSvg(srcImg *image.Gray, srcImgRect image.Rectangle, width int, height int) (svgXml string) {
+	pngdata := imgSubRectPng(srcImg, srcImgRect, &width, &height)
 	svgXml = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
 	svgXml += `<image width="` + itoa(width) + `" height="` + itoa(height) + `" xlink:href="data:image/png;base64,`
-	svgXml += base64.StdEncoding.EncodeToString(buf.Bytes())
+	svgXml += base64.StdEncoding.EncodeToString(pngdata)
 	svgXml += `"/></svg>`
 	return
 }
