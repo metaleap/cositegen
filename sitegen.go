@@ -78,10 +78,9 @@ func siteGen() {
 							func(lidx int, langName string, quali int) {
 								var pidx int
 								sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
-									pidx++
 									if lidx == 0 || panel.HasAny(langName) {
 										tstart := time.Now()
-										name := strings.ToLower(App.Proj.meta.ContentHashes[sheetver.fileName]+itoa(quali)+langName+itoa(pidx)) + ".svg"
+										name := strings.ToLower(App.Proj.meta.ContentHashes[sheetver.fileName]+langName+itoa(quali)+itoa(pidx)) + ".svg"
 										pw, ph, sw := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y, sheetver.meta.PanelsTree.Rect.Max.X-sheetver.meta.PanelsTree.Rect.Min.X
 										width := float64(quali) / (float64(sw) / float64(pw))
 										height := width / (float64(pw) / float64(ph))
@@ -89,6 +88,7 @@ func siteGen() {
 										numsvgs++
 										printLn("\t", name+" ("+time.Now().Sub(tstart).String()+")")
 									}
+									pidx++
 								})
 								// work.Done()
 							}(lidx, lang.Name, quali.SizeHint)
@@ -319,7 +319,7 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 			if !panel.HasAny(langid) {
 				langid = App.Proj.Langs[0].Name
 			}
-			name := strings.ToLower(App.Proj.meta.ContentHashes[sheetVer.fileName] + itoa(quali.SizeHint) + langid + itoa(pidx))
+			name := strings.ToLower(App.Proj.meta.ContentHashes[sheetVer.fileName] + langid + itoa(quali.SizeHint) + itoa(pidx))
 			s += "<div class='" + App.Proj.Html.ClsPanel + "'><img alt='" + name + "' title='" + name + "' src='./img/" + name + ".svg'/></div>"
 			pidx++
 		}
