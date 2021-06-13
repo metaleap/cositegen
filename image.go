@@ -11,8 +11,6 @@ import (
 	"golang.org/x/image/draw"
 )
 
-const MaxImagePanelAreas = 8
-
 type ImgPanel struct {
 	Rect    image.Rectangle
 	Areas   []ImgPanelArea `json:",omitempty"`
