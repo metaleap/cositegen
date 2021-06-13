@@ -68,14 +68,14 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 		assert(len(panel.SubCols) == 0 || len(panel.SubRows) == 0)
 		if len(panel.SubRows) > 0 {
 			s += "<ul>"
-			for _, row := range panel.SubRows {
-				s += "<li><div>Row: " + row.Rect.String() + "</div>" + panelstree(&row) + "</li>"
+			for i := range panel.SubRows {
+				s += "<li><div>Row: " + panel.SubRows[i].Rect.String() + "</div>" + panelstree(&panel.SubRows[i]) + "</li>"
 			}
 			s += "</ul>"
 		} else if len(panel.SubCols) > 0 {
 			s += "<ul>"
-			for _, col := range panel.SubCols {
-				s += "<li><div>Col: " + col.Rect.String() + "</div>" + panelstree(&col) + "</li>"
+			for i := range panel.SubCols {
+				s += "<li><div>Col: " + panel.SubCols[i].Rect.String() + "</div>" + panelstree(&panel.SubCols[i]) + "</li>"
 			}
 			s += "</ul>"
 		} else {

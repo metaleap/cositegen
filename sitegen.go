@@ -249,15 +249,19 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 	var iter func(panel *ImgPanel) string
 	iter = func(panel *ImgPanel) (s string) {
 		if len(panel.SubRows) > 0 {
+			s += "<div class='trow'>ROW"
 			for i := range panel.SubRows {
-				iter(&panel.SubRows[i])
+				s += iter(&panel.SubRows[i])
 			}
+			s += "</div>"
 		} else if len(panel.SubCols) > 0 {
+			s += "<div class='tcol'>COL"
 			for i := range panel.SubCols {
-				iter(&panel.SubCols[i])
+				s += iter(&panel.SubCols[i])
 			}
+			s += "</div>"
 		} else {
-			s += "<div>Panel: " + panel.Rect.String() + "</div>"
+			s += "<div class='tpan'>panel</div>"
 		}
 		return
 	}
@@ -265,9 +269,9 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 		assert(len(sheet.versions) == 1)
 		sheetver := sheet.versions[0]
 		sheetver.ensure(true)
-		// page.PageContent += "<table>" // "<div class='"+App.Proj.Html.ClsSheet+"'><div class='"+App.Proj.Html.ClsPanels+"'>"
+		page.PageContent += "<div class='tsheet'>" // "<table>" // "<div class='"+App.Proj.Html.ClsSheet+"'><div class='"+App.Proj.Html.ClsPanels+"'>"
 		page.PageContent += iter(sheetver.meta.PanelsTree)
-		// page.PageContent += "</table>" // "</div></div>"
+		page.PageContent += "</div>" // "</table>" // "</div></div>"
 	}
 
 	// for _, sheet := range sheets {
