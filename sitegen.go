@@ -3,10 +3,10 @@ package main
 import (
 	"bytes"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"text/template"
-	"time"
 )
 
 type PageGen struct {
@@ -64,15 +64,20 @@ func siteGen() {
 	}
 
 	printLn("SiteGen: generating PNGs & SVGs...")
-	time.Sleep(time.Minute)
 
 	printLn("SiteGen: DONE!")
+	browserCmd[len(browserCmd)-1] = "--app=file://" + os.Getenv("PWD") + "/.build/index.html"
+	printLn(browserCmd)
+	cmd := exec.Command(browserCmd[0], browserCmd[1:]...)
+	if err := cmd.Run(); err != nil {
+		printLn(err)
+	}
 }
 
 func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, pageNumber int) {
 	assert((series == nil) == (chapter == nil))
 
-	name, page := "index", PageGen{SiteTitle: App.Proj.Title, SiteDesc: App.Proj.Desc}
+	name, page := "index", PageGen{SiteTitle: App.Proj.Title, SiteDesc: App.Proj.Desc, PageTitle: "Page Title", PageDesc: "Page description...", PageContent: "Page contents..."}
 
 	if series == nil && chapter == nil {
 		siteGenPageExecAndWrite(tmpl, name, &page)

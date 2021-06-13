@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync"
 )
@@ -33,6 +34,19 @@ func appInit() {
 	App.Gui.State.Sel.Sheet = nil
 	App.Gui.State.Sel.Series = nil
 	App.Proj.load()
+
+	var cmdidx int
+	cmdnames := []string{"chromium", "chromium-browser", "chrome", "google-chrome"}
+	for i, l := 0, len(cmdnames); i < l; i++ {
+		cmdnames = append(cmdnames, cmdnames[i]+"-stable")
+	}
+	for i, cmdname := range cmdnames {
+		if _, nope := exec.LookPath(cmdname); nope == nil {
+			cmdidx = i
+			break
+		}
+	}
+	browserCmd[0] = cmdnames[cmdidx]
 }
 
 func appOnExit() {
