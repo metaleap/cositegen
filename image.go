@@ -32,14 +32,9 @@ type ImgPanelArea struct {
 	Rect image.Rectangle
 }
 
-// returns nil (or srcImgData with origBytesInsteadOfNilIfAlreadySmaller) if srcImgData already smaller than maxWidth
-func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int, origBytesInsteadOfNilIfAlreadySmaller bool, newHeight *int) []byte {
-	var buf bytes.Buffer
-	srcimgdata := srcImgData
-	if origBytesInsteadOfNilIfAlreadySmaller {
-		srcimgdata = io.TeeReader(srcImgData, &buf)
-	}
-	imgsrc, _, err := image.Decode(srcimgdata)
+// returns nil if srcImgData already smaller than maxWidth
+func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int) []byte {
+	imgsrc, _, err := image.Decode(srcImgData)
 	if err != nil {
 		panic(err)
 	}
@@ -47,22 +42,13 @@ func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int, o
 
 	origwidth, origheight := imgsrc.Bounds().Max.X, imgsrc.Bounds().Max.Y
 	if origwidth <= maxWidth {
-		if origBytesInsteadOfNilIfAlreadySmaller {
-			if newHeight != nil {
-				*newHeight = origheight
-			}
-			return buf.Bytes()
-		}
 		return nil
 	}
 
-	buf.Reset()
 	newheight := int(float64(origheight) / (float64(origwidth) / float64(maxWidth)))
-	if newHeight != nil {
-		*newHeight = newheight
-	}
 	imgdown := image.NewGray(image.Rect(0, 0, maxWidth, newheight))
 	draw.ApproxBiLinear.Scale(imgdown, imgdown.Bounds(), imgsrc, imgsrc.Bounds(), draw.Over, nil)
+	var buf bytes.Buffer
 	if err = png.Encode(&buf, imgdown); err != nil {
 		panic(err)
 	}
@@ -118,10 +104,8 @@ func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessT
 	return pngbuf.Bytes()
 }
 
-func imgSvg(srcImgData io.Reader, onFileDone func() error, width int) (svgXml string) {
+func imgSvg(srcImg *image.Gray, srcImgRect image.Rectangle, width int) (svgXml string) {
 	var newheight int
-	pngdata := imgDownsized(srcImgData, onFileDone, width, true, &newheight)
-	_ = pngdata
 	svgXml = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
 	svgXml += `<image width="` + itoa(width) + `" height="` + itoa(newheight) + `" xlink:href="data:image/png;base64,`
 

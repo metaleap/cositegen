@@ -107,7 +107,7 @@ func (me *SheetVer) ensureMonochrome() {
 		_ = os.Remove(me.meta.bwSmallFilePath) // sounds weird but due to potential rare symlink edge case
 		if file, err := os.Open(me.meta.bwFilePath); err != nil {
 			panic(err)
-		} else if data := imgDownsized(file, file.Close, 2048, false, nil); data != nil {
+		} else if data := imgDownsized(file, file.Close, 2048); data != nil {
 			writeFile(me.meta.bwSmallFilePath, data)
 		} else if err = os.Symlink(filepath.Base(me.meta.bwFilePath), me.meta.bwSmallFilePath); err != nil {
 			panic(err)

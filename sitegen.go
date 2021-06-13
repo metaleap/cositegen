@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"image"
+	_ "image/png"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -62,6 +64,16 @@ func siteGen() {
 						for _, sheetver := range sheet.versions {
 							sheetver.ensure(true)
 							pidx := 0
+							srcimgfile, err := os.Open(sheetver.meta.bwFilePath)
+							if err != nil {
+								panic(err)
+							}
+							imgsrc, _, err := image.Decode(srcimgfile)
+							if err != nil {
+								panic(err)
+							}
+							_ = srcimgfile.Close()
+
 							sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
 								pidx++
 								if lidx == 0 || panel.HasAny(lang.Name) {
@@ -69,11 +81,7 @@ func siteGen() {
 									name := strings.ToLower(App.Proj.meta.ContentHashes[sheetver.fileName]+itoa(quali.SizeHint)+lang.Name+itoa(pidx)) + ".svg"
 									pw, sw := panel.Rect.Max.X-panel.Rect.Min.X, sheetver.meta.PanelsTree.Rect.Max.X-sheetver.meta.PanelsTree.Rect.Min.X
 									width := int(float64(quali.SizeHint) / (float64(sw) / float64(pw)))
-									if srcimgfile, err := os.Open(sheetver.meta.bwFilePath); err != nil {
-										panic(err)
-									} else {
-										writeFile(".build/img/"+name, []byte(imgSvg(srcimgfile, srcimgfile.Close, width)))
-									}
+									writeFile(".build/img/"+name, []byte(imgSvg(imgsrc.(*image.Gray), panel.Rect, width)))
 									numsvgs++
 									printLn("\t", name+" ("+time.Now().Sub(tstart).String()+")")
 								}
