@@ -50,8 +50,25 @@ func siteGen() {
 		}
 	}
 
-	{
-		printLn("SiteGen: generating PNGs & SVGs...")
+	for _, quali := range App.Proj.Qualis {
+		for _, lang := range App.Proj.Langs {
+			printLn("SiteGen: generating " + quali.Name + " SVGs (" + lang.Title + ")...")
+			for _, series := range App.Proj.Series {
+				for _, chapter := range series.Chapters {
+					for _, sheet := range chapter.sheets {
+						for _, sheetver := range sheet.versions {
+							sheetver.ensure(true)
+							pidx := 0
+							sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
+								pidx++
+								name := strings.ToLower(App.Proj.meta.ContentHashes[sheetver.fileName] + "-" + quali.Name + "-" + lang.Name + "-" + itoa(pidx))
+								printLn("\t", sheetver.fileName, "\t", name)
+							})
+						}
+					}
+				}
+			}
+		}
 	}
 
 	printLn("SiteGen: generating HTML files...")
