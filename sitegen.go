@@ -196,18 +196,19 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 	quali := App.Proj.Qualis[qIdx]
 	page.PagesList, page.PageContent = "", "<div class='"+App.Proj.Html.ClsSheet+"'><div class='"+App.Proj.Html.ClsPanels+"'>"
 	var sheets []*Sheet
+	numpages := 1
 	switch chapter.SheetsPerPage {
 	case 0:
 		sheets = chapter.sheets
 	default:
+		numpages = len(chapter.sheets) / chapter.SheetsPerPage
 		var pgnr int
-		numpages := len(chapter.sheets) / chapter.SheetsPerPage
 		shownums := map[int]bool{1: true, numpages: true, pageNr: true}
-		for i := 1; i < numpages && len(shownums) < 5; i++ {
-			if (pageNr + i) < numpages {
+		for i, want := 1, 5; numpages >= want && len(shownums) < want && i < numpages; i++ {
+			if len(shownums) < want && (pageNr+i) < numpages {
 				shownums[pageNr+i] = true
 			}
-			if len(shownums) < 5 && (pageNr-i) > 1 {
+			if len(shownums) < want && (pageNr-i) > 1 {
 				shownums[pageNr-i] = true
 			}
 		}
@@ -227,7 +228,22 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 		}
 	}
 	if page.PagesList != "" {
-		page.PagesList = "<ul>" + page.PagesList + "</ul>"
+		var pg int
+		if pg = pageNr - 1; pg < 1 {
+			pg = 1
+		}
+		pvis, prev := "hidden", series.Name+"-"+chapter.Name+"-"+quali.Name+"-p"+itoa(pg)+"-"+langId
+		if pg = pageNr + 1; pg > numpages {
+			pg = numpages
+		}
+		nvis, next := "hidden", series.Name+"-"+chapter.Name+"-"+quali.Name+"-p"+itoa(pg)+"-"+langId
+		if pageNr > 1 {
+			pvis = "visible"
+		}
+		if pageNr < numpages {
+			nvis = "visible"
+		}
+		page.PagesList = "<ul><li><a style='visibility: " + pvis + "' href='./" + strings.ToLower(prev) + ".html'>&larr;</a></li>" + page.PagesList + "<li><a style='visibility: " + nvis + "' href='./" + strings.ToLower(next) + ".html'>&rarr;</a></li></ul>"
 	}
 	for _, sheet := range sheets {
 		assert(len(sheet.versions) == 1)
