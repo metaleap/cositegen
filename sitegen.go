@@ -14,6 +14,8 @@ type PageGen struct {
 	SiteDesc    string
 	PageTitle   string
 	PageDesc    string
+	LangsList   string
+	QualiList   string
 	PageContent string
 }
 
@@ -50,15 +52,17 @@ func siteGen() {
 	if err != nil {
 		panic(err)
 	}
-	siteGenPages(tmpl, nil, nil, 0)
-	for _, series := range App.Proj.Series {
-		for _, chapter := range series.Chapters {
-			if chapter.SheetsPerPage > 0 {
-				for i := 1; i <= (len(chapter.sheets) / chapter.SheetsPerPage); i++ {
-					siteGenPages(tmpl, series, chapter, i)
+	for _, lang := range App.Proj.Langs {
+		siteGenPages(tmpl, nil, nil, lang.Name, 0)
+		for _, series := range App.Proj.Series {
+			for _, chapter := range series.Chapters {
+				if chapter.SheetsPerPage > 0 {
+					for i := 1; i <= (len(chapter.sheets) / chapter.SheetsPerPage); i++ {
+						siteGenPages(tmpl, series, chapter, lang.Name, i)
+					}
+				} else {
+					siteGenPages(tmpl, series, chapter, lang.Name, 0)
 				}
-			} else {
-				siteGenPages(tmpl, series, chapter, 0)
 			}
 		}
 	}
@@ -74,28 +78,71 @@ func siteGen() {
 	}
 }
 
-func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, pageNumber int) {
+func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, langId string, pageNumber int) {
 	assert((series == nil) == (chapter == nil))
 
-	name, page := "index", PageGen{SiteTitle: App.Proj.Title, SiteDesc: App.Proj.Desc, PageTitle: "Page Title", PageDesc: "Page description...", PageContent: "Page contents..."}
+	name, page := "index", PageGen{
+		SiteTitle:   hEsc(App.Proj.Title),
+		SiteDesc:    hEsc(App.Proj.Desc[langId]),
+		PageTitle:   hEsc("Page Title"),
+		PageDesc:    hEsc("Page description..."),
+		PageContent: hEsc("Page contents..."),
+	}
+	if page.SiteDesc == "" && langId != App.Proj.Langs[0].Name {
+		page.SiteDesc = App.Proj.Desc[App.Proj.Langs[0].Name]
+	}
+	if langId != App.Proj.Langs[0].Name {
+		name += "-" + langId
+	}
 
 	if series == nil && chapter == nil {
-		siteGenPageExecAndWrite(tmpl, name, &page)
+		siteGenPageExecAndWrite(tmpl, name, langId, &page)
 	} else {
-		for _, lang := range App.Proj.languages {
-			for _, quali := range []string{"hd" /*1280*/, "fhd" /*1920*/, "qhd4k" /*3840*/, "uhd8k" /*7680*/} {
-				name = series.Name + "-" + chapter.Name + "-p" + itoa(pageNumber) + "-" + quali + "-" + lang[0]
-
-				siteGenPageExecAndWrite(tmpl, name, &page)
+		for _, quali := range App.Proj.Qualis {
+			name = series.Name + "-" + chapter.Name + "-" + quali.Name
+			if pageNumber != 0 {
+				name += "-p" + itoa(pageNumber)
 			}
+			name += "-" + langId
+
+			page.QualiList = ""
+			for _, q := range App.Proj.Qualis {
+				href := strings.Replace(name, "-"+quali.Name+"-", "-"+q.Name+"-", 1)
+				page.QualiList += "<option value='" + strings.ToLower(href) + "'"
+				if q.Name == quali.Name {
+					page.QualiList += " selected='selected'"
+				}
+				page.QualiList += ">" + q.Name + "</option>"
+			}
+			page.QualiList = "<select id='qualilist'>" + page.QualiList + "</select>"
+
+			siteGenPageExecAndWrite(tmpl, name, langId, &page)
 		}
 	}
 }
 
-func siteGenPageExecAndWrite(tmpl *template.Template, name string, page *PageGen) {
+func siteGenPageExecAndWrite(tmpl *template.Template, name string, langId string, page *PageGen) {
+	page.LangsList = ""
+	for _, lang := range App.Proj.Langs {
+		page.LangsList += "<li>"
+		if lang.Name == langId {
+			page.LangsList += "<b>" + hEsc(lang.Title) + "</b>"
+		} else {
+			href := name[:len(name)-len(langId)] + lang.Name
+			if name == "index" && langId == App.Proj.Langs[0].Name {
+				href = name + "-" + lang.Name
+			} else if lang.Name == App.Proj.Langs[0].Name && strings.HasPrefix(name, "index-") {
+				href = "index"
+			}
+			page.LangsList += "<a href='./" + strings.ToLower(href) + ".html'>" + hEsc(lang.Title) + "</a>"
+		}
+		page.LangsList += "</li>"
+	}
+	page.LangsList = "<ul>" + page.LangsList + "</ul>"
+
 	buf := bytes.NewBuffer(nil)
 	if err := tmpl.ExecuteTemplate(buf, "_tmpl.html", page); err != nil {
 		panic(err)
 	}
-	writeFile(".build/"+name+".html", buf.Bytes())
+	writeFile(".build/"+strings.ToLower(name)+".html", buf.Bytes())
 }

@@ -3,12 +3,12 @@ function doPostBack(name) {
     document.getElementById("main_form").submit();
 }
 
-function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelAreas, langs) {
+function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs) {
     try {
         const pid = "p" + panelIdx;
         const span = document.getElementById(pid + 'rects');
         span.innerHTML = "";
-        for (let j = 0; j < maxImagePanelAreas; j++) {
+        for (let j = 0; j < maxImagePanelTextAreas; j++) {
             var ptext = document.getElementById(pid + "t" + j + langs[0]).value;
             for (let ptk = 1; ptk < langs.length; ptk++) {
                 const el = document.getElementById(pid + "t" + j + langs[ptk]);

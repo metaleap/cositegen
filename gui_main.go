@@ -107,12 +107,12 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 			if r.FormValue("main_focus_id") == pid+"save" {
 				cfgdisplay = "block"
 			}
-			for i := 0; i < App.Proj.MaxImagePanelAreas; i++ {
+			for i := 0; i < App.Proj.MaxImagePanelTextAreas; i++ {
 				hastexts, area := false, ImgPanelArea{Data: A{}}
-				for _, lang := range App.Proj.languages {
-					tid := pid + "t" + itoa(i) + lang[0]
+				for _, lang := range App.Proj.Langs {
+					tid := pid + "t" + itoa(i) + lang.Name
 					if tval := r.FormValue(tid); tval != "" {
-						hastexts, area.Data[lang[0]] = true, tval
+						hastexts, area.Data[lang.Name] = true, tval
 					}
 				}
 				if hastexts {
@@ -141,18 +141,18 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 
 		s += "<div class='panelcfg' id='" + pid + "cfg' style='display:" + cfgdisplay + ";'>"
 		langs := []string{}
-		for _, lang := range App.Proj.languages {
-			langs = append(langs, lang[0])
+		for _, lang := range App.Proj.Langs {
+			langs = append(langs, lang.Name)
 		}
-		jsrefr, savebtnhtml := "refreshPanelRects("+itoa(pidx)+", "+itoa(panel.Rect.Min.X)+", "+itoa(panel.Rect.Min.Y)+", "+itoa(App.Proj.MaxImagePanelAreas)+", [\""+strings.Join(langs, "\", \"")+"\"]);", guiHtmlButton(pid+"save", "Save changes (to all texts in all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
+		jsrefr, savebtnhtml := "refreshPanelRects("+itoa(pidx)+", "+itoa(panel.Rect.Min.X)+", "+itoa(panel.Rect.Min.Y)+", "+itoa(App.Proj.MaxImagePanelTextAreas)+", [\""+strings.Join(langs, "\", \"")+"\"]);", guiHtmlButton(pid+"save", "Save changes (to all texts in all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 		s += savebtnhtml + "<hr/>"
-		for i := 0; i < App.Proj.MaxImagePanelAreas; i++ {
+		for i := 0; i < App.Proj.MaxImagePanelTextAreas; i++ {
 			area := ImgPanelArea{Data: A{}}
 			if len(panel.Areas) > i {
 				area = panel.Areas[i]
 			}
-			for _, lang := range App.Proj.languages {
-				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang[0], area.Data[lang[0]], A{"placeholder": lang[1], "onchange": jsrefr, "onfocus": jsrefr, "class": "panelcfgtext col" + itoa(i%8)}) + "</div><div>"
+			for _, lang := range App.Proj.Langs {
+				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang.Name, area.Data[lang.Name], A{"placeholder": lang.Title, "onchange": jsrefr, "onfocus": jsrefr, "class": "panelcfgtext col" + itoa(i%8)}) + "</div><div>"
 			}
 			s += "X,Y:"
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx0", itoa(area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.X), "max": itoa(panel.Rect.Max.X)})

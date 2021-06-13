@@ -8,14 +8,20 @@ import (
 )
 
 type Project struct {
-	Title              string
-	Desc               string
-	Series             []*Series
-	Languages          []map[string]string
-	MaxImagePanelAreas int
+	Title  string
+	Desc   map[string]string
+	Series []*Series
+	Langs  []struct {
+		Name  string
+		Title string
+	}
+	Qualis []struct {
+		Name     string
+		SizeHint int
+	}
+	MaxImagePanelTextAreas int
 
-	languages [][2]string
-	meta      struct {
+	meta struct {
 		ContentHashes map[string]string
 		SheetVer      map[string]*SheetVerMeta
 	}
@@ -56,12 +62,6 @@ func (me *Project) save() {
 
 func (me *Project) load() {
 	jsonLoad("cosite.json", me)
-	for _, lang := range me.Languages {
-		assert(len(lang) == 1)
-		for k, v := range lang {
-			me.languages = append(me.languages, [2]string{k, v})
-		}
-	}
 	if _, err := os.Stat(".cosite.json"); err == nil {
 		jsonLoad(".cosite.json", &me.meta)
 	} else if !os.IsNotExist(err) {
