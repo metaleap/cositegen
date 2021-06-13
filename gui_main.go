@@ -17,14 +17,14 @@ func guiMain(r *http.Request, notice string) []byte {
 
 	App.Gui.State.Sel.Series, _ = guiGetFormSel(rVal("series"), &App.Proj).(*Series)
 	s += guiHtmlList("series", "(Series)", len(App.Proj.Series), func(i int) (string, string, bool) {
-		return App.Proj.Series[i].Name, App.Proj.Series[i].Title, App.Gui.State.Sel.Series != nil && App.Proj.Series[i].Name == App.Gui.State.Sel.Series.Name
+		return App.Proj.Series[i].Name, App.Proj.Series[i].Title["en"], App.Gui.State.Sel.Series != nil && App.Proj.Series[i].Name == App.Gui.State.Sel.Series.Name
 	})
 
 	if series := App.Gui.State.Sel.Series; series != nil {
 		App.Gui.State.Sel.Chapter, _ = guiGetFormSel(rVal("chapter"), series).(*Chapter)
 		s += guiHtmlList("chapter", "(Chapters)", len(series.Chapters), func(i int) (string, string, bool) {
 			chapter := series.Chapters[i]
-			return chapter.Name, chapter.Title, App.Gui.State.Sel.Chapter != nil && App.Gui.State.Sel.Chapter.Name == chapter.Name
+			return chapter.Name, chapter.Title["en"], App.Gui.State.Sel.Chapter != nil && App.Gui.State.Sel.Chapter.Name == chapter.Name
 		})
 		if chapter := App.Gui.State.Sel.Chapter; chapter != nil {
 			App.Gui.State.Sel.Sheet, _ = guiGetFormSel(rVal("sheet"), chapter).(*Sheet)
@@ -109,10 +109,10 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 			}
 			for i := 0; i < App.Proj.MaxImagePanelAreas; i++ {
 				hastexts, area := false, ImgPanelArea{Data: A{}}
-				for _, ptk := range App.Proj.PanelTextKinds {
-					tid := pid + "t" + itoa(i) + ptk
+				for _, lang := range App.Proj.languages {
+					tid := pid + "t" + itoa(i) + lang[0]
 					if tval := r.FormValue(tid); tval != "" {
-						hastexts, area.Data[ptk] = true, tval
+						hastexts, area.Data[lang[0]] = true, tval
 					}
 				}
 				if hastexts {
@@ -140,15 +140,19 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 		s += "</div></div></td><td>"
 
 		s += "<div class='panelcfg' id='" + pid + "cfg' style='display:" + cfgdisplay + ";'>"
-		jsrefr, savebtnhtml := "refreshPanelRects("+itoa(pidx)+", "+itoa(panel.Rect.Min.X)+", "+itoa(panel.Rect.Min.Y)+", "+itoa(App.Proj.MaxImagePanelAreas)+", [\""+strings.Join(App.Proj.PanelTextKinds, "\", \"")+"\"]);", guiHtmlButton(pid+"save", "Save changes (to all texts in all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
+		langs := []string{}
+		for _, lang := range App.Proj.languages {
+			langs = append(langs, lang[0])
+		}
+		jsrefr, savebtnhtml := "refreshPanelRects("+itoa(pidx)+", "+itoa(panel.Rect.Min.X)+", "+itoa(panel.Rect.Min.Y)+", "+itoa(App.Proj.MaxImagePanelAreas)+", [\""+strings.Join(langs, "\", \"")+"\"]);", guiHtmlButton(pid+"save", "Save changes (to all texts in all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 		s += savebtnhtml + "<hr/>"
 		for i := 0; i < App.Proj.MaxImagePanelAreas; i++ {
 			area := ImgPanelArea{Data: A{}}
 			if len(panel.Areas) > i {
 				area = panel.Areas[i]
 			}
-			for _, ptk := range App.Proj.PanelTextKinds {
-				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+ptk, area.Data[ptk], A{"placeholder": ptk, "onchange": jsrefr, "onfocus": jsrefr, "class": "panelcfgtext col" + itoa(i%8)}) + "</div><div>"
+			for _, lang := range App.Proj.languages {
+				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang[0], area.Data[lang[0]], A{"placeholder": lang[1], "onchange": jsrefr, "onfocus": jsrefr, "class": "panelcfgtext col" + itoa(i%8)}) + "</div><div>"
 			}
 			s += "X,Y:"
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx0", itoa(area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.X), "max": itoa(panel.Rect.Max.X)})

@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -10,6 +11,10 @@ import (
 
 func main() {
 	appInit()
+	if len(os.Args) > 1 {
+		siteGen()
+		return
+	}
 	go httpListenAndServe()
 	go launchKioskyBrowser()
 	go appBackgroundWork()

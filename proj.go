@@ -11,10 +11,11 @@ type Project struct {
 	Title              string
 	Desc               string
 	Series             []*Series
-	PanelTextKinds     []string
+	Languages          []map[string]string
 	MaxImagePanelAreas int
 
-	meta struct {
+	languages [][2]string
+	meta      struct {
 		ContentHashes map[string]string
 		SheetVer      map[string]*SheetVerMeta
 	}
@@ -25,7 +26,8 @@ func (me *Project) Len() int              { return len(me.Series) }
 
 type Series struct {
 	Name     string
-	Title    string
+	Title    map[string]string
+	Desc     map[string]string
 	Chapters []*Chapter
 
 	dirPath string
@@ -37,7 +39,7 @@ func (me *Series) String() string        { return me.Name }
 
 type Chapter struct {
 	Name          string
-	Title         string
+	Title         map[string]string
 	SheetsPerPage int
 
 	dirPath string
@@ -54,6 +56,12 @@ func (me *Project) save() {
 
 func (me *Project) load() {
 	jsonLoad("cosite.json", me)
+	for _, lang := range me.Languages {
+		assert(len(lang) == 1)
+		for k, v := range lang {
+			me.languages = append(me.languages, [2]string{k, v})
+		}
+	}
 	if _, err := os.Stat(".cosite.json"); err == nil {
 		jsonLoad(".cosite.json", &me.meta)
 	} else if !os.IsNotExist(err) {
