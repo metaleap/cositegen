@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 )
 
 type PageGen struct {
@@ -34,6 +35,7 @@ func siteGen() {
 		panic(err)
 	}
 	mkDir(".build")
+	mkDir(".build/img/")
 
 	printLn("SiteGen: copying non-HTML files to .build...")
 	if fileinfos, err := os.ReadDir("_sitetmpl"); err != nil {
@@ -50,9 +52,9 @@ func siteGen() {
 		}
 	}
 
-	for _, quali := range App.Proj.Qualis {
-		for _, lang := range App.Proj.Langs {
-			printLn("SiteGen: generating " + quali.Name + " SVGs (" + lang.Title + ")...")
+	for lidx, lang := range App.Proj.Langs {
+		for _, quali := range App.Proj.Qualis {
+			printLn("SiteGen: generating " + lang.Title + " " + quali.Name + " SVGs...")
 			for _, series := range App.Proj.Series {
 				for _, chapter := range series.Chapters {
 					for _, sheet := range chapter.sheets {
@@ -61,8 +63,11 @@ func siteGen() {
 							pidx := 0
 							sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
 								pidx++
-								name := strings.ToLower(App.Proj.meta.ContentHashes[sheetver.fileName] + "-" + quali.Name + "-" + lang.Name + "-" + itoa(pidx))
-								printLn("\t", sheetver.fileName, "\t", name)
+								if lidx == 0 || panel.HasAny(lang.Name) {
+									tstart := time.Now()
+									name := strings.ToLower(App.Proj.meta.ContentHashes[sheetver.fileName]+itoa(quali.SizeHint)+lang.Name+itoa(pidx)) + ".svg"
+									printLn("\t", name+" ("+time.Now().Sub(tstart).String()+")")
+								}
 							})
 						}
 					}
@@ -152,6 +157,7 @@ func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, lan
 }
 
 func siteGenPageExecAndWrite(tmpl *template.Template, name string, langId string, page *PageGen) {
+	// println("\t", strings.ToLower(name)+".html...")
 	page.LangsList = ""
 	for _, lang := range App.Proj.Langs {
 		page.LangsList += "<li>"
@@ -284,7 +290,11 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 			}
 			s += "</div>"
 		} else {
-			name := strings.ToLower(App.Proj.meta.ContentHashes[sheetVer.fileName] + "-" + quali.Name + "-" + langId + "-" + itoa(pidx))
+			langid := langId
+			if !panel.HasAny(langid) {
+				langid = App.Proj.Langs[0].Name
+			}
+			name := strings.ToLower(App.Proj.meta.ContentHashes[sheetVer.fileName] + itoa(quali.SizeHint) + langid + itoa(pidx))
 			s += "<div class='" + App.Proj.Html.ClsPanel + "'><img alt='" + name + "' title='" + name + "' src='../.csg_meta/" + App.Proj.meta.ContentHashes[sheetVer.fileName] + "/bwsmall.png'/></div>"
 			pidx++
 		}

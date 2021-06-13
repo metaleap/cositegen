@@ -18,6 +18,15 @@ type ImgPanel struct {
 	SubCols []ImgPanel     `json:",omitempty"`
 }
 
+func (me *ImgPanel) HasAny(dataKey string) bool {
+	for _, pta := range me.Areas {
+		if pta.Data[dataKey] != "" {
+			return true
+		}
+	}
+	return false
+}
+
 type ImgPanelArea struct {
 	Data map[string]string `json:",omitempty"`
 	Rect image.Rectangle
@@ -92,6 +101,13 @@ func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessT
 		panic(err)
 	}
 	return pngbuf.Bytes()
+}
+
+func imgSvg(srcImgData io.Reader, width int) (svgXml string) {
+	svgXml = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
+	// svgXml+=`<image width="100" height="100" xlink:href="data:image/png;base64,IMAGE_DATA"/>`
+	svgXml += "</svg>"
+	return
 }
 
 func imgPanels(srcImgData io.Reader, onFileDone func() error) ImgPanel {
