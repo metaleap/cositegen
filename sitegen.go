@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 	"text/template"
 	"time"
 )
@@ -62,7 +61,6 @@ func siteGen() {
 			for _, sheet := range chapter.sheets {
 				for _, sheetver := range sheet.versions {
 					sheetver.ensure(true)
-					pidx := 0
 					srcimgfile, err := os.Open(sheetver.meta.bwFilePath)
 					if err != nil {
 						panic(err)
@@ -73,11 +71,12 @@ func siteGen() {
 					}
 					_ = srcimgfile.Close()
 
-					var work sync.WaitGroup
+					// var work sync.WaitGroup
 					for lidx, lang := range App.Proj.Langs {
 						for _, quali := range App.Proj.Qualis {
-							work.Add(1)
-							go func(lidx int, langName string, quali int) {
+							// work.Add(1)
+							func(lidx int, langName string, quali int) {
+								var pidx int
 								sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
 									pidx++
 									if lidx == 0 || panel.HasAny(langName) {
@@ -91,11 +90,11 @@ func siteGen() {
 										printLn("\t", name+" ("+time.Now().Sub(tstart).String()+")")
 									}
 								})
-								work.Done()
+								// work.Done()
 							}(lidx, lang.Name, quali.SizeHint)
 						}
 					}
-					work.Wait()
+					// work.Wait()
 				}
 			}
 		}
@@ -321,7 +320,7 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 				langid = App.Proj.Langs[0].Name
 			}
 			name := strings.ToLower(App.Proj.meta.ContentHashes[sheetVer.fileName] + itoa(quali.SizeHint) + langid + itoa(pidx))
-			s += "<div class='" + App.Proj.Html.ClsPanel + "'><img alt='" + name + "' title='" + name + "' src='../.csg_meta/" + App.Proj.meta.ContentHashes[sheetVer.fileName] + "/bwsmall.png'/></div>"
+			s += "<div class='" + App.Proj.Html.ClsPanel + "'><img alt='" + name + "' title='" + name + "' src='./img/" + name + ".svg'/></div>"
 			pidx++
 		}
 		return
