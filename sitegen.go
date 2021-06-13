@@ -79,14 +79,14 @@ func siteGen() {
 							var pidx int
 							sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
 								tstart := time.Now()
-								name := strings.ToLower(App.Proj.meta.ContentHashes[sheetver.fileName]+itoa(quali)+itoa(pidx)) + ".png"
+								name := strings.ToLower(App.Proj.meta.ContentHashes[sheetver.fileName] + itoa(quali) + itoa(pidx))
 								pw, ph, sw := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y, sheetver.meta.PanelsTree.Rect.Max.X-sheetver.meta.PanelsTree.Rect.Min.X
 								width := float64(quali) / (float64(sw) / float64(pw))
 								height := width / (float64(pw) / float64(ph))
 								w, h := int(width), int(height)
-								writeFile(".build/img/"+name, imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, 3, sheetver.colorLayers))
+								writeFile(".build/img/"+name+".png", imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, 3, sheetver.colorLayers))
 								numpngs++
-								printLn("\t", name+" ("+time.Now().Sub(tstart).String()+")")
+								printLn("\t", name+".png ("+time.Now().Sub(tstart).String()+")")
 								pidx++
 							})
 							work.Done()
