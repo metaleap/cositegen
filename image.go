@@ -32,8 +32,8 @@ type ImgPanelArea struct {
 	Rect image.Rectangle
 }
 
-// returns nil if srcImgData already smaller than maxWidth
-func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int, origBytesInsteadOfNilIfAlreadySmaller bool) []byte {
+// returns nil (or srcImgData with origBytesInsteadOfNilIfAlreadySmaller) if srcImgData already smaller than maxWidth
+func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int, origBytesInsteadOfNilIfAlreadySmaller bool, newHeight *int) []byte {
 	var buf bytes.Buffer
 	srcimgdata := srcImgData
 	if origBytesInsteadOfNilIfAlreadySmaller {
@@ -48,13 +48,20 @@ func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int, o
 	origwidth, origheight := imgsrc.Bounds().Max.X, imgsrc.Bounds().Max.Y
 	if origwidth <= maxWidth {
 		if origBytesInsteadOfNilIfAlreadySmaller {
+			if newHeight != nil {
+				*newHeight = origheight
+			}
 			return buf.Bytes()
 		}
 		return nil
 	}
 
 	buf.Reset()
-	imgdown := image.NewGray(image.Rect(0, 0, maxWidth, int(float64(origheight)/(float64(origwidth)/float64(maxWidth)))))
+	newheight := int(float64(origheight) / (float64(origwidth) / float64(maxWidth)))
+	if newHeight != nil {
+		*newHeight = newheight
+	}
+	imgdown := image.NewGray(image.Rect(0, 0, maxWidth, newheight))
 	draw.ApproxBiLinear.Scale(imgdown, imgdown.Bounds(), imgsrc, imgsrc.Bounds(), draw.Over, nil)
 	if err = png.Encode(&buf, imgdown); err != nil {
 		panic(err)
@@ -112,11 +119,13 @@ func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessT
 }
 
 func imgSvg(srcImgData io.Reader, onFileDone func() error, width int) (svgXml string) {
-	pngdata := imgDownsized(srcImgData, onFileDone, width, true)
+	var newheight int
+	pngdata := imgDownsized(srcImgData, onFileDone, width, true, &newheight)
 	_ = pngdata
 	svgXml = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
-	// svgXml+=`<image width="100" height="100" xlink:href="data:image/png;base64,IMAGE_DATA"/>`
-	svgXml += "</svg>"
+	svgXml += `<image width="` + itoa(width) + `" height="` + itoa(newheight) + `" xlink:href="data:image/png;base64,`
+
+	svgXml += `"/></svg>`
 	return
 }
 
