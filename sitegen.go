@@ -17,6 +17,7 @@ type PageGen struct {
 	LangsList   string
 	QualiList   string
 	PageContent string
+	FooterHtml  string
 }
 
 func siteGen() {
@@ -84,9 +85,10 @@ func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, lan
 	name, page := "index", PageGen{
 		SiteTitle:   hEsc(App.Proj.Title),
 		SiteDesc:    hEsc(App.Proj.Desc[langId]),
-		PageTitle:   hEsc("Page Title"),
-		PageDesc:    hEsc("Page description..."),
+		PageTitle:   hEsc(siteGenTextStr("HomeTitle", langId)),
+		PageDesc:    hEsc(siteGenTextStr("HomeDesc", langId)),
 		PageContent: hEsc("Page contents..."),
+		FooterHtml:  siteGenTextStr("FooterHtml", langId),
 	}
 	if page.SiteDesc == "" && langId != App.Proj.Langs[0].Name {
 		page.SiteDesc = App.Proj.Desc[App.Proj.Langs[0].Name]
@@ -145,4 +147,13 @@ func siteGenPageExecAndWrite(tmpl *template.Template, name string, langId string
 		panic(err)
 	}
 	writeFile(".build/"+strings.ToLower(name)+".html", buf.Bytes())
+}
+
+func siteGenTextStr(key string, langId string) (s string) {
+	if s = App.Proj.PageContentTexts[langId][key]; s == "" {
+		if s = App.Proj.PageContentTexts[App.Proj.Langs[0].Name][key]; s == "" {
+			s = key
+		}
+	}
+	return s
 }

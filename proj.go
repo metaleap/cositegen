@@ -20,6 +20,7 @@ type Project struct {
 		SizeHint int
 	}
 	MaxImagePanelTextAreas int
+	PageContentTexts       map[string]map[string]string
 
 	meta struct {
 		ContentHashes map[string]string
