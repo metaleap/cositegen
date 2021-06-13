@@ -122,7 +122,7 @@ func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, lan
 				}
 				page.QualiList += ">" + q.Name + "</option>"
 			}
-			page.QualiList = "<select id='qualilist'>" + page.QualiList + "</select>"
+			page.QualiList = "<select name='" + App.Proj.Html.IdQualiList + "' id='" + App.Proj.Html.IdQualiList + "'>" + page.QualiList + "</select>"
 
 			sitePrepSheetPage(&page, langId, quali.SizeHint, series, chapter, pageNr)
 			siteGenPageExecAndWrite(tmpl, name, langId, &page)
@@ -177,19 +177,19 @@ func sitePrepHomePage(page *PageGen, langId string) {
 	for _, series := range App.Proj.Series {
 		var authordiv string
 		if series.Author != "" {
-			authordiv = "<div class='series'>(Story: &copy; " + series.Author + ")</div>"
+			authordiv = "<div class='" + App.Proj.Html.ClsSeries + "'>(Story: &copy; " + series.Author + ")</div>"
 		}
-		page.PageContent += "<h5 class='series'>" + hEsc(siteGenLocStr(series.Title, langId)) + "</h5><div class='series'>" + hEsc(siteGenLocStr(series.Desc, langId)) + "</div>" + authordiv
-		page.PageContent += "<ul class='series'>"
+		page.PageContent += "<h5 class='" + App.Proj.Html.ClsSeries + "'>" + hEsc(siteGenLocStr(series.Title, langId)) + "</h5><div class='" + App.Proj.Html.ClsSeries + "'>" + hEsc(siteGenLocStr(series.Desc, langId)) + "</div>" + authordiv
+		page.PageContent += "<ul class='" + App.Proj.Html.ClsSeries + "'>"
 		for _, chapter := range series.Chapters {
-			page.PageContent += "<li class='chapter'><a href='./" + series.Name + "-" + chapter.Name + "-fhd-p1-" + langId + ".html'>" + hEsc(siteGenLocStr(chapter.Title, langId)) + "</a></li>"
+			page.PageContent += "<li class='" + App.Proj.Html.ClsChapter + "'><a href='./" + series.Name + "-" + chapter.Name + "-fhd-p1-" + langId + ".html'>" + hEsc(siteGenLocStr(chapter.Title, langId)) + "</a></li>"
 		}
 		page.PageContent += "</ul>"
 	}
 }
 
 func sitePrepSheetPage(page *PageGen, langId string, quali int, series *Series, chapter *Chapter, pageNr int) {
-	page.PageContent = "<div class='sheet'><div class='panels'>"
+	page.PageContent = "<div class='" + App.Proj.Html.ClsSheet + "'><div class='" + App.Proj.Html.ClsPanels + "'>"
 	var sheets []*Sheet
 	switch chapter.SheetsPerPage {
 	case 0:
@@ -216,7 +216,7 @@ func sitePrepSheetPage(page *PageGen, langId string, quali int, series *Series, 
 		pidx := 0
 		sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
 			name := App.Proj.meta.ContentHashes[sheetver.fileName] + "-" + itoa(quali) + "-" + langId + "-" + itoa(pidx)
-			page.PageContent += "<div class='panel'>" + name + "</div>"
+			page.PageContent += "<div class='" + App.Proj.Html.ClsPanel + "'>" + name + "</div>"
 			pidx++
 		})
 	}
