@@ -105,7 +105,7 @@ func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessT
 	return pngbuf.Bytes()
 }
 
-func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int) []byte {
+func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int) []byte {
 	origwidth, origheight := srcImgRect.Max.X-srcImgRect.Min.X, srcImgRect.Max.Y-srcImgRect.Min.Y
 	assert(((*width < origwidth) == (*height < origheight)) &&
 		((*width > origwidth) == (*height > origheight)))
@@ -117,17 +117,18 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 		imgdst = image.NewGray(image.Rect(0, 0, *width, *height))
 		draw.ApproxBiLinear.Scale(imgdst, imgdst.Bounds(), srcImg, srcImgRect, draw.Over, nil)
 	}
-	border := 3
-	for px := imgdst.Bounds().Min.X; px < imgdst.Bounds().Max.X; px++ {
-		for i := 0; i < border; i++ {
-			imgdst.Set(px, imgdst.Bounds().Min.Y+i, color.Black)
-			imgdst.Set(px, imgdst.Bounds().Max.Y-(i+1), color.Black)
+	if blackBorderSize > 0 {
+		for px := imgdst.Bounds().Min.X; px < imgdst.Bounds().Max.X; px++ {
+			for i := 0; i < blackBorderSize; i++ {
+				imgdst.Set(px, imgdst.Bounds().Min.Y+i, color.Black)
+				imgdst.Set(px, imgdst.Bounds().Max.Y-(i+1), color.Black)
+			}
 		}
-	}
-	for py := imgdst.Bounds().Min.Y; py < imgdst.Bounds().Max.Y; py++ {
-		for i := 0; i < border; i++ {
-			imgdst.Set(imgdst.Bounds().Min.X+i, py, color.Black)
-			imgdst.Set(imgdst.Bounds().Max.X-(i+1), py, color.Black)
+		for py := imgdst.Bounds().Min.Y; py < imgdst.Bounds().Max.Y; py++ {
+			for i := 0; i < blackBorderSize; i++ {
+				imgdst.Set(imgdst.Bounds().Min.X+i, py, color.Black)
+				imgdst.Set(imgdst.Bounds().Max.X-(i+1), py, color.Black)
+			}
 		}
 	}
 	var buf bytes.Buffer
@@ -137,13 +138,13 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 	return buf.Bytes()
 }
 
-func imgSubRectSvg(srcImg *image.Gray, srcImgRect image.Rectangle, width int, height int) (svgXml string) {
-	pngdata := imgSubRectPng(srcImg, srcImgRect, &width, &height)
-	svgXml = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
-	svgXml += `<image width="` + itoa(width) + `" height="` + itoa(height) + `" xlink:href="data:image/png;base64,`
-	svgXml += base64.StdEncoding.EncodeToString(pngdata)
-	svgXml += `"/></svg>`
-	return
+func imgSubRectSvg(srcImg *image.Gray, srcImgRect image.Rectangle, width int, height int, blackBorderSize int) []byte {
+	pngdata := imgSubRectPng(srcImg, srcImgRect, &width, &height, blackBorderSize)
+	svgxml := `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
+	svgxml += `<image width="` + itoa(width) + `" height="` + itoa(height) + `" xlink:href="data:image/png;base64,`
+	svgxml += base64.StdEncoding.EncodeToString(pngdata)
+	svgxml += `"/></svg>`
+	return []byte(svgxml)
 }
 
 func imgPanels(srcImgData io.Reader, onFileDone func() error) ImgPanel {

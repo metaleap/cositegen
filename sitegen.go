@@ -55,8 +55,8 @@ func siteGen() {
 		}
 	}
 
-	numsvgs, tstartsvgs := 0, time.Now()
-	printLn("SiteGen: generating SVGs...")
+	numpngs, tstartpngs := 0, time.Now()
+	printLn("SiteGen: generating PNGs...")
 	for _, series := range App.Proj.Series {
 		for _, chapter := range series.Chapters {
 			for _, sheet := range chapter.sheets {
@@ -73,34 +73,31 @@ func siteGen() {
 					_ = srcimgfile.Close()
 
 					var work sync.WaitGroup
-					for lidx, lang := range App.Proj.Langs {
-						for _, quali := range App.Proj.Qualis {
-							work.Add(1)
-							go func(lidx int, langName string, quali int) {
-								var pidx int
-								sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
-									if lidx == 0 || panel.HasAny(langName) {
-										tstart := time.Now()
-										name := strings.ToLower(App.Proj.meta.ContentHashes[sheetver.fileName]+langName+itoa(quali)+itoa(pidx)) + ".svg"
-										pw, ph, sw := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y, sheetver.meta.PanelsTree.Rect.Max.X-sheetver.meta.PanelsTree.Rect.Min.X
-										width := float64(quali) / (float64(sw) / float64(pw))
-										height := width / (float64(pw) / float64(ph))
-										writeFile(".build/img/"+name, []byte(imgSubRectSvg(imgsrc.(*image.Gray), panel.Rect, int(width), int(height))))
-										numsvgs++
-										printLn("\t", name+" ("+time.Now().Sub(tstart).String()+")")
-									}
-									pidx++
-								})
-								work.Done()
-							}(lidx, lang.Name, quali.SizeHint)
-						}
+					for _, quali := range App.Proj.Qualis {
+						work.Add(1)
+						go func(quali int) {
+							var pidx int
+							sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
+								tstart := time.Now()
+								name := strings.ToLower(App.Proj.meta.ContentHashes[sheetver.fileName]+itoa(quali)+itoa(pidx)) + ".png"
+								pw, ph, sw := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y, sheetver.meta.PanelsTree.Rect.Max.X-sheetver.meta.PanelsTree.Rect.Min.X
+								width := float64(quali) / (float64(sw) / float64(pw))
+								height := width / (float64(pw) / float64(ph))
+								w, h := int(width), int(height)
+								writeFile(".build/img/"+name, imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, 3))
+								numpngs++
+								printLn("\t", name+" ("+time.Now().Sub(tstart).String()+")")
+								pidx++
+							})
+							work.Done()
+						}(quali.SizeHint)
 					}
 					work.Wait()
 				}
 			}
 		}
 	}
-	printLn("SiteGen took " + time.Now().Sub(tstartsvgs).String() + " for generating all " + itoa(numsvgs) + " SVGs")
+	printLn("SiteGen took " + time.Now().Sub(tstartpngs).String() + " for generating all " + itoa(numpngs) + " PNGs")
 
 	printLn("SiteGen: generating HTML files...")
 	tmpl, err := template.New("foo").ParseFiles("_sitetmpl/_tmpl.html")
@@ -316,12 +313,8 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 			}
 			s += "</div>"
 		} else {
-			langid := langId
-			if !panel.HasAny(langid) {
-				langid = App.Proj.Langs[0].Name
-			}
-			name := strings.ToLower(App.Proj.meta.ContentHashes[sheetVer.fileName] + langid + itoa(quali.SizeHint) + itoa(pidx))
-			s += "<div class='" + App.Proj.Html.ClsPanel + "'><img alt='" + name + "' title='" + name + "' src='./img/" + name + ".svg'/></div>"
+			name := strings.ToLower(App.Proj.meta.ContentHashes[sheetVer.fileName] + itoa(quali.SizeHint) + itoa(pidx))
+			s += "<div class='" + App.Proj.Html.ClsPanel + "'><img alt='" + name + "' title='" + name + "' src='./img/" + name + ".png'/></div>"
 			pidx++
 		}
 		return
