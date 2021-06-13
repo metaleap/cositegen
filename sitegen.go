@@ -251,8 +251,11 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 		sheetver.ensure(true)
 		pidx := 0
 		sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
+			pw := panel.Rect.Max.X - panel.Rect.Min.X
+			sw := sheetver.meta.PanelsTree.Rect.Max.X - sheetver.meta.PanelsTree.Rect.Min.X
+			pp := int(90.0 / (float64(sw) / float64(pw)))
 			name := strings.ToLower(App.Proj.meta.ContentHashes[sheetver.fileName] + "-" + quali.Name + "-" + langId + "-" + itoa(pidx))
-			page.PageContent += "<div class='" + App.Proj.Html.ClsPanel + "'><img alt='" + name + "' title='" + name + "' src='../jokes/one-pagers/sheets/NFOIF-v2106.png'/></div>"
+			page.PageContent += "<div style='width: " + itoa(pp) + "%;' class='" + App.Proj.Html.ClsPanel + "'><img alt='" + name + "' title='" + name + "' src='../.csg_meta/" + App.Proj.meta.ContentHashes[sheetver.fileName] + "/bwsmall.png'/></div>"
 			pidx++
 		})
 	}
