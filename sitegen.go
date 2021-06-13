@@ -194,7 +194,7 @@ func sitePrepHomePage(page *PageGen, langId string) {
 
 func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, chapter *Chapter, pageNr int) {
 	quali := App.Proj.Qualis[qIdx]
-	page.PagesList, page.PageContent = "", "<div class='"+App.Proj.Html.ClsSheet+"'><div class='"+App.Proj.Html.ClsPanels+"'>"
+	page.PagesList, page.PageContent = "", ""
 	var sheets []*Sheet
 	numpages := 1
 	switch chapter.SheetsPerPage {
@@ -245,19 +245,45 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 		}
 		page.PagesList = "<ul><li><a style='visibility: " + pvis + "' href='./" + strings.ToLower(prev) + ".html'>&larr;</a></li>" + page.PagesList + "<li><a style='visibility: " + nvis + "' href='./" + strings.ToLower(next) + ".html'>&rarr;</a></li></ul>"
 	}
+
+	var iter func(panel *ImgPanel) string
+	iter = func(panel *ImgPanel) (s string) {
+		if len(panel.SubRows) > 0 {
+			for i := range panel.SubRows {
+				iter(&panel.SubRows[i])
+			}
+		} else if len(panel.SubCols) > 0 {
+			for i := range panel.SubCols {
+				iter(&panel.SubCols[i])
+			}
+		} else {
+			s += "<div>Panel: " + panel.Rect.String() + "</div>"
+		}
+		return
+	}
 	for _, sheet := range sheets {
 		assert(len(sheet.versions) == 1)
 		sheetver := sheet.versions[0]
 		sheetver.ensure(true)
-		pidx := 0
-		sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
-			pw := panel.Rect.Max.X - panel.Rect.Min.X
-			sw := sheetver.meta.PanelsTree.Rect.Max.X - sheetver.meta.PanelsTree.Rect.Min.X
-			pp := int(90.0 / (float64(sw) / float64(pw)))
-			name := strings.ToLower(App.Proj.meta.ContentHashes[sheetver.fileName] + "-" + quali.Name + "-" + langId + "-" + itoa(pidx))
-			page.PageContent += "<div style='width: " + itoa(pp) + "%;' class='" + App.Proj.Html.ClsPanel + "'><img alt='" + name + "' title='" + name + "' src='../.csg_meta/" + App.Proj.meta.ContentHashes[sheetver.fileName] + "/bwsmall.png'/></div>"
-			pidx++
-		})
+		// page.PageContent += "<table>" // "<div class='"+App.Proj.Html.ClsSheet+"'><div class='"+App.Proj.Html.ClsPanels+"'>"
+		page.PageContent += iter(sheetver.meta.PanelsTree)
+		// page.PageContent += "</table>" // "</div></div>"
 	}
-	page.PageContent += "</div></div>"
+
+	// for _, sheet := range sheets {
+	// 	assert(len(sheet.versions) == 1)
+	// 	sheetver := sheet.versions[0]
+	// 	sheetver.ensure(true)
+	// 	pidx := 0
+	// 	sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
+	// 		pw := panel.Rect.Max.X - panel.Rect.Min.X
+	// 		sw := sheetver.meta.PanelsTree.Rect.Max.X - sheetver.meta.PanelsTree.Rect.Min.X
+	// 		pp := int(90.0 / (float64(sw) / float64(pw)))
+	// 		name := strings.ToLower(App.Proj.meta.ContentHashes[sheetver.fileName] + "-" + quali.Name + "-" + langId + "-" + itoa(pidx))
+	// 		page.PageContent += "<div style='width: " + itoa(pp) + "%;' class='" + App.Proj.Html.ClsPanel + "'>"
+	// 		page.PageContent += "<img alt='" + name + "' title='" + name + "' src='../.csg_meta/" + App.Proj.meta.ContentHashes[sheetver.fileName] + "/bwsmall.png'/>"
+	// 		page.PageContent += "</div>"
+	// 		pidx++
+	// 	})
+	// }
 }
