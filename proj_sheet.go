@@ -39,14 +39,14 @@ func (me *SheetVer) ensure(removeFromWorkQueue bool) {
 	var shouldsaveprojmeta bool
 
 	if removeFromWorkQueue {
-		App.BgWork.Lock()
-		for i, sheetver := range App.BgWork.Queue {
+		App.PrepWork.Lock()
+		for i, sheetver := range App.PrepWork.Queue {
 			if me == sheetver {
-				App.BgWork.Queue = append(App.BgWork.Queue[:i], App.BgWork.Queue[i+1:]...)
+				App.PrepWork.Queue = append(App.PrepWork.Queue[:i], App.PrepWork.Queue[i+1:]...)
 				break
 			}
 		}
-		App.BgWork.Unlock()
+		App.PrepWork.Unlock()
 	}
 
 	data, err := os.ReadFile(me.fileName)

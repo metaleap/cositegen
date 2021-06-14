@@ -12,16 +12,23 @@ import (
 func main() {
 	appInit()
 	if len(os.Args) > 1 {
-		siteGen()
-		return
+		appPrepWork()
+		args := map[string]bool{}
+		for _, arg := range os.Args[2:] {
+			args[arg] = true
+		}
+		if msg := appMainAction(false, os.Args[1], args); msg != "" {
+			printLn(msg)
+		}
+	} else {
+		go httpListenAndServe()
+		go launchKioskyBrowser()
+		go appPrepWork()
+		for !App.Gui.BrowserClosed {
+			time.Sleep(time.Second)
+		}
+		appOnExit()
 	}
-	go httpListenAndServe()
-	go launchKioskyBrowser()
-	go appBackgroundWork()
-	for !App.Gui.BrowserClosed {
-		time.Sleep(time.Second)
-	}
-	appOnExit()
 }
 
 var browserCmd = []string{"", "--new-window", "--single-process", "--user-data-dir=./.csg_gui", "--disable-extensions", "--disk-cache-size=128", "--app=http://localhost:4321"}
@@ -56,7 +63,7 @@ func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
 		httpResp.Header().Add("Content-Type", "text/html")
 		var notice string
 		if action := httpReq.FormValue("main_action"); action != "" {
-			if notice = appMainAction(action, ""); notice == "" {
+			if notice = appMainAction(true, action, nil); notice == "" {
 				notice = "Action '" + action + "' completed successfully."
 			}
 		}

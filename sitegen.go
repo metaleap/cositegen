@@ -7,8 +7,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"text/template"
 	"time"
 )
@@ -18,6 +20,7 @@ type PageGen struct {
 	SiteDesc    string
 	PageTitle   string
 	PageDesc    string
+	PageLang    string
 	LangsList   string
 	QualList    string
 	PagesList   string
@@ -26,7 +29,7 @@ type PageGen struct {
 	HrefHome    string
 }
 
-func siteGen() {
+func siteGen(args map[string]bool) {
 	printLn("SiteGen started. When done, result will open in new window.")
 	defer func() {
 		if err := recover(); err != nil {
@@ -34,11 +37,13 @@ func siteGen() {
 		}
 	}()
 
-	if err := os.RemoveAll(".build"); err != nil && !os.IsNotExist(err) {
-		panic(err)
+	if !args["nopngs"] {
+		if err := os.RemoveAll(".build"); err != nil && !os.IsNotExist(err) {
+			panic(err)
+		}
+		mkDir(".build")
+		mkDir(".build/img/")
 	}
-	mkDir(".build")
-	mkDir(".build/img/")
 
 	printLn("SiteGen: copying non-HTML files to .build...")
 	if fileinfos, err := os.ReadDir("_sitetmpl"); err != nil {
@@ -55,49 +60,12 @@ func siteGen() {
 		}
 	}
 
-	numpngs, tstartpngs := 0, time.Now()
-	printLn("SiteGen: generating PNGs...")
-	for _, series := range App.Proj.Series {
-		for _, chapter := range series.Chapters {
-			for _, sheet := range chapter.sheets {
-				for _, sheetver := range sheet.versions {
-					sheetver.ensure(true)
-					srcimgfile, err := os.Open(sheetver.meta.bwFilePath)
-					if err != nil {
-						panic(err)
-					}
-					imgsrc, _, err := image.Decode(srcimgfile)
-					if err != nil {
-						panic(err)
-					}
-					_ = srcimgfile.Close()
-
-					var work sync.WaitGroup
-					for _, quali := range App.Proj.Qualis {
-						work.Add(1)
-						go func(quali int) {
-							var pidx int
-							sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
-								tstart := time.Now()
-								name := strings.ToLower(App.Proj.meta.ContentHashes[sheetver.fileName] + itoa(quali) + itoa(pidx))
-								pw, ph, sw := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y, sheetver.meta.PanelsTree.Rect.Max.X-sheetver.meta.PanelsTree.Rect.Min.X
-								width := float64(quali) / (float64(sw) / float64(pw))
-								height := width / (float64(pw) / float64(ph))
-								w, h := int(width), int(height)
-								writeFile(".build/img/"+name+".png", imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, 3, sheetver.colorLayers))
-								numpngs++
-								printLn("\t", name+".png ("+time.Now().Sub(tstart).String()+")")
-								pidx++
-							})
-							work.Done()
-						}(quali.SizeHint)
-					}
-					work.Wait()
-				}
-			}
-		}
+	if !args["nopngs"] {
+		tstartpngs := time.Now()
+		printLn("SiteGen: generating PNGs...")
+		numpngs, numsheets, numpanels := siteGenPngs()
+		printLn("SiteGen took " + time.Now().Sub(tstartpngs).String() + " for generating all " + itoa(numpngs) + " PNGs for " + itoa(numpanels) + " panels from " + itoa(numsheets) + " sheets")
 	}
-	printLn("SiteGen took " + time.Now().Sub(tstartpngs).String() + " for generating all " + itoa(numpngs) + " PNGs")
 
 	printLn("SiteGen: generating HTML files...")
 	tmpl, err := template.New("foo").ParseFiles("_sitetmpl/_tmpl.html")
@@ -127,12 +95,67 @@ func siteGen() {
 	}
 }
 
+func siteGenPngs() (numPngs int, numSheets int, numPanels int) {
+	var numpngs atomic.Value
+	numpngs.Store(0)
+	for _, series := range App.Proj.Series {
+		for _, chapter := range series.Chapters {
+			for _, sheet := range chapter.sheets {
+				for _, sheetver := range sheet.versions {
+					numSheets++
+					sheetver.ensure(true)
+					srcimgfile, err := os.Open(sheetver.meta.bwFilePath)
+					if err != nil {
+						panic(err)
+					}
+					imgsrc, _, err := image.Decode(srcimgfile)
+					if err != nil {
+						panic(err)
+					}
+					_ = srcimgfile.Close()
+
+					var pidx int
+					var work sync.WaitGroup
+					contenthash := App.Proj.meta.ContentHashes[sheetver.fileName]
+					sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
+						work.Add(1)
+						numPanels++
+						go func(pidx int) {
+							for _, quali := range App.Proj.Qualis {
+								tstart := time.Now()
+								name := strings.ToLower(contenthash + itoa(quali.SizeHint) + itoa(pidx))
+								pw, ph, sw := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y, sheetver.meta.PanelsTree.Rect.Max.X-sheetver.meta.PanelsTree.Rect.Min.X
+								width := float64(quali.SizeHint) / (float64(sw) / float64(pw))
+								height := width / (float64(pw) / float64(ph))
+								w, h := int(width), int(height)
+								var wassamesize bool
+								writeFile(".build/img/"+name+".png", imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, 3, sheetver.colorLayers, &wassamesize))
+								numpngs.Store(1 + numpngs.Load().(int))
+								printLn("\t", name+".png ("+time.Now().Sub(tstart).String()+")")
+								if wassamesize {
+									break
+								}
+							}
+							work.Done()
+						}(pidx)
+						pidx++
+					})
+					work.Wait()
+				}
+			}
+		}
+	}
+	numPngs = numpngs.Load().(int)
+	return
+}
+
 func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, langId string, pageNr int) {
 	assert((series == nil) == (chapter == nil))
 
 	name, page := "index", PageGen{
 		SiteTitle:  hEsc(App.Proj.Title),
 		SiteDesc:   hEsc(siteGenLocStr(App.Proj.Desc, langId)),
+		PageLang:   langId,
 		FooterHtml: siteGenTextStr("FooterHtml", langId),
 		HrefHome:   "./index.html",
 	}
@@ -151,7 +174,7 @@ func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, lan
 		if series.Author != "" {
 			authorinfo = " (Story: © " + series.Author + ")"
 		}
-		page.PageTitle = hEsc(siteGenLocStr(series.Title, langId)) + ": " + hEsc(siteGenLocStr(chapter.Title, langId))
+		page.PageTitle = "<span>" + hEsc(siteGenLocStr(series.Title, langId)) + "</span>: " + hEsc(siteGenLocStr(chapter.Title, langId))
 		page.PageDesc = hEsc(siteGenLocStr(series.Desc, langId) + authorinfo)
 		for qidx, quali := range App.Proj.Qualis {
 			name = series.Name + "-" + chapter.Name + "-" + quali.Name
@@ -162,18 +185,37 @@ func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, lan
 			}
 			name += "-" + langId
 
+			allpanels := sitePrepSheetPage(&page, langId, qidx, series, chapter, pageNr)
 			page.QualList = ""
-			for _, q := range App.Proj.Qualis {
+			var prevtotalimgsize int64
+			for i, q := range App.Proj.Qualis {
+				var totalimgsize int64
+				for contenthash, maxpidx := range allpanels {
+					for pidx := 0; pidx <= maxpidx; pidx++ {
+						name := strings.ToLower(contenthash + itoa(q.SizeHint) + itoa(pidx))
+						if fileinfo, err := os.Stat(strings.ToLower(".build/img/" + name + ".png")); err == nil {
+							totalimgsize += fileinfo.Size()
+						}
+					}
+				}
+				if i != 0 && totalimgsize <= prevtotalimgsize {
+					break
+				}
+				prevtotalimgsize = totalimgsize
+
 				href := strings.Replace(name, "-"+quali.Name+"-", "-"+q.Name+"-", 1)
 				page.QualList += "<option value='" + strings.ToLower(href) + "'"
 				if q.Name == quali.Name {
 					page.QualList += " selected='selected'"
 				}
-				page.QualList += ">" + q.Name + "</option>"
+				imgsizeinfo := itoa(int(totalimgsize/1024)) + "KB"
+				if mb := totalimgsize / 1048576; mb > 0 {
+					imgsizeinfo = strconv.FormatFloat(float64(totalimgsize)/1048576.0, 1, 'f', 64) + "MB"
+				}
+				page.QualList += ">" + q.Name + " (~" + imgsizeinfo + ")" + "</option>"
 			}
 			page.QualList = "<select name='" + App.Proj.Html.IdQualiList + "' id='" + App.Proj.Html.IdQualiList + "'>" + page.QualList + "</select>"
 
-			sitePrepSheetPage(&page, langId, qidx, series, chapter, pageNr)
 			siteGenPageExecAndWrite(tmpl, name, langId, &page)
 		}
 	}
@@ -232,13 +274,13 @@ func sitePrepHomePage(page *PageGen, langId string) {
 		page.PageContent += "<h5 class='" + App.Proj.Html.ClsSeries + "'>" + hEsc(siteGenLocStr(series.Title, langId)) + "</h5><div class='" + App.Proj.Html.ClsSeries + "'>" + hEsc(siteGenLocStr(series.Desc, langId)) + "</div>" + authordiv
 		page.PageContent += "<ul class='" + App.Proj.Html.ClsSeries + "'>"
 		for _, chapter := range series.Chapters {
-			page.PageContent += "<li class='" + App.Proj.Html.ClsChapter + "'><a href='./" + series.Name + "-" + chapter.Name + "-fhd-p1-" + langId + ".html'>" + hEsc(siteGenLocStr(chapter.Title, langId)) + "</a></li>"
+			page.PageContent += "<li class='" + App.Proj.Html.ClsChapter + "'><a href='./" + strings.ToLower(series.Name+"-"+chapter.Name+"-"+App.Proj.Qualis[0].Name+"-p1-"+langId) + ".html'>" + hEsc(siteGenLocStr(chapter.Title, langId)) + "</a></li>"
 		}
 		page.PageContent += "</ul>"
 	}
 }
 
-func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, chapter *Chapter, pageNr int) {
+func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, chapter *Chapter, pageNr int) map[string]int {
 	quali := App.Proj.Qualis[qIdx]
 	page.PagesList, page.PageContent = "", ""
 	var sheets []*Sheet
@@ -294,6 +336,7 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 
 	var pidx int
 	var iter func(*SheetVer, *ImgPanel) string
+	allpanels := map[string]int{}
 	iter = func(sheetVer *SheetVer, panel *ImgPanel) (s string) {
 		assert(len(panel.SubCols) == 0 || len(panel.SubRows) == 0)
 		if len(panel.SubRows) > 0 {
@@ -313,7 +356,14 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 			}
 			s += "</div>"
 		} else {
-			name := strings.ToLower(App.Proj.meta.ContentHashes[sheetVer.fileName] + itoa(quali.SizeHint) + itoa(pidx))
+			allpanels[App.Proj.meta.ContentHashes[sheetVer.fileName]] = pidx
+			var name string
+			for i := qIdx; i >= 0; i-- {
+				name = strings.ToLower(App.Proj.meta.ContentHashes[sheetVer.fileName] + itoa(App.Proj.Qualis[i].SizeHint) + itoa(pidx))
+				if fileinfo, err := os.Stat(".build/img/" + name + ".png"); err == nil && (!fileinfo.IsDir()) && fileinfo.Size() > 0 {
+					break
+				}
+			}
 			s += "<div class='" + App.Proj.Html.ClsPanel + "'><img alt='" + name + "' title='" + name + "' src='./img/" + name + ".png'/></div>"
 			pidx++
 		}
@@ -328,4 +378,5 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 		page.PageContent += iter(sheetver, sheetver.meta.PanelsTree)
 		page.PageContent += "</div>"
 	}
+	return allpanels
 }

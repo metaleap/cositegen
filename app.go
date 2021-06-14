@@ -10,7 +10,7 @@ import (
 var App struct {
 	StaticFilesDirPath string
 	Proj               Project
-	BgWork             struct {
+	PrepWork           struct {
 		sync.Mutex
 		Queue []*SheetVer
 	}
@@ -30,9 +30,6 @@ var App struct {
 func appInit() {
 	App.StaticFilesDirPath = filepath.Join(os.Getenv("HOME"), "c/go/src/github.com/metaleap/cositegen/_static")
 	mkDir(".csg_meta")
-	App.Gui.State.Sel.Chapter = nil
-	App.Gui.State.Sel.Sheet = nil
-	App.Gui.State.Sel.Series = nil
 	App.Proj.load()
 
 	var cmdidx int
@@ -54,33 +51,44 @@ func appOnExit() {
 }
 
 var appMainActions = map[string]bool{}
+var AppMainActions = A{
+	"SiteGen": "Re-generate site fully",
+}
 
-func appMainAction(name string, arg string) string {
+func appMainAction(fromGui bool, name string, args map[string]bool) string {
 	if appMainActions[name] {
 		return "Action '" + name + "' already in progress and not yet done."
 	}
 	appMainActions[name] = true
+
+	var action func(map[string]bool)
 	switch name {
 	case "SiteGen":
-		go func() { defer func() { appMainActions[name] = false }(); siteGen() }()
+		action = siteGen
 	default:
 		return "Unknown action: '" + name + "'"
 	}
-	return "Action '" + name + "' kicked off. Progress printed to stdio."
+	if fromGui {
+		go func() { defer func() { appMainActions[name] = false }(); action(args) }()
+		return "Action '" + name + "' kicked off. Progress printed to stdio."
+	} else {
+		action(args)
+		return ""
+	}
 }
 
-func appBackgroundWork() {
+func appPrepWork() {
 	for true {
-		App.BgWork.Lock()
-		if len(App.BgWork.Queue) == 0 {
-			App.BgWork.Unlock()
+		App.PrepWork.Lock()
+		if len(App.PrepWork.Queue) == 0 {
+			App.PrepWork.Unlock()
 			break
 		}
-		job := App.BgWork.Queue[0]
-		App.BgWork.Queue = App.BgWork.Queue[1:]
-		App.BgWork.Unlock()
-		printLn("Background processing: " + job.fileName + "...")
+		job := App.PrepWork.Queue[0]
+		App.PrepWork.Queue = App.PrepWork.Queue[1:]
+		App.PrepWork.Unlock()
+		printLn("Pre-processing: " + job.fileName + "...")
 		job.ensure(false)
 	}
-	printLn("Background processings complete.")
+	printLn("Pre-processings complete.")
 }

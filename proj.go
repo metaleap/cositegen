@@ -131,7 +131,7 @@ func (me *Project) load() {
 					}
 					sheetver := &SheetVer{name: versionname, parent: sheet, fileName: fname}
 					sheet.versions = append(sheet.versions, sheetver)
-					App.BgWork.Queue = append(App.BgWork.Queue, sheetver)
+					App.PrepWork.Queue = append(App.PrepWork.Queue, sheetver)
 				}
 			}
 		}

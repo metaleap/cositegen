@@ -105,7 +105,7 @@ func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessT
 	return pngbuf.Bytes()
 }
 
-func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int, transparent bool) []byte {
+func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int, transparent bool, gotSameSizeAsOrig *bool) []byte {
 	origwidth, origheight := srcImgRect.Max.X-srcImgRect.Min.X, srcImgRect.Max.Y-srcImgRect.Min.Y
 	assert(((*width < origwidth) == (*height < origheight)) &&
 		((*width > origwidth) == (*height > origheight)))
@@ -122,8 +122,8 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 	}
 
 	var imgdst draw.Image
-	isnoresize := *width > origwidth
-	if isnoresize {
+	*gotSameSizeAsOrig = *width > origwidth
+	if *gotSameSizeAsOrig {
 		*width, *height = origwidth, origheight
 		if !transparent {
 			imgdst = srcImg.SubImage(srcImgRect).(draw.Image)
@@ -162,8 +162,8 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 	return buf.Bytes()
 }
 
-func imgSubRectSvg(srcImg *image.Gray, srcImgRect image.Rectangle, width int, height int, blackBorderSize int, transparent bool) []byte {
-	pngdata := imgSubRectPng(srcImg, srcImgRect, &width, &height, blackBorderSize, transparent)
+func imgSubRectSvg(srcImg *image.Gray, srcImgRect image.Rectangle, width int, height int, blackBorderSize int, transparent bool, gotSameSizeAsOrig *bool) []byte {
+	pngdata := imgSubRectPng(srcImg, srcImgRect, &width, &height, blackBorderSize, transparent, gotSameSizeAsOrig)
 	svgxml := `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
 	svgxml += `<image width="` + itoa(width) + `" height="` + itoa(height) + `" xlink:href="data:image/png;base64,`
 	svgxml += base64.StdEncoding.EncodeToString(pngdata)

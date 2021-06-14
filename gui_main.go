@@ -49,9 +49,7 @@ func guiMain(r *http.Request, notice string) []byte {
 		}
 	}
 
-	s += "<hr/>" + guiHtmlListFrom("main_action", "(Actions)", A{
-		"SiteGen": "Re-generate site fully",
-	})
+	s += "<hr/>" + guiHtmlListFrom("main_action", "(Actions)", AppMainActions)
 
 	s += "</form></body>"
 	if rfv := rVal("main_focus_id"); rfv != "" && rfv != "main_action" && notice == "" {
