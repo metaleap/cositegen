@@ -24,6 +24,7 @@ type PageGen struct {
 	PageDesc    string
 	PageLang    string
 	LangsList   string
+	ViewerList  string
 	QualList    string
 	PagesList   string
 	PageContent string
@@ -230,7 +231,7 @@ func siteGenPageExecAndWrite(tmpl *template.Template, name string, langId string
 	for _, lang := range App.Proj.Langs {
 		page.LangsList += "<div>"
 		if lang.Name == langId {
-			page.LangsList += "<b>" + hEsc(lang.Title) + "</b>"
+			page.LangsList += "<b><input type='radio' disabled='disabled' checked='checked'/>" + hEsc(lang.Title) + "</b>"
 		} else {
 			href := name[:len(name)-len(langId)] + lang.Name
 			if name == "index" && langId == App.Proj.Langs[0].Name {
@@ -238,7 +239,7 @@ func siteGenPageExecAndWrite(tmpl *template.Template, name string, langId string
 			} else if lang.Name == App.Proj.Langs[0].Name && strings.HasPrefix(name, "index-") {
 				href = "index"
 			}
-			page.LangsList += "<a href='./" + strings.ToLower(href) + ".html'>" + hEsc(lang.Title) + "</a>"
+			page.LangsList += "<a href='./" + strings.ToLower(href) + ".html'><input type='radio' disabled='disabled'/>" + hEsc(lang.Title) + "</a>"
 		}
 		page.LangsList += "</div>"
 	}
@@ -316,6 +317,21 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 				sheets = append(sheets, chapter.sheets[i])
 			}
 		}
+	}
+	if pageNr == numpages && len(series.Chapters) > 1 {
+		chidx := 0
+		for i, chap := range series.Chapters {
+			if chap == chapter {
+				chidx = i
+				break
+			}
+		}
+		nextchap := series.Chapters[0]
+		if chidx < len(series.Chapters)-1 {
+			nextchap = series.Chapters[chidx+1]
+		}
+		href := series.Name + "-" + nextchap.Name + "-" + itoa(quali.SizeHint) + "-p1-" + langId
+		page.PagesList += "<li><a href='./" + strings.ToLower(href) + ".html#" + App.Proj.Html.APaging + "'>" + siteGenLocStr(nextchap.Title, langId) + "</a></li>"
 	}
 	if page.PagesList != "" {
 		var pg int
