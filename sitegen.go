@@ -122,16 +122,16 @@ func siteGenPngs() (numPngs int, numSheets int, numPanels int) {
 						numPanels++
 						go func(pidx int) {
 							for _, quali := range App.Proj.Qualis {
-								tstart := time.Now()
+								// tstart := time.Now()
 								name := strings.ToLower(contenthash + itoa(quali.SizeHint) + itoa(pidx))
 								pw, ph, sw := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y, sheetver.meta.PanelsTree.Rect.Max.X-sheetver.meta.PanelsTree.Rect.Min.X
 								width := float64(quali.SizeHint) / (float64(sw) / float64(pw))
 								height := width / (float64(pw) / float64(ph))
 								w, h := int(width), int(height)
 								var wassamesize bool
-								writeFile(".build/img/"+name+".png", imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, 3, sheetver.colorLayers, &wassamesize))
+								writeFile(".build/img/"+name+".png", imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, quali.SizeHint/424, quali.SizeHint/424, sheetver.colorLayers, &wassamesize))
 								numpngs.Store(1 + numpngs.Load().(int))
-								printLn("\t", name+".png ("+time.Now().Sub(tstart).String()+")")
+								// printLn("\t", name+".png ("+time.Now().Sub(tstart).String()+")")
 								if wassamesize {
 									break
 								}
@@ -170,14 +170,14 @@ func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, lan
 		sitePrepHomePage(&page, langId)
 		siteGenPageExecAndWrite(tmpl, name, langId, &page)
 	} else {
+		page.PageTitle = "<span>" + hEsc(siteGenLocStr(series.Title, langId)) + "</span>: " + hEsc(siteGenLocStr(chapter.Title, langId))
 		var authorinfo string
 		if series.Author != "" {
-			authorinfo = " (Story: © " + series.Author + ")"
+			authorinfo = strings.Replace(siteGenTextStr("TmplAuthorInfoHtml", langId), "%AUTHOR%", series.Author, 1)
 		}
-		page.PageTitle = "<span>" + hEsc(siteGenLocStr(series.Title, langId)) + "</span>: " + hEsc(siteGenLocStr(chapter.Title, langId))
-		page.PageDesc = hEsc(siteGenLocStr(series.Desc, langId) + authorinfo)
+		page.PageDesc = hEsc(siteGenLocStr(series.Desc, langId)) + authorinfo
 		for qidx, quali := range App.Proj.Qualis {
-			name = series.Name + "-" + chapter.Name + "-" + quali.Name
+			name = series.Name + "-" + chapter.Name + "-" + itoa(quali.SizeHint)
 			if pageNr != 0 {
 				name += "-p" + itoa(pageNr)
 			} else {
@@ -203,7 +203,7 @@ func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, lan
 				}
 				prevtotalimgsize = totalimgsize
 
-				href := strings.Replace(name, "-"+quali.Name+"-", "-"+q.Name+"-", 1)
+				href := strings.Replace(name, "-"+itoa(quali.SizeHint)+"-", "-"+itoa(q.SizeHint)+"-", 1)
 				page.QualList += "<option value='" + strings.ToLower(href) + "'"
 				if q.Name == quali.Name {
 					page.QualList += " selected='selected'"
@@ -212,9 +212,9 @@ func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, lan
 				if mb := totalimgsize / 1048576; mb > 0 {
 					imgsizeinfo = strconv.FormatFloat(float64(totalimgsize)/1048576.0, 1, 'f', 64) + "MB"
 				}
-				page.QualList += ">" + q.Name + " (~" + imgsizeinfo + ")" + "</option>"
+				page.QualList += ">" + q.Name + " (" + imgsizeinfo + ")" + "</option>"
 			}
-			page.QualList = "<select name='" + App.Proj.Html.IdQualiList + "' id='" + App.Proj.Html.IdQualiList + "'>" + page.QualList + "</select>"
+			page.QualList = "<select title='" + hEsc(siteGenTextStr("QualityHint", langId)) + "' name='" + App.Proj.Html.IdQualiList + "' id='" + App.Proj.Html.IdQualiList + "'>" + page.QualList + "</select>"
 
 			siteGenPageExecAndWrite(tmpl, name, langId, &page)
 		}
@@ -225,7 +225,7 @@ func siteGenPageExecAndWrite(tmpl *template.Template, name string, langId string
 	// println("\t", strings.ToLower(name)+".html...")
 	page.LangsList = ""
 	for _, lang := range App.Proj.Langs {
-		page.LangsList += "<li>"
+		page.LangsList += "<div>"
 		if lang.Name == langId {
 			page.LangsList += "<b>" + hEsc(lang.Title) + "</b>"
 		} else {
@@ -237,9 +237,8 @@ func siteGenPageExecAndWrite(tmpl *template.Template, name string, langId string
 			}
 			page.LangsList += "<a href='./" + strings.ToLower(href) + ".html'>" + hEsc(lang.Title) + "</a>"
 		}
-		page.LangsList += "</li>"
+		page.LangsList += "</div>"
 	}
-	page.LangsList = "<ul>" + page.LangsList + "</ul>"
 
 	buf := bytes.NewBuffer(nil)
 	if err := tmpl.ExecuteTemplate(buf, "_tmpl.html", page); err != nil {
@@ -267,14 +266,14 @@ func siteGenTextStr(key string, langId string) (s string) {
 func sitePrepHomePage(page *PageGen, langId string) {
 	page.PageContent = ""
 	for _, series := range App.Proj.Series {
-		var authordiv string
+		var authorinfo string
 		if series.Author != "" {
-			authordiv = "<div class='" + App.Proj.Html.ClsSeries + "'>(Story: &copy; " + series.Author + ")</div>"
+			authorinfo = strings.Replace(siteGenTextStr("TmplAuthorInfoHtml", langId), "%AUTHOR%", series.Author, 1)
 		}
-		page.PageContent += "<h5 class='" + App.Proj.Html.ClsSeries + "'>" + hEsc(siteGenLocStr(series.Title, langId)) + "</h5><div class='" + App.Proj.Html.ClsSeries + "'>" + hEsc(siteGenLocStr(series.Desc, langId)) + "</div>" + authordiv
+		page.PageContent += "<h5 class='" + App.Proj.Html.ClsSeries + "'>" + hEsc(siteGenLocStr(series.Title, langId)) + "</h5><div class='" + App.Proj.Html.ClsSeries + "'>" + hEsc(siteGenLocStr(series.Desc, langId)) + authorinfo + "</div>"
 		page.PageContent += "<ul class='" + App.Proj.Html.ClsSeries + "'>"
 		for _, chapter := range series.Chapters {
-			page.PageContent += "<li class='" + App.Proj.Html.ClsChapter + "'><a href='./" + strings.ToLower(series.Name+"-"+chapter.Name+"-"+App.Proj.Qualis[0].Name+"-p1-"+langId) + ".html'>" + hEsc(siteGenLocStr(chapter.Title, langId)) + "</a></li>"
+			page.PageContent += "<li class='" + App.Proj.Html.ClsChapter + "'><a href='./" + strings.ToLower(series.Name+"-"+chapter.Name+"-"+itoa(App.Proj.Qualis[0].SizeHint)+"-p1-"+langId) + ".html'>" + hEsc(siteGenLocStr(chapter.Title, langId)) + "</a></li>"
 		}
 		page.PageContent += "</ul>"
 	}
@@ -306,7 +305,7 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 				if pgnr == pageNr {
 					page.PagesList += "<li><b>" + itoa(pgnr) + "</b></li>"
 				} else if shownums[pgnr] {
-					href := series.Name + "-" + chapter.Name + "-" + quali.Name + "-p" + itoa(pgnr) + "-" + langId
+					href := series.Name + "-" + chapter.Name + "-" + itoa(quali.SizeHint) + "-p" + itoa(pgnr) + "-" + langId
 					page.PagesList += "<li><a href='./" + strings.ToLower(href) + ".html'>" + itoa(pgnr) + "</a></li>"
 				}
 			}
@@ -320,11 +319,11 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 		if pg = pageNr - 1; pg < 1 {
 			pg = 1
 		}
-		pvis, prev := "hidden", series.Name+"-"+chapter.Name+"-"+quali.Name+"-p"+itoa(pg)+"-"+langId
+		pvis, prev := "hidden", series.Name+"-"+chapter.Name+"-"+itoa(quali.SizeHint)+"-p"+itoa(pg)+"-"+langId
 		if pg = pageNr + 1; pg > numpages {
 			pg = numpages
 		}
-		nvis, next := "hidden", series.Name+"-"+chapter.Name+"-"+quali.Name+"-p"+itoa(pg)+"-"+langId
+		nvis, next := "hidden", series.Name+"-"+chapter.Name+"-"+itoa(quali.SizeHint)+"-p"+itoa(pg)+"-"+langId
 		if pageNr > 1 {
 			pvis = "visible"
 		}
@@ -351,8 +350,8 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 				sc := &panel.SubCols[i]
 				pw := sc.Rect.Max.X - sc.Rect.Min.X
 				sw := sheetVer.meta.PanelsTree.Rect.Max.X - sheetVer.meta.PanelsTree.Rect.Min.X
-				pp := int(99.0 / (float64(sw) / float64(pw)))
-				s += "<div class='" + App.Proj.Html.ClsPanelCol + "' style='width: " + itoa(pp) + "%'>" + iter(sheetVer, sc) + "</div>"
+				pp := 100.0 / (float64(sw) / float64(pw))
+				s += "<div class='" + App.Proj.Html.ClsPanelCol + "' style='width: " + strconv.FormatFloat(pp, 'f', 8, 64) + "%'>" + iter(sheetVer, sc) + "</div>"
 			}
 			s += "</div>"
 		} else {

@@ -105,7 +105,7 @@ func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessT
 	return pngbuf.Bytes()
 }
 
-func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int, transparent bool, gotSameSizeAsOrig *bool) []byte {
+func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int, whiteBorderSize int, transparent bool, gotSameSizeAsOrig *bool) []byte {
 	origwidth, origheight := srcImgRect.Max.X-srcImgRect.Min.X, srcImgRect.Max.Y-srcImgRect.Min.Y
 	assert(((*width < origwidth) == (*height < origheight)) &&
 		((*width > origwidth) == (*height > origheight)))
@@ -137,21 +137,39 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 		}
 		draw.ApproxBiLinear.Scale(imgdst, imgdst.Bounds(), srcimg, srcImgRect, draw.Over, nil)
 	}
+	if whiteBorderSize > 0 {
+		var white color.Color = color.White
+		if transparent {
+			white = color.NRGBA{R: 0, G: 0, B: 0, A: 0}
+		}
+		for px := imgdst.Bounds().Min.X; px < imgdst.Bounds().Max.X; px++ {
+			for i := 0; i < whiteBorderSize; i++ {
+				imgdst.Set(px, imgdst.Bounds().Min.Y+i, white)
+				imgdst.Set(px, imgdst.Bounds().Max.Y-(i+1), white)
+			}
+		}
+		for py := imgdst.Bounds().Min.Y; py < imgdst.Bounds().Max.Y; py++ {
+			for i := 0; i < whiteBorderSize; i++ {
+				imgdst.Set(imgdst.Bounds().Min.X+i, py, white)
+				imgdst.Set(imgdst.Bounds().Max.X-(i+1), py, white)
+			}
+		}
+	}
 	if blackBorderSize > 0 {
 		var black color.Color = color.Black
 		if transparent {
 			black = color.NRGBA{R: 0, G: 0, B: 0, A: 255}
 		}
-		for px := imgdst.Bounds().Min.X; px < imgdst.Bounds().Max.X; px++ {
+		for px := imgdst.Bounds().Min.X + whiteBorderSize; px < (imgdst.Bounds().Max.X - whiteBorderSize); px++ {
 			for i := 0; i < blackBorderSize; i++ {
-				imgdst.Set(px, imgdst.Bounds().Min.Y+i, black)
-				imgdst.Set(px, imgdst.Bounds().Max.Y-(i+1), black)
+				imgdst.Set(px, imgdst.Bounds().Min.Y+i+whiteBorderSize, black)
+				imgdst.Set(px, imgdst.Bounds().Max.Y-(i+1+whiteBorderSize), black)
 			}
 		}
-		for py := imgdst.Bounds().Min.Y; py < imgdst.Bounds().Max.Y; py++ {
+		for py := imgdst.Bounds().Min.Y + whiteBorderSize; py < imgdst.Bounds().Max.Y-whiteBorderSize; py++ {
 			for i := 0; i < blackBorderSize; i++ {
-				imgdst.Set(imgdst.Bounds().Min.X+i, py, black)
-				imgdst.Set(imgdst.Bounds().Max.X-(i+1), py, black)
+				imgdst.Set(imgdst.Bounds().Min.X+i+whiteBorderSize, py, black)
+				imgdst.Set(imgdst.Bounds().Max.X-(i+1+whiteBorderSize), py, black)
 			}
 		}
 	}
@@ -162,8 +180,8 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 	return buf.Bytes()
 }
 
-func imgSubRectSvg(srcImg *image.Gray, srcImgRect image.Rectangle, width int, height int, blackBorderSize int, transparent bool, gotSameSizeAsOrig *bool) []byte {
-	pngdata := imgSubRectPng(srcImg, srcImgRect, &width, &height, blackBorderSize, transparent, gotSameSizeAsOrig)
+func imgSubRectSvg(srcImg *image.Gray, srcImgRect image.Rectangle, width int, height int, blackBorderSize int, whiteBorderSize int, transparent bool, gotSameSizeAsOrig *bool) []byte {
+	pngdata := imgSubRectPng(srcImg, srcImgRect, &width, &height, blackBorderSize, whiteBorderSize, transparent, gotSameSizeAsOrig)
 	svgxml := `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
 	svgxml += `<image width="` + itoa(width) + `" height="` + itoa(height) + `" xlink:href="data:image/png;base64,`
 	svgxml += base64.StdEncoding.EncodeToString(pngdata)
