@@ -105,6 +105,27 @@ func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessT
 	return pngbuf.Bytes()
 }
 
+func imgBwBorder(imgdst draw.Image, bwColor color.Gray, size int, offset int, transparent bool) {
+	if size > 0 {
+		var col color.Color = bwColor
+		if transparent {
+			col = color.NRGBA{R: 0, G: 0, B: 0, A: 255 - bwColor.Y}
+		}
+		for px := imgdst.Bounds().Min.X + offset; px < (imgdst.Bounds().Max.X - offset); px++ {
+			for i := 0; i < size; i++ {
+				imgdst.Set(px, imgdst.Bounds().Min.Y+i+offset, col)
+				imgdst.Set(px, imgdst.Bounds().Max.Y-(i+1+offset), col)
+			}
+		}
+		for py := imgdst.Bounds().Min.Y + offset; py < imgdst.Bounds().Max.Y-offset; py++ {
+			for i := 0; i < size; i++ {
+				imgdst.Set(imgdst.Bounds().Min.X+i+offset, py, col)
+				imgdst.Set(imgdst.Bounds().Max.X-(i+1+offset), py, col)
+			}
+		}
+	}
+}
+
 func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int, whiteBorderSize int, transparent bool, gotSameSizeAsOrig *bool) []byte {
 	origwidth, origheight := srcImgRect.Max.X-srcImgRect.Min.X, srcImgRect.Max.Y-srcImgRect.Min.Y
 	assert(((*width < origwidth) == (*height < origheight)) &&
@@ -137,42 +158,8 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 		}
 		draw.ApproxBiLinear.Scale(imgdst, imgdst.Bounds(), srcimg, srcImgRect, draw.Over, nil)
 	}
-	if whiteBorderSize > 0 {
-		var white color.Color = color.White
-		if transparent {
-			white = color.NRGBA{R: 0, G: 0, B: 0, A: 0}
-		}
-		for px := imgdst.Bounds().Min.X; px < imgdst.Bounds().Max.X; px++ {
-			for i := 0; i < whiteBorderSize; i++ {
-				imgdst.Set(px, imgdst.Bounds().Min.Y+i, white)
-				imgdst.Set(px, imgdst.Bounds().Max.Y-(i+1), white)
-			}
-		}
-		for py := imgdst.Bounds().Min.Y; py < imgdst.Bounds().Max.Y; py++ {
-			for i := 0; i < whiteBorderSize; i++ {
-				imgdst.Set(imgdst.Bounds().Min.X+i, py, white)
-				imgdst.Set(imgdst.Bounds().Max.X-(i+1), py, white)
-			}
-		}
-	}
-	if blackBorderSize > 0 {
-		var black color.Color = color.Black
-		if transparent {
-			black = color.NRGBA{R: 0, G: 0, B: 0, A: 255}
-		}
-		for px := imgdst.Bounds().Min.X + whiteBorderSize; px < (imgdst.Bounds().Max.X - whiteBorderSize); px++ {
-			for i := 0; i < blackBorderSize; i++ {
-				imgdst.Set(px, imgdst.Bounds().Min.Y+i+whiteBorderSize, black)
-				imgdst.Set(px, imgdst.Bounds().Max.Y-(i+1+whiteBorderSize), black)
-			}
-		}
-		for py := imgdst.Bounds().Min.Y + whiteBorderSize; py < imgdst.Bounds().Max.Y-whiteBorderSize; py++ {
-			for i := 0; i < blackBorderSize; i++ {
-				imgdst.Set(imgdst.Bounds().Min.X+i+whiteBorderSize, py, black)
-				imgdst.Set(imgdst.Bounds().Max.X-(i+1+whiteBorderSize), py, black)
-			}
-		}
-	}
+	imgBwBorder(imgdst, color.Gray{255}, whiteBorderSize, 0, transparent)
+	imgBwBorder(imgdst, color.Gray{0}, blackBorderSize, whiteBorderSize, transparent)
 	var buf bytes.Buffer
 	if err := png.Encode(&buf, imgdst); err != nil {
 		panic(err)
