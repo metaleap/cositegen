@@ -54,12 +54,13 @@ func httpListenAndServe() {
 }
 
 func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
-	switch path.Ext(httpReq.URL.Path) {
-	case ".css", ".js":
+	if ext := path.Ext(httpReq.URL.Path); ext == ".css" || ext == ".js" {
 		http.ServeFile(httpResp, httpReq, filepath.Join(App.StaticFilesDirPath, httpReq.URL.Path))
-	case ".png":
-		http.ServeFile(httpResp, httpReq, filepath.Join(".", httpReq.URL.Path))
-	default:
+	} else if ext == ".png" {
+		http.ServeFile(httpResp, httpReq, filepath.Join(".", httpReq.URL.Path)) //looks redudant but isnt!
+	} else if ext != "" {
+		http.ServeFile(httpResp, httpReq, filepath.Join("_sitetmpl", httpReq.URL.Path))
+	} else {
 		httpResp.Header().Add("Content-Type", "text/html")
 		var notice string
 		if action := httpReq.FormValue("main_action"); action != "" {

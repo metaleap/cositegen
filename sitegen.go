@@ -382,7 +382,18 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 					break
 				}
 			}
-			s += "<div class='" + App.Proj.Html.ClsPanel + "'><img alt='" + name + "' title='" + name + "' src='./img/" + name + ".png'/></div>"
+
+			s += "<div class='" + App.Proj.Html.ClsPanel + "'>"
+			s += "<img alt='" + name + "' title='" + name + "' src='./img/" + name + ".png'/>"
+			for _, pta := range panel.Areas {
+				aw, ah := pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
+				pw, ph := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y
+				wp, hp := 100.0/(float64(pw)/float64(aw)), 100.0/(float64(ph)/float64(ah))
+				ax, ay := pta.Rect.Min.X-panel.Rect.Min.X, pta.Rect.Min.Y-panel.Rect.Min.Y
+				xp, yp := 100.0/(float64(pw)/float64(ax)), 100.0/(float64(ph)/float64(ay))
+				s += "<div class='" + App.Proj.Html.ClsPanelArea + "' style='top: " + strconv.FormatFloat(yp, 'f', 8, 64) + "%; left: " + strconv.FormatFloat(xp, 'f', 8, 64) + "%; width: " + strconv.FormatFloat(wp, 'f', 8, 64) + "%; height: " + strconv.FormatFloat(hp, 'f', 8, 64) + "%; max-width: " + strconv.FormatFloat(wp, 'f', 8, 64) + "%; max-height: " + strconv.FormatFloat(hp, 'f', 8, 64) + "%;'>" + siteGenLocStr(pta.Data, langId) + "</div>"
+			}
+			s += "</div>"
 			pidx++
 		}
 		return

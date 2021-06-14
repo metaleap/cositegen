@@ -30,6 +30,7 @@ type Project struct {
 		ClsPanelRows string
 		ClsPanelRow  string
 		ClsPanel     string
+		ClsPanelArea string
 		APaging      string
 	}
 
