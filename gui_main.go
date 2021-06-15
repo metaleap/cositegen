@@ -167,7 +167,7 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 				area = panel.Areas[i]
 			}
 			for _, lang := range App.Proj.Langs {
-				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang.Name, area.Data[lang.Name], A{"placeholder": lang.Title, "onfocus": "tmpInterval = setInterval(function() { " + jsrefr + " }, 123);", "onblur": "clearInterval(tmpInterval);" + jsrefr, "onchange": "clearInterval(tmpInterval);" + jsrefr, "class": "panelcfgtext col" + itoa(i%8)}) + "</div><div>"
+				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang.Name, area.Data[lang.Name], A{"placeholder": lang.Title, "onfocus": "clearInterval(tmpInterval); tmpInterval = setInterval(function() { " + jsrefr + " }, 444);", "onblur": "clearInterval(tmpInterval);" + jsrefr, "onchange": "clearInterval(tmpInterval);" + jsrefr, "class": "panelcfgtext col" + itoa(i%8)}) + "</div><div>"
 			}
 			s += "X,Y:"
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx0", itoa(area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.X), "max": itoa(panel.Rect.Max.X)})
