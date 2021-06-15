@@ -8,6 +8,7 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	"io"
+	"strings"
 
 	"golang.org/x/image/draw"
 )
@@ -176,6 +177,17 @@ func imgSubRectSvg(srcImg *image.Gray, srcImgRect image.Rectangle, width int, he
 	return []byte(svgxml)
 }
 
+func imgSvgText(pta *ImgPanelArea, langId string) (s string) {
+	aw, ah := pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
+	s += "<svg viewbox='0 0 " + itoa(aw) + " " + itoa(ah) + "'><text x='0' y='0'>"
+	for _, ln := range strings.Split(svgRepl.Replace(siteGenLocStr(pta.Data, langId)), "\n") {
+		s += "<tspan dy='" + App.Proj.Gen.PanelSvgText.PerLineDy + "' x='0'>" + ln + "</tspan>"
+	}
+	s += "</text></svg>"
+
+	return
+}
+
 func imgPanels(srcImgData io.Reader, onFileDone func() error) ImgPanel {
 	imgsrc, _, err := image.Decode(srcImgData)
 	if err != nil {
@@ -183,11 +195,26 @@ func imgPanels(srcImgData io.Reader, onFileDone func() error) ImgPanel {
 	}
 	_ = onFileDone()
 	ret := ImgPanel{Rect: imgsrc.Bounds()}
-	ret.detectSubPanels(imgsrc.(*image.Gray), true, true)
-	return ret
+	ret.detectSubPanels(imgsrc.(*image.Gray))
+	return ret.flattened()
 }
 
-func (me *ImgPanel) detectSubPanels(srcImg *image.Gray, findRows bool, findCols bool) {
+func (me ImgPanel) flattened() ImgPanel {
+	for i := range me.SubRows {
+		me.SubRows[i] = me.SubRows[i].flattened()
+	}
+	for i := range me.SubCols {
+		me.SubCols[i] = me.SubCols[i].flattened()
+	}
+	if len(me.SubCols) == 1 && len(me.SubRows) == 0 {
+		return me.SubCols[0]
+	} else if len(me.SubCols) == 0 && len(me.SubRows) == 1 {
+		return me.SubRows[0]
+	}
+	return me
+}
+
+func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 	cm := srcImg.Rect.Max.Y / 21
 
 	detectRows := func(area image.Rectangle) (ret []image.Rectangle) {
@@ -220,6 +247,9 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray, findRows bool, findCols 
 				ret = append(ret, rect)
 			}
 			prevmid = mid
+		}
+		if area.Max.Y-prevmid > cm {
+			ret = append(ret, image.Rect(area.Min.X, prevmid, area.Max.X, area.Max.Y))
 		}
 		return
 	}
@@ -255,17 +285,15 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray, findRows bool, findCols 
 			}
 			prevmid = mid
 		}
+		if area.Max.X-prevmid > cm {
+			ret = append(ret, image.Rect(prevmid, area.Min.Y, area.Max.X, area.Max.Y))
+		}
 		return
 	}
 
 	me.SubCols, me.SubRows = nil, nil
 	var rows, cols []image.Rectangle
-	if findRows {
-		rows = detectRows(me.Rect)
-	}
-	if findCols {
-		cols = detectCols(me.Rect)
-	}
+	rows, cols = detectRows(me.Rect), detectCols(me.Rect)
 	if len(rows) == 1 {
 		rows = nil
 	}
@@ -275,13 +303,13 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray, findRows bool, findCols 
 	assert(!(len(rows) > 0 && len(cols) > 0))
 	for _, row := range rows {
 		imgpanel := ImgPanel{Rect: row}
-		imgpanel.detectSubPanels(srcImg, false, true)
-		me.SubRows = append(me.SubRows, imgpanel)
+		imgpanel.detectSubPanels(srcImg)
+		me.SubRows = append(me.SubRows, imgpanel.flattened())
 	}
 	for _, col := range cols {
 		imgpanel := ImgPanel{Rect: col}
-		imgpanel.detectSubPanels(srcImg, true, false)
-		me.SubCols = append(me.SubCols, imgpanel)
+		imgpanel.detectSubPanels(srcImg)
+		me.SubCols = append(me.SubCols, imgpanel.flattened())
 	}
 }
 

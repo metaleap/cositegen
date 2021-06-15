@@ -49,15 +49,31 @@ func siteGen(args map[string]bool) {
 	}
 
 	printLn("SiteGen: copying non-HTML files to .build...")
+	modifycssfiles := App.Proj.Gen.PanelSvgText.AppendToFiles
+	if modifycssfiles == nil {
+		modifycssfiles = map[string]bool{}
+	}
 	if fileinfos, err := os.ReadDir("_sitetmpl"); err != nil {
 		panic(err)
 	} else {
 		for _, fileinfo := range fileinfos {
-			if !(fileinfo.IsDir() || strings.Contains(strings.ToLower(filepath.Ext(fileinfo.Name())), "htm")) {
-				if data, err := os.ReadFile("_sitetmpl/" + fileinfo.Name()); err != nil {
+			if fn := fileinfo.Name(); !(fileinfo.IsDir() || strings.Contains(strings.ToLower(filepath.Ext(fn)), "htm")) {
+				if data, err := os.ReadFile("_sitetmpl/" + fn); err != nil {
 					panic(err)
-				} else if err := os.WriteFile(".build/"+fileinfo.Name(), data, os.ModePerm); err != nil {
-					panic(err)
+				} else {
+					if modifycssfiles[fn] {
+						for csssel, csslines := range App.Proj.Gen.PanelSvgText.Css {
+							if csssel != "" {
+								if csslines == nil {
+									csslines = App.Proj.Gen.PanelSvgText.Css[""]
+								}
+								data = append([]byte(csssel+"{"+strings.Join(csslines, ";")+"}\n"), data...)
+							}
+						}
+					}
+					if err := os.WriteFile(".build/"+fn, data, os.ModePerm); err != nil {
+						panic(err)
+					}
 				}
 			}
 		}
@@ -106,7 +122,7 @@ func siteGenPngs() (numPngs int, numSheets int, numPanels int) {
 			for _, sheet := range chapter.sheets {
 				for _, sheetver := range sheet.versions {
 					numSheets++
-					sheetver.ensure(true)
+					sheetver.ensure(true, false)
 					srcimgfile, err := os.Open(sheetver.meta.bwFilePath)
 					if err != nil {
 						panic(err)
@@ -132,7 +148,7 @@ func siteGenPngs() (numPngs int, numSheets int, numPanels int) {
 								height := width / (float64(pw) / float64(ph))
 								w, h := int(width), int(height)
 								var wassamesize bool
-								writeFile(".build/img/"+name+".png", imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, quali.SizeHint/424, quali.SizeHint/424, sheetver.colorLayers, &wassamesize))
+								writeFile(".build/img/"+name+".png", imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, quali.SizeHint/640, quali.SizeHint/640, sheetver.colorLayers, &wassamesize))
 								numpngs.Store(1 + numpngs.Load().(int))
 								// printLn("\t", name+".png ("+time.Now().Sub(tstart).String()+")")
 								if wassamesize {
@@ -174,7 +190,7 @@ func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, lan
 		siteGenPageExecAndWrite(tmpl, name, langId, &page)
 	} else {
 		page.HrefHome += "#" + strings.ToLower(series.Name)
-		page.PageTitle = "<span>" + hEsc(siteGenLocStr(series.Title, langId)) + "</span>: " + hEsc(siteGenLocStr(chapter.Title, langId))
+		page.PageTitle = "<span>" + hEsc(siteGenLocStr(series.Title, langId)) + ":</span> " + hEsc(siteGenLocStr(chapter.Title, langId))
 		var authorinfo string
 		if series.Author != "" {
 			authorinfo = strings.Replace(siteGenTextStr("TmplAuthorInfoHtml", langId), "%AUTHOR%", series.Author, 1)
@@ -218,7 +234,7 @@ func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, lan
 				}
 				page.QualList += ">" + q.Name + " (" + imgsizeinfo + ")" + "</option>"
 			}
-			page.QualList = "<select title='" + hEsc(siteGenTextStr("QualityHint", langId)) + "' name='" + App.Proj.Html.IdQualiList + "' id='" + App.Proj.Html.IdQualiList + "'>" + page.QualList + "</select>"
+			page.QualList = "<select title='" + hEsc(siteGenTextStr("QualityHint", langId)) + "' name='" + App.Proj.Gen.IdQualiList + "' id='" + App.Proj.Gen.IdQualiList + "'>" + page.QualList + "</select>"
 
 			siteGenPageExecAndWrite(tmpl, name, langId, &page)
 		}
@@ -274,10 +290,10 @@ func sitePrepHomePage(page *PageGen, langId string) {
 		if series.Author != "" {
 			authorinfo = strings.Replace(siteGenTextStr("TmplAuthorInfoHtml", langId), "%AUTHOR%", series.Author, 1)
 		}
-		page.PageContent += "<h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Html.ClsSeries + "'>" + hEsc(siteGenLocStr(series.Title, langId)) + "</h5><div class='" + App.Proj.Html.ClsSeries + "'>" + hEsc(siteGenLocStr(series.Desc, langId)) + authorinfo + "</div>"
-		page.PageContent += "<ul class='" + App.Proj.Html.ClsSeries + "'>"
+		page.PageContent += "<h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(siteGenLocStr(series.Title, langId)) + "</h5><div class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(siteGenLocStr(series.Desc, langId)) + authorinfo + "</div>"
+		page.PageContent += "<ul class='" + App.Proj.Gen.ClsSeries + "'>"
 		for _, chapter := range series.Chapters {
-			page.PageContent += "<li class='" + App.Proj.Html.ClsChapter + "'><a href='./" + strings.ToLower(series.Name+"-"+chapter.Name+"-"+itoa(App.Proj.Qualis[0].SizeHint)+"-p1-"+langId) + ".html'>" + hEsc(siteGenLocStr(chapter.Title, langId)) + "</a></li>"
+			page.PageContent += "<li class='" + App.Proj.Gen.ClsChapter + "'><a href='./" + strings.ToLower(series.Name+"-"+chapter.Name+"-"+itoa(App.Proj.Qualis[0].SizeHint)+"-p1-"+langId) + ".html'>" + hEsc(siteGenLocStr(chapter.Title, langId)) + "</a></li>"
 		}
 		page.PageContent += "</ul>"
 	}
@@ -310,7 +326,7 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 					page.PagesList += "<li><b>" + itoa(pgnr) + "</b></li>"
 				} else if shownums[pgnr] {
 					href := series.Name + "-" + chapter.Name + "-" + itoa(quali.SizeHint) + "-p" + itoa(pgnr) + "-" + langId
-					page.PagesList += "<li><a href='./" + strings.ToLower(href) + ".html#" + App.Proj.Html.APaging + "'>" + itoa(pgnr) + "</a></li>"
+					page.PagesList += "<li><a href='./" + strings.ToLower(href) + ".html#" + App.Proj.Gen.APaging + "'>" + itoa(pgnr) + "</a></li>"
 				}
 			}
 			if pgnr == pageNr {
@@ -331,7 +347,7 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 			nextchap = series.Chapters[chidx+1]
 		}
 		href := series.Name + "-" + nextchap.Name + "-" + itoa(quali.SizeHint) + "-p1-" + langId
-		page.PagesList += "<li><a href='./" + strings.ToLower(href) + ".html#" + App.Proj.Html.APaging + "'>" + siteGenLocStr(nextchap.Title, langId) + "</a></li>"
+		page.PagesList += "<li><a href='./" + strings.ToLower(href) + ".html#" + App.Proj.Gen.APaging + "'>" + siteGenLocStr(nextchap.Title, langId) + "</a></li>"
 	}
 	if page.PagesList != "" {
 		var pg int
@@ -349,7 +365,7 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 		if pageNr < numpages {
 			nvis = "visible"
 		}
-		page.PagesList = "<ul id='" + App.Proj.Html.APaging + "'><li><a style='visibility: " + pvis + "' href='./" + strings.ToLower(prev) + ".html#" + App.Proj.Html.APaging + "'>&larr;</a></li>" + page.PagesList + "<li><a style='visibility: " + nvis + "' href='./" + strings.ToLower(next) + ".html#" + App.Proj.Html.APaging + "'>&rarr;</a></li></ul>"
+		page.PagesList = "<ul id='" + App.Proj.Gen.APaging + "'><li><a style='visibility: " + pvis + "' href='./" + strings.ToLower(prev) + ".html#" + App.Proj.Gen.APaging + "'>&larr;</a></li>" + page.PagesList + "<li><a style='visibility: " + nvis + "' href='./" + strings.ToLower(next) + ".html#" + App.Proj.Gen.APaging + "'>&rarr;</a></li></ul>"
 	}
 
 	var pidx int
@@ -358,19 +374,19 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 	iter = func(sheetVer *SheetVer, panel *ImgPanel) (s string) {
 		assert(len(panel.SubCols) == 0 || len(panel.SubRows) == 0)
 		if len(panel.SubRows) > 0 {
-			s += "<div class='" + App.Proj.Html.ClsPanelRows + "'>"
+			s += "<div class='" + App.Proj.Gen.ClsPanelRows + "'>"
 			for i := range panel.SubRows {
-				s += "<div class='" + App.Proj.Html.ClsPanelRow + "'>" + iter(sheetVer, &panel.SubRows[i]) + "</div>"
+				s += "<div class='" + App.Proj.Gen.ClsPanelRow + "'>" + iter(sheetVer, &panel.SubRows[i]) + "</div>"
 			}
 			s += "</div>"
 		} else if len(panel.SubCols) > 0 {
-			s += "<div class='" + App.Proj.Html.ClsPanelCols + "'>"
+			s += "<div class='" + App.Proj.Gen.ClsPanelCols + "'>"
 			for i := range panel.SubCols {
 				sc := &panel.SubCols[i]
 				pw := sc.Rect.Max.X - sc.Rect.Min.X
 				sw := sheetVer.meta.PanelsTree.Rect.Max.X - sheetVer.meta.PanelsTree.Rect.Min.X
 				pp := 100.0 / (float64(sw) / float64(pw))
-				s += "<div class='" + App.Proj.Html.ClsPanelCol + "' style='width: " + strconv.FormatFloat(pp, 'f', 8, 64) + "%'>" + iter(sheetVer, sc) + "</div>"
+				s += "<div class='" + App.Proj.Gen.ClsPanelCol + "' style='width: " + strconv.FormatFloat(pp, 'f', 8, 64) + "%'>" + iter(sheetVer, sc) + "</div>"
 			}
 			s += "</div>"
 		} else {
@@ -383,15 +399,18 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 				}
 			}
 
-			s += "<div class='" + App.Proj.Html.ClsPanel + "'>"
-			s += "<img alt='" + name + "' title='" + name + "' src='./img/" + name + ".png'/>"
+			s += "<div class='" + App.Proj.Gen.ClsPanel + "'>"
+			s += "<img src='./img/" + name + ".png'/>"
 			for _, pta := range panel.Areas {
 				aw, ah := pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
 				pw, ph := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y
 				wp, hp := 100.0/(float64(pw)/float64(aw)), 100.0/(float64(ph)/float64(ah))
 				ax, ay := pta.Rect.Min.X-panel.Rect.Min.X, pta.Rect.Min.Y-panel.Rect.Min.Y
 				xp, yp := 100.0/(float64(pw)/float64(ax)), 100.0/(float64(ph)/float64(ay))
-				s += "<div class='" + App.Proj.Html.ClsPanelArea + "' style='top: " + strconv.FormatFloat(yp, 'f', 8, 64) + "%; left: " + strconv.FormatFloat(xp, 'f', 8, 64) + "%; width: " + strconv.FormatFloat(wp, 'f', 8, 64) + "%; height: " + strconv.FormatFloat(hp, 'f', 8, 64) + "%; max-width: " + strconv.FormatFloat(wp, 'f', 8, 64) + "%; max-height: " + strconv.FormatFloat(hp, 'f', 8, 64) + "%;'>" + siteGenLocStr(pta.Data, langId) + "</div>"
+				sx, sy, sw, sh := strconv.FormatFloat(xp, 'f', 8, 64), strconv.FormatFloat(yp, 'f', 8, 64), strconv.FormatFloat(wp, 'f', 8, 64), strconv.FormatFloat(hp, 'f', 8, 64)
+				s += "<div class='" + App.Proj.Gen.ClsPanelArea + "' style='top: " + sy + "%; left: " + sx + "%; width: " + sw + "%; height: " + sh + "%; max-width: " + sw + "%; max-height: " + sh + "%;'>"
+				s += imgSvgText(&pta, langId)
+				s += "</div>"
 			}
 			s += "</div>"
 			pidx++
@@ -401,7 +420,7 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 	for _, sheet := range sheets {
 		assert(len(sheet.versions) == 1)
 		sheetver := sheet.versions[0]
-		sheetver.ensure(true)
+		sheetver.ensure(true, false)
 		pidx = 0
 		page.PageContent += "<div class='tsheet'>"
 		page.PageContent += iter(sheetver, sheetver.meta.PanelsTree)
@@ -409,3 +428,13 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 	}
 	return allpanels
 }
+
+var svgRepl = strings.NewReplacer(
+	" ", "&nbsp;",
+	"<b>", "<tspan class='b'>",
+	"<u>", "<tspan class='u'>",
+	"<i>", "<tspan class='i'>",
+	"</b>", "</tspan>",
+	"</u>", "</tspan>",
+	"</i>", "</tspan>",
+)

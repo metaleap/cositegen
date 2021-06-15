@@ -21,7 +21,7 @@ type Project struct {
 	}
 	MaxImagePanelTextAreas int
 	PageContentTexts       map[string]map[string]string
-	Html                   struct {
+	Gen                    struct {
 		IdQualiList  string
 		ClsSeries    string
 		ClsChapter   string
@@ -32,6 +32,11 @@ type Project struct {
 		ClsPanel     string
 		ClsPanelArea string
 		APaging      string
+		PanelSvgText struct {
+			PerLineDy     string
+			Css           map[string][]string
+			AppendToFiles map[string]bool
+		}
 	}
 
 	meta struct {

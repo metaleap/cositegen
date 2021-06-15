@@ -1,3 +1,5 @@
+let tmpInterval = null;
+
 function doPostBack(name) {
     document.getElementById("main_focus_id").value = name;
     document.getElementById("main_form").submit();
@@ -7,7 +9,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs
     try {
         const pid = "p" + panelIdx;
         const span = document.getElementById(pid + 'rects');
-        span.innerHTML = "";
+        let innerhtml = "";
         for (let j = 0; j < maxImagePanelTextAreas; j++) {
             var ptext = document.getElementById(pid + "t" + j + langs[0]).value;
             for (let ptk = 1; ptk < langs.length; ptk++) {
@@ -24,9 +26,23 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs
             const width = trx1 - trx0;
             const height = try1 - try0;
             if ((!(isNaN(width) || isNaN(height))) && width > 0 && height > 0) {
-                span.innerHTML += "<div class='panelrect col" + j + "' style='left:" + (trx0 - pOffX) + "px; top:" + (try0 - pOffY) + "px; width: " + width + "px; height: " + height + "px;'>" + ptext + "</div>";
+                innerhtml += "<div class='panelrect col" + j + "' style='left:" + (trx0 - pOffX) + "px; top:" + (try0 - pOffY) + "px; width: " + width + "px; height: " + height + "px;'>";
+                innerhtml += "<svg viewbox='0 0 " + width + " " + height + "'><text x='0' y='0'>";
+                for (const line of ptext.split('\n')) {
+                    innerhtml += "<tspan dy='" + AppProjGenPanelSvgTextPerLineDy + "' x='0'>" + line
+                        .replace(/\s/g, "&nbsp;")
+                        .replace(/<b>/g, "<tspan class='b'>")
+                        .replace(/<u>/g, "<tspan class='u'>")
+                        .replace(/<i>/g, "<tspan class='i'>")
+                        .replace(/<\/b>/g, "</tspan>")
+                        .replace(/<\/u>/g, "</tspan>")
+                        .replace(/<\/i>/g, "</tspan>")
+                        + "</tspan>"
+                }
+                innerhtml += "</text></svg></div>"
             }
         }
+        span.innerHTML = innerhtml;
     } catch (e) {
         alert(e);
     }

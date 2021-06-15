@@ -35,8 +35,8 @@ type SheetVer struct {
 
 func (me *SheetVer) String() string { return me.fileName }
 
-func (me *SheetVer) ensure(removeFromWorkQueue bool) {
-	var shouldsaveprojmeta bool
+func (me *SheetVer) ensure(removeFromWorkQueue bool, forceFullRedo bool) {
+	shouldsaveprojmeta := forceFullRedo
 
 	if removeFromWorkQueue {
 		App.PrepWork.Lock()
@@ -79,17 +79,17 @@ func (me *SheetVer) ensure(removeFromWorkQueue bool) {
 	me.meta.bwSmallFilePath = filepath.Join(me.meta.dirPath, "bwsmall.png")
 	mkDir(me.meta.dirPath)
 
-	me.ensureMonochrome()
-	shouldsaveprojmeta = me.ensurePanels() || shouldsaveprojmeta
+	me.ensureMonochrome(forceFullRedo)
+	shouldsaveprojmeta = me.ensurePanels(forceFullRedo) || shouldsaveprojmeta
 
 	if shouldsaveprojmeta {
 		App.Proj.save()
 	}
 }
 
-func (me *SheetVer) ensureMonochrome() {
-	if _, err := os.Stat(me.meta.bwFilePath); err != nil {
-		if !os.IsNotExist(err) {
+func (me *SheetVer) ensureMonochrome(force bool) {
+	if _, err := os.Stat(me.meta.bwFilePath); err != nil || force {
+		if err != nil && !os.IsNotExist(err) {
 			panic(err)
 		}
 		_ = os.Remove(me.meta.bwFilePath) // sounds weird but due to potential rare symlink edge case
@@ -100,9 +100,10 @@ func (me *SheetVer) ensureMonochrome() {
 		} else if err = os.Symlink(filepath.Base(me.fileName), me.meta.bwFilePath); err != nil {
 			panic(err)
 		}
+		force = true
 	}
-	if _, err := os.Stat(me.meta.bwSmallFilePath); err != nil {
-		if !os.IsNotExist(err) {
+	if _, err := os.Stat(me.meta.bwSmallFilePath); err != nil || force {
+		if err != nil && !os.IsNotExist(err) {
 			panic(err)
 		}
 		_ = os.Remove(me.meta.bwSmallFilePath) // sounds weird but due to potential rare symlink edge case
@@ -116,8 +117,8 @@ func (me *SheetVer) ensureMonochrome() {
 	}
 }
 
-func (me *SheetVer) ensurePanels() bool {
-	if me.meta.PanelsTree == nil {
+func (me *SheetVer) ensurePanels(force bool) bool {
+	if me.meta.PanelsTree == nil || force {
 		if file, err := os.Open(me.meta.bwFilePath); err != nil {
 			panic(err)
 		} else {

@@ -9,7 +9,16 @@ import (
 
 func guiMain(r *http.Request, notice string) []byte {
 	rVal := r.FormValue
-	s := "<!DOCTYPE html><html><head><link rel='stylesheet' type='text/css' href='/main.css'/><script src='/main.js' type='text/javascript' language='javascript'></script>"
+	s := "<!DOCTYPE html><html><head><link rel='stylesheet' type='text/css' href='/main.css'/><style type='text/css'>"
+	for csssel, csslines := range App.Proj.Gen.PanelSvgText.Css {
+		if csssel == "" {
+			csssel = "div.panel .panelrect svg text"
+		}
+		if csslines != nil {
+			s += csssel + "{" + strings.Join(csslines, ";") + "}"
+		}
+	}
+	s += "</style><script type='text/javascript' language='javascript'>const AppProjGenPanelSvgTextPerLineDy = '" + App.Proj.Gen.PanelSvgText.PerLineDy + "';</script><script src='/main.js' type='text/javascript' language='javascript'></script>"
 	s += "</head><body><form method='POST' action='/' id='main_form'>" + guiHtmlInput("hidden", "main_focus_id", rVal("main_focus_id"), nil)
 	if notice != "" {
 		s += "<div class='notice'>" + hEsc(notice) + "</div>"
@@ -33,11 +42,19 @@ func guiMain(r *http.Request, notice string) []byte {
 				return sheet.name, sheet.name, App.Gui.State.Sel.Sheet != nil && App.Gui.State.Sel.Sheet.name == sheet.name
 			})
 			if sheet := App.Gui.State.Sel.Sheet; sheet != nil {
+				ver1 := len(sheet.versions) == 1
+				var veritem string
+				if !ver1 {
+					veritem = "(Versions)"
+				}
 				App.Gui.State.Sel.Ver, _ = guiGetFormSel(rVal("sheetver"), sheet).(*SheetVer)
-				s += guiHtmlList("sheetver", "(Versions)", len(sheet.versions), func(i int) (string, string, bool) {
+				s += guiHtmlList("sheetver", veritem, len(sheet.versions), func(i int) (string, string, bool) {
 					sheetver := sheet.versions[i]
 					return sheetver.fileName, sheetver.name, App.Gui.State.Sel.Ver != nil && App.Gui.State.Sel.Ver.fileName == sheetver.fileName
 				})
+				if App.Gui.State.Sel.Ver == nil && ver1 {
+					App.Gui.State.Sel.Ver = sheet.versions[0]
+				}
 				if sheetver := App.Gui.State.Sel.Ver; sheetver != nil {
 					html, shouldsavemeta := guiSheet(sheetver, r)
 					s += html
@@ -59,7 +76,7 @@ func guiMain(r *http.Request, notice string) []byte {
 }
 
 func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
-	sv.ensure(true)
+	sv.ensure(true, false)
 	s = "<hr/><h3>Full Sheet:</h3><div class='fullsheet'>" + guiHtmlImg("/"+sv.meta.bwSmallFilePath, nil) + "</div>"
 	var panelstree func(*ImgPanel) string
 	panelstree = func(panel *ImgPanel) (s string) {
@@ -150,7 +167,7 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 				area = panel.Areas[i]
 			}
 			for _, lang := range App.Proj.Langs {
-				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang.Name, area.Data[lang.Name], A{"placeholder": lang.Title, "onchange": jsrefr, "onfocus": jsrefr, "class": "panelcfgtext col" + itoa(i%8)}) + "</div><div>"
+				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang.Name, area.Data[lang.Name], A{"placeholder": lang.Title, "onfocus": "tmpInterval = setInterval(function() { " + jsrefr + " }, 123);", "onblur": "clearInterval(tmpInterval);" + jsrefr, "onchange": "clearInterval(tmpInterval);" + jsrefr, "class": "panelcfgtext col" + itoa(i%8)}) + "</div><div>"
 			}
 			s += "X,Y:"
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx0", itoa(area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.X), "max": itoa(panel.Rect.Max.X)})

@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"sync"
 )
 
@@ -78,6 +79,7 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 }
 
 func appPrepWork() {
+	printLn("Starting background pre-processing... (" + strconv.Itoa(len(App.PrepWork.Queue)) + " pending jobs)")
 	for true {
 		App.PrepWork.Lock()
 		if len(App.PrepWork.Queue) == 0 {
@@ -87,8 +89,7 @@ func appPrepWork() {
 		job := App.PrepWork.Queue[0]
 		App.PrepWork.Queue = App.PrepWork.Queue[1:]
 		App.PrepWork.Unlock()
-		printLn("Pre-processing: " + job.fileName + "...")
-		job.ensure(false)
+		job.ensure(false, false)
 	}
-	printLn("Pre-processings complete.")
+	printLn("All pending background pre-processings completed.")
 }
