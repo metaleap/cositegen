@@ -76,13 +76,13 @@ func (me *Chapter) Len() int              { return len(me.sheets) }
 func (me *Chapter) String() string        { return me.Name }
 
 func (me *Project) save() {
-	jsonSave(".cosite.json", &App.Proj.meta)
+	jsonSave(".csg_meta.json", &me.meta)
 }
 
 func (me *Project) load() {
 	jsonLoad("cosite.json", me)
-	if _, err := os.Stat(".cosite.json"); err == nil {
-		jsonLoad(".cosite.json", &me.meta)
+	if _, err := os.Stat(".csg_meta.json"); err == nil {
+		jsonLoad(".csg_meta.json", &me.meta)
 	} else if !os.IsNotExist(err) {
 		panic(err)
 	}
@@ -92,6 +92,7 @@ func (me *Project) load() {
 	if me.meta.SheetVer == nil {
 		me.meta.SheetVer = map[string]*SheetVerMeta{}
 	}
+
 	for filename, contenthash := range me.meta.ContentHashes {
 		if fileinfo, err := os.Stat(filename); err != nil || fileinfo.IsDir() {
 			delete(me.meta.SheetVer, contenthash)

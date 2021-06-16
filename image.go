@@ -15,9 +15,10 @@ import (
 
 type ImgPanel struct {
 	Rect    image.Rectangle
-	Areas   []ImgPanelArea `json:",omitempty"`
-	SubRows []ImgPanel     `json:",omitempty"`
-	SubCols []ImgPanel     `json:",omitempty"`
+	SubRows []ImgPanel `json:",omitempty"`
+	SubCols []ImgPanel `json:",omitempty"`
+
+	Areas []ImgPanelArea `json:",omitempty"`
 }
 
 func (me *ImgPanel) HasAny(dataKey string) bool {

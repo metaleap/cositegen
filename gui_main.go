@@ -159,8 +159,8 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 		for _, lang := range App.Proj.Langs {
 			langs = append(langs, lang.Name)
 		}
-		jsrefr, savebtnhtml := "refreshPanelRects("+itoa(pidx)+", "+itoa(panel.Rect.Min.X)+", "+itoa(panel.Rect.Min.Y)+", "+itoa(App.Proj.MaxImagePanelTextAreas)+", [\""+strings.Join(langs, "\", \"")+"\"]);", guiHtmlButton(pid+"save", "Save changes (to all texts in all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
-		s += savebtnhtml + "<hr/>"
+		jsrefr, btnhtml := "refreshPanelRects("+itoa(pidx)+", "+itoa(panel.Rect.Min.X)+", "+itoa(panel.Rect.Min.Y)+", "+itoa(App.Proj.MaxImagePanelTextAreas)+", [\""+strings.Join(langs, "\", \"")+"\"]);", guiHtmlButton(pid+"save", "Save changes (to all texts in all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
+		s += btnhtml + "<hr/>"
 		for i := 0; i < App.Proj.MaxImagePanelTextAreas; i++ {
 			area := ImgPanelArea{Data: A{}}
 			if len(panel.Areas) > i {
@@ -177,7 +177,7 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"ry1", itoa(area.Rect.Max.Y), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.Y), "max": itoa(panel.Rect.Max.Y)})
 			s += "</div>"
 		}
-		s += "<hr/>" + savebtnhtml
+		s += "<hr/>" + btnhtml
 		s += "</div>"
 		s += "</td></tr></table>"
 		s += "<script language='javascript' type='text/javascript'>" + jsrefr + "</script>"

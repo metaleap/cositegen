@@ -14,7 +14,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs
             var ptext = document.getElementById(pid + "t" + j + langs[0]).value;
             for (let ptk = 1; ptk < langs.length; ptk++) {
                 const el = document.getElementById(pid + "t" + j + langs[ptk]);
-                if (el == document.activeElement) {
+                if (el == document.activeElement && el.value && el.value.length) {
                     ptext = el.value;
                     break;
                 }
