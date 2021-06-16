@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 )
 
 type Sheet struct {
@@ -31,24 +32,26 @@ type SheetVer struct {
 	fileName    string
 	meta        *SheetVerMeta
 	colorLayers bool
+	prep        struct {
+		sync.Mutex
+		done bool
+	}
 }
 
 func (me *SheetVer) String() string { return me.fileName }
 
-func (me *SheetVer) ensure(removeFromWorkQueue bool, forceFullRedo bool) {
-	shouldsaveprojmeta := forceFullRedo
-
-	if removeFromWorkQueue {
-		App.PrepWork.Lock()
-		for i, sheetver := range App.PrepWork.Queue {
-			if me == sheetver {
-				App.PrepWork.Queue = append(App.PrepWork.Queue[:i], App.PrepWork.Queue[i+1:]...)
-				break
-			}
+func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) {
+	if !fromBgPrep {
+		if me.prep.done {
+			return
 		}
-		App.PrepWork.Unlock()
+		me.prep.Lock()
+		defer func() { me.prep.done = true; me.prep.Unlock() }()
+		if me.prep.done {
+			return
+		}
 	}
-
+	shouldsaveprojmeta := forceFullRedo
 	data, err := os.ReadFile(me.fileName)
 	if err != nil {
 		panic(err)
@@ -65,9 +68,7 @@ func (me *SheetVer) ensure(removeFromWorkQueue bool, forceFullRedo bool) {
 	} else if oldhash != "" {
 		me.meta = nil
 		delete(App.Proj.meta.SheetVer, oldhash)
-		if err = os.RemoveAll(filepath.Join(".csg_meta", oldhash)); err != nil && !os.IsNotExist(err) {
-			printLn("Failed to rm .csg_meta/" + oldhash + ": " + err.Error())
-		}
+		rmDir(filepath.Join(".csg_meta", oldhash))
 	}
 	if me.meta == nil {
 		shouldsaveprojmeta = true
@@ -75,8 +76,8 @@ func (me *SheetVer) ensure(removeFromWorkQueue bool, forceFullRedo bool) {
 		App.Proj.meta.SheetVer[curhash] = me.meta
 	}
 	me.meta.dirPath = filepath.Join(".csg_meta", curhash)
-	me.meta.bwFilePath = filepath.Join(me.meta.dirPath, "bw.png")
-	me.meta.bwSmallFilePath = filepath.Join(me.meta.dirPath, "bwsmall.png")
+	me.meta.bwFilePath = filepath.Join(me.meta.dirPath, "bw."+itoa(int(App.Proj.BwThreshold))+".png")
+	me.meta.bwSmallFilePath = filepath.Join(me.meta.dirPath, "bwsmall."+itoa(int(App.Proj.BwThreshold))+".png")
 	mkDir(me.meta.dirPath)
 
 	me.ensureMonochrome(forceFullRedo)
@@ -92,21 +93,21 @@ func (me *SheetVer) ensureMonochrome(force bool) {
 		if err != nil && !os.IsNotExist(err) {
 			panic(err)
 		}
-		_ = os.Remove(me.meta.bwFilePath) // sounds weird but due to potential rare symlink edge case
+		rmDir(filepath.Dir(me.meta.bwFilePath))
+		mkDir(filepath.Dir(me.meta.bwFilePath))
 		if file, err := os.Open(me.fileName); err != nil {
 			panic(err)
-		} else if data := imgToMonochrome(file, file.Close, 128); data != nil {
+		} else if data := imgToMonochrome(file, file.Close, uint8(App.Proj.BwThreshold)); data != nil {
 			writeFile(me.meta.bwFilePath, data)
 		} else if err = os.Symlink(filepath.Base(me.fileName), me.meta.bwFilePath); err != nil {
 			panic(err)
 		}
-		force = true
 	}
 	if _, err := os.Stat(me.meta.bwSmallFilePath); err != nil || force {
 		if err != nil && !os.IsNotExist(err) {
 			panic(err)
 		}
-		_ = os.Remove(me.meta.bwSmallFilePath) // sounds weird but due to potential rare symlink edge case
+		_ = os.Remove(me.meta.bwSmallFilePath) // sounds weird but symlinks
 		if file, err := os.Open(me.meta.bwFilePath); err != nil {
 			panic(err)
 		} else if data := imgDownsized(file, file.Close, 2048); data != nil {
@@ -118,12 +119,14 @@ func (me *SheetVer) ensureMonochrome(force bool) {
 }
 
 func (me *SheetVer) ensurePanels(force bool) bool {
-	if me.meta.PanelsTree == nil || force {
+	if old := me.meta.PanelsTree; old == nil || force {
 		if file, err := os.Open(me.meta.bwFilePath); err != nil {
 			panic(err)
 		} else {
 			imgpanel := imgPanels(file, file.Close)
-			me.meta.PanelsTree = &imgpanel
+			if me.meta.PanelsTree = &imgpanel; old != nil {
+				me.meta.PanelsTree.salvageAreasFrom(old)
+			}
 			return true
 		}
 	}

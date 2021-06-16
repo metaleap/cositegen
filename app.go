@@ -4,18 +4,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
-	"sync"
 )
 
 var App struct {
 	StaticFilesDirPath string
 	Proj               Project
-	PrepWork           struct {
-		sync.Mutex
-		Queue []*SheetVer
-	}
-	Gui struct {
+	Gui                struct {
 		BrowserClosed bool
 		State         struct {
 			Sel struct {
@@ -79,17 +73,24 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 }
 
 func appPrepWork() {
-	printLn("Starting background pre-processing... (" + strconv.Itoa(len(App.PrepWork.Queue)) + " pending jobs)")
-	for true {
-		App.PrepWork.Lock()
-		if len(App.PrepWork.Queue) == 0 {
-			App.PrepWork.Unlock()
-			break
+	printLn("Preprocessing started...")
+	for _, series := range App.Proj.Series {
+		for _, chapter := range series.Chapters {
+			for _, sheet := range chapter.sheets {
+				for _, sv := range sheet.versions {
+					if !sv.prep.done {
+						sv.prep.Lock()
+						if sv.prep.done {
+							sv.prep.Unlock()
+						} else {
+							sv.ensurePrep(true, false)
+							sv.prep.done = true
+							sv.prep.Unlock()
+						}
+					}
+				}
+			}
 		}
-		job := App.PrepWork.Queue[0]
-		App.PrepWork.Queue = App.PrepWork.Queue[1:]
-		App.PrepWork.Unlock()
-		job.ensure(false, false)
 	}
-	printLn("All pending background pre-processings completed.")
+	printLn("Preprocessing done.")
 }

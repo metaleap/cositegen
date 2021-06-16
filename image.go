@@ -8,6 +8,7 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	"io"
+	"os"
 	"strings"
 
 	"golang.org/x/image/draw"
@@ -35,7 +36,6 @@ type ImgPanelArea struct {
 	Rect image.Rectangle
 }
 
-// returns nil if srcImgData already smaller than maxWidth
 func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int) []byte {
 	imgsrc, _, err := image.Decode(srcImgData)
 	if err != nil {
@@ -182,11 +182,53 @@ func imgSvgText(pta *ImgPanelArea, langId string) (s string) {
 	aw, ah := pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
 	s += "<svg viewbox='0 0 " + itoa(aw) + " " + itoa(ah) + "'><text x='0' y='0'>"
 	for _, ln := range strings.Split(svgRepl.Replace(siteGenLocStr(pta.Data, langId)), "\n") {
+		if ln == "" {
+			ln = "&nbsp;"
+		}
 		s += "<tspan dy='" + App.Proj.Gen.PanelSvgText.PerLineDy + "' x='0'>" + ln + "</tspan>"
 	}
 	s += "</text></svg>"
 
 	return
+}
+
+func imgStitchHorizontally(fileNames []string, height int, gapWidth int, gapColor color.Color) []byte {
+	totalwidth, srcimgs := 0, make(map[image.Image]int, len(fileNames))
+	for _, fname := range fileNames {
+		if data, err := os.ReadFile(fname); err != nil {
+			panic(err)
+		} else if img, _, err := image.Decode(bytes.NewReader(data)); err != nil {
+			panic(err)
+		} else {
+			width := int(float64(img.Bounds().Max.X) / (float64(img.Bounds().Max.Y) / float64(height)))
+			srcimgs[img] = width
+			totalwidth += width + gapWidth
+		}
+	}
+	var dst draw.Image
+	if _, isbw := gapColor.(color.Gray); isbw || gapWidth <= 0 {
+		dst = image.NewGray(image.Rect(0, 0, totalwidth, height))
+	} else {
+		dst = image.NewNRGBA(image.Rect(0, 0, totalwidth, height))
+	}
+	if gapWidth > 0 {
+		for x := 0; x < totalwidth; x++ {
+			for y := 0; y < height; y++ {
+				dst.Set(x, y, gapColor)
+			}
+		}
+	}
+	nextx := gapWidth / 2
+	for img, width := range srcimgs {
+		draw.ApproxBiLinear.Scale(dst, image.Rect(nextx, 0, nextx+width, height), img, img.Bounds(), draw.Over, nil)
+		nextx += width + gapWidth
+	}
+
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, dst); err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
 }
 
 func imgPanels(srcImgData io.Reader, onFileDone func() error) ImgPanel {
@@ -327,4 +369,14 @@ func (me *ImgPanel) iter(onPanel func(*ImgPanel)) {
 	} else {
 		onPanel(me)
 	}
+}
+
+func (me *ImgPanel) salvageAreasFrom(old *ImgPanel) {
+	for i := 0; i < len(me.SubCols) && i < len(old.SubCols); i++ {
+		me.SubCols[i].salvageAreasFrom(&old.SubCols[i])
+	}
+	for i := 0; i < len(me.SubRows) && i < len(old.SubRows); i++ {
+		me.SubRows[i].salvageAreasFrom(&old.SubRows[i])
+	}
+	me.Areas = old.Areas
 }

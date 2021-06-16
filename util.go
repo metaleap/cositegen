@@ -27,6 +27,12 @@ func mkDir(dirPath string) {
 	}
 }
 
+func rmDir(dirPath string) {
+	if err := os.RemoveAll(dirPath); err != nil && !os.IsNotExist(err) {
+		panic(err)
+	}
+}
+
 func percent(hundred int, val int) int {
 	if hundred == 0 || val == 0 {
 		return 0

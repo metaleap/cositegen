@@ -7,8 +7,11 @@ import (
 	"strings"
 )
 
+var wthDisAintWindoze = strings.NewReplacer("\r\n", "\n")
+
 func guiMain(r *http.Request, notice string) []byte {
-	rVal := r.FormValue
+	rVal := func(s string) string { return wthDisAintWindoze.Replace(r.FormValue(s)) }
+
 	s := "<!DOCTYPE html><html><head><link rel='stylesheet' type='text/css' href='/main.css'/><style type='text/css'>"
 	for csssel, csslines := range App.Proj.Gen.PanelSvgText.Css {
 		if csssel == "" {
@@ -41,18 +44,13 @@ func guiMain(r *http.Request, notice string) []byte {
 				sheet := chapter.sheets[i]
 				return sheet.name, sheet.name, App.Gui.State.Sel.Sheet != nil && App.Gui.State.Sel.Sheet.name == sheet.name
 			})
-			if sheet := App.Gui.State.Sel.Sheet; sheet != nil {
-				ver1 := len(sheet.versions) == 1
-				var veritem string
-				if !ver1 {
-					veritem = "(Versions)"
-				}
+			if sheet := App.Gui.State.Sel.Sheet; sheet != nil && len(sheet.versions) > 0 {
 				App.Gui.State.Sel.Ver, _ = guiGetFormSel(rVal("sheetver"), sheet).(*SheetVer)
-				s += guiHtmlList("sheetver", veritem, len(sheet.versions), func(i int) (string, string, bool) {
+				s += guiHtmlList("sheetver", "", len(sheet.versions), func(i int) (string, string, bool) {
 					sheetver := sheet.versions[i]
 					return sheetver.fileName, sheetver.name, App.Gui.State.Sel.Ver != nil && App.Gui.State.Sel.Ver.fileName == sheetver.fileName
 				})
-				if App.Gui.State.Sel.Ver == nil && ver1 {
+				if App.Gui.State.Sel.Ver == nil {
 					App.Gui.State.Sel.Ver = sheet.versions[0]
 				}
 				if sheetver := App.Gui.State.Sel.Ver; sheetver != nil {
@@ -76,7 +74,9 @@ func guiMain(r *http.Request, notice string) []byte {
 }
 
 func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
-	sv.ensure(true, false)
+	rVal := func(s string) string { return wthDisAintWindoze.Replace(r.FormValue(s)) }
+
+	sv.ensurePrep(false, false)
 	s = "<hr/><h3>Full Sheet:</h3><div class='fullsheet'>" + guiHtmlImg("/"+sv.meta.bwSmallFilePath, nil) + "</div>"
 	var panelstree func(*ImgPanel) string
 	panelstree = func(panel *ImgPanel) (s string) {
@@ -110,7 +110,7 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 		zoomdiv := float64(maxwidth) / float64(wmax)
 		zoom = int(100.0 / zoomdiv)
 	}
-	if rfv := r.FormValue("main_focus_id"); rfv != "" && rfv[0] == 'p' && strings.HasSuffix(rfv, "save") {
+	if rfv := rVal("main_focus_id"); rfv != "" && rfv[0] == 'p' && strings.HasSuffix(rfv, "save") {
 		shouldSaveMeta = true
 	}
 	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
@@ -119,47 +119,54 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 		cfgdisplay := "none"
 		if shouldSaveMeta {
 			panel.Areas = nil
-			if r.FormValue("main_focus_id") == pid+"save" {
+			if rVal("main_focus_id") == pid+"save" {
 				cfgdisplay = "block"
 			}
 			for i := 0; i < App.Proj.MaxImagePanelTextAreas; i++ {
 				hastexts, area := false, ImgPanelArea{Data: A{}}
 				for _, lang := range App.Proj.Langs {
-					tid := pid + "t" + itoa(i) + lang.Name
-					if tval := r.FormValue(tid); tval != "" {
-						hastexts, area.Data[lang.Name] = true, tval
+					tid := pid + "t" + itoa(i) + lang
+					if tval := rVal(tid); tval != "" {
+						hastexts, area.Data[lang] = true, tval
 					}
 				}
 				if hastexts {
-					trx0, trx1 := r.FormValue(pid+"t"+itoa(i)+"rx0"), r.FormValue(pid+"t"+itoa(i)+"rx1")
-					try0, try1 := r.FormValue(pid+"t"+itoa(i)+"ry0"), r.FormValue(pid+"t"+itoa(i)+"ry1")
-					rx0, _ := strconv.ParseUint(trx0, 0, 64)
-					rx1, _ := strconv.ParseUint(trx1, 0, 64)
-					ry0, _ := strconv.ParseUint(try0, 0, 64)
-					ry1, _ := strconv.ParseUint(try1, 0, 64)
-					area.Rect = image.Rect(int(rx0), int(ry0), int(rx1), int(ry1))
-					panel.Areas = append(panel.Areas, area)
+					trx, trw := rVal(pid+"t"+itoa(i)+"rx"), rVal(pid+"t"+itoa(i)+"rw")
+					try, trh := rVal(pid+"t"+itoa(i)+"ry"), rVal(pid+"t"+itoa(i)+"rh")
+					if rx0, err := strconv.ParseUint(trx, 0, 64); err == nil {
+						if ry0, err := strconv.ParseUint(try, 0, 64); err == nil {
+							if rx1, err := strconv.ParseUint(trw, 0, 64); err == nil {
+								rx1 += rx0
+								if ry1, err := strconv.ParseUint(trh, 0, 64); err == nil {
+									ry1 += ry0
+									area.Rect = image.Rect(int(rx0), int(ry0), int(rx1), int(ry1))
+									panel.Areas = append(panel.Areas, area)
+								}
+							}
+						}
+					}
 				}
 			}
 		}
+		langs := []string{}
+		for _, lang := range App.Proj.Langs {
+			langs = append(langs, lang)
+		}
+		jsrefr, btnhtml := "refreshPanelRects("+itoa(pidx)+", "+itoa(panel.Rect.Min.X)+", "+itoa(panel.Rect.Min.Y)+", "+itoa(App.Proj.MaxImagePanelTextAreas)+", [\""+strings.Join(langs, "\", \"")+"\"]);", guiHtmlButton(pid+"save", "Save changes (to all texts in all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
+
 		s += "<h3>Panel #" + itoa(pidx+1) + " (" + itoa(len(panel.Areas)) + ")" + "</h3><div>" + rect.String() + "</div>"
 
 		s += "<table><tr><td>"
-		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;' onclick='toggle(\"" + pid + "cfg\")'>"
+		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;' onclick='onPanelClick(\"" + pid + "\")'>"
 		style := `width: ` + itoa(w) + `px; height: ` + itoa(h) + `px;`
 		s += "<div style='position:relative; " + style + "'>"
 		style += `background-image: url("/` + sv.meta.bwSmallFilePath + `");`
 		style += `background-size: ` + itoa(sv.meta.PanelsTree.Rect.Max.X-sv.meta.PanelsTree.Rect.Min.X) + `px ` + itoa(sv.meta.PanelsTree.Rect.Max.Y-sv.meta.PanelsTree.Rect.Min.Y) + `px;`
 		style += `background-position: -` + itoa(rect.Min.X) + `px -` + itoa(rect.Min.Y) + `px;`
-		s += "<div class='panelpic' style='" + style + "'></div><span id='" + pid + "rects'></span>"
+		s += "<div class='panelpic' onauxclick='onPanelAuxClick(event, " + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(App.Proj.MaxImagePanelTextAreas) + ", [\"" + strings.Join(langs, "\", \"") + "\"])' style='" + style + "'></div><span id='" + pid + "rects'></span>"
 		s += "</div></div></td><td>"
 
 		s += "<div class='panelcfg' id='" + pid + "cfg' style='display:" + cfgdisplay + ";'>"
-		langs := []string{}
-		for _, lang := range App.Proj.Langs {
-			langs = append(langs, lang.Name)
-		}
-		jsrefr, btnhtml := "refreshPanelRects("+itoa(pidx)+", "+itoa(panel.Rect.Min.X)+", "+itoa(panel.Rect.Min.Y)+", "+itoa(App.Proj.MaxImagePanelTextAreas)+", [\""+strings.Join(langs, "\", \"")+"\"]);", guiHtmlButton(pid+"save", "Save changes (to all texts in all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 		s += btnhtml + "<hr/>"
 		for i := 0; i < App.Proj.MaxImagePanelTextAreas; i++ {
 			area := ImgPanelArea{Data: A{}}
@@ -167,14 +174,14 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 				area = panel.Areas[i]
 			}
 			for _, lang := range App.Proj.Langs {
-				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang.Name, area.Data[lang.Name], A{"placeholder": lang.Title, "onfocus": "clearInterval(tmpInterval); tmpInterval = setInterval(function() { " + jsrefr + " }, 444);", "onblur": "clearInterval(tmpInterval);" + jsrefr, "onchange": "clearInterval(tmpInterval);" + jsrefr, "class": "panelcfgtext col" + itoa(i%8)}) + "</div><div>"
+				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang, area.Data[lang], A{"placeholder": lang, "onfocus": "clearInterval(tmpInterval); tmpInterval = setInterval(function() { " + jsrefr + " }, 444);", "onblur": "clearInterval(tmpInterval);" + jsrefr, "onchange": "clearInterval(tmpInterval);" + jsrefr, "class": "panelcfgtext col" + itoa(i%8)}) + "</div><div>"
 			}
 			s += "X,Y:"
-			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx0", itoa(area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.X), "max": itoa(panel.Rect.Max.X)})
-			s += guiHtmlInput("number", pid+"t"+itoa(i)+"ry0", itoa(area.Rect.Min.Y), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.Y), "max": itoa(panel.Rect.Max.Y)})
-			s += "X,Y:"
-			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx1", itoa(area.Rect.Max.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.X), "max": itoa(panel.Rect.Max.X)})
-			s += guiHtmlInput("number", pid+"t"+itoa(i)+"ry1", itoa(area.Rect.Max.Y), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.Y), "max": itoa(panel.Rect.Max.Y)})
+			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx", itoa(area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.X), "max": itoa(panel.Rect.Max.X)})
+			s += guiHtmlInput("number", pid+"t"+itoa(i)+"ry", itoa(area.Rect.Min.Y), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.Y), "max": itoa(panel.Rect.Max.Y)})
+			s += "W,H:"
+			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rw", itoa(area.Rect.Max.X-area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": "1", "max": itoa(panel.Rect.Max.X - panel.Rect.Min.X)})
+			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rh", itoa(area.Rect.Max.Y-area.Rect.Min.Y), A{"onchange": jsrefr, "class": "panelcfgrect", "min": "1", "max": itoa(panel.Rect.Max.Y - panel.Rect.Min.Y)})
 			s += "</div>"
 		}
 		s += "<hr/>" + btnhtml

@@ -11,28 +11,35 @@ type Project struct {
 	Title  string
 	Desc   map[string]string
 	Series []*Series
-	Langs  []struct {
-		Name  string
-		Title string
-	}
+	Langs  []string
 	Qualis []struct {
 		Name     string
 		SizeHint int
 	}
+	AtomFile struct {
+		Name     string
+		Title    string
+		LinkHref string
+	}
 	MaxImagePanelTextAreas int
+	BwThreshold            uint8
 	PageContentTexts       map[string]map[string]string
+	NumSheetsInHomeBgs     int
 	Gen                    struct {
-		IdQualiList  string
-		ClsSeries    string
-		ClsChapter   string
-		ClsPanelCols string
-		ClsPanelCol  string
-		ClsPanelRows string
-		ClsPanelRow  string
-		ClsPanel     string
-		ClsPanelArea string
-		APaging      string
-		PanelSvgText struct {
+		IdQualiList   string
+		ClsSheetsPage string
+		ClsSeries     string
+		ClsChapter    string
+		ClsPanelCols  string
+		ClsPanelCol   string
+		ClsPanelRows  string
+		ClsPanelRow   string
+		ClsPanel      string
+		ClsPanelArea  string
+		ClsSheet      string
+		ClsSheets     string
+		APaging       string
+		PanelSvgText  struct {
 			PerLineDy     string
 			Css           map[string][]string
 			AppendToFiles map[string]bool
@@ -66,6 +73,11 @@ type Chapter struct {
 	Name          string
 	Title         map[string]string
 	SheetsPerPage int
+	History       []struct {
+		Date   string
+		PageNr int
+		Notes  map[string]string
+	}
 
 	dirPath string
 	sheets  []*Sheet
@@ -96,7 +108,7 @@ func (me *Project) load() {
 	for filename, contenthash := range me.meta.ContentHashes {
 		if fileinfo, err := os.Stat(filename); err != nil || fileinfo.IsDir() {
 			delete(me.meta.SheetVer, contenthash)
-			_ = os.RemoveAll(filepath.Join(".csg_meta", contenthash))
+			rmDir(filepath.Join(".csg_meta", contenthash))
 			delete(me.meta.ContentHashes, filename)
 		}
 	}
@@ -139,7 +151,6 @@ func (me *Project) load() {
 					}
 					sheetver := &SheetVer{name: versionname, parent: sheet, fileName: fname}
 					sheet.versions = append(sheet.versions, sheetver)
-					App.PrepWork.Queue = append(App.PrepWork.Queue, sheetver)
 				}
 			}
 		}
