@@ -5,7 +5,7 @@ body {
     margin: 0;
 }
 
-input, textarea, button, select {
+input, textarea, button, select, option {
     color: #2f2928;
     font-family: "Yanone Kaffeesatz", sans-serif;
 }
