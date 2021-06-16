@@ -123,23 +123,24 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 				cfgdisplay = "block"
 			}
 			for i := 0; i < App.Proj.MaxImagePanelTextAreas; i++ {
-				hastexts, area := false, ImgPanelArea{Data: A{}}
+				area := ImgPanelArea{Data: A{}}
 				for _, lang := range App.Proj.Langs {
 					tid := pid + "t" + itoa(i) + lang
 					if tval := rVal(tid); tval != "" {
-						hastexts, area.Data[lang] = true, tval
+						area.Data[lang] = tval
 					}
 				}
-				if hastexts {
-					trx, trw := rVal(pid+"t"+itoa(i)+"rx"), rVal(pid+"t"+itoa(i)+"rw")
-					try, trh := rVal(pid+"t"+itoa(i)+"ry"), rVal(pid+"t"+itoa(i)+"rh")
-					if rx0, err := strconv.ParseUint(trx, 0, 64); err == nil {
-						if ry0, err := strconv.ParseUint(try, 0, 64); err == nil {
-							if rx1, err := strconv.ParseUint(trw, 0, 64); err == nil {
-								rx1 += rx0
-								if ry1, err := strconv.ParseUint(trh, 0, 64); err == nil {
-									ry1 += ry0
-									area.Rect = image.Rect(int(rx0), int(ry0), int(rx1), int(ry1))
+
+				trx, trw := rVal(pid+"t"+itoa(i)+"rx"), rVal(pid+"t"+itoa(i)+"rw")
+				try, trh := rVal(pid+"t"+itoa(i)+"ry"), rVal(pid+"t"+itoa(i)+"rh")
+				if rx0, err := strconv.ParseUint(trx, 0, 64); err == nil {
+					if ry0, err := strconv.ParseUint(try, 0, 64); err == nil {
+						if rw, err := strconv.ParseUint(trw, 0, 64); err == nil {
+							rx1 := rw + rx0
+							if rh, err := strconv.ParseUint(trh, 0, 64); err == nil {
+								ry1 := rh + ry0
+								area.Rect = image.Rect(int(rx0), int(ry0), int(rx1), int(ry1))
+								if !area.Rect.Empty() {
 									panel.Areas = append(panel.Areas, area)
 								}
 							}
