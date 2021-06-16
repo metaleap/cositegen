@@ -35,6 +35,7 @@ type PageGen struct {
 }
 
 func siteGen(args map[string]bool) {
+	tstart := time.Now()
 	printLn("SiteGen started. When done, result will open in new window.")
 	defer func() {
 		if err := recover(); err != nil {
@@ -112,7 +113,7 @@ func siteGen(args map[string]bool) {
 		}
 	}
 
-	printLn("SiteGen: DONE!")
+	printLn("SiteGen: DONE after " + time.Now().Sub(tstart).String())
 	browserCmd[len(browserCmd)-1] = "--app=file://" + os.Getenv("PWD") + "/.build/index.html"
 	cmd := exec.Command(browserCmd[0], browserCmd[1:]...)
 	if err := cmd.Run(); err != nil {
@@ -147,7 +148,6 @@ func siteGenPngs() (numPngs int, numSheets int, numPanels int) {
 						numPanels++
 						go func(pidx int) {
 							for _, quali := range App.Proj.Qualis {
-								// tstart := time.Now()
 								name := strings.ToLower(contenthash + itoa(quali.SizeHint) + itoa(pidx))
 								pw, ph, sw := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y, sheetver.meta.PanelsTree.Rect.Max.X-sheetver.meta.PanelsTree.Rect.Min.X
 								width := float64(quali.SizeHint) / (float64(sw) / float64(pw))
@@ -156,7 +156,6 @@ func siteGenPngs() (numPngs int, numSheets int, numPanels int) {
 								var wassamesize bool
 								writeFile(".build/img/"+name+".png", imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, quali.SizeHint/640, 0, sheetver.colorLayers, &wassamesize))
 								numpngs.Store(1 + numpngs.Load().(int))
-								// printLn("\t", name+".png ("+time.Now().Sub(tstart).String()+")")
 								if wassamesize {
 									break
 								}
