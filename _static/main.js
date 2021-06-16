@@ -49,10 +49,11 @@ function onPanelClick(pid) {
     cfgbox.style.display = (cfgbox.style.display == 'none') ? 'block' : 'none';
 }
 
-function onPanelAuxClick(evt, panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs) {
+function onPanelAuxClick(evt, panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs, zoomDiv) {
     const pid = "p" + panelIdx;
     if (evt.target != evt.currentTarget)
         return;
+    const ex = parseInt(evt.offsetX * zoomDiv), ey = parseInt(evt.offsetY * zoomDiv);
     const cfgbox = document.getElementById(pid + "cfg");
     cfgbox.style.display = 'block';
     let ridx = undefined, trX, trY, trW, trH;
@@ -70,17 +71,17 @@ function onPanelAuxClick(evt, panelIdx, pOffX, pOffY, maxImagePanelTextAreas, la
     }
     if (ridx != undefined) {
         if ((isNaN(trX) || (trX == 0)) && (isNaN(trY) || (trY == 0))) {
-            document.getElementById(pid + "t" + ridx + "rx").value = (pOffX + evt.offsetX).toString();
-            document.getElementById(pid + "t" + ridx + "ry").value = (pOffY + evt.offsetY).toString();
+            document.getElementById(pid + "t" + ridx + "rx").value = (pOffX + ex).toString();
+            document.getElementById(pid + "t" + ridx + "ry").value = (pOffY + ey).toString();
         } else if ((isNaN(trW) || (trW == 0)) && (isNaN(trH) || (trH == 0))) {
-            let rw = (pOffX + evt.offsetX) - trX, rh = (pOffY + evt.offsetY) - trY;
+            let rw = (pOffX + ex) - trX, rh = (pOffY + ey) - trY;
             if (rw < 0) {
                 rw = -rw;
-                document.getElementById(pid + "t" + ridx + "rx").value = (pOffX + evt.offsetX).toString();
+                document.getElementById(pid + "t" + ridx + "rx").value = (pOffX + ex).toString();
             }
             if (rh < 0) {
                 rh = -rh;
-                document.getElementById(pid + "t" + ridx + "ry").value = (pOffY + evt.offsetY).toString();
+                document.getElementById(pid + "t" + ridx + "ry").value = (pOffY + ey).toString();
             }
             document.getElementById(pid + "t" + ridx + "rw").value = rw.toString();
             document.getElementById(pid + "t" + ridx + "rh").value = rh.toString();

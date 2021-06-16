@@ -99,15 +99,15 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 		return
 	}
 	s += "<h3>Sheet Panels Structure:</h3><ul><li>Sheet:" + sv.meta.PanelsTree.Rect.String() + panelstree(sv.meta.PanelsTree) + "</li></ul>"
-	pidx, numpanels, maxwidth, zoom := 0, 0, 0, 100
+	pidx, numpanels, maxwidth, zoom, zoomdiv := 0, 0, 0, 100, 1.0
 	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
 		numpanels++
 		if w := panel.Rect.Max.X - panel.Rect.Min.X; w > maxwidth {
 			maxwidth = w
 		}
 	})
-	if wmax := 700; maxwidth > wmax {
-		zoomdiv := float64(maxwidth) / float64(wmax)
+	if wmax := 320; maxwidth > wmax {
+		zoomdiv = float64(maxwidth) / float64(wmax)
 		zoom = int(100.0 / zoomdiv)
 	}
 	if rfv := rVal("main_focus_id"); rfv != "" && rfv[0] == 'p' && strings.HasSuffix(rfv, "save") {
@@ -164,7 +164,7 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 		style += `background-image: url("/` + sv.meta.bwSmallFilePath + `");`
 		style += `background-size: ` + itoa(sv.meta.PanelsTree.Rect.Max.X-sv.meta.PanelsTree.Rect.Min.X) + `px ` + itoa(sv.meta.PanelsTree.Rect.Max.Y-sv.meta.PanelsTree.Rect.Min.Y) + `px;`
 		style += `background-position: -` + itoa(rect.Min.X) + `px -` + itoa(rect.Min.Y) + `px;`
-		s += "<div class='panelpic' onauxclick='onPanelAuxClick(event, " + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(App.Proj.MaxImagePanelTextAreas) + ", [\"" + strings.Join(langs, "\", \"") + "\"])' style='" + style + "'></div><span id='" + pid + "rects'></span>"
+		s += "<div class='panelpic' onauxclick='onPanelAuxClick(event, " + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(App.Proj.MaxImagePanelTextAreas) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + strconv.FormatFloat(zoomdiv, 'f', 8, 64) + ")' style='" + style + "'></div><span id='" + pid + "rects'></span>"
 		s += "</div></div></td><td>"
 
 		s += "<div class='panelcfg' id='" + pid + "cfg' style='display:" + cfgdisplay + ";'>"
