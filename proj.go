@@ -40,7 +40,8 @@ type Project struct {
 		ClsSheets     string
 		APaging       string
 		PanelSvgText  struct {
-			PerLineDy     string
+			PerLineDyCmA4 float64
+			FontSizeCmA4  float64
 			Css           map[string][]string
 			AppendToFiles map[string]bool
 		}

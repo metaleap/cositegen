@@ -5,10 +5,13 @@ function doPostBack(name) {
     document.getElementById("main_form").submit();
 }
 
-function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs) {
+function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs, px1cm) {
     const pid = "p" + panelIdx;
     const span = document.getElementById(pid + 'rects');
     let innerhtml = "";
+    const pxfont = parseInt(px1cm * svgTxtFontSizeCmA4);
+    const pxline = parseInt(px1cm * svgTxtPerLineDyCmA4);
+
     for (let j = 0; j < maxImagePanelTextAreas; j++) {
         var ptext = document.getElementById(pid + "t" + j + langs[0]).value;
         for (let ptk = 1; ptk < langs.length; ptk++) {
@@ -28,7 +31,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs
             for (let line of ptext.split('\n')) {
                 if ((!line) || line.length == 0)
                     line = '&nbsp;';
-                innerhtml += "<tspan dy='" + AppProjGenPanelSvgTextPerLineDy + "' x='0'>" + line
+                innerhtml += "<tspan style='font-size: " + pxfont + "px' dy='" + pxline + "' x='0'>" + line
                     .replace(/\s/g, "&nbsp;")
                     .replace(/<b>/g, "<tspan class='b'>")
                     .replace(/<u>/g, "<tspan class='u'>")
@@ -41,7 +44,8 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs
             innerhtml += "</text></svg></div>"
         }
     }
-    span.innerHTML = innerhtml;
+    if (span.innerHTML != innerhtml)
+        span.innerHTML = innerhtml;
 }
 
 function onPanelClick(pid) {
@@ -86,6 +90,6 @@ function onPanelAuxClick(evt, panelIdx, pOffX, pOffY, maxImagePanelTextAreas, la
             document.getElementById(pid + "t" + ridx + "rw").value = rw.toString();
             document.getElementById(pid + "t" + ridx + "rh").value = rh.toString();
         }
-        refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs);
+        document.getElementById(pid + "t" + ridx + langs[0]).dispatchEvent("change");
     }
 }

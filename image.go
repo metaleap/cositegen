@@ -178,17 +178,17 @@ func imgSubRectSvg(srcImg *image.Gray, srcImgRect image.Rectangle, width int, he
 	return []byte(svgxml)
 }
 
-func imgSvgText(pta *ImgPanelArea, langId string) (s string) {
+func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64) (s string) {
 	aw, ah := pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
+	pxfont, pxline := int(px1cm*App.Proj.Gen.PanelSvgText.FontSizeCmA4), int(px1cm*App.Proj.Gen.PanelSvgText.PerLineDyCmA4)
 	s += "<svg viewbox='0 0 " + itoa(aw) + " " + itoa(ah) + "'><text x='0' y='0'>"
 	for _, ln := range strings.Split(svgRepl.Replace(siteGenLocStr(pta.Data, langId)), "\n") {
 		if ln == "" {
 			ln = "&nbsp;"
 		}
-		s += "<tspan dy='" + App.Proj.Gen.PanelSvgText.PerLineDy + "' x='0'>" + ln + "</tspan>"
+		s += "<tspan style='font-size: " + itoa(pxfont) + "px' dy='" + itoa(pxline) + "' x='0'>" + ln + "</tspan>"
 	}
 	s += "</text></svg>"
-
 	return
 }
 

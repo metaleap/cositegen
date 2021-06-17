@@ -395,6 +395,7 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 	allpanels := map[string]int{}
 	iter = func(sheetVer *SheetVer, panel *ImgPanel) (s string) {
 		assert(len(panel.SubCols) == 0 || len(panel.SubRows) == 0)
+		px1cm := float64(sheetVer.meta.PanelsTree.Rect.Max.Y-sheetVer.meta.PanelsTree.Rect.Min.Y) / 21.0
 		if len(panel.SubRows) > 0 {
 			s += "<div class='" + App.Proj.Gen.ClsPanelRows + "'>"
 			for i := range panel.SubRows {
@@ -431,7 +432,7 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 				xp, yp := 100.0/(float64(pw)/float64(ax)), 100.0/(float64(ph)/float64(ay))
 				sx, sy, sw, sh := strconv.FormatFloat(xp, 'f', 8, 64), strconv.FormatFloat(yp, 'f', 8, 64), strconv.FormatFloat(wp, 'f', 8, 64), strconv.FormatFloat(hp, 'f', 8, 64)
 				s += "<div class='" + App.Proj.Gen.ClsPanelArea + "' style='top: " + sy + "%; left: " + sx + "%; width: " + sw + "%; height: " + sh + "%; max-width: " + sw + "%; max-height: " + sh + "%;'>"
-				s += imgSvgText(&pta, langId)
+				s += imgSvgText(&pta, langId, px1cm)
 				s += "</div>"
 			}
 			s += "</div>"
