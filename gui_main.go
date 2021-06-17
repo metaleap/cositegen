@@ -156,7 +156,7 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 		}
 		jsrefr, btnhtml := "refreshPanelRects("+itoa(pidx)+", "+itoa(panel.Rect.Min.X)+", "+itoa(panel.Rect.Min.Y)+", "+itoa(App.Proj.MaxImagePanelTextAreas)+", [\""+strings.Join(langs, "\", \"")+"\"], "+strconv.FormatFloat(px1cm, 'f', 8, 64)+");", guiHtmlButton(pid+"save", "Save changes (to all texts in all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 
-		s += "<h3>Panel #" + itoa(pidx+1) + " (" + itoa(len(panel.Areas)) + ")" + "</h3><div>" + rect.String() + "</div>"
+		s += "<hr/><h3><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(len(panel.Areas)) + " text rect(s)" + "</h3><hr/><div>Panel coords: " + rect.String() + "</div>"
 
 		s += "<table><tr><td>"
 		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;' onclick='onPanelClick(\"" + pid + "\")'>"
@@ -176,7 +176,11 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 				area = panel.Areas[i]
 			}
 			for _, lang := range App.Proj.Langs {
-				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang, area.Data[lang], A{"placeholder": lang, "onfocus": "clearInterval(tmpInterval); tmpInterval = setInterval(function() { " + jsrefr + " }, 444);", "onblur": "clearInterval(tmpInterval);" + jsrefr, "onchange": "clearInterval(tmpInterval);" + jsrefr, "class": "panelcfgtext col" + itoa(i%8)}) + "</div><div>"
+				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang, area.Data[lang], A{
+					"placeholder": lang,
+					"onfocus":     jsrefr, "onblur": jsrefr, "onchange": jsrefr, "onkeydown": jsrefr, "onkeyup": jsrefr, "onkeypress": jsrefr,
+					"style": strings.Join(App.Proj.Gen.PanelSvgText.Css[""], ";"),
+					"class": "panelcfgtext col" + itoa(i%8)}) + "</div><div>"
 			}
 			s += "X,Y:"
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx", itoa(area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.X), "max": itoa(panel.Rect.Max.X)})
