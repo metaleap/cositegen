@@ -99,7 +99,7 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 		}
 		return
 	}
-	s += "<h3>Sheet Panels Structure:</h3><ul><li>Sheet:" + sv.meta.PanelsTree.Rect.String() + panelstree(sv.meta.PanelsTree) + "</li></ul>"
+	s += "<h3>Sheet Panels Structure:</h3><ul><li>Sheet coords:" + sv.meta.PanelsTree.Rect.String() + panelstree(sv.meta.PanelsTree) + "</li></ul><hr/><h3>All panels:</h3>"
 	pidx, numpanels, maxwidth, zoom, zoomdiv := 0, 0, 0, 100, 1.0
 	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
 		numpanels++
@@ -107,6 +107,13 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 			maxwidth = w
 		}
 	})
+	for i, lang := range App.Proj.Langs {
+		attrs := A{"name": "plang", "onclick": "refreshAllPanelRects(" + itoa(numpanels) + "," + itoa(i) + ",\"" + lang + "\");"}
+		if i == 0 {
+			attrs["checked"] = "checked"
+		}
+		s += guiHtmlInput("radio", "plang"+itoa(i), itoa(i), attrs) + "<label for='plang" + itoa(i) + "'>" + lang + "</label>"
+	}
 	if wmax := 320; maxwidth > wmax {
 		zoomdiv = float64(maxwidth) / float64(wmax)
 		zoom = int(100.0 / zoomdiv)
@@ -154,9 +161,10 @@ func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 		for _, lang := range App.Proj.Langs {
 			langs = append(langs, lang)
 		}
-		jsrefr, btnhtml := "refreshPanelRects("+itoa(pidx)+", "+itoa(panel.Rect.Min.X)+", "+itoa(panel.Rect.Min.Y)+", "+itoa(App.Proj.MaxImagePanelTextAreas)+", [\""+strings.Join(langs, "\", \"")+"\"], "+strconv.FormatFloat(px1cm, 'f', 8, 64)+");", guiHtmlButton(pid+"save", "Save changes (to all texts in all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
+		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(App.Proj.MaxImagePanelTextAreas) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + strconv.FormatFloat(px1cm, 'f', 8, 64) + ");"
+		btnhtml := guiHtmlButton(pid+"save", "Save changes (all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 
-		s += "<hr/><h3><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(len(panel.Areas)) + " text rect(s)" + "</h3><hr/><div>Panel coords: " + rect.String() + "</div>"
+		s += "<hr/><h4><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(len(panel.Areas)) + " text rect(s)" + "</h4><div>Panel coords: " + rect.String() + "</div>"
 
 		s += "<table><tr><td>"
 		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;' onclick='onPanelClick(\"" + pid + "\")'>"

@@ -1,8 +1,14 @@
-let tmpInterval = null;
+let pLangIdx = 0;
 
 function doPostBack(name) {
     document.getElementById("main_focus_id").value = name;
     document.getElementById("main_form").submit();
+}
+
+function refreshAllPanelRects(numPanels, langIdx, langName) {
+    pLangIdx = langIdx;
+    for (let i = 0; i < numPanels; i++)
+        document.getElementById('p' + i + 't0' + langName).dispatchEvent(new Event("change"));
 }
 
 function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs, px1cm) {
@@ -12,21 +18,21 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs
     const pxfont = parseInt(px1cm * svgTxtFontSizeCmA4);
     const pxline = parseInt(px1cm * svgTxtPerLineDyCmA4);
 
-    for (let j = 0; j < maxImagePanelTextAreas; j++) {
-        var ptext = document.getElementById(pid + "t" + j + langs[0]).value;
-        for (let ptk = 1; ptk < langs.length; ptk++) {
-            const el = document.getElementById(pid + "t" + j + langs[ptk]);
-            if (el == document.activeElement && el.value && el.value.length) {
+    for (let i = 0; i < maxImagePanelTextAreas; i++) {
+        var ptext = document.getElementById(pid + "t" + i + langs[pLangIdx]).value;
+        for (let langidx = 0; langidx < langs.length; langidx++) {
+            const el = document.getElementById(pid + "t" + i + langs[langidx]);
+            if ((el == document.activeElement && el.value && el.value.length) || (langidx == 0 && !ptext)) {
                 ptext = el.value;
                 break;
             }
         }
-        const trX = parseInt(document.getElementById(pid + "t" + j + "rx").value);
-        const trY = parseInt(document.getElementById(pid + "t" + j + "ry").value);
-        const trW = parseInt(document.getElementById(pid + "t" + j + "rw").value);
-        const trH = parseInt(document.getElementById(pid + "t" + j + "rh").value);
+        const trX = parseInt(document.getElementById(pid + "t" + i + "rx").value);
+        const trY = parseInt(document.getElementById(pid + "t" + i + "ry").value);
+        const trW = parseInt(document.getElementById(pid + "t" + i + "rw").value);
+        const trH = parseInt(document.getElementById(pid + "t" + i + "rh").value);
         if ((!(isNaN(trW) || isNaN(trH) || isNaN(trX) || isNaN(trY))) && (trW > 0) && (trH > 0)) {
-            innerhtml += "<div class='panelrect col" + j + "' style='left:" + (trX - pOffX) + "px; top:" + (trY - pOffY) + "px; width: " + trW + "px; height: " + trH + "px;'>";
+            innerhtml += "<div class='panelrect col" + i + "' style='left:" + (trX - pOffX) + "px; top:" + (trY - pOffY) + "px; width: " + trW + "px; height: " + trH + "px;'>";
             innerhtml += "<svg viewbox='0 0 " + trW + " " + trH + "'><text x='0' y='0'>";
             for (let line of ptext.split('\n')) {
                 if ((!line) || line.length == 0)
@@ -90,6 +96,6 @@ function onPanelAuxClick(evt, panelIdx, pOffX, pOffY, maxImagePanelTextAreas, la
             document.getElementById(pid + "t" + ridx + "rw").value = rw.toString();
             document.getElementById(pid + "t" + ridx + "rh").value = rh.toString();
         }
-        document.getElementById(pid + "t" + ridx + langs[0]).dispatchEvent("change");
+        document.getElementById(pid + "t" + ridx + langs[pLangIdx]).dispatchEvent(new Event("change"));
     }
 }
