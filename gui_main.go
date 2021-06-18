@@ -104,7 +104,43 @@ func guiSheetScan(r *http.Request) (s string) {
 			cssdisplay = "none"
 		}
 		s += "<div class='scandevopts' id='scandevopts_" + sd.Dev + "' style='display: " + cssdisplay + "'>"
-		s += "(options for " + sd.Dev + ")"
+		defvals := saneDevDefaults[sd.Dev]
+		if defvals == nil {
+			defvals = map[string]string{}
+		}
+		for _, opt := range sd.Options {
+			htmlid := sd.Dev + "_opt_" + opt.Name
+			s += "<div class='scandevopt'><div class='scandevoptheader'>"
+			defval := defvals[opt.Name]
+			if defval == "" {
+				defval = saneDevDefaults[""][opt.Name]
+			}
+			attrs := A{"onfocus": "document.getElementById(\"scandevoptdesc_" + sd.Dev + "_" + opt.Name + "\").style.display=\"block\";", "onblur": "document.getElementById(\"scandevoptdesc_" + sd.Dev + "_" + opt.Name + "\").style.display=\"none\";", "title": hEsc(strings.Replace(strings.Replace(strings.Join(opt.Description, "\n"), "\"", "`", -1), "'", "`", -1))}
+			if opt.Inactive {
+				attrs["readonly"], attrs["disabled"] = "readonly", "disabled"
+			}
+			if !opt.IsToggle {
+				s += guiHtmlInput("text", htmlid, defval, attrs)
+			} else {
+				if defval == "yes" && !opt.Inactive {
+					attrs["checked"] = "checked"
+				}
+				s += guiHtmlInput("checkbox", htmlid, "", attrs)
+			}
+			ht := "b"
+			if opt.Inactive {
+				ht = "del"
+			}
+			s += "&nbsp;<label for='" + htmlid + "'><" + ht + ">" + opt.Name + "</" + ht + "></label>"
+			if opt.FormatInfo != "" {
+				s += " &mdash; " + hEsc(strings.Replace(opt.FormatInfo, "|", " | ", -1))
+			}
+			s += "</div><div class='scandevoptdesc' style='display: none' id='scandevoptdesc_" + sd.Dev + "_" + opt.Name + "'>"
+			for _, desc := range opt.Description {
+				s += "<div>" + hEsc(desc) + "</div>"
+			}
+			s += "</div></div><hr/>"
+		}
 		s += "</div>"
 	}
 	s += "</div>"

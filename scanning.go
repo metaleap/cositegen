@@ -14,15 +14,16 @@ var (
 		"--format=pnm",
 		"--buffer-size=" + strconv.FormatInt(128* /*expects in KB*/ 1024, 10),
 	}
-	saneDevDefaults = map[string][]string{
-		"": {},
+	saneDevDefaults = map[string]map[string]string{
+		"": {
+			"resolution": "1200dpi",
+			"mode":       "Gray",
+		},
 		"test": {
-			"--depth", "8",
-			"--mode", "Gray",
-			"--resolution", "1200dpi",
-			"--source", "Flatbed",
-			"--test-picture", "Grid",
-			"--enable-test-options", "yes",
+			"depth":               "8",
+			"source":              "Flatbed",
+			"test-picture":        "Grid",
+			"enable-test-options": "yes",
 		},
 	}
 	saneDevDontShow = map[string][]string{
@@ -104,6 +105,8 @@ func detectScanners() {
 					opt.FormatInfo = strings.TrimSpace(ln[idx:])
 					opt.IsToggle = strings.HasPrefix(opt.FormatInfo, "[=(yes|no)]")
 					opt.Inactive = strings.HasSuffix(opt.FormatInfo, " [inactive]")
+				} else {
+					opt.IsToggle = true
 				}
 			} else if strings.HasPrefix(ln, prefcat) {
 				next()

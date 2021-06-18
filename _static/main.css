@@ -87,6 +87,14 @@ div.scandevoptsbox {
     margin: 1em;
 }
 
+.scandevoptdesc {
+    font-style: italic;
+    background-color: #fff9f8;
+    font-size: 0.88em;
+    padding: 0.44em;
+    margin: 0.44em;
+}
+
 textarea.panelcfgtext {
     opacity: 0.6;
     color: #000000 !important;
