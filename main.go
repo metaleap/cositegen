@@ -21,6 +21,7 @@ func main() {
 			printLn(msg)
 		}
 	} else {
+		go detectScanners()
 		go httpListenAndServe()
 		go launchKioskyBrowser()
 		go appPrepWork()
@@ -31,7 +32,7 @@ func main() {
 	}
 }
 
-var browserCmd = []string{"", "--new-window", "--single-process", "--user-data-dir=./.csg_gui", "--disable-extensions", "--disk-cache-size=128", "--app=http://localhost:4321"}
+var browserCmd = []string{"", "--new-window", "--single-process", "--user-data-dir=./.csg/gui", "--disable-extensions", "--disk-cache-size=128", "--app=http://localhost:4321"}
 
 func launchKioskyBrowser() {
 	cmd := exec.Command(browserCmd[0], browserCmd[1:]...)

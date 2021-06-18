@@ -44,7 +44,9 @@ func guiMain(r *http.Request, notice string) []byte {
 				sheet := chapter.sheets[i]
 				return sheet.name, sheet.name, App.Gui.State.Sel.Sheet != nil && App.Gui.State.Sel.Sheet.name == sheet.name
 			})
-			if sheet := App.Gui.State.Sel.Sheet; sheet != nil && len(sheet.versions) > 0 {
+			if sheet := App.Gui.State.Sel.Sheet; sheet == nil {
+				s += guiSheetScan(r)
+			} else if len(sheet.versions) > 0 {
 				App.Gui.State.Sel.Ver, _ = guiGetFormSel(rVal("sheetver"), sheet).(*SheetVer)
 				s += guiHtmlList("sheetver", "", len(sheet.versions), func(i int) (string, string, bool) {
 					sheetver := sheet.versions[i]
@@ -54,7 +56,7 @@ func guiMain(r *http.Request, notice string) []byte {
 					App.Gui.State.Sel.Ver = sheet.versions[0]
 				}
 				if sheetver := App.Gui.State.Sel.Ver; sheetver != nil {
-					html, shouldsavemeta := guiSheet(sheetver, r)
+					html, shouldsavemeta := guiSheetEdit(sheetver, r)
 					s += html
 					if shouldsavemeta {
 						App.Proj.save()
@@ -64,7 +66,7 @@ func guiMain(r *http.Request, notice string) []byte {
 		}
 	}
 
-	s += "<hr/>" + guiHtmlListFrom("main_action", "(Actions)", AppMainActions)
+	s += "<hr/>" + guiHtmlListFrom("main_action", "(Project Actions)", AppMainActions)
 
 	s += "</form></body>"
 	if rfv := rVal("main_focus_id"); rfv != "" && rfv != "main_action" && notice == "" {
@@ -73,7 +75,22 @@ func guiMain(r *http.Request, notice string) []byte {
 	return []byte(s)
 }
 
-func guiSheet(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
+func guiSheetScan(r *http.Request) (s string) {
+	s = "<hr><h3>New Sheet Version Scan</h3>"
+	s += guiHtmlInput("text", "sheetname", "", A{"placeholder": "Sheet Name"})
+	s += guiHtmlInput("text", "sheetvername", "", A{"placeholder": "Sheet Version Name"})
+	s += "<h2>Scanner To Use:</h2>"
+	for i, sd := range DetectedScannerDevices {
+		attrs := A{"name": "scannerdev"}
+		if i == len(DetectedScannerDevices)-1 {
+			attrs["checked"] = "checked"
+		}
+		s += "<div>" + guiHtmlInput("radio", "scannerdev"+sd.Dev, sd.Dev, attrs) + "<label for='scannerdev" + sd.Dev + "'>" + hEsc(sd.String()) + "</label></div>"
+	}
+	return
+}
+
+func guiSheetEdit(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
 	rVal := func(s string) string { return wthDisAintWindoze.Replace(r.FormValue(s)) }
 
 	sv.ensurePrep(false, false)

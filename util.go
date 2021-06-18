@@ -69,10 +69,14 @@ func contentHash(content []byte) []byte {
 	return append(b1[:], b2[:]...)
 }
 
-func jsonLoad(filename string, intoPtr Any) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		panic(err)
+func jsonLoad(eitherFileName string, orBytes []byte, intoPtr Any) {
+	var data []byte = orBytes
+	var err error
+	if eitherFileName != "" {
+		data, err = os.ReadFile(eitherFileName)
+		if err != nil {
+			panic(err)
+		}
 	}
 	if err = json.Unmarshal(data, intoPtr); err != nil {
 		panic(err)

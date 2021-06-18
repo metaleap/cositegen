@@ -34,7 +34,15 @@ type PageGen struct {
 	HrefHome       string
 }
 
-func siteGen(args map[string]bool) {
+func siteGenFully(map[string]bool) {
+	siteGen(true)
+}
+
+func siteGenPagesOnly(map[string]bool) {
+	siteGen(false)
+}
+
+func siteGen(fully bool) {
 	tstart := time.Now()
 	printLn("SiteGen started. When done, result will open in new window.")
 	defer func() {
@@ -43,7 +51,7 @@ func siteGen(args map[string]bool) {
 		}
 	}()
 
-	if !args["nopngs"] {
+	if fully {
 		rmDir(".build")
 		mkDir(".build")
 		mkDir(".build/img/")
@@ -80,7 +88,7 @@ func siteGen(args map[string]bool) {
 		}
 	}
 
-	if !args["nopngs"] {
+	if fully {
 		tstartpngs := time.Now()
 		printLn("SiteGen: generating PNGs...")
 		numpngs, numsheets, numpanels := siteGenPngs()

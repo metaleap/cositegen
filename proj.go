@@ -89,13 +89,13 @@ func (me *Chapter) Len() int              { return len(me.sheets) }
 func (me *Chapter) String() string        { return me.Name }
 
 func (me *Project) save() {
-	jsonSave(".csg_meta.json", &me.meta)
+	jsonSave(".csg/meta.json", &me.meta)
 }
 
 func (me *Project) load() {
-	jsonLoad("cosite.json", me)
-	if _, err := os.Stat(".csg_meta.json"); err == nil {
-		jsonLoad(".csg_meta.json", &me.meta)
+	jsonLoad("cosite.json", nil, me)
+	if _, err := os.Stat(".csg/meta.json"); err == nil {
+		jsonLoad(".csg/meta.json", nil, &me.meta)
 	} else if !os.IsNotExist(err) {
 		panic(err)
 	}
@@ -109,10 +109,11 @@ func (me *Project) load() {
 	for filename, contenthash := range me.meta.ContentHashes {
 		if fileinfo, err := os.Stat(filename); err != nil || fileinfo.IsDir() {
 			delete(me.meta.SheetVer, contenthash)
-			rmDir(filepath.Join(".csg_meta", contenthash))
+			rmDir(filepath.Join(".csg/meta", contenthash))
 			delete(me.meta.ContentHashes, filename)
 		}
 	}
+
 	for _, series := range me.Series {
 		series.dirPath = filepath.Join("sheets", series.Name)
 		for _, chapter := range series.Chapters {
@@ -129,6 +130,8 @@ func (me *Project) load() {
 					versionname := fnamebase[strings.LastIndexByte(fnamebase, '-')+1:]
 					if versionname == fnamebase {
 						panic("invalid sheet-file name: " + fname)
+					} else if versionname == "" {
+						continue // sheet-.* are "wip, ignore for now please"
 					}
 					sheetname := fnamebase[:strings.LastIndexByte(fnamebase, '-')]
 					if sheetname == "" {

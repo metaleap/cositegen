@@ -68,14 +68,14 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) {
 	} else if oldhash != "" {
 		me.meta = nil
 		delete(App.Proj.meta.SheetVer, oldhash)
-		rmDir(filepath.Join(".csg_meta", oldhash))
+		rmDir(filepath.Join(".csg/meta", oldhash))
 	}
 	if me.meta == nil {
 		shouldsaveprojmeta = true
 		me.meta = &SheetVerMeta{SrcFilePath: me.fileName}
 		App.Proj.meta.SheetVer[curhash] = me.meta
 	}
-	me.meta.dirPath = filepath.Join(".csg_meta", curhash)
+	me.meta.dirPath = filepath.Join(".csg/meta", curhash)
 	me.meta.bwFilePath = filepath.Join(me.meta.dirPath, "bw."+itoa(int(App.Proj.BwThreshold))+".png")
 	me.meta.bwSmallFilePath = filepath.Join(me.meta.dirPath, "bwsmall."+itoa(int(App.Proj.BwThreshold))+".png")
 	mkDir(me.meta.dirPath)

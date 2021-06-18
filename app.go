@@ -24,7 +24,8 @@ var App struct {
 
 func appInit() {
 	App.StaticFilesDirPath = filepath.Join(os.Getenv("HOME"), "c/go/src/github.com/metaleap/cositegen/_static")
-	mkDir(".csg_meta")
+	mkDir(".csg")
+	mkDir(".csg/meta")
 	App.Proj.load()
 
 	var cmdidx int
@@ -47,7 +48,8 @@ func appOnExit() {
 
 var appMainActions = map[string]bool{}
 var AppMainActions = A{
-	"SiteGen": "Re-generate site fully",
+	"genfully": "Re-generate site fully (incl. PNGs)",
+	"genpages": "Re-generate site (pages only, keep old PNGs)",
 }
 
 func appMainAction(fromGui bool, name string, args map[string]bool) string {
@@ -58,8 +60,10 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 
 	var action func(map[string]bool)
 	switch name {
-	case "SiteGen":
-		action = siteGen
+	case "genfully":
+		action = siteGenFully
+	case "genpages":
+		action = siteGenPagesOnly
 	default:
 		return "Unknown action: '" + name + "'"
 	}

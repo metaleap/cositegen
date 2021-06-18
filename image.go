@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"image"
 	"image/color"
-	_ "image/jpeg"
 	"image/png"
 	"io"
 	"os"
@@ -13,6 +12,8 @@ import (
 
 	"golang.org/x/image/draw"
 )
+
+var PngEncoder = png.Encoder{CompressionLevel: png.BestCompression}
 
 type ImgPanel struct {
 	Rect    image.Rectangle
@@ -52,7 +53,7 @@ func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int) [
 	imgdown := image.NewGray(image.Rect(0, 0, maxWidth, newheight))
 	draw.ApproxBiLinear.Scale(imgdown, imgdown.Bounds(), imgsrc, imgsrc.Bounds(), draw.Over, nil)
 	var buf bytes.Buffer
-	if err = png.Encode(&buf, imgdown); err != nil {
+	if err = PngEncoder.Encode(&buf, imgdown); err != nil {
 		panic(err)
 	}
 	return buf.Bytes()
@@ -101,7 +102,7 @@ func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessT
 	}
 
 	var pngbuf bytes.Buffer
-	if err = png.Encode(&pngbuf, imggray); err != nil {
+	if err = PngEncoder.Encode(&pngbuf, imggray); err != nil {
 		panic(err)
 	}
 	return pngbuf.Bytes()
@@ -163,7 +164,7 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 	imgBwBorder(imgdst, color.Gray{255}, whiteBorderSize, 0, transparent)
 	imgBwBorder(imgdst, color.Gray{0}, blackBorderSize, whiteBorderSize, transparent)
 	var buf bytes.Buffer
-	if err := png.Encode(&buf, imgdst); err != nil {
+	if err := PngEncoder.Encode(&buf, imgdst); err != nil {
 		panic(err)
 	}
 	return buf.Bytes()
@@ -225,7 +226,7 @@ func imgStitchHorizontally(fileNames []string, height int, gapWidth int, gapColo
 	}
 
 	var buf bytes.Buffer
-	if err := png.Encode(&buf, dst); err != nil {
+	if err := PngEncoder.Encode(&buf, dst); err != nil {
 		panic(err)
 	}
 	return buf.Bytes()
