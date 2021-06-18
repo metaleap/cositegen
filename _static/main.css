@@ -78,9 +78,13 @@ tspan.i {
 .col6 { background-color: lightgreen; }
 .col7 { background-color: palevioletred; }
 
-div.panelcfg {
+div.panelcfg, div.scandevopts {
     padding: 1em;
     background-color: #efe9e8;
+}
+
+div.scandevoptsbox {
+    margin: 1em;
 }
 
 textarea.panelcfgtext {

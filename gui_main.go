@@ -79,14 +79,35 @@ func guiSheetScan(r *http.Request) (s string) {
 	s = "<hr><h3>New Sheet Version Scan</h3>"
 	s += guiHtmlInput("text", "sheetname", "", A{"placeholder": "Sheet Name"})
 	s += guiHtmlInput("text", "sheetvername", "", A{"placeholder": "Sheet Version Name"})
-	s += "<h2>Scanner To Use:</h2>"
-	for i, sd := range DetectedScannerDevices {
-		attrs := A{"name": "scannerdev"}
-		if i == len(DetectedScannerDevices)-1 {
-			attrs["checked"] = "checked"
-		}
-		s += "<div>" + guiHtmlInput("radio", "scannerdev"+sd.Dev, sd.Dev, attrs) + "<label for='scannerdev" + sd.Dev + "'>" + hEsc(sd.String()) + "</label></div>"
+	s += "<h4>Scanner To Use:</h4>"
+
+	if len(scannerDevices) == 1 {
+		tmpcopy := *scannerDevices[0]
+		tmpcopy.Dev += "copy"
+		tmpcopy.Model += "Copy"
+		tmpcopy.Nr--
+		scannerDevices = append(scannerDevices, &tmpcopy)
 	}
+
+	s += "<div><select onchange='toggleScanOpt(this.options[this.selectedIndex].value)'>"
+	for i, sd := range scannerDevices {
+		htmlsel := " selected='selected'"
+		if i != len(scannerDevices)-1 {
+			htmlsel = ""
+		}
+		s += "<option value='" + sd.Dev + "'" + htmlsel + ">" + hEsc(sd.String()) + "</option>"
+	}
+	s += "</select></div><div class='scandevoptsbox'>"
+	for i, sd := range scannerDevices {
+		cssdisplay := "block"
+		if i != len(scannerDevices)-1 {
+			cssdisplay = "none"
+		}
+		s += "<div class='scandevopts' id='scandevopts_" + sd.Dev + "' style='display: " + cssdisplay + "'>"
+		s += "(options for " + sd.Dev + ")"
+		s += "</div>"
+	}
+	s += "</div>"
 	return
 }
 

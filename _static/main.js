@@ -99,3 +99,11 @@ function onPanelAuxClick(evt, panelIdx, pOffX, pOffY, maxImagePanelTextAreas, la
         document.getElementById(pid + "t" + ridx + langs[pLangIdx]).dispatchEvent(new Event("change"));
     }
 }
+
+function toggleScanOpt(curScanDev) {
+    var divs = document.getElementsByClassName("scandevopts");
+    if (divs && divs.length)
+        for (let i = 0; i < divs.length; i++)
+            if (divs[i] && divs[i].style)
+                divs[i].style.display = (divs[i].id == 'scandevopts_' + curScanDev) ? 'block' : 'none';
+}
