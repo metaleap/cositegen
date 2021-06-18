@@ -76,18 +76,13 @@ func guiMain(r *http.Request, notice string) []byte {
 }
 
 func guiSheetScan(r *http.Request) (s string) {
+	if !scannerDeviceDetectionCompleted {
+		return ""
+	}
 	s = "<hr><h3>New Sheet Version Scan</h3>"
 	s += guiHtmlInput("text", "sheetname", "", A{"placeholder": "Sheet Name"})
 	s += guiHtmlInput("text", "sheetvername", "", A{"placeholder": "Sheet Version Name"})
 	s += "<h4>Scanner To Use:</h4>"
-
-	if len(scannerDevices) == 1 {
-		tmpcopy := *scannerDevices[0]
-		tmpcopy.Dev += "copy"
-		tmpcopy.Model += "Copy"
-		tmpcopy.Nr--
-		scannerDevices = append(scannerDevices, &tmpcopy)
-	}
 
 	s += "<div><select onchange='toggleScanOpt(this.options[this.selectedIndex].value)'>"
 	for i, sd := range scannerDevices {
@@ -104,18 +99,38 @@ func guiSheetScan(r *http.Request) (s string) {
 			cssdisplay = "none"
 		}
 		s += "<div class='scandevopts' id='scandevopts_" + sd.Dev + "' style='display: " + cssdisplay + "'>"
-		defvals := saneDevDefaults[sd.Dev]
+		defvals, dontshow := saneDevDefaults[sd.Dev], append(saneDevDontShow[sd.Dev], saneDevDontShow[""]...)
 		if defvals == nil {
 			defvals = map[string]string{}
 		}
 		for _, opt := range sd.Options {
+			var hide bool
+			for _, ds := range dontshow {
+				if hide = (ds == opt.Name); (!hide) && (ds[0] == '*' || ds[len(ds)-1] == '*') {
+					if ds[0] == '*' && ds[len(ds)-1] == '*' {
+						hide = strings.Contains(opt.Name, ds[1:len(ds)-2])
+					} else if ds[0] == '*' {
+						hide = strings.HasSuffix(opt.Name, ds[1:])
+					} else {
+						hide = strings.HasPrefix(opt.Name, ds[:len(ds)-2])
+					}
+				}
+				if hide {
+					break
+				}
+			}
+			if hide {
+				continue
+			}
+
 			htmlid := sd.Dev + "_opt_" + opt.Name
 			s += "<div class='scandevopt'><div class='scandevoptheader'>"
 			defval := defvals[opt.Name]
 			if defval == "" {
 				defval = saneDevDefaults[""][opt.Name]
 			}
-			attrs := A{"onfocus": "document.getElementById(\"scandevoptdesc_" + sd.Dev + "_" + opt.Name + "\").style.display=\"block\";", "onblur": "document.getElementById(\"scandevoptdesc_" + sd.Dev + "_" + opt.Name + "\").style.display=\"none\";", "title": hEsc(strings.Replace(strings.Replace(strings.Join(opt.Description, "\n"), "\"", "`", -1), "'", "`", -1))}
+			httitle := hEsc(strings.Replace(strings.Replace(strings.Join(opt.Description, "\n"), "\"", "`", -1), "'", "`", -1))
+			attrs := A{"onfocus": "document.getElementById(\"scandevoptdesc_" + sd.Dev + "_" + opt.Name + "\").style.display=\"block\";", "onblur": "document.getElementById(\"scandevoptdesc_" + sd.Dev + "_" + opt.Name + "\").style.display=\"none\";", "title": httitle}
 			if opt.Inactive {
 				attrs["readonly"], attrs["disabled"] = "readonly", "disabled"
 			}
@@ -125,15 +140,20 @@ func guiSheetScan(r *http.Request) (s string) {
 				if defval == "yes" && !opt.Inactive {
 					attrs["checked"] = "checked"
 				}
+				attrs["indeterminate"] = "indeterminate"
 				s += guiHtmlInput("checkbox", htmlid, "", attrs)
 			}
 			ht := "b"
 			if opt.Inactive {
 				ht = "del"
 			}
-			s += "&nbsp;<label for='" + htmlid + "'><" + ht + ">" + opt.Name + "</" + ht + "></label>"
-			if opt.FormatInfo != "" {
-				s += " &mdash; " + hEsc(strings.Replace(opt.FormatInfo, "|", " | ", -1))
+			s += "&nbsp;<label for='" + htmlid + "' title='" + httitle + "'><" + ht + ">" + opt.Name + "</" + ht + "></label>"
+			if fi := opt.FormatInfo; fi != "" && !opt.IsToggle {
+				var misc string
+				if idx := strings.LastIndexByte(fi, '['); fi[len(fi)-1] == ']' && idx > 0 {
+					misc, fi = fi[idx:], fi[:idx]
+				}
+				s += " &mdash; <span title='" + hEsc(misc) + "'>" + hEsc(strings.Replace(fi, "|", " | ", -1)) + "</span>"
 			}
 			s += "</div><div class='scandevoptdesc' style='display: none' id='scandevoptdesc_" + sd.Dev + "_" + opt.Name + "'>"
 			for _, desc := range opt.Description {

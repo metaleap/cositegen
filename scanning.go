@@ -9,15 +9,17 @@ import (
 )
 
 var (
-	scannerDevices  []*ScannerDevice
-	saneDefaultArgs = []string{
+	scannerDeviceDetectionCompleted bool
+	scannerDevices                  []*ScannerDevice
+	saneDefaultArgs                 = []string{
 		"--format=pnm",
 		"--buffer-size=" + strconv.FormatInt(128* /*expects in KB*/ 1024, 10),
 	}
 	saneDevDefaults = map[string]map[string]string{
 		"": {
-			"resolution": "1200dpi",
-			"mode":       "Gray",
+			"resolution":              "1200dpi",
+			"mode":                    "Gray",
+			"disable-dynamic-lineart": "yes",
 		},
 		"test": {
 			"depth":               "8",
@@ -27,10 +29,13 @@ var (
 		},
 	}
 	saneDevDontShow = map[string][]string{
-		"": {},
+		"": {
+			"mode",
+			"lamp-off-time", "clear-calibration", "calibration-file", "expiration-time",
+		},
 		"test": {
-			"--source", "--depth", "--mode", "--enable-test-options",
-			"--button", "--bool-*", "--int-*", "--int", "--fixed-*", "--fixed", "--string-*", "--string", "*-gamma-*", "-l", "-t", "-x", "-y", "--print-options", "--non-blocking", "--select-fd", "--fuzzy-parameters", "--ppl-loss", "--handscanner", "--three-pass", "--three-pass-*", "--invert-endianess", "--read-*",
+			"source", "depth", "enable-test-options", "test-picture",
+			"button", "bool-*", "int-*", "int", "fixed-*", "fixed", "string-*", "string", "*gamma-*", "-l", "-t", "-x", "-y", "print-options", "non-blocking", "select-fd", "fuzzy-parameters", "ppl-loss", "hand-scanner", "three-pass", "three-pass-*", "invert-endianess", "read-*",
 		},
 	}
 )
@@ -103,8 +108,8 @@ func detectScanners() {
 				if idx > 0 {
 					opt.Name = ln[:idx]
 					opt.FormatInfo = strings.TrimSpace(ln[idx:])
-					opt.IsToggle = strings.HasPrefix(opt.FormatInfo, "[=(yes|no)]")
 					opt.Inactive = strings.HasSuffix(opt.FormatInfo, " [inactive]")
+					opt.IsToggle = strings.HasPrefix(opt.FormatInfo, "[=(") && strings.Contains(opt.FormatInfo, "yes|no)]")
 				} else {
 					opt.IsToggle = true
 				}
@@ -115,5 +120,6 @@ func detectScanners() {
 		}
 		next()
 	}
+	scannerDeviceDetectionCompleted = true
 	printLn(len(scannerDevices), "scanner(s) detected")
 }
