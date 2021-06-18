@@ -140,7 +140,6 @@ func guiSheetScan(r *http.Request) (s string) {
 				if defval == "yes" && !opt.Inactive {
 					attrs["checked"] = "checked"
 				}
-				attrs["indeterminate"] = "indeterminate"
 				s += guiHtmlInput("checkbox", htmlid, "", attrs)
 			}
 			ht := "b"
