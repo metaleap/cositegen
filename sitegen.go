@@ -54,12 +54,12 @@ func siteGen(args map[string]bool) {
 	if modifycssfiles == nil {
 		modifycssfiles = map[string]bool{}
 	}
-	if fileinfos, err := os.ReadDir("_sitetmpl"); err != nil {
+	if fileinfos, err := os.ReadDir("sitetmpl"); err != nil {
 		panic(err)
 	} else {
 		for _, fileinfo := range fileinfos {
 			if fn := fileinfo.Name(); !(fileinfo.IsDir() || strings.Contains(strings.ToLower(filepath.Ext(fn)), "htm")) {
-				if data, err := os.ReadFile("_sitetmpl/" + fn); err != nil {
+				if data, err := os.ReadFile("sitetmpl/" + fn); err != nil {
 					panic(err)
 				} else {
 					if modifycssfiles[fn] {
@@ -89,7 +89,7 @@ func siteGen(args map[string]bool) {
 	}
 
 	printLn("SiteGen: generating HTML files...")
-	tmpl, err := template.New("foo").ParseFiles("_sitetmpl/_tmpl.html")
+	tmpl, err := template.New("foo").ParseFiles("sitetmpl/_tmpl.html")
 	if err != nil {
 		panic(err)
 	}

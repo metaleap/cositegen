@@ -59,7 +59,7 @@ func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
 	} else if ext == ".png" {
 		http.ServeFile(httpResp, httpReq, filepath.Join(".", httpReq.URL.Path)) //looks redudant but isnt!
 	} else if ext != "" {
-		http.ServeFile(httpResp, httpReq, filepath.Join("_sitetmpl", httpReq.URL.Path))
+		http.ServeFile(httpResp, httpReq, filepath.Join("sitetmpl", httpReq.URL.Path))
 	} else {
 		httpResp.Header().Add("Content-Type", "text/html")
 		var notice string

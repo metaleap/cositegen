@@ -114,7 +114,7 @@ func (me *Project) load() {
 		}
 	}
 	for _, series := range me.Series {
-		series.dirPath = series.Name
+		series.dirPath = filepath.Join("sheets", series.Name)
 		for _, chapter := range series.Chapters {
 			chapter.dirPath = filepath.Join(series.dirPath, chapter.Name)
 			sheetsdirpath := filepath.Join(chapter.dirPath, "sheets")
