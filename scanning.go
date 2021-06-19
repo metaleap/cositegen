@@ -10,7 +10,7 @@ import (
 
 var (
 	scanJob         *ScanJob
-	scannerDevices  []*ScannerDevice
+	scanDevices     []*ScanDevice
 	saneDefaultArgs = []string{
 		"--format=pnm",
 		"--buffer-size=" + strconv.FormatInt(128* /*expects in KB*/ 1024, 10),
@@ -40,17 +40,17 @@ var (
 	}
 )
 
-type ScannerDevice struct {
+type ScanDevice struct {
 	Nr      int
-	Dev     string
+	Ident   string
 	Vendor  string
 	Model   string
 	Type    string
 	Options []ScanOption
 }
 
-func (me *ScannerDevice) String() string {
-	return fmt.Sprintf("[%d] %s (%s %s, type '%s')", me.Nr, me.Dev, me.Vendor, me.Model, me.Type)
+func (me *ScanDevice) String() string {
+	return fmt.Sprintf("[%d] %s (%s %s, type '%s')", me.Nr, me.Ident, me.Vendor, me.Model, me.Type)
 }
 
 type ScanOption struct {
@@ -70,7 +70,7 @@ type ScanJob struct {
 	SheetVerName string
 	PnmFileName  string
 	PngFileName  string
-	Dev          string
+	Dev          *ScanDevice
 	Opts         map[string]string
 }
 
@@ -78,14 +78,14 @@ func (me *ScanJob) do() {
 }
 
 func detectScanners() {
-	var sds []*ScannerDevice
+	var sds []*ScanDevice
 	cmd := exec.Command("scanimage", "--formatted-device-list",
-		`{"Vendor": "%v", "Model": "%m", "Type": "%t", "Dev": "%d", "Nr": %i}`)
+		`{"Vendor": "%v", "Model": "%m", "Type": "%t", "Ident": "%d", "Nr": %i}`)
 	data, err := cmd.CombinedOutput()
 	if err != nil {
 		panic(err.Error() + ": " + string(data))
 	}
-	dataprefix := []byte(`[{"Vendor": "sane-project.org", "Model": "sane-test", "Type": "sim", "Dev": "test", "Nr": -1},`)
+	dataprefix := []byte(`[{"Vendor": "sane-project.org", "Model": "sane-test", "Type": "sim", "Ident": "test", "Nr": -1},`)
 	if data = bytes.TrimSpace(data); len(data) == 0 {
 		dataprefix = dataprefix[:len(dataprefix)-1]
 	}
@@ -93,8 +93,8 @@ func detectScanners() {
 
 	prefcat, prefdesc, prefspec := "  ", "        ", "    --"
 	for _, sd := range sds {
-		cmdargs := append(saneDefaultArgs, "--device-name", sd.Dev, "--all-options")
-		if sd.Dev == "test" {
+		cmdargs := append(saneDefaultArgs, "--device-name", sd.Ident, "--all-options")
+		if sd.Ident == "test" {
 			cmdargs = append(cmdargs, "--enable-test-options")
 		}
 		cmd := exec.Command("scanimage", cmdargs...)
@@ -136,6 +136,6 @@ func detectScanners() {
 		}
 		next()
 	}
-	scannerDevices = sds
-	printLn(len(scannerDevices), "scanner(s) detected")
+	scanDevices = sds
+	printLn(len(scanDevices), "scanner(s) detected")
 }

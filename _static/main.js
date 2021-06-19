@@ -100,10 +100,19 @@ function onPanelAuxClick(evt, panelIdx, pOffX, pOffY, maxImagePanelTextAreas, la
     }
 }
 
-function toggleScanOpt(curScanDev) {
+function toggleScanOptsPane(curScanDev) {
     var divs = document.getElementsByClassName("scandevopts");
     if (divs && divs.length)
         for (let i = 0; i < divs.length; i++)
             if (divs[i] && divs[i].style)
                 divs[i].style.display = (divs[i].id == 'scandevopts_' + curScanDev) ? 'block' : 'none';
+}
+
+function kickOffScanJob() {
+    const btn = document.getElementById('scanbtn');
+    btn.disabled = 'disabled';
+    btn.innerText = 'Wait...';
+    const hid = document.getElementById('scannow');
+    hid.value = '1';
+    doPostBack('');
 }
