@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"html"
 	"os"
 	"os/exec"
 	"strconv"
@@ -24,10 +25,9 @@ var (
 			"disable-dynamic-lineart": "yes",
 		},
 		"test": {
-			"depth":               "8",
-			"source":              "Flatbed",
-			"test-picture":        "Grid",
-			"enable-test-options": "yes",
+			"depth":        "8",
+			"source":       "Flatbed",
+			"test-picture": "Grid",
 		},
 	}
 	saneDevDontShow = map[string][]string{
@@ -36,8 +36,8 @@ var (
 			"lamp-off-time", "clear-calibration", "calibration-file", "expiration-time",
 		},
 		"test": {
-			"source", "depth", // "test-picture","enable-test-options",
-			"button", "bool-*", "int-*", "int", "fixed-*", "fixed", "string-*", "string", "*gamma-*", "-l", "-t", "-x", "-y", "print-options", "non-blocking", "select-fd", "fuzzy-parameters", "ppl-loss", "hand-scanner", "three-pass", "three-pass-*", "invert-endianess", "read-*",
+			"source", "depth", "enable-test-options", // "test-picture",
+			"button", "bool-*", "int-*", "int", "fixed-*", "fixed", "string-*", "string", "*gamma-*", "l", "t", "x", "y", "print-options", "non-blocking", "select-fd", "fuzzy-parameters", "ppl-loss", "hand-scanner", "three-pass", "three-pass-*", "invert-endianess", "read-*",
 		},
 	}
 )
@@ -76,7 +76,7 @@ type ScanJob struct {
 	Opts         map[string]string
 }
 
-func detectScanners() {
+func scanDevicesDetection() {
 	var sds []*ScanDevice
 	cmd := exec.Command("scanimage", "--formatted-device-list",
 		`{"Vendor": "%v", "Model": "%m", "Type": "%t", "Ident": "%d", "Nr": %i}`)
@@ -90,8 +90,11 @@ func detectScanners() {
 	}
 	jsonLoad("", append(dataprefix, append(data, ']')...), &sds)
 
-	prefcat, prefdesc, prefspec := "  ", "        ", "    --"
+	prefcat, prefdesc, prefspec := "  ", "        ", "    -"
 	for _, sd := range sds {
+		if sd.Ident = strings.TrimSpace(sd.Ident); sd.Ident == "" || html.EscapeString(sd.Ident) != sd.Ident {
+			panic(fmt.Sprintf("TODO prep code for previously unexpected scandev ident format:\t%#v", sd.Ident))
+		}
 		cmdargs := append(saneDefaultArgs, "--device-name", sd.Ident, "--all-options")
 		if sd.Ident == "test" {
 			cmdargs = append(cmdargs, "--enable-test-options")
@@ -119,9 +122,9 @@ func detectScanners() {
 				idx := strings.IndexFunc(ln, func(r rune) bool {
 					return !(r == '-' || (r >= 'a' && r <= 'z'))
 				})
-				opt.Name = ln
+				opt.Name = strings.TrimLeft(ln, "-")
 				if idx > 0 {
-					opt.Name = ln[:idx]
+					opt.Name = strings.TrimLeft(ln[:idx], "-")
 					opt.FormatInfo = strings.TrimSpace(ln[idx:])
 					opt.Inactive = strings.HasSuffix(opt.FormatInfo, " [inactive]")
 					opt.IsToggle = strings.HasPrefix(opt.FormatInfo, "[=(") && strings.Contains(opt.FormatInfo, "yes|no)]")
@@ -152,15 +155,20 @@ func scanJobDo() {
 		"--device-name="+sj.Dev.Ident,
 		"--output-file="+sj.PnmFileName,
 	)...)
+	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+	for name, val := range sj.Opts {
+		cmd.Args = append(cmd.Args, "--"+name+"="+val)
+	}
 	if err := cmd.Start(); err != nil {
-		panic(err)
+		panic(fmt.Errorf("%v %v", err, cmd.Args))
 	}
 	if err := cmd.Wait(); err != nil {
-		panic(err)
+		panic(fmt.Errorf("%v %v", err, cmd.Args))
 	}
 
-	_, err := os.Stat(sj.PnmFileName)
+	pnmfile, err := os.Open(sj.PnmFileName)
 	if err != nil {
 		panic(err)
 	}
+	imgPnmToPng(pnmfile, pnmfile.Close, true)
 }

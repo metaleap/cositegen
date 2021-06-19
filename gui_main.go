@@ -28,7 +28,7 @@ func guiMain(r *http.Request, notice string) []byte {
 	if notice != "" {
 		s += "<div class='notice'>" + hEsc(notice) + "</div>"
 	}
-	if scanJobFail != "" {
+	if scanJobFail != "" && fv("scannow") == "" {
 		s += "<div class='notice'>Most recent scan job failed: <b>" + hEsc(scanJobFail) + "</b> (see stdio for details).</div>"
 	}
 
@@ -89,22 +89,30 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 		}
 		sj.PnmFileName, sj.PngFileName = ".csg/pnm/"+sj.Id+".pnm", "sheets/"+series.Name+"/"+chapter.Name+"/sheets/"+sj.SheetName+"_"+sj.SheetVerName+".png"
 		for _, sd := range scanDevices {
-			if hEsc(sd.Ident) == fv("scandev") {
+			if sd.Ident == fv("scandev") {
 				sj.Dev = sd
 				break
 			}
 		}
 		if sj.Dev != nil {
-			scanJobFail, scanJob = "", &sj
+			for _, opt := range sj.Dev.Options {
+				if opt.Inactive {
+					continue
+				}
+				if formval := strings.TrimSpace(fv(sj.Dev.Ident + "_opt_" + opt.Name)); formval != "" {
+					sj.Opts[opt.Name] = formval
+				}
+			}
+			scanJob, scanJobFail = &sj, ""
 			go scanJobDo()
 		}
 	}
 	if len(scanDevices) == 0 {
 		return "<div>(Scanner device detection still ongoing)</div>"
 	} else if scanJob != nil {
-		s = "<div>Scan job in progress on device <b>" + hEsc(scanJob.Dev.String()) + "</b>:<br/>"
+		s = "<div>Scan job in progress on device <b>" + scanJob.Dev.String() + "</b>:<br/>"
 		if scanJob.Series == series && scanJob.Chapter == chapter {
-			return s + "first into <code>" + hEsc(scanJob.PnmFileName) + "</code>, then <code>" + hEsc(scanJob.PngFileName) + "</code></div>"
+			return s + "first into <code>" + scanJob.PnmFileName + "</code>, then <code>" + hEsc(scanJob.PngFileName) + "</code></div>"
 		}
 		return s + "for other chapter <code>" + scanJob.Series.Name + "/" + scanJob.Chapter.Name + "</code>)</div>"
 	}
@@ -120,7 +128,7 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 		if i != len(scanDevices)-1 {
 			htmlsel = ""
 		}
-		s += "<option value='" + hEsc(sd.Ident) + "'" + htmlsel + ">" + hEsc(sd.String()) + "</option>"
+		s += "<option value='" + sd.Ident + "'" + htmlsel + ">" + hEsc(sd.String()) + "</option>"
 	}
 	s += "</select></div><div class='scandevoptsbox'>"
 	for i, sd := range scanDevices {
@@ -128,7 +136,7 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 		if i != len(scanDevices)-1 {
 			cssdisplay = "none"
 		}
-		s += "<div class='scandevopts' id='scandevopts_" + hEsc(sd.Ident) + "' style='display: " + cssdisplay + "'>"
+		s += "<div class='scandevopts' id='scandevopts_" + sd.Ident + "' style='display: " + cssdisplay + "'>"
 		defvals, dontshow := saneDevDefaults[sd.Ident], append(saneDevDontShow[sd.Ident], saneDevDontShow[""]...)
 		if defvals == nil {
 			defvals = map[string]string{}
@@ -150,21 +158,21 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 					break
 				}
 			}
-			if hide = false; hide {
+			if hide {
 				continue
 			}
-			if opt.Category != cat {
+			if opt.Category != cat && opt.Category != "" {
 				cat = opt.Category
-				s += "<h3>" + hEsc(cat) + "</h3>"
+				s += "<h3><i>" + hEsc(cat) + "</i></h3>"
 			}
-			htmlid := hEsc(sd.Ident) + "_opt_" + opt.Name
-			s += "<hr/><div class='scandevopt'><div class='scandevoptheader'>"
+			htmlid := sd.Ident + "_opt_" + opt.Name
+			s += "<div class='scandevopt'><div class='scandevoptheader'>"
 			defval := defvals[opt.Name]
 			if defval == "" {
 				defval = saneDevDefaults[""][opt.Name]
 			}
 			httitle := hEsc(strings.Replace(strings.Replace(strings.Join(opt.Description, "\n"), "\"", "`", -1), "'", "`", -1))
-			attrs := A{"onfocus": "document.getElementById(\"scandevoptdesc_" + hEsc(sd.Ident) + "_" + opt.Name + "\").style.display=\"block\";", "onblur": "document.getElementById(\"scandevoptdesc_" + hEsc(sd.Ident) + "_" + opt.Name + "\").style.display=\"none\";", "title": httitle}
+			attrs := A{"onfocus": "document.getElementById(\"scandevoptdesc_" + sd.Ident + "_" + opt.Name + "\").style.display=\"block\";", "onblur": "document.getElementById(\"scandevoptdesc_" + sd.Ident + "_" + opt.Name + "\").style.display=\"none\";", "title": httitle}
 			if opt.Inactive {
 				attrs["readonly"], attrs["disabled"] = "readonly", "disabled"
 			}
@@ -174,7 +182,7 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 				if defval == "yes" && !opt.Inactive {
 					attrs["checked"] = "checked"
 				}
-				s += guiHtmlInput("checkbox", htmlid, "", attrs)
+				s += guiHtmlInput("checkbox", htmlid, "yes", attrs)
 			}
 			ht := "b"
 			if opt.Inactive {
@@ -188,11 +196,11 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 				}
 				s += " &mdash; <span title='" + hEsc(misc) + "'>" + hEsc(strings.Replace(fi, "|", " | ", -1)) + "</span>"
 			}
-			s += "</div><div class='scandevoptdesc' style='display: none' id='scandevoptdesc_" + hEsc(sd.Ident) + "_" + opt.Name + "'>"
+			s += "</div><div class='scandevoptdesc' style='display: none' id='scandevoptdesc_" + sd.Ident + "_" + opt.Name + "'>"
 			for _, desc := range opt.Description {
 				s += "<div>" + hEsc(desc) + "</div>"
 			}
-			s += "</div></div>"
+			s += "</div></div><hr/>"
 		}
 		s += "</div>"
 	}

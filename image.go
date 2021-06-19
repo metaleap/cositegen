@@ -38,12 +38,14 @@ type ImgPanelArea struct {
 	Rect image.Rectangle
 }
 
-func imgPnmToPng(srcImgData io.Reader) {
+func imgPnmToPng(srcImgData io.Reader, onFileDone func() error, ensureWide bool) {
 	imgsrc, err := pnm.Decode(srcImgData)
 	if err != nil {
 		panic(err)
 	}
-	panic(imgsrc) // TODO continue here..  =)
+	_ = onFileDone()
+
+	panic(imgsrc.Bounds().String())
 }
 
 func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int) []byte {

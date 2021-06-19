@@ -21,7 +21,7 @@ func main() {
 			printLn(msg)
 		}
 	} else {
-		go detectScanners()
+		go scanDevicesDetection()
 		go httpListenAndServe()
 		go launchKioskyBrowser()
 		go appPrepWork()
