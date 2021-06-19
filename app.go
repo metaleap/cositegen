@@ -24,10 +24,6 @@ var App struct {
 
 func appInit() {
 	App.StaticFilesDirPath = filepath.Join(os.Getenv("HOME"), "c/go/src/github.com/metaleap/cositegen/_static")
-	rmDir(".csg/pnm")
-	mkDir(".csg")
-	mkDir(".csg/pnm")
-	mkDir(".csg/meta")
 	App.Proj.load()
 
 	var cmdidx int

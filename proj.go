@@ -94,7 +94,11 @@ func (me *Project) save() {
 }
 
 func (me *Project) load() {
-	jsonLoad("cosite.json", nil, me)
+	jsonLoad("cosite.json", nil, me) // exits early if no such file, before creating work dirs:
+	rmDir(".csg/pnm")
+	mkDir(".csg")
+	mkDir(".csg/pnm")
+	mkDir(".csg/meta")
 	if _, err := os.Stat(".csg/meta.json"); err == nil {
 		jsonLoad(".csg/meta.json", nil, &me.meta)
 	} else if !os.IsNotExist(err) {
