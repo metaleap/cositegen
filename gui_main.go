@@ -26,12 +26,16 @@ func guiMain(r *http.Request, notice string) []byte {
 	if notice != "" {
 		s += "<div class='notice'>" + hEsc(notice) + "</div>"
 	}
+	if sj := scanJob; sj != nil {
+		s += "<div class='notice'>Scan job ongoing: <b>" + hEsc(sj.Dev) + "</b> (into <code>" + hEsc(sj.PnmFileName) + "</code>, then <code>" + hEsc(sj.PngFileName) + "</code>)</div>"
+	}
 
 	App.Gui.State.Sel.Series, _ = guiGetFormSel(rVal("series"), &App.Proj).(*Series)
 	s += guiHtmlList("series", "(Series)", len(App.Proj.Series), func(i int) (string, string, bool) {
 		return App.Proj.Series[i].Name, App.Proj.Series[i].Title["en"], App.Gui.State.Sel.Series != nil && App.Proj.Series[i].Name == App.Gui.State.Sel.Series.Name
 	})
 
+	shouldsavemeta := false
 	if series := App.Gui.State.Sel.Series; series != nil {
 		App.Gui.State.Sel.Chapter, _ = guiGetFormSel(rVal("chapter"), series).(*Chapter)
 		s += guiHtmlList("chapter", "(Chapters)", len(series.Chapters), func(i int) (string, string, bool) {
@@ -45,7 +49,7 @@ func guiMain(r *http.Request, notice string) []byte {
 				return sheet.name, sheet.name, App.Gui.State.Sel.Sheet != nil && App.Gui.State.Sel.Sheet.name == sheet.name
 			})
 			if sheet := App.Gui.State.Sel.Sheet; sheet == nil {
-				s += guiSheetScan(r)
+				s += "<hr/><div class='uipane'>" + guiSheetScan(r) + "</div>"
 			} else if len(sheet.versions) > 0 {
 				App.Gui.State.Sel.Ver, _ = guiGetFormSel(rVal("sheetver"), sheet).(*SheetVer)
 				s += guiHtmlList("sheetver", "", len(sheet.versions), func(i int) (string, string, bool) {
@@ -56,14 +60,13 @@ func guiMain(r *http.Request, notice string) []byte {
 					App.Gui.State.Sel.Ver = sheet.versions[0]
 				}
 				if sheetver := App.Gui.State.Sel.Ver; sheetver != nil {
-					html, shouldsavemeta := guiSheetEdit(sheetver, r)
-					s += html
-					if shouldsavemeta {
-						App.Proj.save()
-					}
+					s += "<hr/><div class='uipane'>" + guiSheetEdit(sheetver, r, &shouldsavemeta) + "</div>"
 				}
 			}
 		}
+	}
+	if shouldsavemeta {
+		App.Proj.save()
 	}
 
 	s += "<hr/>" + guiHtmlListFrom("main_action", "(Project Actions)", AppMainActions)
@@ -76,13 +79,14 @@ func guiMain(r *http.Request, notice string) []byte {
 }
 
 func guiSheetScan(r *http.Request) (s string) {
-	if !scannerDeviceDetectionCompleted {
-		return ""
+	if scanJob != nil || len(scannerDevices) == 0 {
+		return
 	}
-	s = "<hr><h3>New Sheet Version Scan</h3>"
+
+	s = "<h3>New Sheet Version Scan</h3>"
 	s += guiHtmlInput("text", "sheetname", "", A{"placeholder": "Sheet Name"})
 	s += guiHtmlInput("text", "sheetvername", "", A{"placeholder": "Sheet Version Name"})
-	s += "<h4>Scanner To Use:</h4>"
+	s += "<h3>Scanner To Use:</h3>"
 
 	s += "<div><select onchange='toggleScanOpt(this.options[this.selectedIndex].value)'>"
 	for i, sd := range scannerDevices {
@@ -90,7 +94,7 @@ func guiSheetScan(r *http.Request) (s string) {
 		if i != len(scannerDevices)-1 {
 			htmlsel = ""
 		}
-		s += "<option value='" + sd.Dev + "'" + htmlsel + ">" + hEsc(sd.String()) + "</option>"
+		s += "<option value='" + hEsc(sd.Dev) + "'" + htmlsel + ">" + hEsc(sd.String()) + "</option>"
 	}
 	s += "</select></div><div class='scandevoptsbox'>"
 	for i, sd := range scannerDevices {
@@ -98,11 +102,12 @@ func guiSheetScan(r *http.Request) (s string) {
 		if i != len(scannerDevices)-1 {
 			cssdisplay = "none"
 		}
-		s += "<div class='scandevopts' id='scandevopts_" + sd.Dev + "' style='display: " + cssdisplay + "'>"
+		s += "<div class='scandevopts' id='scandevopts_" + hEsc(sd.Dev) + "' style='display: " + cssdisplay + "'>"
 		defvals, dontshow := saneDevDefaults[sd.Dev], append(saneDevDontShow[sd.Dev], saneDevDontShow[""]...)
 		if defvals == nil {
 			defvals = map[string]string{}
 		}
+		var cat string
 		for _, opt := range sd.Options {
 			var hide bool
 			for _, ds := range dontshow {
@@ -119,18 +124,21 @@ func guiSheetScan(r *http.Request) (s string) {
 					break
 				}
 			}
-			if hide {
+			if hide = false; hide {
 				continue
 			}
-
-			htmlid := sd.Dev + "_opt_" + opt.Name
-			s += "<div class='scandevopt'><div class='scandevoptheader'>"
+			if opt.Category != cat {
+				cat = opt.Category
+				s += "<h3>" + hEsc(cat) + "</h3>"
+			}
+			htmlid := hEsc(sd.Dev) + "_opt_" + opt.Name
+			s += "<hr/><div class='scandevopt'><div class='scandevoptheader'>"
 			defval := defvals[opt.Name]
 			if defval == "" {
 				defval = saneDevDefaults[""][opt.Name]
 			}
 			httitle := hEsc(strings.Replace(strings.Replace(strings.Join(opt.Description, "\n"), "\"", "`", -1), "'", "`", -1))
-			attrs := A{"onfocus": "document.getElementById(\"scandevoptdesc_" + sd.Dev + "_" + opt.Name + "\").style.display=\"block\";", "onblur": "document.getElementById(\"scandevoptdesc_" + sd.Dev + "_" + opt.Name + "\").style.display=\"none\";", "title": httitle}
+			attrs := A{"onfocus": "document.getElementById(\"scandevoptdesc_" + hEsc(sd.Dev) + "_" + opt.Name + "\").style.display=\"block\";", "onblur": "document.getElementById(\"scandevoptdesc_" + hEsc(sd.Dev) + "_" + opt.Name + "\").style.display=\"none\";", "title": httitle}
 			if opt.Inactive {
 				attrs["readonly"], attrs["disabled"] = "readonly", "disabled"
 			}
@@ -154,24 +162,24 @@ func guiSheetScan(r *http.Request) (s string) {
 				}
 				s += " &mdash; <span title='" + hEsc(misc) + "'>" + hEsc(strings.Replace(fi, "|", " | ", -1)) + "</span>"
 			}
-			s += "</div><div class='scandevoptdesc' style='display: none' id='scandevoptdesc_" + sd.Dev + "_" + opt.Name + "'>"
+			s += "</div><div class='scandevoptdesc' style='display: none' id='scandevoptdesc_" + hEsc(sd.Dev) + "_" + opt.Name + "'>"
 			for _, desc := range opt.Description {
 				s += "<div>" + hEsc(desc) + "</div>"
 			}
-			s += "</div></div><hr/>"
+			s += "</div></div>"
 		}
 		s += "</div>"
 	}
 	s += "</div>"
-	return
+	return //		sheets/jokes/two-pagers/sheets
 }
 
-func guiSheetEdit(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool) {
+func guiSheetEdit(sv *SheetVer, r *http.Request, shouldSaveMeta *bool) (s string) {
 	rVal := func(s string) string { return wthDisAintWindoze.Replace(r.FormValue(s)) }
 
 	sv.ensurePrep(false, false)
 	px1cm := float64(sv.meta.PanelsTree.Rect.Max.Y-sv.meta.PanelsTree.Rect.Min.Y) / 21.0
-	s = "<hr/><h3>Full Sheet:</h3><div class='fullsheet'>" + guiHtmlImg("/"+sv.meta.bwSmallFilePath, nil) + "</div>"
+	s = "<h3>Full Sheet:</h3><div class='fullsheet'>" + guiHtmlImg("/"+sv.meta.bwSmallFilePath, nil) + "</div>"
 	var panelstree func(*ImgPanel) string
 	panelstree = func(panel *ImgPanel) (s string) {
 		assert(len(panel.SubCols) == 0 || len(panel.SubRows) == 0)
@@ -212,13 +220,13 @@ func guiSheetEdit(sv *SheetVer, r *http.Request) (s string, shouldSaveMeta bool)
 		zoom = int(100.0 / zoomdiv)
 	}
 	if rfv := rVal("main_focus_id"); rfv != "" && rfv[0] == 'p' && strings.HasSuffix(rfv, "save") {
-		shouldSaveMeta = true
+		*shouldSaveMeta = true
 	}
 	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
 		rect, pid := panel.Rect, "p"+itoa(pidx)
 		w, h := rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y
 		cfgdisplay := "none"
-		if shouldSaveMeta {
+		if *shouldSaveMeta {
 			panel.Areas = nil
 			if rVal("main_focus_id") == pid+"save" {
 				cfgdisplay = "block"

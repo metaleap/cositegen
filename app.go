@@ -51,8 +51,8 @@ func appOnExit() {
 
 var appMainActions = map[string]bool{}
 var AppMainActions = A{
-	"genfully": "Re-generate site fully (incl. PNGs)",
 	"genpages": "Re-generate site (pages only, keep old PNGs)",
+	"genfully": "Re-generate site fully (incl. PNGs)",
 }
 
 func appMainAction(fromGui bool, name string, args map[string]bool) string {

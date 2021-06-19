@@ -109,13 +109,13 @@ func (me *Project) load() {
 	for filename, contenthash := range me.meta.ContentHashes {
 		if fileinfo, err := os.Stat(filename); err != nil || fileinfo.IsDir() {
 			delete(me.meta.SheetVer, contenthash)
-			rmDir(filepath.Join(".csg/meta", contenthash))
+			rmDir(".csg/meta/" + contenthash)
 			delete(me.meta.ContentHashes, filename)
 		}
 	}
 
 	for _, series := range me.Series {
-		series.dirPath = filepath.Join("sheets", series.Name)
+		series.dirPath = "sheets/" + series.Name
 		for _, chapter := range series.Chapters {
 			chapter.dirPath = filepath.Join(series.dirPath, chapter.Name)
 			sheetsdirpath := filepath.Join(chapter.dirPath, "sheets")
@@ -127,13 +127,14 @@ func (me *Project) load() {
 				if fnamebase := f.Name(); !f.IsDir() {
 					fname := filepath.Join(sheetsdirpath, fnamebase)
 					fnamebase = fnamebase[:len(fnamebase)-len(filepath.Ext(fnamebase))]
-					versionname := fnamebase[strings.LastIndexByte(fnamebase, '-')+1:]
+					versionname := fnamebase[strings.LastIndexByte(fnamebase, '_')+1:]
 					if versionname == fnamebase {
 						panic("invalid sheet-file name: " + fname)
 					} else if versionname == "" {
-						continue // sheet-.* are "wip, ignore for now please"
+						printLn("SkipWip: " + fname)
+						continue
 					}
-					sheetname := fnamebase[:strings.LastIndexByte(fnamebase, '-')]
+					sheetname := fnamebase[:strings.LastIndexByte(fnamebase, '_')]
 					if sheetname == "" {
 						panic("invalid sheet-file name: " + fname)
 					}

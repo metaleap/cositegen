@@ -19,6 +19,11 @@ div.fullsheet img {
     width: 90%;
 }
 
+div.uipane {
+    font-size: 0.88em;
+    padding-left: 1em;
+}
+
 div.notice {
     background-color: moccasin;
     padding: 0.22em;

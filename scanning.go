@@ -9,9 +9,9 @@ import (
 )
 
 var (
-	scannerDeviceDetectionCompleted bool
-	scannerDevices                  []*ScannerDevice
-	saneDefaultArgs                 = []string{
+	scanJob         *ScanJob
+	scannerDevices  []*ScannerDevice
+	saneDefaultArgs = []string{
 		"--format=pnm",
 		"--buffer-size=" + strconv.FormatInt(128* /*expects in KB*/ 1024, 10),
 	}
@@ -30,11 +30,11 @@ var (
 	}
 	saneDevDontShow = map[string][]string{
 		"": {
-			"mode",
+			// "mode",
 			"lamp-off-time", "clear-calibration", "calibration-file", "expiration-time",
 		},
 		"test": {
-			"source", "depth", "enable-test-options", "test-picture",
+			"source", "depth", // "test-picture","enable-test-options",
 			"button", "bool-*", "int-*", "int", "fixed-*", "fixed", "string-*", "string", "*gamma-*", "-l", "-t", "-x", "-y", "print-options", "non-blocking", "select-fd", "fuzzy-parameters", "ppl-loss", "hand-scanner", "three-pass", "three-pass-*", "invert-endianess", "read-*",
 		},
 	}
@@ -49,6 +49,10 @@ type ScannerDevice struct {
 	Options []ScanOption
 }
 
+func (me *ScannerDevice) String() string {
+	return fmt.Sprintf("[%d] %s (%s %s, type '%s')", me.Nr, me.Dev, me.Vendor, me.Model, me.Type)
+}
+
 type ScanOption struct {
 	Category    string
 	Name        string
@@ -58,11 +62,23 @@ type ScanOption struct {
 	Inactive    bool
 }
 
-func (me *ScannerDevice) String() string {
-	return fmt.Sprintf("[%d] %s (%s %s, type '%s')", me.Nr, me.Dev, me.Vendor, me.Model, me.Type)
+type ScanJob struct {
+	Id           string
+	Series       *Series
+	Chapter      *Chapter
+	SheetName    string
+	SheetVerName string
+	PnmFileName  string
+	PngFileName  string
+	Dev          string
+	Opts         map[string]string
+}
+
+func (me *ScanJob) do() {
 }
 
 func detectScanners() {
+	var sds []*ScannerDevice
 	cmd := exec.Command("scanimage", "--formatted-device-list",
 		`{"Vendor": "%v", "Model": "%m", "Type": "%t", "Dev": "%d", "Nr": %i}`)
 	data, err := cmd.CombinedOutput()
@@ -73,10 +89,10 @@ func detectScanners() {
 	if data = bytes.TrimSpace(data); len(data) == 0 {
 		dataprefix = dataprefix[:len(dataprefix)-1]
 	}
-	jsonLoad("", append(dataprefix, append(data, ']')...), &scannerDevices)
+	jsonLoad("", append(dataprefix, append(data, ']')...), &sds)
 
 	prefcat, prefdesc, prefspec := "  ", "        ", "    --"
-	for _, sd := range scannerDevices {
+	for _, sd := range sds {
 		cmdargs := append(saneDefaultArgs, "--device-name", sd.Dev, "--all-options")
 		if sd.Dev == "test" {
 			cmdargs = append(cmdargs, "--enable-test-options")
@@ -120,6 +136,6 @@ func detectScanners() {
 		}
 		next()
 	}
-	scannerDeviceDetectionCompleted = true
+	scannerDevices = sds
 	printLn(len(scannerDevices), "scanner(s) detected")
 }

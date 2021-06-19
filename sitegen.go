@@ -55,6 +55,14 @@ func siteGen(fully bool) {
 		rmDir(".build")
 		mkDir(".build")
 		mkDir(".build/img/")
+	} else if fileinfos, err := os.ReadDir(".build"); err == nil {
+		for _, finfo := range fileinfos {
+			if !finfo.IsDir() {
+				_ = os.Remove(".build/" + finfo.Name())
+			}
+		}
+	} else if !os.IsNotExist(err) {
+		panic(err)
 	}
 
 	printLn("SiteGen: copying non-HTML files to .build...")
@@ -506,7 +514,7 @@ func siteGenAtom(lang string) {
 		for i := len(xmls) - 1; i >= 0; i-- {
 			s += xmls[i]
 		}
-		writeFile(filepath.Join(".build", af.Name+"."+lang+".xml"), []byte(s+"</feed>"))
+		writeFile(".build/"+af.Name+"."+lang+".xml", []byte(s+"</feed>"))
 	}
 }
 
