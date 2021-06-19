@@ -28,6 +28,9 @@ func guiMain(r *http.Request, notice string) []byte {
 	if notice != "" {
 		s += "<div class='notice'>" + hEsc(notice) + "</div>"
 	}
+	if scanJobFail != "" {
+		s += "<div class='notice'>Most recent scan job failed: <b>" + hEsc(scanJobFail) + "</b> (see stdio for details).</div>"
+	}
 
 	App.Gui.State.Sel.Series, _ = guiGetFormSel(fv("series"), &App.Proj).(*Series)
 	s += guiHtmlList("series", "(Series)", len(App.Proj.Series), func(i int) (string, string, bool) {
@@ -78,13 +81,13 @@ func guiMain(r *http.Request, notice string) []byte {
 }
 
 func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s string) {
-	if fv("scannow") != "" {
+	if fv("scannow") != "" && scanJob == nil {
 		sj := ScanJob{
 			Id:     strconv.FormatInt(time.Now().UnixNano(), 36),
 			Series: series, Chapter: chapter, Opts: map[string]string{},
 			SheetName: fv("sheetname"), SheetVerName: fv("sheetvername"),
 		}
-		sj.PnmFileName, sj.PngFileName = ".csg/pnm/"+sj.Id+".png", "sheets/"+series.Name+"/"+chapter.Name+"/sheets/"+sj.SheetName+"_"+sj.SheetVerName+".png"
+		sj.PnmFileName, sj.PngFileName = ".csg/pnm/"+sj.Id+".pnm", "sheets/"+series.Name+"/"+chapter.Name+"/sheets/"+sj.SheetName+"_"+sj.SheetVerName+".png"
 		for _, sd := range scanDevices {
 			if hEsc(sd.Ident) == fv("scandev") {
 				sj.Dev = sd
@@ -92,7 +95,8 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 			}
 		}
 		if sj.Dev != nil {
-			scanJob = &sj
+			scanJobFail, scanJob = "", &sj
+			go scanJobDo()
 		}
 	}
 	if len(scanDevices) == 0 {
@@ -105,7 +109,7 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 		return s + "for other chapter <code>" + scanJob.Series.Name + "/" + scanJob.Chapter.Name + "</code>)</div>"
 	}
 
-	s = "<h3>New Sheet Version Scan</h3>"
+	s += "<h3>New Sheet Version Scan</h3>"
 	s += guiHtmlInput("text", "sheetname", "", A{"placeholder": "Sheet Name"})
 	s += guiHtmlInput("text", "sheetvername", "", A{"placeholder": "Sheet Version Name"})
 	s += "<h3>Scanner To Use:</h3>"

@@ -24,6 +24,12 @@ div.uipane {
     padding-left: 1em;
 }
 
+code {
+    font-size: 0.88em;
+    font-weight: bold;
+    background-color: #efe9e8;
+}
+
 div.notice {
     background-color: moccasin;
     padding: 0.22em;

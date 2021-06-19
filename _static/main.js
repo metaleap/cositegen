@@ -45,9 +45,9 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs
                     .replace(/<\/b>/g, "</tspan>")
                     .replace(/<\/u>/g, "</tspan>")
                     .replace(/<\/i>/g, "</tspan>")
-                    + "</tspan>"
+                    + "</tspan>";
             }
-            innerhtml += "</text></svg></div>"
+            innerhtml += "</text></svg></div>";
         }
     }
     if (span.innerHTML != innerhtml)
@@ -109,6 +109,13 @@ function toggleScanOptsPane(curScanDev) {
 }
 
 function kickOffScanJob() {
+    const txt = document.getElementById('sheetname');
+    txt.value = txt.value.trim();
+    if (!(txt.value && txt.value.length)) {
+        txt.focus();
+        alert("Sheet name missing but required.");
+        return;
+    }
     const btn = document.getElementById('scanbtn');
     btn.disabled = 'disabled';
     btn.innerText = 'Wait...';

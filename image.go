@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/go-forks/gopnm"
 	"golang.org/x/image/draw"
 )
 
@@ -35,6 +36,14 @@ func (me *ImgPanel) HasAny(dataKey string) bool {
 type ImgPanelArea struct {
 	Data map[string]string `json:",omitempty"`
 	Rect image.Rectangle
+}
+
+func imgPnmToPng(srcImgData io.Reader) {
+	imgsrc, err := pnm.Decode(srcImgData)
+	if err != nil {
+		panic(err)
+	}
+	panic(imgsrc) // TODO continue here..  =)
 }
 
 func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int) []byte {

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 var (
 	scanJob         *ScanJob
+	scanJobFail     string
 	scanDevices     []*ScanDevice
 	saneDefaultArgs = []string{
 		"--format=pnm",
@@ -74,9 +76,6 @@ type ScanJob struct {
 	Opts         map[string]string
 }
 
-func (me *ScanJob) do() {
-}
-
 func detectScanners() {
 	var sds []*ScanDevice
 	cmd := exec.Command("scanimage", "--formatted-device-list",
@@ -138,4 +137,30 @@ func detectScanners() {
 	}
 	scanDevices = sds
 	printLn(len(scanDevices), "scanner(s) detected")
+}
+
+func scanJobDo() {
+	sj := scanJob
+	defer func() {
+		scanJob = nil
+		if err := recover(); err != nil {
+			scanJobFail = "[" + sj.SheetName + "_" + sj.SheetVerName + "] " + fmt.Sprintf("%v", err)
+		}
+	}()
+
+	cmd := exec.Command("scanimage", append(saneDefaultArgs,
+		"--device-name="+sj.Dev.Ident,
+		"--output-file="+sj.PnmFileName,
+	)...)
+	if err := cmd.Start(); err != nil {
+		panic(err)
+	}
+	if err := cmd.Wait(); err != nil {
+		panic(err)
+	}
+
+	_, err := os.Stat(sj.PnmFileName)
+	if err != nil {
+		panic(err)
+	}
 }
