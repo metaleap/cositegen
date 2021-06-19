@@ -17,12 +17,17 @@ func guiHtmlList(name string, noneItemFirst string, numItems int, getItem func(i
 	if noneItemFirst != "" {
 		s += "<option value=''>" + noneItemFirst + "</option>"
 	}
-	for i := 0; i < numItems; i++ {
-		value, caption, sel := getItem(i)
-		if s += "<option value='" + value + "'"; sel {
-			s += " selected"
+	if getItem != nil {
+		for i := 0; i < numItems || numItems == 0; i++ {
+			value, caption, sel := getItem(i)
+			if value == "" && caption == "" {
+				break
+			}
+			if s += "<option value='" + value + "'"; sel {
+				s += " selected"
+			}
+			s += ">" + hEsc(caption) + "</option>"
 		}
-		s += ">" + hEsc(caption) + "</option>"
 	}
 	s += "</select>"
 	return s

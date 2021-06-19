@@ -234,7 +234,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		}
 		return
 	}
-	s += "<h3>Sheet Panels Structure:</h3><ul><li>Sheet coords:" + sv.meta.PanelsTree.Rect.String() + panelstree(sv.meta.PanelsTree) + "</li></ul><hr/><h3>All panels:</h3>"
+	s += "<h3>Sheet Panels Structure:</h3><ul><li>Sheet coords:" + sv.meta.PanelsTree.Rect.String() + panelstree(sv.meta.PanelsTree) + "</li></ul><hr/>"
 	pidx, numpanels, maxwidth, zoom, zoomdiv := 0, 0, 0, 100, 1.0
 	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
 		numpanels++
@@ -242,12 +242,28 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 			maxwidth = w
 		}
 	})
+	s += "<h3>All " + itoa(numpanels) + " panel(s):</h3><div>"
 	for i, lang := range App.Proj.Langs {
 		attrs := A{"name": "plang", "onclick": "refreshAllPanelRects(" + itoa(numpanels) + "," + itoa(i) + ",\"" + lang + "\");"}
 		if i == 0 {
 			attrs["checked"] = "checked"
 		}
 		s += guiHtmlInput("radio", "plang"+itoa(i), itoa(i), attrs) + "<label for='plang" + itoa(i) + "'>" + lang + "</label>"
+	}
+	importlist := map[string]string{}
+	for sheetfilename, panelsareas := range App.Proj.meta.sheetVerPanelAreas {
+		if sheetfilename != sv.fileName {
+			var numareas int
+			for _, panelareas := range panelsareas {
+				numareas += len(panelareas)
+			}
+			importlist[sheetfilename] = sheetfilename + " (" + itoa(numareas) + " text area(s) in " + itoa(len(panelsareas)) + " panel(s))"
+		}
+	}
+	s += "</div><div>" + guiHtmlListFrom("importpaneltexts", "(Import panel text areas from another sheet where panel indices match)", importlist) + "</div>"
+	var importfrom string
+	if fv("main_focus_id") == "importpaneltexts" {
+		*shouldSaveMeta, importfrom = true, fv("importpaneltexts")
 	}
 	if wmax := 320; maxwidth > wmax {
 		zoomdiv = float64(maxwidth) / float64(wmax)
@@ -291,6 +307,13 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 								}
 							}
 						}
+					}
+				}
+			}
+			if panelsareas := App.Proj.meta.sheetVerPanelAreas[importfrom]; len(panelsareas) > pidx {
+				for _, area := range panelsareas[pidx] {
+					if !area.Rect.Empty() {
+						App.Proj.meta.sheetVerPanelAreas[sv.fileName][pidx] = append(App.Proj.meta.sheetVerPanelAreas[sv.fileName][pidx], area)
 					}
 				}
 			}
