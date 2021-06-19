@@ -293,6 +293,8 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 					}
 				}
 
+				area.SvgTextTransformAttr = strings.TrimSpace(fv(pid + "t" + itoa(i) + "_transform"))
+				area.SvgTextTspanStyleAttr = strings.TrimSpace(fv(pid + "t" + itoa(i) + "_style"))
 				trx, trw := fv(pid+"t"+itoa(i)+"rx"), fv(pid+"t"+itoa(i)+"rw")
 				try, trh := fv(pid+"t"+itoa(i)+"ry"), fv(pid+"t"+itoa(i)+"rh")
 				if rx0, err := strconv.ParseUint(trx, 0, 64); err == nil {
@@ -338,12 +340,13 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		s += "</div></div></td><td>"
 
 		s += "<div class='panelcfg' id='" + pid + "cfg' style='display:" + cfgdisplay + ";'>"
-		s += btnhtml + "<hr/>"
+		s += btnhtml
 		for i := 0; i < App.Proj.MaxImagePanelTextAreas; i++ {
 			area := ImgPanelArea{Data: A{}}
 			if panelareas := sv.panelAreas(pidx); len(panelareas) > i {
 				area = panelareas[i]
 			}
+			s += "<hr/>"
 			for _, lang := range App.Proj.Langs {
 				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang, area.Data[lang], A{
 					"placeholder": lang,
@@ -357,7 +360,13 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 			s += "W,H:"
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rw", itoa(area.Rect.Max.X-area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": "1", "max": itoa(panel.Rect.Max.X - panel.Rect.Min.X)})
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rh", itoa(area.Rect.Max.Y-area.Rect.Min.Y), A{"onchange": jsrefr, "class": "panelcfgrect", "min": "1", "max": itoa(panel.Rect.Max.Y - panel.Rect.Min.Y)})
-			s += "</div>"
+			s += "</div><div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+"_transform", area.SvgTextTransformAttr, A{
+				"class": "panelcfgtextattr", "title": "transform attr for the SVG <text> element",
+				"onfocus": jsrefr, "onblur": jsrefr, "onchange": jsrefr, "onkeydown": jsrefr, "onkeyup": jsrefr, "onkeypress": jsrefr,
+			}) + "</div><div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+"_style", area.SvgTextTspanStyleAttr, A{
+				"class": "panelcfgtextattr", "title": "style attr for the SVG <tspan> element",
+				"onfocus": jsrefr, "onblur": jsrefr, "onchange": jsrefr, "onkeydown": jsrefr, "onkeyup": jsrefr, "onkeypress": jsrefr,
+			}) + "</div>"
 		}
 		s += "<hr/>" + btnhtml
 		s += "</div>"

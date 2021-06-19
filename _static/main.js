@@ -33,21 +33,24 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs
         const trH = parseInt(document.getElementById(pid + "t" + i + "rh").value);
         if ((!(isNaN(trW) || isNaN(trH) || isNaN(trX) || isNaN(trY))) && (trW > 0) && (trH > 0)) {
             innerhtml += "<div class='panelrect col" + i + "' style='left:" + (trX - pOffX) + "px; top:" + (trY - pOffY) + "px; width: " + trW + "px; height: " + trH + "px;'>";
-            innerhtml += "<svg viewbox='0 0 " + trW + " " + trH + "'><text x='0' y='0'>";
+            innerhtml += "<svg viewbox='0 0 " + trW + " " + trH + "'>";
+            innerhtml += "<text x='0' y='0' style='font-size: " + pxfont + "px' transform='" + document.getElementById(pid + "t" + i + "_transform").value.replace(/\n/g, " ").trim() + "'>"
+            innerhtml += "<tspan style='" + document.getElementById(pid + "t" + i + "_style").value.replace(/\n/g, " ").trim() + "'>"
             for (let line of ptext.split('\n')) {
                 if ((!line) || line.length == 0)
                     line = '&nbsp;';
-                innerhtml += "<tspan style='font-size: " + pxfont + "px' dy='" + pxline + "' x='0'>" + line
-                    .replace(/\s/g, "&nbsp;")
-                    .replace(/<b>/g, "<tspan class='b'>")
-                    .replace(/<u>/g, "<tspan class='u'>")
-                    .replace(/<i>/g, "<tspan class='i'>")
-                    .replace(/<\/b>/g, "</tspan>")
-                    .replace(/<\/u>/g, "</tspan>")
-                    .replace(/<\/i>/g, "</tspan>")
+                innerhtml += "<tspan dy='" + pxline + "' x='0'>"
+                    + line
+                        .replace(/\s/g, "&nbsp;")
+                        .replace(/<b>/g, "<tspan class='b'>")
+                        .replace(/<u>/g, "<tspan class='u'>")
+                        .replace(/<i>/g, "<tspan class='i'>")
+                        .replace(/<\/b>/g, "</tspan>")
+                        .replace(/<\/u>/g, "</tspan>")
+                        .replace(/<\/i>/g, "</tspan>")
                     + "</tspan>";
             }
-            innerhtml += "</text></svg></div>";
+            innerhtml += "</tspan></text></svg></div>";
         }
     }
     if (span.innerHTML != innerhtml)

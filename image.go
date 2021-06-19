@@ -15,6 +15,7 @@ import (
 
 var PngEncoder = png.Encoder{CompressionLevel: png.BestCompression}
 var ImgScaler = draw.CatmullRom
+var DeNewLineRepl = strings.NewReplacer("\n", " ")
 
 type ImgPanel struct {
 	Rect    image.Rectangle
@@ -23,8 +24,10 @@ type ImgPanel struct {
 }
 
 type ImgPanelArea struct {
-	Data map[string]string `json:",omitempty"`
-	Rect image.Rectangle
+	Data                  map[string]string `json:",omitempty"`
+	SvgTextTransformAttr  string            `json:",omitempty"`
+	SvgTextTspanStyleAttr string            `json:",omitempty"`
+	Rect                  image.Rectangle
 }
 
 func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide bool) {
@@ -188,14 +191,16 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64) (s string) {
 	aw, ah := pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
 	pxfont, pxline := int(px1cm*App.Proj.Gen.PanelSvgText.FontSizeCmA4), int(px1cm*App.Proj.Gen.PanelSvgText.PerLineDyCmA4)
-	s += "<svg viewbox='0 0 " + itoa(aw) + " " + itoa(ah) + "'><text x='0' y='0'>"
+	s += "<svg viewbox='0 0 " + itoa(aw) + " " + itoa(ah) + "'>"
+	s += "<text x='0' y='0' style='font-size: " + itoa(pxfont) + "px' transform='" + strings.TrimSpace(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
+	s += "<tspan style='" + strings.TrimSpace(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'>"
 	for _, ln := range strings.Split(svgRepl.Replace(siteGenLocStr(pta.Data, langId)), "\n") {
 		if ln == "" {
 			ln = "&nbsp;"
 		}
-		s += "<tspan style='font-size: " + itoa(pxfont) + "px' dy='" + itoa(pxline) + "' x='0'>" + ln + "</tspan>"
+		s += "<tspan dy='" + itoa(pxline) + "' x='0'>" + ln + "</tspan>"
 	}
-	s += "</text></svg>"
+	s += "</tspan></text></svg>"
 	return
 }
 
