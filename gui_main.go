@@ -28,8 +28,8 @@ func guiMain(r *http.Request, notice string) []byte {
 	if notice != "" {
 		s += "<div class='notice'>" + hEsc(notice) + "</div>"
 	}
-	if scanJobFail != "" && fv("scannow") == "" {
-		s += "<div class='notice'>Most recent scan job failed: <b>" + hEsc(scanJobFail) + "</b> (see stdio for details).</div>"
+	if scanJobNotice != "" && fv("scannow") == "" {
+		s += "<div class='notice'>Most recent scan job: <b>" + hEsc(scanJobNotice) + "</b> (details if any in stdio)</div>"
 	}
 
 	App.Gui.State.Sel.Series, _ = guiGetFormSel(fv("series"), &App.Proj).(*Series)
@@ -103,7 +103,7 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 					sj.Opts[opt.Name] = formval
 				}
 			}
-			scanJob, scanJobFail = &sj, ""
+			scanJob, scanJobNotice = &sj, ""
 			go scanJobDo()
 		}
 	}

@@ -12,7 +12,7 @@ import (
 
 var (
 	scanJob         *ScanJob
-	scanJobFail     string
+	scanJobNotice   string
 	scanDevices     []*ScanDevice
 	saneDefaultArgs = []string{
 		"--format=pnm",
@@ -146,8 +146,8 @@ func scanJobDo() {
 	sj := scanJob
 	defer func() {
 		scanJob = nil
-		if err := recover(); err != nil {
-			scanJobFail = "[" + sj.SheetName + "_" + sj.SheetVerName + "] " + fmt.Sprintf("%v", err)
+		if msg := recover(); msg != nil {
+			scanJobNotice = "[" + sj.SheetName + "_" + sj.SheetVerName + "] " + fmt.Sprintf("%v", msg)
 		}
 	}()
 	for _, fname := range []string{sj.PngFileName, sj.PnmFileName} {
@@ -171,13 +171,14 @@ func scanJobDo() {
 
 	pnmfile, err := os.Open(sj.PnmFileName)
 	if err != nil {
-		panic(err)
+		panic(sj.PnmFileName + ": " + err.Error())
 	}
 	pngfile, err := os.Create(sj.PngFileName)
 	if err != nil {
-		panic(err)
+		panic(sj.PngFileName + ": " + err.Error())
 	}
 
-	imgPnmToPng(pnmfile, pngfile, false)
-
+	imgPnmToPng(pnmfile, pngfile, true)
+	_ = os.Remove(sj.PnmFileName)
+	scanJobNotice = "successfully written to " + sj.PngFileName + ", available in editor upon restart"
 }

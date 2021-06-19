@@ -43,19 +43,24 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 	if err != nil {
 		panic(err)
 	}
-	srcImgData.Close()
+	_ = srcImgData.Close()
 
 	dstbounds := srcimg.(*image.Gray).Bounds() // the cast as an assert, not as a need
-	ensureWide = ensureWide && dstbounds.Max.X < dstbounds.Max.Y
-	if !ensureWide {
-		if err := PngEncoder.Encode(dstImgFile, srcimg); err != nil {
-			panic(err)
-		}
-		dstImgFile.Close()
-	} else {
+	if ensureWide && dstbounds.Max.X < dstbounds.Max.Y {
 		dstbounds.Max.X, dstbounds.Max.Y = dstbounds.Max.Y, dstbounds.Max.X
-		// dstimg := image.NewGray(dstbounds)
+		dstimg, srcbounds := image.NewGray(dstbounds), srcimg.Bounds()
+		for dstx := 0; dstx < dstbounds.Max.X; dstx++ {
+			for dsty := 0; dsty < dstbounds.Max.Y; dsty++ {
+				srcx, srcy := dsty, (srcbounds.Max.Y-1)-dstx
+				dstimg.Set(dstx, dsty, srcimg.At(srcx, srcy))
+			}
+		}
+		srcimg = dstimg
 	}
+	if err := PngEncoder.Encode(dstImgFile, srcimg); err != nil {
+		panic(err)
+	}
+	_ = dstImgFile.Close()
 }
 
 func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int) []byte {
