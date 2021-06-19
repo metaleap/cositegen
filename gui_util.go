@@ -20,7 +20,7 @@ func guiHtmlList(name string, noneItemFirst string, numItems int, getItem func(i
 	if getItem != nil {
 		for i := 0; i < numItems || numItems == 0; i++ {
 			value, caption, sel := getItem(i)
-			if value == "" && caption == "" {
+			if value == "" && caption == "" && numItems == 0 {
 				break
 			}
 			if s += "<option value='" + value + "'"; sel {
