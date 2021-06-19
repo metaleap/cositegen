@@ -20,22 +20,12 @@ type ImgPanel struct {
 	Rect    image.Rectangle
 	SubRows []ImgPanel `json:",omitempty"`
 	SubCols []ImgPanel `json:",omitempty"`
-
-	Areas []ImgPanelArea `json:",omitempty"`
-}
-
-func (me *ImgPanel) HasAny(dataKey string) bool {
-	for _, pta := range me.Areas {
-		if pta.Data[dataKey] != "" {
-			return true
-		}
-	}
-	return false
 }
 
 type ImgPanelArea struct {
 	Data map[string]string `json:",omitempty"`
-	Rect image.Rectangle
+	Rect image.Rectangle   `json:",omitempty"`
+	Rel  [4]float64        `json:",omitempty"`
 }
 
 func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide bool) {
@@ -387,14 +377,4 @@ func (me *ImgPanel) iter(onPanel func(*ImgPanel)) {
 	} else {
 		onPanel(me)
 	}
-}
-
-func (me *ImgPanel) salvageAreasFrom(old *ImgPanel) {
-	for i := 0; i < len(me.SubCols) && i < len(old.SubCols); i++ {
-		me.SubCols[i].salvageAreasFrom(&old.SubCols[i])
-	}
-	for i := 0; i < len(me.SubRows) && i < len(old.SubRows); i++ {
-		me.SubRows[i].salvageAreasFrom(&old.SubRows[i])
-	}
-	me.Areas = old.Areas
 }

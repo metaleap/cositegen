@@ -256,12 +256,15 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	if rfv := fv("main_focus_id"); rfv != "" && rfv[0] == 'p' && strings.HasSuffix(rfv, "save") {
 		*shouldSaveMeta = true
 	}
+	if *shouldSaveMeta {
+		App.Proj.meta.sheetVerPanelAreas[sv.fileName] = nil
+	}
 	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
 		rect, pid := panel.Rect, "p"+itoa(pidx)
 		w, h := rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y
 		cfgdisplay := "none"
 		if *shouldSaveMeta {
-			panel.Areas = nil
+			App.Proj.meta.sheetVerPanelAreas[sv.fileName] = append(App.Proj.meta.sheetVerPanelAreas[sv.fileName], []ImgPanelArea{})
 			if fv("main_focus_id") == pid+"save" {
 				cfgdisplay = "block"
 			}
@@ -284,7 +287,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 								ry1 := rh + ry0
 								area.Rect = image.Rect(int(rx0), int(ry0), int(rx1), int(ry1))
 								if !area.Rect.Empty() {
-									panel.Areas = append(panel.Areas, area)
+									App.Proj.meta.sheetVerPanelAreas[sv.fileName][pidx] = append(App.Proj.meta.sheetVerPanelAreas[sv.fileName][pidx], area)
 								}
 							}
 						}
@@ -299,7 +302,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(App.Proj.MaxImagePanelTextAreas) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + strconv.FormatFloat(px1cm, 'f', 8, 64) + ");"
 		btnhtml := guiHtmlButton(pid+"save", "Save changes (all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 
-		s += "<hr/><h4><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(len(panel.Areas)) + " text rect(s)" + "</h4><div>Panel coords: " + rect.String() + "</div>"
+		s += "<hr/><h4><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(len(sv.panelAreas(pidx))) + " text rect(s)" + "</h4><div>Panel coords: " + rect.String() + "</div>"
 
 		s += "<table><tr><td>"
 		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;' onclick='onPanelClick(\"" + pid + "\")'>"
@@ -315,8 +318,8 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		s += btnhtml + "<hr/>"
 		for i := 0; i < App.Proj.MaxImagePanelTextAreas; i++ {
 			area := ImgPanelArea{Data: A{}}
-			if len(panel.Areas) > i {
-				area = panel.Areas[i]
+			if panelareas := sv.panelAreas(pidx); len(panelareas) > i {
+				area = panelareas[i]
 			}
 			for _, lang := range App.Proj.Langs {
 				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang, area.Data[lang], A{
@@ -337,6 +340,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		s += "</div>"
 		s += "</td></tr></table>"
 		s += "<script language='javascript' type='text/javascript'>" + jsrefr + "</script>"
+
 		pidx++
 	})
 	return

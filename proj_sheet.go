@@ -119,16 +119,21 @@ func (me *SheetVer) ensureMonochrome(force bool) {
 }
 
 func (me *SheetVer) ensurePanels(force bool) bool {
-	if old := me.meta.PanelsTree; old == nil || force {
+	if me.meta.PanelsTree == nil || force {
 		if file, err := os.Open(me.meta.bwFilePath); err != nil {
 			panic(err)
 		} else {
 			imgpanel := imgPanels(file, file.Close)
-			if me.meta.PanelsTree = &imgpanel; old != nil {
-				me.meta.PanelsTree.salvageAreasFrom(old)
-			}
+			me.meta.PanelsTree = &imgpanel
 			return true
 		}
 	}
 	return false
+}
+
+func (me *SheetVer) panelAreas(panelIdx int) []ImgPanelArea {
+	if all := App.Proj.meta.sheetVerPanelAreas[me.fileName]; len(all) > panelIdx {
+		return all[panelIdx]
+	}
+	return nil
 }

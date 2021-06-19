@@ -51,6 +51,8 @@ type Project struct {
 	meta struct {
 		ContentHashes map[string]string
 		SheetVer      map[string]*SheetVerMeta
+
+		sheetVerPanelAreas map[string][][]ImgPanelArea
 	}
 }
 
@@ -91,6 +93,7 @@ func (me *Chapter) String() string        { return me.Name }
 
 func (me *Project) save() {
 	jsonSave(".csg/meta.json", &me.meta)
+	jsonSave(".csg/panelareas.json", me.meta.sheetVerPanelAreas)
 }
 
 func (me *Project) load() {
@@ -104,6 +107,14 @@ func (me *Project) load() {
 	} else if !os.IsNotExist(err) {
 		panic(err)
 	}
+	if _, err := os.Stat(".csg/panelareas.json"); err == nil {
+		jsonLoad(".csg/panelareas.json", nil, &me.meta.sheetVerPanelAreas)
+	} else if !os.IsNotExist(err) {
+		panic(err)
+	}
+	if me.meta.sheetVerPanelAreas == nil {
+		me.meta.sheetVerPanelAreas = map[string][][]ImgPanelArea{}
+	}
 	if me.meta.ContentHashes == nil {
 		me.meta.ContentHashes = map[string]string{}
 	}
@@ -111,6 +122,11 @@ func (me *Project) load() {
 		me.meta.SheetVer = map[string]*SheetVerMeta{}
 	}
 
+	for filename := range me.meta.sheetVerPanelAreas {
+		if fileinfo, err := os.Stat(filename); err != nil || fileinfo.IsDir() {
+			delete(me.meta.sheetVerPanelAreas, filename)
+		}
+	}
 	for filename, contenthash := range me.meta.ContentHashes {
 		if fileinfo, err := os.Stat(filename); err != nil || fileinfo.IsDir() {
 			delete(me.meta.SheetVer, contenthash)

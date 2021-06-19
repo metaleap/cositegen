@@ -452,7 +452,8 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 
 			s += "<div class='" + App.Proj.Gen.ClsPanel + "'>"
 			s += "<img id='" + name + "' src='./img/" + name + ".png' class='" + App.Proj.Gen.ClsImgHq + "' " + App.Proj.Gen.ClsImgHq + "='" + hqsrc + "'/>"
-			for _, pta := range panel.Areas {
+
+			for _, pta := range sheetVer.panelAreas(pidx) {
 				aw, ah := pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
 				pw, ph := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y
 				wp, hp := 100.0/(float64(pw)/float64(aw)), 100.0/(float64(ph)/float64(ah))
