@@ -65,69 +65,75 @@ func siteGen(fully bool) {
 		panic(err)
 	}
 
-	printLn("SiteGen: copying non-HTML files to .build...")
-	modifycssfiles := App.Proj.Gen.PanelSvgText.AppendToFiles
-	if modifycssfiles == nil {
-		modifycssfiles = map[string]bool{}
-	}
-	if fileinfos, err := os.ReadDir("sitetmpl"); err != nil {
-		panic(err)
-	} else {
-		for _, fileinfo := range fileinfos {
-			if fn := fileinfo.Name(); !(fileinfo.IsDir() || strings.Contains(strings.ToLower(filepath.Ext(fn)), "htm")) {
-				if data, err := os.ReadFile("sitetmpl/" + fn); err != nil {
-					panic(err)
-				} else {
-					if modifycssfiles[fn] {
-						for csssel, csslines := range App.Proj.Gen.PanelSvgText.Css {
-							if csssel != "" {
-								if csslines == nil {
-									csslines = App.Proj.Gen.PanelSvgText.Css[""]
+	timedLogged("SiteGen: copying static non-HTML/non-XML files to .build...", func() string {
+		numfileswritten, modifycssfiles := 0, App.Proj.Gen.PanelSvgText.AppendToFiles
+		if modifycssfiles == nil {
+			modifycssfiles = map[string]bool{}
+		}
+		if fileinfos, err := os.ReadDir("sitetmpl"); err != nil {
+			panic(err)
+		} else {
+			for _, fileinfo := range fileinfos {
+				if fn := fileinfo.Name(); !(fileinfo.IsDir() || strings.Contains(strings.ToLower(filepath.Ext(fn)), "htm")) {
+					if data, err := os.ReadFile("sitetmpl/" + fn); err != nil {
+						panic(err)
+					} else {
+						if modifycssfiles[fn] {
+							for csssel, csslines := range App.Proj.Gen.PanelSvgText.Css {
+								if csssel != "" {
+									if csslines == nil {
+										csslines = App.Proj.Gen.PanelSvgText.Css[""]
+									}
+									data = append([]byte(csssel+"{"+strings.Join(csslines, ";")+"}\n"), data...)
 								}
-								data = append([]byte(csssel+"{"+strings.Join(csslines, ";")+"}\n"), data...)
 							}
 						}
-					}
-					if err := os.WriteFile(".build/"+fn, data, os.ModePerm); err != nil {
-						panic(err)
+						if err := os.WriteFile(".build/"+fn, data, os.ModePerm); err != nil {
+							panic(err)
+						}
+						numfileswritten++
 					}
 				}
 			}
 		}
-	}
+		return "for " + strconv.Itoa(numfileswritten) + " file(s)"
+	})
 
 	if fully {
-		tstartpngs := time.Now()
-		printLn("SiteGen: generating PNGs...")
-		numpngs, numsheets, numpanels := siteGenPngs()
-		numpngs += siteGenThumbs()
-		printLn("SiteGen took " + time.Now().Sub(tstartpngs).String() + " for generating all " + itoa(numpngs) + " PNGs for " + itoa(numpanels) + " panels from " + itoa(numsheets) + " sheets")
+		timedLogged("SiteGen: generating PNGs...", func() string {
+			numpngs, numsheets, numpanels := siteGenPngs()
+			numpngs += siteGenThumbs()
+			return "to generate " + itoa(numpngs) + " PNG(s) for " + itoa(numpanels) + " panel(s) from " + itoa(numsheets) + " sheet(s)"
+		})
 	}
 
-	printLn("SiteGen: generating HTML files...")
-	tmpl, err := template.New("foo").ParseFiles("sitetmpl/_tmpl.html")
-	if err != nil {
-		panic(err)
-	}
-	for _, lang := range App.Proj.Langs {
-		siteGenPages(tmpl, nil, nil, lang, 0)
-		for _, series := range App.Proj.Series {
-			for _, chapter := range series.Chapters {
-				if chapter.SheetsPerPage > 0 {
-					for i := 1; i <= (len(chapter.sheets) / chapter.SheetsPerPage); i++ {
-						siteGenPages(tmpl, series, chapter, lang, i)
+	timedLogged("SiteGen: generating HTML/XML files...", func() string {
+		numfileswritten := 0
+		tmpl, err := template.New("foo").ParseFiles("sitetmpl/_tmpl.html")
+		if err != nil {
+			panic(err)
+		}
+		for _, lang := range App.Proj.Langs {
+			numfileswritten += siteGenPages(tmpl, nil, nil, lang, 0)
+			for _, series := range App.Proj.Series {
+				for _, chapter := range series.Chapters {
+					if chapter.SheetsPerPage > 0 {
+						for i := 1; i <= (len(chapter.sheets) / chapter.SheetsPerPage); i++ {
+							numfileswritten += siteGenPages(tmpl, series, chapter, lang, i)
+						}
+					} else {
+						numfileswritten += siteGenPages(tmpl, series, chapter, lang, 0)
 					}
-				} else {
-					siteGenPages(tmpl, series, chapter, lang, 0)
 				}
 			}
 		}
-	}
-	if App.Proj.AtomFile.Name != "" {
-		for _, lang := range App.Proj.Langs {
-			siteGenAtom(lang)
+		if App.Proj.AtomFile.Name != "" {
+			for _, lang := range App.Proj.Langs {
+				numfileswritten += siteGenAtom(lang)
+			}
 		}
-	}
+		return "for " + strconv.Itoa(numfileswritten) + " file(s)"
+	})
 
 	printLn("SiteGen: DONE after " + time.Now().Sub(tstart).String())
 	browserCmd[len(browserCmd)-1] = "--app=file://" + os.Getenv("PWD") + "/.build/index.html"
@@ -189,7 +195,7 @@ func siteGenPngs() (numPngs int, numSheets int, numPanels int) {
 	return
 }
 
-func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, langId string, pageNr int) {
+func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, langId string, pageNr int) (numFilesWritten int) {
 	assert((series == nil) == (chapter == nil))
 
 	name, page := "index", PageGen{
@@ -208,7 +214,7 @@ func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, lan
 		page.PageTitle = hEsc(siteGenTextStr("HomeTitle", langId))
 		page.PageDesc = hEsc(siteGenTextStr("HomeDesc", langId))
 		sitePrepHomePage(&page, langId)
-		siteGenPageExecAndWrite(tmpl, name, langId, &page)
+		numFilesWritten += siteGenPageExecAndWrite(tmpl, name, langId, &page)
 	} else {
 		page.PageCssClasses = "chapter"
 		page.HrefHome += "#" + strings.ToLower(series.Name)
@@ -259,12 +265,13 @@ func siteGenPages(tmpl *template.Template, series *Series, chapter *Chapter, lan
 			}
 			page.QualList = "<select title='" + hEsc(siteGenTextStr("QualityHint", langId)) + "' name='" + App.Proj.Gen.IdQualiList + "' id='" + App.Proj.Gen.IdQualiList + "'>" + page.QualList + "</select>"
 
-			siteGenPageExecAndWrite(tmpl, name, langId, &page)
+			numFilesWritten += siteGenPageExecAndWrite(tmpl, name, langId, &page)
 		}
 	}
+	return
 }
 
-func siteGenPageExecAndWrite(tmpl *template.Template, name string, langId string, page *PageGen) {
+func siteGenPageExecAndWrite(tmpl *template.Template, name string, langId string, page *PageGen) (numFilesWritten int) {
 	page.LangsList = ""
 	for _, lang := range App.Proj.Langs {
 		page.LangsList += "<div>"
@@ -290,6 +297,8 @@ func siteGenPageExecAndWrite(tmpl *template.Template, name string, langId string
 		panic(err)
 	}
 	writeFile(".build/"+strings.ToLower(name)+".html", buf.Bytes())
+	numFilesWritten++
+	return
 }
 
 func siteGenLocStr(m map[string]string, langId string) (s string) {
@@ -488,7 +497,7 @@ var svgRepl = strings.NewReplacer(
 	"</i>", "</tspan>",
 )
 
-func siteGenAtom(lang string) {
+func siteGenAtom(lang string) (numFilesWritten int) {
 	af := App.Proj.AtomFile
 	s := `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="` + lang + `">`
 	var latestdate string
@@ -518,7 +527,9 @@ func siteGenAtom(lang string) {
 			s += xmls[i]
 		}
 		writeFile(".build/"+af.Name+"."+lang+".xml", []byte(s+"</feed>"))
+		numFilesWritten++
 	}
+	return
 }
 
 func siteGenThumbs() (numPngs int) {

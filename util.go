@@ -90,3 +90,10 @@ func jsonSave(fileName string, obj Any) {
 	}
 	writeFile(fileName, data)
 }
+
+func timedLogged(logMsg string, do func() string) {
+	printLn(logMsg)
+	tstart := time.Now()
+	summary := do()
+	printLn("\t...took", time.Now().Sub(tstart).String(), summary)
+}

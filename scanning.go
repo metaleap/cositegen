@@ -155,31 +155,35 @@ func scanJobDo() {
 		_ = os.Remove(fname)
 	}
 
-	cmd := exec.Command("scanimage", append(saneDefaultArgs,
-		"--device-name="+sj.Dev.Ident,
-		"--output-file="+sj.PnmFileName,
-	)...)
-	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
-	for name, val := range sj.Opts {
-		cmd.Args = append(cmd.Args, "--"+name+"="+val)
-	}
-	if err := cmd.Start(); err != nil {
-		panic(fmt.Errorf("%v %v", err, cmd.Args))
-	}
-	if err := cmd.Wait(); err != nil {
-		panic(fmt.Errorf("%v %v", err, cmd.Args))
-	}
-
-	pnmfile, err := os.Open(sj.PnmFileName)
-	if err != nil {
-		panic(sj.PnmFileName + ": " + err.Error())
-	}
-	pngfile, err := os.Create(sj.PngFileName)
-	if err != nil {
-		panic(sj.PngFileName + ": " + err.Error())
-	}
-
-	imgPnmToPng(pnmfile, pngfile, true)
-	_ = os.Remove(sj.PnmFileName)
+	timedLogged("Scanning "+sj.PnmFileName+" from "+sj.Dev.Ident+"...", func() string {
+		cmd := exec.Command("scanimage", append(saneDefaultArgs,
+			"--device-name="+sj.Dev.Ident,
+			"--output-file="+sj.PnmFileName,
+		)...)
+		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+		for name, val := range sj.Opts {
+			cmd.Args = append(cmd.Args, "--"+name+"="+val)
+		}
+		if err := cmd.Start(); err != nil {
+			panic(fmt.Errorf("%v %v", err, cmd.Args))
+		}
+		if err := cmd.Wait(); err != nil {
+			panic(fmt.Errorf("%v %v", err, cmd.Args))
+		}
+		return ""
+	})
+	timedLogged("Converting "+sj.PnmFileName+" to "+sj.PngFileName+"...", func() string {
+		pnmfile, err := os.Open(sj.PnmFileName)
+		if err != nil {
+			panic(sj.PnmFileName + ": " + err.Error())
+		}
+		pngfile, err := os.Create(sj.PngFileName)
+		if err != nil {
+			panic(sj.PngFileName + ": " + err.Error())
+		}
+		imgPnmToPng(pnmfile, pngfile, true)
+		_ = os.Remove(sj.PnmFileName)
+		return ""
+	})
 	scanJobNotice = "successfully written to " + sj.PngFileName + ", available in editor upon restart"
 }
