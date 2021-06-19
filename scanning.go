@@ -150,6 +150,9 @@ func scanJobDo() {
 			scanJobFail = "[" + sj.SheetName + "_" + sj.SheetVerName + "] " + fmt.Sprintf("%v", err)
 		}
 	}()
+	for _, fname := range []string{sj.PngFileName, sj.PnmFileName} {
+		_ = os.Remove(fname)
+	}
 
 	cmd := exec.Command("scanimage", append(saneDefaultArgs,
 		"--device-name="+sj.Dev.Ident,
@@ -170,5 +173,11 @@ func scanJobDo() {
 	if err != nil {
 		panic(err)
 	}
-	imgPnmToPng(pnmfile, pnmfile.Close, true)
+	pngfile, err := os.Create(sj.PngFileName)
+	if err != nil {
+		panic(err)
+	}
+
+	imgPnmToPng(pnmfile, pngfile, false)
+
 }
