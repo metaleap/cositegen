@@ -25,8 +25,12 @@ func main() {
 		go httpListenAndServe()
 		go launchKioskyBrowser()
 		go appPrepWork()
-		for !App.Gui.BrowserClosed {
+		for canexit := false; !canexit; {
 			time.Sleep(time.Second)
+			canexit = App.Gui.BrowserClosed && scanJob == nil
+			for _, busy := range appMainActions {
+				canexit = canexit && !busy
+			}
 		}
 		appOnExit()
 	}

@@ -14,6 +14,7 @@ import (
 )
 
 var PngEncoder = png.Encoder{CompressionLevel: png.BestCompression}
+var ImgScaler = draw.CatmullRom
 
 type ImgPanel struct {
 	Rect    image.Rectangle
@@ -76,7 +77,7 @@ func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int) [
 
 	newheight := int(float64(origheight) / (float64(origwidth) / float64(maxWidth)))
 	imgdown := image.NewGray(image.Rect(0, 0, maxWidth, newheight))
-	draw.ApproxBiLinear.Scale(imgdown, imgdown.Bounds(), imgsrc, imgsrc.Bounds(), draw.Over, nil)
+	ImgScaler.Scale(imgdown, imgdown.Bounds(), imgsrc, imgsrc.Bounds(), draw.Over, nil)
 	var buf bytes.Buffer
 	if err = PngEncoder.Encode(&buf, imgdown); err != nil {
 		panic(err)
@@ -184,7 +185,7 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 		if transparent {
 			imgdst = image.NewNRGBA(image.Rect(0, 0, *width, *height))
 		}
-		draw.ApproxBiLinear.Scale(imgdst, imgdst.Bounds(), srcimg, srcImgRect, draw.Over, nil)
+		ImgScaler.Scale(imgdst, imgdst.Bounds(), srcimg, srcImgRect, draw.Over, nil)
 	}
 	imgBwBorder(imgdst, color.Gray{255}, whiteBorderSize, 0, transparent)
 	imgBwBorder(imgdst, color.Gray{0}, blackBorderSize, whiteBorderSize, transparent)
@@ -237,7 +238,7 @@ func imgStitchHorizontally(fileNames []string, height int, gapWidth int, gapColo
 	}
 	nextx := gapWidth / 2
 	for img, width := range srcimgs {
-		draw.ApproxBiLinear.Scale(dst, image.Rect(nextx, 0, nextx+width, height), img, img.Bounds(), draw.Over, nil)
+		ImgScaler.Scale(dst, image.Rect(nextx, 0, nextx+width, height), img, img.Bounds(), draw.Over, nil)
 		nextx += width + gapWidth
 	}
 

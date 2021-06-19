@@ -155,7 +155,7 @@ func scanJobDo() {
 		_ = os.Remove(fname)
 	}
 
-	timedLogged("Scanning "+sj.PnmFileName+" from "+sj.Dev.Ident+"...", func() string {
+	timedLogged("SheetScan: from "+sj.Dev.Ident+"...", func() string {
 		cmd := exec.Command("scanimage", append(saneDefaultArgs,
 			"--device-name="+sj.Dev.Ident,
 			"--output-file="+sj.PnmFileName,
@@ -170,9 +170,9 @@ func scanJobDo() {
 		if err := cmd.Wait(); err != nil {
 			panic(fmt.Errorf("%v %v", err, cmd.Args))
 		}
-		return ""
+		return "for " + sj.PnmFileName
 	})
-	timedLogged("Converting "+sj.PnmFileName+" to "+sj.PngFileName+"...", func() string {
+	timedLogged("SheetScan: convert to PNG...", func() string {
 		pnmfile, err := os.Open(sj.PnmFileName)
 		if err != nil {
 			panic(sj.PnmFileName + ": " + err.Error())
@@ -183,7 +183,11 @@ func scanJobDo() {
 		}
 		imgPnmToPng(pnmfile, pngfile, true)
 		_ = os.Remove(sj.PnmFileName)
-		return ""
+		return "for " + sj.PngFileName
 	})
 	scanJobNotice = "successfully written to " + sj.PngFileName + ", available in editor upon restart"
+	printLn(scanJobNotice)
+	browserCmd[len(browserCmd)-1] = "--app=file://" + os.Getenv("PWD") + "/" + sj.PngFileName
+	cmd := exec.Command(browserCmd[0], browserCmd[1:]...)
+	_ = cmd.Run()
 }
