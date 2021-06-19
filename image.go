@@ -24,8 +24,7 @@ type ImgPanel struct {
 
 type ImgPanelArea struct {
 	Data map[string]string `json:",omitempty"`
-	Rect image.Rectangle   `json:",omitempty"`
-	Rel  [4]float64        `json:",omitempty"`
+	Rect image.Rectangle
 }
 
 func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide bool) {
