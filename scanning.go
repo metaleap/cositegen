@@ -146,8 +146,9 @@ func scanJobDo() {
 	sj := scanJob
 	defer func() {
 		scanJob = nil
-		if msg := recover(); msg != nil {
-			scanJobNotice = "[" + sj.SheetName + "_" + sj.SheetVerName + "] " + fmt.Sprintf("%v", msg)
+		if err := recover(); err != nil {
+			_ = os.Remove(sj.PngFileName)
+			scanJobNotice = "[" + sj.SheetName + "_" + sj.SheetVerName + "] " + fmt.Sprintf("%v", err)
 		}
 	}()
 	for _, fname := range []string{sj.PngFileName, sj.PnmFileName} {

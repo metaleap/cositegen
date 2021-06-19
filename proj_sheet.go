@@ -93,13 +93,13 @@ func (me *SheetVer) ensureMonochrome(force bool) {
 		if err != nil && !os.IsNotExist(err) {
 			panic(err)
 		}
-		rmDir(filepath.Dir(me.meta.bwFilePath))
-		mkDir(filepath.Dir(me.meta.bwFilePath))
+		rmDir(me.meta.dirPath) // because threshold might have changed...
+		mkDir(me.meta.dirPath) // ... and thus the name part of bwFilePath
 		if file, err := os.Open(me.fileName); err != nil {
 			panic(err)
 		} else if data := imgToMonochrome(file, file.Close, uint8(App.Proj.BwThreshold)); data != nil {
 			writeFile(me.meta.bwFilePath, data)
-		} else if err = os.Symlink(filepath.Base(me.fileName), me.meta.bwFilePath); err != nil {
+		} else if err = os.Symlink("../../../"+me.fileName, me.meta.bwFilePath); err != nil {
 			panic(err)
 		}
 	}
@@ -107,7 +107,7 @@ func (me *SheetVer) ensureMonochrome(force bool) {
 		if err != nil && !os.IsNotExist(err) {
 			panic(err)
 		}
-		_ = os.Remove(me.meta.bwSmallFilePath) // sounds weird but symlinks
+		_ = os.Remove(me.meta.bwSmallFilePath) // sounds unnecessary but.. symlinks
 		if file, err := os.Open(me.meta.bwFilePath); err != nil {
 			panic(err)
 		} else if data := imgDownsized(file, file.Close, 2048); data != nil {

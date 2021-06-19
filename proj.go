@@ -38,6 +38,7 @@ type Project struct {
 		ClsPanelArea  string
 		ClsSheet      string
 		ClsSheets     string
+		ClsImgHq      string
 		APaging       string
 		PanelSvgText  struct {
 			PerLineDyCmA4 float64

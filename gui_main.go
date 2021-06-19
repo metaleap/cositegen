@@ -30,6 +30,7 @@ func guiMain(r *http.Request, notice string) []byte {
 	}
 	if scanJobNotice != "" && fv("scannow") == "" {
 		s += "<div class='notice'>Most recent scan job: <b>" + hEsc(scanJobNotice) + "</b> (details if any in stdio)</div>"
+		scanJobNotice = ""
 	}
 
 	App.Gui.State.Sel.Series, _ = guiGetFormSel(fv("series"), &App.Proj).(*Series)
@@ -172,7 +173,7 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 				defval = saneDevDefaults[""][opt.Name]
 			}
 			httitle := hEsc(strings.Replace(strings.Replace(strings.Join(opt.Description, "\n"), "\"", "`", -1), "'", "`", -1))
-			attrs := A{"onfocus": "document.getElementById(\"scandevoptdesc_" + sd.Ident + "_" + opt.Name + "\").style.display=\"block\";", "onblur": "document.getElementById(\"scandevoptdesc_" + sd.Ident + "_" + opt.Name + "\").style.display=\"none\";", "title": httitle}
+			attrs := A{"title": httitle}
 			if opt.Inactive {
 				attrs["readonly"], attrs["disabled"] = "readonly", "disabled"
 			}
@@ -196,7 +197,7 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 				}
 				s += " &mdash; <span title='" + hEsc(misc) + "'>" + hEsc(strings.Replace(fi, "|", " | ", -1)) + "</span>"
 			}
-			s += "</div><div class='scandevoptdesc' style='display: none' id='scandevoptdesc_" + sd.Ident + "_" + opt.Name + "'>"
+			s += "</div><div class='scandevoptdesc' id='scandevoptdesc_" + sd.Ident + "_" + opt.Name + "'>"
 			for _, desc := range opt.Description {
 				s += "<div>" + hEsc(desc) + "</div>"
 			}

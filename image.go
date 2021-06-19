@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/base64"
 	"image"
 	"image/color"
 	"image/png"
@@ -194,15 +193,6 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 		panic(err)
 	}
 	return buf.Bytes()
-}
-
-func imgSubRectSvg(srcImg *image.Gray, srcImgRect image.Rectangle, width int, height int, blackBorderSize int, whiteBorderSize int, transparent bool, gotSameSizeAsOrig *bool) []byte {
-	pngdata := imgSubRectPng(srcImg, srcImgRect, &width, &height, blackBorderSize, whiteBorderSize, transparent, gotSameSizeAsOrig)
-	svgxml := `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
-	svgxml += `<image width="` + itoa(width) + `" height="` + itoa(height) + `" xlink:href="data:image/png;base64,`
-	svgxml += base64.StdEncoding.EncodeToString(pngdata)
-	svgxml += `"/></svg>`
-	return []byte(svgxml)
 }
 
 func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64) (s string) {

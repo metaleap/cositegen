@@ -430,16 +430,19 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 			s += "</div>"
 		} else {
 			allpanels[App.Proj.meta.ContentHashes[sheetVer.fileName]] = pidx
-			var name string
+			hqsrc, name := "", strings.ToLower(App.Proj.meta.ContentHashes[sheetVer.fileName]+itoa(App.Proj.Qualis[0].SizeHint)+itoa(pidx))
 			for i := qIdx; i >= 0; i-- {
-				name = strings.ToLower(App.Proj.meta.ContentHashes[sheetVer.fileName] + itoa(App.Proj.Qualis[i].SizeHint) + itoa(pidx))
-				if fileinfo, err := os.Stat(".build/img/" + name + ".png"); err == nil && (!fileinfo.IsDir()) && fileinfo.Size() > 0 {
+				hqsrc = strings.ToLower(App.Proj.meta.ContentHashes[sheetVer.fileName] + itoa(App.Proj.Qualis[i].SizeHint) + itoa(pidx))
+				if fileinfo, err := os.Stat(".build/img/" + hqsrc + ".png"); err == nil && (!fileinfo.IsDir()) && fileinfo.Size() > 0 {
 					break
 				}
 			}
+			if hqsrc == name {
+				hqsrc = ""
+			}
 
 			s += "<div class='" + App.Proj.Gen.ClsPanel + "'>"
-			s += "<img id='" + name + "' src='./img/" + name + ".png'/>"
+			s += "<img id='" + name + "' src='./img/" + name + ".png' class='" + App.Proj.Gen.ClsImgHq + "' " + App.Proj.Gen.ClsImgHq + "='" + hqsrc + "'/>"
 			for _, pta := range panel.Areas {
 				aw, ah := pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
 				pw, ph := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y
