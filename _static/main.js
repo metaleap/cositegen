@@ -42,17 +42,23 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
                     isrt = (ptext.trim() == 'RT'),
                     islb = (ptext.trim() == 'LB'),
                     islt = (ptext.trim() == 'LT');
+                const dst = rpx + ',' + rpy; // coords to point out to
                 if (isbl) {
-                    poly = arrIns(poly, 3,
-                        [(pl + cmh) + ',' + pb,
-                        rpx + ',' + rpy]);
+                    poly = arrIns(poly, 3, [(pl + cmh) + ',' + pb, dst]);
                 } else if (isbr) {
+                    poly = arrIns(poly, 3, [dst, (pr - cmh) + ',' + pb]);
                 } else if (isrb) {
+                    poly = arrIns(poly, 2, [pr + ',' + (pb - cmh), dst])
                 } else if (isrt) {
+                    poly = arrIns(poly, 2, [dst, pr + ',' + (pt + cmh)])
                 } else if (istr) {
+                    poly = arrIns(poly, 1, [(pr - cmh) + ',' + pt, dst])
                 } else if (istl) {
-                } else if (islb) {
+                    poly = arrIns(poly, 1, [dst, (pl + cmh) + ',' + pt])
                 } else if (islt) {
+                    poly = arrIns(poly, 4, [pl + ',' + (pt + cmh), dst])
+                } else if (islb) {
+                    poly = arrIns(poly, 4, [dst, pl + ',' + (pb - cmh)])
                 }
                 innerhtml += "<polygon points='" + poly.join(' ') + "' fill='gold' stroke='black' stroke-width='" + mmh + "px'/>";
             }
