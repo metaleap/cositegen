@@ -17,7 +17,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
     const pxfont = parseInt(px1cm * svgTxtFontSizeCmA4);
     const pxline = parseInt(px1cm * svgTxtPerLineDyCmA4);
 
-    innerhtml += "<div class='panelrect' style='background: gold; left: 0px; top: 0px; width: 100%; height: 100%;'>"
+    innerhtml += "<div class='panelrect' style='left: 0px; top: 0px; width: 100%; height: 100%;'>"
     innerhtml += "<svg style='width: 100%; max-width: 100%;' viewbox='0 0 " + pWidth + " " + pHeight + "'>";
     for (let i = 0; i < maxImagePanelTextAreas; i++) {
         var ptext = document.getElementById(pid + "t" + i + langs[0]).value;
@@ -30,43 +30,32 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
         if ((!(isNaN(trW) || isNaN(trH) || isNaN(trX) || isNaN(trY))) && (trW > 0) && (trH > 0)) {
             const svgrect = (!(isNaN(trPx) || isNaN(trPy)));
             if (svgrect) {
-                //     textrectcol = "";
-                //     const mmh = px1cm / 22, cmh = px1cm / 2, cmm = px1cm * 1.22;
-                //     let rw = trW, rh = trH;
-                //     let poly = [
-                //         mmh + ',' + mmh,                // topleft
-                //         (rw - mmh) + ',' + mmh,         // topright
-                //         (rw - mmh) + ',' + (rh - mmh),  // bottomright
-                //         mmh + ',' + (rh - mmh)          // bottomleft
-                //     ];
-                //     const isbr = (ptext.trim() == 'BR'),
-                //         isbl = (ptext.trim() == 'BL'),
-                //         istr = (ptext.trim() == 'TR'),
-                //         istl = (ptext.trim() == 'TL'),
-                //         isrb = (ptext.trim() == 'RB'),
-                //         isrt = (ptext.trim() == 'RT'),
-                //         islb = (ptext.trim() == 'LB'),
-                //         islt = (ptext.trim() == 'LT');
-                //     if (isbl) {
-                //         poly = arrIns(poly, 3,
-                //             [cmh + ',' + (rh - mmh),
-                //             trPx + ',' + trPy])
-                //         rh = (trPy - trY) + cmm;
-                //     } else if (isbr) {
-                //     } else if (isrb) {
-                //     } else if (isrt) {
-                //     } else if (istr) {
-                //     } else if (istl) {
-                //     } else if (islb) {
-                //     } else if (islt) {
-                //     }
-                //     let svgw = rw, svgh = rh, divx = trX - pOffX, divy = trY - pOffY;
-                //     if (poly && poly.length) {
-                //         innerhtml += "<div class='panelrect" + "' style='left:" + divx + "px; top:" + divy + "px; width: " + svgw + "px; height: " + svgh + "px;'>";
-                //         innerhtml += "<svg viewbox='0 0 " + svgw + " " + svgh + "'>";
-                //         innerhtml += "<polygon points='" + poly.join(' ') + "' fill='gold' stroke='black' stroke-width='" + mmh + "px'/>";
-                //         innerhtml += "</svg ></div>";
-                //     }
+                let rw = trW, rh = trH, rx = trX - pOffX, ry = trY - pOffY;
+                const mmh = px1cm / 22, cmh = px1cm / 2, cmm = px1cm * 1.22;
+                const pl = (rx + mmh), pr = ((rx + rw) - mmh), pt = (ry + mmh), pb = ((ry + rh) - mmh);
+                let poly = [pl + ',' + pt, pr + ',' + pt, pr + ',' + pb, pl + ',' + pb];
+                const isbr = (ptext.trim() == 'BR'),
+                    isbl = (ptext.trim() == 'BL'),
+                    istr = (ptext.trim() == 'TR'),
+                    istl = (ptext.trim() == 'TL'),
+                    isrb = (ptext.trim() == 'RB'),
+                    isrt = (ptext.trim() == 'RT'),
+                    islb = (ptext.trim() == 'LB'),
+                    islt = (ptext.trim() == 'LT');
+                if (isbl) {
+                    // poly = arrIns(poly, 3,
+                    //     [cmh + ',' + (rh - mmh),
+                    //     trPx + ',' + trPy])
+                    // rh = (trPy - trY) + cmm;
+                } else if (isbr) {
+                } else if (isrb) {
+                } else if (isrt) {
+                } else if (istr) {
+                } else if (istl) {
+                } else if (islb) {
+                } else if (islt) {
+                }
+                innerhtml += "<polygon points='" + poly.join(' ') + "' fill='gold' stroke='black' stroke-width='" + mmh + "px'/>";
             }
         }
     }
