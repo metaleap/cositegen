@@ -27,7 +27,7 @@ func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
 	} else if ext != "" {
 		http.ServeFile(httpResp, httpReq, filepath.Join("sitetmpl", httpReq.URL.Path))
 	} else if strings.Contains(httpReq.URL.Path, ".png/") {
-		httpServePng(httpResp, httpReq)
+		httpServeDynPng(httpResp, httpReq)
 	} else {
 		httpResp.Header().Add("Content-Type", "text/html")
 		var notice string
@@ -40,10 +40,7 @@ func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
 	}
 }
 
-func httpServePng(httpResp http.ResponseWriter, httpReq *http.Request) {
-	httpResp.Header().Add("Content-Type", "image/png")
-	httpResp.Header().Add("Cache-Control", "public")
-	httpResp.Header().Add("Cache-Control", "max-age=8640000")
+func httpServeDynPng(httpResp http.ResponseWriter, httpReq *http.Request) {
 	idx := strings.Index(httpReq.URL.Path, ".png/")
 	urlpath, urlargstr := httpReq.URL.Path[:idx+len(".png")], httpReq.URL.Path[idx+len(".png/"):]
 	filename := filepath.Join("." /*looks redudant but isnt!*/, urlpath)
@@ -78,7 +75,10 @@ func httpServePng(httpResp http.ResponseWriter, httpReq *http.Request) {
 		pngdata = imgDownsized(bytes.NewReader(pngdata), nil, int(w))
 	}
 
-	if _, err = httpResp.Write(pngdata); err != nil {
-		panic(err)
-	}
+	httpResp.Header().Add("Cache-Control", "public")
+	httpResp.Header().Add("Cache-Control", "max-age=8640000")
+	httpResp.Header().Add("Content-Type", "image/png")
+	httpResp.Header().Add("Content-Length", strconv.FormatUint(uint64(len(pngdata)), 10))
+	bl, _ := httpResp.Write(pngdata)
+	printLn(bl, len(pngdata))
 }

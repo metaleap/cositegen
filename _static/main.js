@@ -126,3 +126,39 @@ function kickOffScanJob() {
     hid.value = '1';
     doPostBack('');
 }
+
+let bwtPrevPage = '';
+
+function toggleBwtPreviews(sheetVerSrcFilePath) {
+    const uipane = document.getElementById('uipane');
+    if (bwtPrevPage && bwtPrevPage.length) {
+        const html = bwtPrevPage;
+        bwtPrevPage = '';
+        uipane.innerHTML = html;
+        return;
+    }
+
+    let nums = document.getElementById('previewbwt').value.split(',');
+    if (!(nums && nums.length)) {
+        alert("Enter 1 or more thresholds between 1-255.");
+        return;
+    }
+    for (let i = 0; i < nums.length; i++) {
+        nums[i] = parseInt(nums[i]);
+        if (isNaN(nums[i]) || nums[i] < 1 || nums[i] > 255) {
+            alert("Enter 1 or more thresholds between 1-255.");
+            return;
+        }
+    }
+
+    html = "";
+    for (let i = 0; i < nums.length; i++) {
+        if (i > 0)
+            html += "<hr/>";
+        html += "<div><button onclick='toggleBwtPreviews();'>Close All / Go Back</button>&mdash; B&amp;W threshold <b>&lt;" + nums[i] + "</b> preview:</div>";
+        html += "<div class='previewbwt'><img src='" + sheetVerSrcFilePath + "/" + nums[i] + "' title='" + nums[i] + "' style='width: 100%;'/></div>";
+    }
+
+    bwtPrevPage = uipane.innerHTML;
+    uipane.innerHTML = html;
+}

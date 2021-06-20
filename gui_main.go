@@ -236,9 +236,9 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		}
 		s += "<div style='background: linear-gradient(to right, rgba(" + cf + "," + cf + "," + cf + ",1.0), rgba(" + ct + "," + ct + "," + ct + ",1.0)); min-width: " + itoa(90/len(graydistrs)) + "%'><span style='" + spanstyle + "'><nobr>" + cf + "-" + ct + "</nobr><br/><b>" + strconv.FormatFloat(100.0*gd[2], 'f', 2, 64) + "%</b><br/><i>(" + strconv.FormatFloat(sum, 'f', 2, 64) + "%)</i>" + "</span></div>"
 	}
-	s += "</div><div>B&amp;W version at black-threshold of &lt;" + itoa(int(App.Proj.BwThreshold)) + ":</div>"
+	s += "</div><div>B&amp;W version at black-threshold of <b>&lt;" + itoa(int(App.Proj.BwThreshold)) + "</b>:</div>"
 	s += "<div class='fullsheet'>" + guiHtmlImg("/"+bwsrc, nil) + "</div>"
-	s += "<div>Compare other B&amp;W thresholds via slow-loading full-size previews: <input type='text' id='previewbwt'/><button onclick=''>Go!</button></div>"
+	s += "<div>Compare other B&amp;W thresholds via slow-loading full-size previews: <input type='text' id='previewbwt'/><button onclick='toggleBwtPreviews(\"" + sv.meta.SrcFilePath + "\");'>Go!</button></div>"
 
 	var panelstree func(*ImgPanel) string
 	panelstree = func(panel *ImgPanel) (s string) {
