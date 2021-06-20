@@ -230,7 +230,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	s += "<div class='graydistrs'>"
 	for _, gd := range graydistrs {
 		sum += (100 * gd[2])
-		spanstyle, cf, ct := "", itoa(int(gd[0])), itoa(int(gd[1]))
+		spanstyle, cf, ct := "", itoa(int(gd[0])), itoa(int(gd[1])-1)
 		if gd[0] > 150 {
 			spanstyle = "color: #000000"
 		}
