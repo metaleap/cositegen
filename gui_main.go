@@ -328,7 +328,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 				for _, lang := range App.Proj.Langs {
 					tid := pid + "t" + itoa(i) + lang
 					if tval := fv(tid); trim(tval) != "" {
-						area.Data[lang] = strings.TrimRight(tval, "\n")
+						area.Data[lang] = strings.TrimRight(tval, "\n \t\r\v\b")
 					}
 				}
 

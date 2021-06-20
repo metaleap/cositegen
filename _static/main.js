@@ -31,12 +31,13 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
             divshtml += "<div class='panelrect col" + i + "' style='left:" + (trX - pOffX) + "px; top:" + (trY - pOffY) + "px; width: " + trW + "px; height: " + trH + "px;'></div>";
 
             const rw = trW, rh = trH, rx = trX - pOffX, ry = trY - pOffY;
-            if (!(isNaN(trPx) || isNaN(trPy))) { // text-rect wants black border and white fill?
+            const borderandfill = !(isNaN(trPx) || isNaN(trPy));
+            if (borderandfill) {
                 const rpx = trPx - pOffX, rpy = trPy - pOffY;
                 const mmh = px1cm / 22, cmh = px1cm / 2, cmm = px1cm * 1.22;
                 const pl = (rx + mmh), pr = ((rx + rw) - mmh), pt = (ry + mmh), pb = ((ry + rh) - mmh);
                 let poly = [pl + ',' + pt, pr + ',' + pt, pr + ',' + pb, pl + ',' + pb];
-                if (!((trPx == 0) && (trPy == 0))) { // speech rect pointing somewhere?
+                if (!((trPx == 0) && (trPy == 0))) { // "speech-text" pointing somewhere?
                     const dx = Math.abs(rpx - (rx + (rw / 2))), dy = Math.abs(rpy - (ry + (rh / 2)));
                     const isr = rpx > (rx + (rw / 2)), isl = !isr,
                         isb = rpy > (ry + (rh / 2)), ist = !isb,
@@ -69,7 +70,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
                 }
             }
 
-            let ptext = document.getElementById(pid + "t" + i + langs[pLangIdx]).value;
+            let ptext = document.getElementById(pid + "t" + i + langs[pLangIdx]).value.trimEnd();
             for (let langidx = 0; langidx < langs.length; langidx++) {
                 const el = document.getElementById(pid + "t" + i + langs[langidx]);
                 if ((el == document.activeElement && el.value && el.value.length) || (langidx == 0 && !ptext)) {
@@ -83,7 +84,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
             for (let line of ptext.split('\n')) {
                 if ((!line) || line.length == 0)
                     line = '&nbsp;';
-                innerhtml += "<tspan dy='" + pxline + "' x='0'>"
+                innerhtml += "<tspan dy='" + pxline + "' x='" + (borderandfill ? (px1cm / 11) : 0) + "'>"
                     + line
                         .replace(/\s/g, "&nbsp;")
                         .replace(/<b>/g, "<tspan class='b'>")
