@@ -65,7 +65,7 @@ func siteGen(fully bool) {
 		panic(err)
 	}
 
-	timedLogged("SiteGen: copying static non-HTML/non-XML files to .build...", func() string {
+	timedLogged("SiteGen: copying static files to .build...", func() string {
 		numfileswritten, modifycssfiles := 0, App.Proj.Gen.PanelSvgText.AppendToFiles
 		if modifycssfiles == nil {
 			modifycssfiles = map[string]bool{}
