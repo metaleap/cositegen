@@ -41,38 +41,46 @@ func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
 }
 
 func httpServeDynPng(httpResp http.ResponseWriter, httpReq *http.Request) {
-	idx := strings.Index(httpReq.URL.Path, ".png/")
-	urlpath, urlargstr := httpReq.URL.Path[:idx+len(".png")], httpReq.URL.Path[idx+len(".png/"):]
-	filename := filepath.Join("." /*looks redudant but isnt!*/, urlpath)
-	file, err := os.Open(filename)
-	if err != nil {
-		panic(err)
-	}
+	var pngdata []byte
+	tmpfilename := filepath.Join(".csg/tmp", strings.Replace(httpReq.URL.Path, "/", "_", -1))
+	pngdata, _ = os.ReadFile(tmpfilename)
 
-	args := strings.Split(urlargstr, "/")
-	t := App.Proj.BwThreshold
-	if qt := args[0]; qt != "" {
-		if ui8, err := strconv.ParseUint(qt, 0, 8); err != nil {
+	if len(pngdata) == 0 {
+		idx := strings.Index(httpReq.URL.Path, ".png/")
+		urlpath, urlargstr := httpReq.URL.Path[:idx+len(".png")], httpReq.URL.Path[idx+len(".png/"):]
+		filename := filepath.Join("." /*looks redudant but isnt!*/, urlpath)
+		file, err := os.Open(filename)
+		if err != nil {
 			panic(err)
-		} else if ui8 > 255 {
-			panic(ui8)
-		} else {
-			t = uint8(ui8)
 		}
-	}
 
-	w, pngdata := 0, imgToMonochrome(file, file.Close, t)
-	if len(args) > 1 {
-		if qw := args[1]; qw != "" {
-			if ui, err := strconv.ParseUint(qw, 0, 64); err != nil {
+		args := strings.Split(urlargstr, "/")
+		t := App.Proj.BwThreshold
+		if qt := args[0]; qt != "" {
+			if ui8, err := strconv.ParseUint(qt, 0, 8); err != nil {
 				panic(err)
+			} else if ui8 > 255 {
+				panic(ui8)
 			} else {
-				w = int(ui)
+				t = uint8(ui8)
 			}
 		}
-	}
-	if w != 0 {
-		pngdata = imgDownsized(bytes.NewReader(pngdata), nil, int(w))
+
+		w := 0
+		pngdata = imgToMonochrome(file, file.Close, t)
+		if len(args) > 1 {
+			if qw := args[1]; qw != "" {
+				if ui, err := strconv.ParseUint(qw, 0, 64); err != nil {
+					panic(err)
+				} else {
+					w = int(ui)
+				}
+			}
+		}
+		if w != 0 {
+			pngdata = imgDownsized(bytes.NewReader(pngdata), nil, int(w))
+		}
+		_ = os.WriteFile(tmpfilename, pngdata, os.ModePerm)
 	}
 
 	httpResp.Header().Add("Cache-Control", "public")

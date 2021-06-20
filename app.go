@@ -42,7 +42,7 @@ func appInit() {
 
 func appOnExit() {
 	App.Proj.save()
-	rmDir(".csg/pnm")
+	rmDir(".csg/tmp")
 }
 
 var appMainActions = map[string]bool{}

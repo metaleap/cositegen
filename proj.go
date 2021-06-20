@@ -50,7 +50,7 @@ type Project struct {
 		}
 	}
 
-	meta struct {
+	data struct {
 		ContentHashes map[string]string
 		SheetVer      map[string]*SheetVerMeta
 
@@ -94,46 +94,46 @@ func (me *Chapter) Len() int              { return len(me.sheets) }
 func (me *Chapter) String() string        { return me.Name }
 
 func (me *Project) save() {
-	jsonSave(".csg/meta.json", &me.meta)
-	jsonSave(".csg/panelareas.json", me.meta.sheetVerPanelAreas)
+	jsonSave(".csg/projdata.json", &me.data)
+	jsonSave(".csg/panelareas.json", me.data.sheetVerPanelAreas)
 }
 
 func (me *Project) load() {
 	jsonLoad("cosite.json", nil, me) // exits early if no such file, before creating work dirs:
-	rmDir(".csg/pnm")
+	rmDir(".csg/tmp")
 	mkDir(".csg")
-	mkDir(".csg/pnm")
-	mkDir(".csg/meta")
-	if _, err := os.Stat(".csg/meta.json"); err == nil {
-		jsonLoad(".csg/meta.json", nil, &me.meta)
+	mkDir(".csg/tmp")
+	mkDir(".csg/projdata")
+	if _, err := os.Stat(".csg/projdata.json"); err == nil {
+		jsonLoad(".csg/projdata.json", nil, &me.data)
 	} else if !os.IsNotExist(err) {
 		panic(err)
 	}
 	if _, err := os.Stat(".csg/panelareas.json"); err == nil {
-		jsonLoad(".csg/panelareas.json", nil, &me.meta.sheetVerPanelAreas)
+		jsonLoad(".csg/panelareas.json", nil, &me.data.sheetVerPanelAreas)
 	} else if !os.IsNotExist(err) {
 		panic(err)
 	}
-	if me.meta.sheetVerPanelAreas == nil {
-		me.meta.sheetVerPanelAreas = map[string][][]ImgPanelArea{}
+	if me.data.sheetVerPanelAreas == nil {
+		me.data.sheetVerPanelAreas = map[string][][]ImgPanelArea{}
 	}
-	if me.meta.ContentHashes == nil {
-		me.meta.ContentHashes = map[string]string{}
+	if me.data.ContentHashes == nil {
+		me.data.ContentHashes = map[string]string{}
 	}
-	if me.meta.SheetVer == nil {
-		me.meta.SheetVer = map[string]*SheetVerMeta{}
+	if me.data.SheetVer == nil {
+		me.data.SheetVer = map[string]*SheetVerMeta{}
 	}
 
-	for filename := range me.meta.sheetVerPanelAreas {
+	for filename := range me.data.sheetVerPanelAreas {
 		if fileinfo, err := os.Stat(filename); err != nil || fileinfo.IsDir() {
-			delete(me.meta.sheetVerPanelAreas, filename)
+			delete(me.data.sheetVerPanelAreas, filename)
 		}
 	}
-	for filename, contenthash := range me.meta.ContentHashes {
+	for filename, contenthash := range me.data.ContentHashes {
 		if fileinfo, err := os.Stat(filename); err != nil || fileinfo.IsDir() {
-			delete(me.meta.SheetVer, contenthash)
-			rmDir(".csg/meta/" + contenthash)
-			delete(me.meta.ContentHashes, filename)
+			delete(me.data.SheetVer, contenthash)
+			rmDir(".csg/projdata/" + contenthash)
+			delete(me.data.ContentHashes, filename)
 		}
 	}
 

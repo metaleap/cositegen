@@ -88,7 +88,7 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 			Series: series, Chapter: chapter, Opts: map[string]string{},
 			SheetName: fv("sheetname"), SheetVerName: fv("sheetvername"),
 		}
-		sj.PnmFileName, sj.PngFileName = ".csg/pnm/"+sj.Id+".pnm", "sheets/"+series.Name+"/"+chapter.Name+"/sheets/"+sj.SheetName+"_"+sj.SheetVerName+".png"
+		sj.PnmFileName, sj.PngFileName = ".csg/tmp/"+sj.Id+".pnm", "sheets/"+series.Name+"/"+chapter.Name+"/sheets/"+sj.SheetName+"_"+sj.SheetVerName+".png"
 		for _, sd := range scanDevices {
 			if sd.Ident == fv("scandev") {
 				sj.Dev = sd
@@ -238,7 +238,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	}
 	s += "</div><div>B&amp;W version at black-threshold of <b>&lt;" + itoa(int(App.Proj.BwThreshold)) + "</b>:</div>"
 	s += "<div class='fullsheet'>" + guiHtmlImg("/"+bwsrc, nil) + "</div>"
-	s += "<div>Compare other B&amp;W thresholds via slow-loading full-size previews: <input type='text' id='previewbwt'/><button type='button' onclick='openBwtPreviews(\"" + sv.meta.SrcFilePath + "\");'>Open all in new windows</button></div>"
+	s += "<div>View other B&amp;W thresholds: <input type='text' id='previewbwt' onchange='addBwtPreviewLinks(\"" + sv.meta.SrcFilePath + "\");'/><div id='previewbwtlinks'></div></div>"
 
 	var panelstree func(*ImgPanel) string
 	panelstree = func(panel *ImgPanel) (s string) {
@@ -278,7 +278,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	}
 	s += "</h3><div>"
 	importlist := map[string]string{}
-	for sheetfilename, panelsareas := range App.Proj.meta.sheetVerPanelAreas {
+	for sheetfilename, panelsareas := range App.Proj.data.sheetVerPanelAreas {
 		if sheetfilename != sv.fileName {
 			var numareas int
 			for _, panelareas := range panelsareas {
@@ -300,14 +300,14 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		*shouldSaveMeta = true
 	}
 	if *shouldSaveMeta {
-		App.Proj.meta.sheetVerPanelAreas[sv.fileName] = nil
+		App.Proj.data.sheetVerPanelAreas[sv.fileName] = nil
 	}
 	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
 		rect, pid := panel.Rect, "p"+itoa(pidx)
 		w, h := rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y
 		cfgdisplay := "none"
 		if *shouldSaveMeta {
-			App.Proj.meta.sheetVerPanelAreas[sv.fileName] = append(App.Proj.meta.sheetVerPanelAreas[sv.fileName], []ImgPanelArea{})
+			App.Proj.data.sheetVerPanelAreas[sv.fileName] = append(App.Proj.data.sheetVerPanelAreas[sv.fileName], []ImgPanelArea{})
 			if fv("main_focus_id") == pid+"save" {
 				cfgdisplay = "block"
 			}
@@ -332,17 +332,17 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 								ry1 := rh + ry0
 								area.Rect = image.Rect(int(rx0), int(ry0), int(rx1), int(ry1))
 								if !area.Rect.Empty() {
-									App.Proj.meta.sheetVerPanelAreas[sv.fileName][pidx] = append(App.Proj.meta.sheetVerPanelAreas[sv.fileName][pidx], area)
+									App.Proj.data.sheetVerPanelAreas[sv.fileName][pidx] = append(App.Proj.data.sheetVerPanelAreas[sv.fileName][pidx], area)
 								}
 							}
 						}
 					}
 				}
 			}
-			if panelsareas := App.Proj.meta.sheetVerPanelAreas[importfrom]; len(panelsareas) > pidx {
+			if panelsareas := App.Proj.data.sheetVerPanelAreas[importfrom]; len(panelsareas) > pidx {
 				for _, area := range panelsareas[pidx] {
 					if !area.Rect.Empty() {
-						App.Proj.meta.sheetVerPanelAreas[sv.fileName][pidx] = append(App.Proj.meta.sheetVerPanelAreas[sv.fileName][pidx], area)
+						App.Proj.data.sheetVerPanelAreas[sv.fileName][pidx] = append(App.Proj.data.sheetVerPanelAreas[sv.fileName][pidx], area)
 					}
 				}
 			}

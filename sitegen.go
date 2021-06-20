@@ -164,7 +164,7 @@ func siteGenPngs() (numPngs int, numSheets int, numPanels int) {
 
 					var pidx int
 					var work sync.WaitGroup
-					contenthash := App.Proj.meta.ContentHashes[sheetver.fileName]
+					contenthash := App.Proj.data.ContentHashes[sheetver.fileName]
 					sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
 						work.Add(1)
 						numPanels++
@@ -438,10 +438,10 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 			}
 			s += "</div>"
 		} else {
-			allpanels[App.Proj.meta.ContentHashes[sheetVer.fileName]] = pidx
-			hqsrc, name := "", strings.ToLower(App.Proj.meta.ContentHashes[sheetVer.fileName]+itoa(App.Proj.Qualis[0].SizeHint)+itoa(pidx))
+			allpanels[App.Proj.data.ContentHashes[sheetVer.fileName]] = pidx
+			hqsrc, name := "", strings.ToLower(App.Proj.data.ContentHashes[sheetVer.fileName]+itoa(App.Proj.Qualis[0].SizeHint)+itoa(pidx))
 			for i := qIdx; i >= 0; i-- {
-				hqsrc = strings.ToLower(App.Proj.meta.ContentHashes[sheetVer.fileName] + itoa(App.Proj.Qualis[i].SizeHint) + itoa(pidx))
+				hqsrc = strings.ToLower(App.Proj.data.ContentHashes[sheetVer.fileName] + itoa(App.Proj.Qualis[i].SizeHint) + itoa(pidx))
 				if fileinfo, err := os.Stat(".build/img/" + hqsrc + ".png"); err == nil && (!fileinfo.IsDir()) && fileinfo.Size() > 0 {
 					break
 				}

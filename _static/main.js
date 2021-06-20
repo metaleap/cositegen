@@ -1,5 +1,3 @@
-let wins = [];
-
 let pLangIdx = 0;
 
 function doPostBack(name) {
@@ -129,50 +127,23 @@ function kickOffScanJob() {
     doPostBack('');
 }
 
-// let bwtPrevPage = '';
-
-function openBwtPreviews(sheetVerSrcFilePath) {
-    // const uipane = document.getElementById('uipane');
-    // if (bwtPrevPage && bwtPrevPage.length) {
-    //     const html = bwtPrevPage;
-    //     bwtPrevPage = '';
-    //     uipane.innerHTML = html;
-    //     return;
-    // }
-
+function addBwtPreviewLinks(sheetVerSrcFilePath) {
+    document.getElementById('previewbwtlinks').innerHTML = '';
     let nums = document.getElementById('previewbwt').value.split(',');
     if (!(nums && nums.length)) {
-        alert("Enter 1 or more thresholds between 1-255.");
         return;
     }
     for (let i = 0; i < nums.length; i++) {
         nums[i] = parseInt(nums[i]);
-        if (isNaN(nums[i]) || nums[i] < 1 || nums[i] > 255) {
-            alert("Enter 1 or more thresholds between 1-255.");
+        if (isNaN(nums[i]) || nums[i] < 1 || nums[i] > 255)
             return;
-        }
     }
 
-    // html = "";
+    let html = '';
     for (let i = 0; i < nums.length; i++) {
         const imgsrc = sheetVerSrcFilePath + "/" + nums[i];
-        wins.push(imgsrc);
-        // setTimeout(function () { window.open(imgsrc, sheetVerSrcFilePath.replace(/\//g, '_') + "_" + nums[i]); }, i * 123);
-        // if (i > 0)
-        //     html += "<hr/>";
-        // html += "<div><button onclick='toggleBwtPreviews();'>Close All / Go Back</button>&mdash; B&amp;W threshold <b>&lt;" + nums[i] + "</b> preview:</div>";
-        // html += "<div class='previewbwt'><img src='" + imgsrc + "' title='" + nums[i] + "' style='width: 100%;'/></div>";
+        html += "<a id='previewbwtlink" + i + "' href='" + imgsrc + "' target='" + imgsrc.replace(/\//g, '_') + "'>&nbsp;" + nums[i] + "&nbsp;</a>"
     }
-
-    // bwtPrevPage = uipane.innerHTML;
-    // uipane.innerHTML = html;
+    document.getElementById('previewbwtlinks').innerHTML = html;
+    document.getElementById('previewbwtlink0').focus()
 }
-
-setInterval(() => {
-    if (wins.length) {
-        const before = JSON.stringify(wins);
-        const next = wins[wins.length - 1];
-        wins.splice(wins.length - 1);
-        window.open(next, '_blank');
-    }
-}, 1234);

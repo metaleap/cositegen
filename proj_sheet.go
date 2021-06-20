@@ -62,21 +62,21 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) {
 	for _, b := range contentHash(data) {
 		curhash += strconv.FormatUint(uint64(b), 36)
 	}
-	oldhash := App.Proj.meta.ContentHashes[me.fileName]
-	App.Proj.meta.ContentHashes[me.fileName] = curhash
+	oldhash := App.Proj.data.ContentHashes[me.fileName]
+	App.Proj.data.ContentHashes[me.fileName] = curhash
 	if oldhash == curhash {
-		me.meta = App.Proj.meta.SheetVer[oldhash]
+		me.meta = App.Proj.data.SheetVer[oldhash]
 	} else if oldhash != "" {
 		me.meta = nil
-		delete(App.Proj.meta.SheetVer, oldhash)
-		rmDir(".csg/meta/" + oldhash)
+		delete(App.Proj.data.SheetVer, oldhash)
+		rmDir(".csg/projdata/" + oldhash)
 	}
 	if me.meta == nil {
 		shouldsaveprojmeta = true
 		me.meta = &SheetVerMeta{SrcFilePath: me.fileName}
-		App.Proj.meta.SheetVer[curhash] = me.meta
+		App.Proj.data.SheetVer[curhash] = me.meta
 	}
-	me.meta.dirPath = ".csg/meta/" + curhash
+	me.meta.dirPath = ".csg/projdata/" + curhash
 	me.meta.bwFilePath = filepath.Join(me.meta.dirPath, "bw."+itoa(int(App.Proj.BwThreshold))+".png")
 	me.meta.bwSmallFilePath = filepath.Join(me.meta.dirPath, "bwsmall."+itoa(int(App.Proj.BwThreshold))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
 	mkDir(me.meta.dirPath)
@@ -145,7 +145,7 @@ func (me *SheetVer) ensurePanels(force bool) bool {
 }
 
 func (me *SheetVer) panelAreas(panelIdx int) []ImgPanelArea {
-	if all := App.Proj.meta.sheetVerPanelAreas[me.fileName]; len(all) > panelIdx {
+	if all := App.Proj.data.sheetVerPanelAreas[me.fileName]; len(all) > panelIdx {
 		return all[panelIdx]
 	}
 	return nil

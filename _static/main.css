@@ -147,9 +147,7 @@ div.graydistrs > div {
     text-align: center;
 }
 
-div.previewbwt {
-    margin: 0;
-    padding: 0;
-    line-height: 0;
-    white-space: nowrap;
+div#previewbwtlinks {
+    display: inline-block;
+    padding: 0.44em;
 }
