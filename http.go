@@ -27,7 +27,10 @@ func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
 	} else if ext != "" {
 		http.ServeFile(httpResp, httpReq, filepath.Join("sitetmpl", httpReq.URL.Path))
 	} else if strings.Contains(httpReq.URL.Path, ".png/") {
-		httpServePng(httpResp, httpReq)
+		timedLogged(httpReq.URL.String(), func() string {
+			httpServePng(httpResp, httpReq)
+			return ""
+		})
 	} else {
 		httpResp.Header().Add("Content-Type", "text/html")
 		var notice string
@@ -75,7 +78,7 @@ func httpServePng(httpResp http.ResponseWriter, httpReq *http.Request) {
 		}
 	}
 	if w != 0 {
-		pngdata = imgDownsized(bytes.NewReader(pngdata), nil, int(w), true)
+		pngdata = imgDownsized(bytes.NewReader(pngdata), nil, int(w))
 	}
 
 	if _, err = httpResp.Write(pngdata); err != nil {

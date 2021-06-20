@@ -55,7 +55,7 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 	_ = dstImgFile.Close()
 }
 
-func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int, faster bool) []byte {
+func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int) []byte {
 	imgsrc, _, err := image.Decode(srcImgData)
 	if err != nil {
 		panic(err)
@@ -70,11 +70,8 @@ func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int, f
 	}
 
 	newheight := int(float64(origheight) / (float64(origwidth) / float64(maxWidth)))
-	imgdown, imgscaler := image.NewGray(image.Rect(0, 0, maxWidth, newheight)), ImgScaler
-	if faster {
-		imgscaler = draw.ApproxBiLinear
-	}
-	imgscaler.Scale(imgdown, imgdown.Bounds(), imgsrc, imgsrc.Bounds(), draw.Over, nil)
+	imgdown := image.NewGray(image.Rect(0, 0, maxWidth, newheight))
+	ImgScaler.Scale(imgdown, imgdown.Bounds(), imgsrc, imgsrc.Bounds(), draw.Over, nil)
 	var buf bytes.Buffer
 	if err = PngEncoder.Encode(&buf, imgdown); err != nil {
 		panic(err)
