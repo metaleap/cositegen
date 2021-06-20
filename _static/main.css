@@ -132,3 +132,18 @@ input.panelcfgrect {
     width: 3.11em;
     font-size: 0.77em;
 }
+
+div.graydistrs {
+    font-size: 0.77em;
+}
+
+div.graydistrs > div {
+    display: inline-block;
+    border-left: 0.1em #000000 solid;
+    border-top: 0.1em #000000 solid;
+    border-right: 0.1em #ffffff solid;
+    border-bottom: 0.1em #ffffff solid;
+    color: #ffffff;
+    text-shadow: 0.11em 0.11em #000000;
+    text-align: center;
+}

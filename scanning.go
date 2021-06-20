@@ -139,7 +139,6 @@ func scanDevicesDetection() {
 		next()
 	}
 	scanDevices = sds
-	printLn(len(scanDevices), "scanner(s) detected")
 }
 
 func scanJobDo() {

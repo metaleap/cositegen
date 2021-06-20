@@ -25,6 +25,7 @@ type Project struct {
 	BwThreshold            uint8
 	PageContentTexts       map[string]map[string]string
 	NumSheetsInHomeBgs     int
+	NumColorDistrClusters  int
 	Gen                    struct {
 		IdQualiList   string
 		ClsSheetsPage string

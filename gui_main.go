@@ -213,7 +213,17 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s string) {
 	sv.ensurePrep(false, false)
 	px1cm := float64(sv.meta.PanelsTree.Rect.Max.Y-sv.meta.PanelsTree.Rect.Min.Y) / 21.0
-	s = "<h3>Full Sheet:</h3><div class='fullsheet'>" + guiHtmlImg("/"+sv.meta.bwSmallFilePath, nil) + "</div>"
+	s = "<h3>Full Sheet:</h3>"
+	graydistrs, sum := sv.grayDistrs(), 0.0
+	s += "<div class='graydistrs'>"
+	for _, gd := range graydistrs {
+		sum += (100 * gd[2])
+		cf, ct := itoa(int(gd[0])), itoa(int(gd[1]))
+		s += "<div style='background: linear-gradient(to right, rgba(" + cf + "," + cf + "," + cf + ",1.0), rgba(" + ct + "," + ct + "," + ct + ",1.0)); min-width: " + itoa(90/len(graydistrs)) + "%'><span><nobr>" + cf + "-" + ct + "</nobr><br/><b>" + strconv.FormatFloat(100.0*gd[2], 'f', 2, 64) + "%</b><br/><i>(" + strconv.FormatFloat(sum, 'f', 2, 64) + "%)</i>" + "</span></div>"
+	}
+	s += "</div>"
+	s += "<div class='fullsheet'>" + guiHtmlImg("/"+sv.meta.bwSmallFilePath, nil) + "</div>"
+
 	var panelstree func(*ImgPanel) string
 	panelstree = func(panel *ImgPanel) (s string) {
 		assert(len(panel.SubCols) == 0 || len(panel.SubRows) == 0)

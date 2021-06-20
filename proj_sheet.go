@@ -24,6 +24,7 @@ type SheetVerMeta struct {
 
 	SrcFilePath string
 	PanelsTree  *ImgPanel `json:",omitempty"`
+	ColorDistr  []int     `json:",omitempty"`
 }
 
 type SheetVer struct {
@@ -82,6 +83,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) {
 
 	me.ensureMonochrome(forceFullRedo)
 	shouldsaveprojmeta = me.ensurePanels(forceFullRedo) || shouldsaveprojmeta
+	shouldsaveprojmeta = me.ensureColorDistr(forceFullRedo) || shouldsaveprojmeta
 
 	if shouldsaveprojmeta {
 		App.Proj.save()
@@ -118,8 +120,20 @@ func (me *SheetVer) ensureMonochrome(force bool) {
 	}
 }
 
+func (me *SheetVer) ensureColorDistr(force bool) bool {
+	if force || len(me.meta.ColorDistr) != App.Proj.NumColorDistrClusters {
+		if file, err := os.Open(me.meta.SrcFilePath); err != nil {
+			panic(err)
+		} else {
+			me.meta.ColorDistr = imgGrayDistrs(file, file.Close, App.Proj.NumColorDistrClusters)
+		}
+		return true
+	}
+	return false
+}
+
 func (me *SheetVer) ensurePanels(force bool) bool {
-	if me.meta.PanelsTree == nil || force {
+	if force || me.meta.PanelsTree == nil {
 		if file, err := os.Open(me.meta.bwFilePath); err != nil {
 			panic(err)
 		} else {
@@ -136,4 +150,16 @@ func (me *SheetVer) panelAreas(panelIdx int) []ImgPanelArea {
 		return all[panelIdx]
 	}
 	return nil
+}
+
+func (me *SheetVer) grayDistrs() (r [][3]float64) {
+	numpx, m := 0, 256.0/float64(len(me.meta.ColorDistr))
+	for _, cd := range me.meta.ColorDistr {
+		numpx += cd
+	}
+	for i, cd := range me.meta.ColorDistr {
+		r = append(r, [3]float64{float64(i) * m, float64(i+1) * m,
+			1.0 / (float64(numpx) / float64(cd))})
+	}
+	return
 }
