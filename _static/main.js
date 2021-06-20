@@ -13,7 +13,6 @@ function refreshAllPanelRects(numPanels, langIdx, langName) {
 
 function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs, px1cm) {
     const pid = "p" + panelIdx;
-    const span = document.getElementById(pid + 'rects');
     let innerhtml = "";
     const pxfont = parseInt(px1cm * svgTxtFontSizeCmA4);
     const pxline = parseInt(px1cm * svgTxtPerLineDyCmA4);
@@ -97,7 +96,8 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs
             innerhtml += "</tspan></text></svg></div>";
         }
     }
-    if (span.innerHTML != innerhtml)
+    const span = document.getElementById(pid + 'rects');
+    if (span && span.innerHTML != innerhtml)
         span.innerHTML = innerhtml;
 }
 
