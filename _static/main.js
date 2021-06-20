@@ -34,15 +34,16 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
                 const mmh = px1cm / 22, cmh = px1cm / 2, cmm = px1cm * 1.22;
                 const pl = (rx + mmh), pr = ((rx + rw) - mmh), pt = (ry + mmh), pb = ((ry + rh) - mmh);
                 let poly = [pl + ',' + pt, pr + ',' + pt, pr + ',' + pb, pl + ',' + pb];
+                const islr = rpy > ry && rpy < (ry + rh);
                 const isbr = (ptext.trim() == 'BR'),
                     isbl = (ptext.trim() == 'BL'),
                     istr = (ptext.trim() == 'TR'),
                     istl = (ptext.trim() == 'TL'),
-                    isrb = (ptext.trim() == 'RB'),
-                    isrt = (ptext.trim() == 'RT'),
-                    islb = (ptext.trim() == 'LB'),
-                    islt = (ptext.trim() == 'LT');
-                const dst = rpx + ',' + rpy; // coords to point out to
+                    isrb = islr && (ptext.trim() == 'RB'),
+                    isrt = islr && (ptext.trim() == 'RT'),
+                    islb = islr && (ptext.trim() == 'LB'),
+                    islt = islr && (ptext.trim() == 'LT');
+                const dst = rpx + ',' + rpy; // coords to point towards
                 if (isbl) {
                     poly = arrIns(poly, 3, [(pl + cmh) + ',' + pb, dst]);
                 } else if (isbr) {
