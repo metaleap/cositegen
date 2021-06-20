@@ -62,7 +62,7 @@ func guiHtmlInput(inputType string, id string, value string, attrs map[string]st
 	}
 	s += guiHtmlAttrs(attrs)
 	if inputType == "textarea" {
-		s += ">" + hEsc(value) + "</textarea>"
+		s += ">\n" + hEsc(value) + "\n</textarea>"
 	} else {
 		s += "/>"
 	}

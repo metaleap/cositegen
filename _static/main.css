@@ -122,6 +122,7 @@ textarea.panelcfgtext {
     opacity: 0.6;
     color: #000000 !important;
     width: 99%;
+    height: 0.88em;
 }
 
 textarea.panelcfgtext:focus {

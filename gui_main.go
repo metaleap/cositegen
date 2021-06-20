@@ -8,23 +8,11 @@ import (
 	"time"
 )
 
+var trim = strings.TrimSpace
+
 func fV(r *http.Request) func(string) string {
 	var wthDisAintWindoze = strings.NewReplacer("\r\n", "\n")
-	return func(k string) string {
-		isareatext, s := false, wthDisAintWindoze.Replace(r.FormValue(k))
-		if i := strings.IndexByte(k, 't'); k != "" && k[0] == 'p' && i > 1 {
-			for _, langid := range App.Proj.Langs { // p0t1de
-				if j := strings.LastIndex(k, langid); j > (i+1) && j == len(k)-len(langid) {
-					isareatext = true
-					break
-				}
-			}
-		}
-		if !isareatext {
-			s = strings.TrimSpace(s)
-		}
-		return s
-	}
+	return func(k string) string { return wthDisAintWindoze.Replace(r.FormValue(k)) }
 }
 
 func guiMain(r *http.Request, notice string) []byte {
@@ -100,7 +88,7 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 		sj := ScanJob{
 			Id:     strconv.FormatInt(time.Now().UnixNano(), 36),
 			Series: series, Chapter: chapter, Opts: map[string]string{},
-			SheetName: fv("sheetname"), SheetVerName: fv("sheetvername"),
+			SheetName: trim(fv("sheetname")), SheetVerName: trim(fv("sheetvername")),
 		}
 		sj.PnmFileName, sj.PngFileName = ".csg/tmp/"+sj.Id+".pnm", "sheets/"+series.Name+"/"+chapter.Name+"/sheets/"+sj.SheetName+"_"+sj.SheetVerName+".png"
 		for _, sd := range scanDevices {
@@ -114,7 +102,7 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 				if opt.Inactive {
 					continue
 				}
-				if formval := fv(sj.Dev.Ident + "_opt_" + opt.Name); formval != "" {
+				if formval := trim(fv(sj.Dev.Ident + "_opt_" + opt.Name)); formval != "" {
 					sj.Opts[opt.Name] = formval
 				}
 			}
@@ -226,7 +214,13 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 
 func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s string) {
 	sv.ensurePrep(false, false)
-	px1cm, bwsrc := float64(sv.data.PanelsTree.Rect.Max.Y-sv.data.PanelsTree.Rect.Min.Y)/21.0, fv("srcpx")
+	numpanels, maxpanelwidth, px1cm, bwsrc := 0, 0, float64(sv.data.PanelsTree.Rect.Max.Y-sv.data.PanelsTree.Rect.Min.Y)/21.0, fv("srcpx")
+	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
+		numpanels++
+		if w := panel.Rect.Max.X - panel.Rect.Min.X; w > maxpanelwidth {
+			maxpanelwidth = w
+		}
+	})
 	if bwsrc != sv.data.bwSmallFilePath && bwsrc != sv.data.bwFilePath {
 		bwsrc = sv.data.bwSmallFilePath
 	}
@@ -238,6 +232,10 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 			}
 			return sv.data.bwSmallFilePath, itoa(bw) + "px", true
 		})
+	}
+	s += "&nbsp;&mdash; jump to panel:"
+	for i := 0; i < numpanels; i++ {
+		s += "&nbsp;&nbsp;<a href='#pa" + App.Proj.data.ContentHashes[sv.fileName] + itoa(i) + "'>" + itoa(i+1) + "</a>"
 	}
 	s += "</h3>"
 	graydistrs, sum := sv.grayDistrs(), 0.0
@@ -255,6 +253,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	s += "<div>View other B&amp;W thresholds: <input type='text' id='previewbwt' onchange='addBwtPreviewLinks(\"" + sv.data.SrcFilePath + "\");'/><div id='previewbwtlinks'></div></div>"
 
 	var panelstree func(*ImgPanel) string
+	pidx := 0
 	panelstree = func(panel *ImgPanel) (s string) {
 		assert(len(panel.SubCols) == 0 || len(panel.SubRows) == 0)
 		if len(panel.SubRows) > 0 {
@@ -270,25 +269,23 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 			}
 			s += "</ul>"
 		} else {
-			s += "<ul><li><div>Panel: " + panel.Rect.String() + "</div></li></ul>"
+			s += "<ul><li><div><b><a href='#pa" + App.Proj.data.ContentHashes[sv.fileName] + itoa(pidx) + "'>Panel #" + itoa(pidx+1) + "</a></b>: " + panel.Rect.String() + "</div></li></ul>"
+			pidx++
 		}
 		return
 	}
 	s += "<h3>Sheet Panels Structure:</h3><ul><li>Sheet coords:" + sv.data.PanelsTree.Rect.String() + panelstree(sv.data.PanelsTree) + "</li></ul><hr/>"
-	pidx, numpanels, maxwidth, zoom, zoomdiv := 0, 0, 0, 100, 1.0
-	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
-		numpanels++
-		if w := panel.Rect.Max.X - panel.Rect.Min.X; w > maxwidth {
-			maxwidth = w
-		}
-	})
+	zoom, zoomdiv := 100, 1.0
 	s += "<h3>All " + itoa(numpanels) + " panel(s):"
+	for i := 0; i < numpanels; i++ {
+		s += "&nbsp;&nbsp;<a href='#pa" + App.Proj.data.ContentHashes[sv.fileName] + itoa(i) + "'>" + itoa(i+1) + "</a>"
+	}
 	for i, lang := range App.Proj.Langs {
 		attrs := A{"name": "plang", "onclick": "refreshAllPanelRects(" + itoa(numpanels) + "," + itoa(i) + ",\"" + lang + "\");"}
 		if i == 0 {
 			attrs["checked"] = "checked"
 		}
-		s += "&nbsp;" + guiHtmlInput("radio", "plang"+itoa(i), itoa(i), attrs) + "<label for='plang" + itoa(i) + "'>" + lang + "</label>"
+		s += "&nbsp;&nbsp;" + guiHtmlInput("radio", "plang"+itoa(i), itoa(i), attrs) + "<label for='plang" + itoa(i) + "'>" + lang + "</label>"
 	}
 	s += "</h3><div>"
 	importlist := map[string]string{}
@@ -306,8 +303,8 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	if fv("main_focus_id") == "importpaneltexts" {
 		*shouldSaveMeta, importfrom = true, fv("importpaneltexts")
 	}
-	if wmax := 320; maxwidth > wmax {
-		zoomdiv = float64(maxwidth) / float64(wmax)
+	if wmax := 320; maxpanelwidth > wmax {
+		zoomdiv = float64(maxpanelwidth) / float64(wmax)
 		zoom = int(100.0 / zoomdiv)
 	}
 	if rfv := fv("main_focus_id"); rfv != "" && rfv[0] == 'p' && strings.HasSuffix(rfv, "save") {
@@ -316,6 +313,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	if *shouldSaveMeta {
 		App.Proj.data.sheetVerPanelAreas[sv.fileName] = nil
 	}
+	pidx = 0
 	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
 		rect, pid := panel.Rect, "p"+itoa(pidx)
 		w, h := rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y
@@ -329,16 +327,16 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 				area := ImgPanelArea{Data: A{}}
 				for _, lang := range App.Proj.Langs {
 					tid := pid + "t" + itoa(i) + lang
-					if tval := fv(tid); tval != "" {
-						area.Data[lang] = tval
+					if tval := fv(tid); trim(tval) != "" {
+						area.Data[lang] = strings.TrimRight(tval, "\n")
 					}
 				}
 
-				area.SvgTextTransformAttr = fv(pid + "t" + itoa(i) + "_transform")
-				area.SvgTextTspanStyleAttr = fv(pid + "t" + itoa(i) + "_style")
-				trx, trw := fv(pid+"t"+itoa(i)+"rx"), fv(pid+"t"+itoa(i)+"rw")
-				try, trh := fv(pid+"t"+itoa(i)+"ry"), fv(pid+"t"+itoa(i)+"rh")
-				rpx, rpy := fv(pid+"t"+itoa(i)+"rpx"), fv(pid+"t"+itoa(i)+"rpy")
+				area.SvgTextTransformAttr = trim(fv(pid + "t" + itoa(i) + "_transform"))
+				area.SvgTextTspanStyleAttr = trim(fv(pid + "t" + itoa(i) + "_style"))
+				trx, trw := trim(fv(pid+"t"+itoa(i)+"rx")), trim(fv(pid+"t"+itoa(i)+"rw"))
+				try, trh := trim(fv(pid+"t"+itoa(i)+"ry")), trim(fv(pid+"t"+itoa(i)+"rh"))
+				rpx, rpy := trim(fv(pid+"t"+itoa(i)+"rpx")), trim(fv(pid+"t"+itoa(i)+"rpy"))
 				if rx0, err := strconv.ParseUint(trx, 0, 64); err == nil {
 					if ry0, err := strconv.ParseUint(try, 0, 64); err == nil {
 						if rw, err := strconv.ParseUint(trw, 0, 64); err == nil {
@@ -376,7 +374,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(App.Proj.MaxImagePanelTextAreas) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + strconv.FormatFloat(px1cm, 'f', 8, 64) + ");"
 		btnhtml := guiHtmlButton(pid+"save", "Save changes (all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 
-		s += "<hr/><h4><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(len(sv.panelAreas(pidx))) + " text rect(s)" + "</h4><div>Panel coords: " + rect.String() + "</div>"
+		s += "<hr/><h4 id='pa" + App.Proj.data.ContentHashes[sv.fileName] + itoa(pidx) + "'><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(len(sv.panelAreas(pidx))) + " text rect(s)" + "</h4><div>Panel coords: " + rect.String() + "</div>"
 
 		s += "<table><tr><td>"
 		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;' onclick='onPanelClick(\"" + pid + "\")'>"
