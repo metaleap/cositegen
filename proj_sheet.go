@@ -78,7 +78,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) {
 	}
 	me.meta.dirPath = ".csg/meta/" + curhash
 	me.meta.bwFilePath = filepath.Join(me.meta.dirPath, "bw."+itoa(int(App.Proj.BwThreshold))+".png")
-	me.meta.bwSmallFilePath = filepath.Join(me.meta.dirPath, "bwsmall."+itoa(int(App.Proj.BwThreshold))+".png")
+	me.meta.bwSmallFilePath = filepath.Join(me.meta.dirPath, "bwsmall."+itoa(int(App.Proj.BwThreshold))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
 	mkDir(me.meta.dirPath)
 
 	me.ensureMonochrome(forceFullRedo)
@@ -91,12 +91,17 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) {
 }
 
 func (me *SheetVer) ensureMonochrome(force bool) {
-	if _, err := os.Stat(me.meta.bwFilePath); err != nil || force {
-		if err != nil && !os.IsNotExist(err) {
+	var exist1, exist2 bool
+	for fname, bptr := range map[string]*bool{me.meta.bwFilePath: &exist1, me.meta.bwSmallFilePath: &exist2} {
+		if fileinfo, err := os.Stat(fname); err == nil && !fileinfo.IsDir() {
+			*bptr = true
+		} else if !os.IsNotExist(err) {
 			panic(err)
 		}
-		rmDir(me.meta.dirPath) // because threshold might have changed...
-		mkDir(me.meta.dirPath) // ... and thus the name part of bwFilePath
+	}
+	if force || !(exist1 && exist2) {
+		rmDir(me.meta.dirPath) // because BwThreshold or BwSmallWidth might have been..
+		mkDir(me.meta.dirPath) // ..changed and thus the file names: so rm stale ones.
 		if file, err := os.Open(me.fileName); err != nil {
 			panic(err)
 		} else if data := imgToMonochrome(file, file.Close, uint8(App.Proj.BwThreshold)); data != nil {
@@ -104,15 +109,9 @@ func (me *SheetVer) ensureMonochrome(force bool) {
 		} else if err = os.Symlink("../../../"+me.fileName, me.meta.bwFilePath); err != nil {
 			panic(err)
 		}
-	}
-	if _, err := os.Stat(me.meta.bwSmallFilePath); err != nil || force {
-		if err != nil && !os.IsNotExist(err) {
-			panic(err)
-		}
-		_ = os.Remove(me.meta.bwSmallFilePath) // sounds unnecessary but.. symlinks
 		if file, err := os.Open(me.meta.bwFilePath); err != nil {
 			panic(err)
-		} else if data := imgDownsized(file, file.Close, 2048); data != nil {
+		} else if data := imgDownsized(file, file.Close, int(App.Proj.BwSmallWidth)); data != nil {
 			writeFile(me.meta.bwSmallFilePath, data)
 		} else if err = os.Symlink(filepath.Base(me.meta.bwFilePath), me.meta.bwSmallFilePath); err != nil {
 			panic(err)

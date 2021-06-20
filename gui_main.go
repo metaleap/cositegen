@@ -212,17 +212,32 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 
 func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s string) {
 	sv.ensurePrep(false, false)
-	px1cm := float64(sv.meta.PanelsTree.Rect.Max.Y-sv.meta.PanelsTree.Rect.Min.Y) / 21.0
-	s = "<h3>Full Sheet:</h3>"
+	px1cm, bwsrc := float64(sv.meta.PanelsTree.Rect.Max.Y-sv.meta.PanelsTree.Rect.Min.Y)/21.0, fv("srcpx")
+	if bwsrc != sv.meta.bwSmallFilePath && bwsrc != sv.meta.bwFilePath {
+		bwsrc = sv.meta.bwSmallFilePath
+	}
+	s = "<h3>Full Sheet:&nbsp;"
+	if sw, bw := sv.meta.PanelsTree.Rect.Max.X, int(App.Proj.BwSmallWidth); sw > bw {
+		s += guiHtmlList("srcpx", "", 2, func(i int) (string, string, bool) {
+			if i == 1 {
+				return sv.meta.bwFilePath, itoa(sw) + "px", bwsrc == sv.meta.bwFilePath
+			}
+			return sv.meta.bwSmallFilePath, itoa(bw) + "px", true
+		})
+	}
+	s += "</h3>"
 	graydistrs, sum := sv.grayDistrs(), 0.0
 	s += "<div class='graydistrs'>"
 	for _, gd := range graydistrs {
 		sum += (100 * gd[2])
-		cf, ct := itoa(int(gd[0])), itoa(int(gd[1]))
-		s += "<div style='background: linear-gradient(to right, rgba(" + cf + "," + cf + "," + cf + ",1.0), rgba(" + ct + "," + ct + "," + ct + ",1.0)); min-width: " + itoa(90/len(graydistrs)) + "%'><span><nobr>" + cf + "-" + ct + "</nobr><br/><b>" + strconv.FormatFloat(100.0*gd[2], 'f', 2, 64) + "%</b><br/><i>(" + strconv.FormatFloat(sum, 'f', 2, 64) + "%)</i>" + "</span></div>"
+		spanstyle, cf, ct := "", itoa(int(gd[0])), itoa(int(gd[1]))
+		if gd[0] > 150 {
+			spanstyle = "color: #000000"
+		}
+		s += "<div style='background: linear-gradient(to right, rgba(" + cf + "," + cf + "," + cf + ",1.0), rgba(" + ct + "," + ct + "," + ct + ",1.0)); min-width: " + itoa(90/len(graydistrs)) + "%'><span style='" + spanstyle + "'><nobr>" + cf + "-" + ct + "</nobr><br/><b>" + strconv.FormatFloat(100.0*gd[2], 'f', 2, 64) + "%</b><br/><i>(" + strconv.FormatFloat(sum, 'f', 2, 64) + "%)</i>" + "</span></div>"
 	}
 	s += "</div>"
-	s += "<div class='fullsheet'>" + guiHtmlImg("/"+sv.meta.bwSmallFilePath, nil) + "</div>"
+	s += "<div class='fullsheet'>" + guiHtmlImg("/"+bwsrc, nil) + "</div>"
 
 	var panelstree func(*ImgPanel) string
 	panelstree = func(panel *ImgPanel) (s string) {
@@ -343,7 +358,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;' onclick='onPanelClick(\"" + pid + "\")'>"
 		style := `width: ` + itoa(w) + `px; height: ` + itoa(h) + `px;`
 		s += "<div style='position:relative; " + style + "'>"
-		style += `background-image: url("/` + sv.meta.bwSmallFilePath + `");`
+		style += `background-image: url("/` + bwsrc + `");`
 		style += `background-size: ` + itoa(sv.meta.PanelsTree.Rect.Max.X-sv.meta.PanelsTree.Rect.Min.X) + `px ` + itoa(sv.meta.PanelsTree.Rect.Max.Y-sv.meta.PanelsTree.Rect.Min.Y) + `px;`
 		style += `background-position: -` + itoa(rect.Min.X) + `px -` + itoa(rect.Min.Y) + `px;`
 		s += "<div class='panelpic' onauxclick='onPanelAuxClick(event, " + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(App.Proj.MaxImagePanelTextAreas) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + strconv.FormatFloat(zoomdiv, 'f', 8, 64) + ")' style='" + style + "'></div><span id='" + pid + "rects'></span>"
