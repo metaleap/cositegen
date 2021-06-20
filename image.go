@@ -14,7 +14,7 @@ import (
 )
 
 var PngEncoder = png.Encoder{CompressionLevel: png.BestCompression}
-var ImgScaler = draw.CatmullRom
+var ImgScaler draw.Interpolator = draw.CatmullRom
 var DeNewLineRepl = strings.NewReplacer("\n", " ")
 
 type ImgPanel struct {
@@ -55,12 +55,14 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 	_ = dstImgFile.Close()
 }
 
-func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int) []byte {
+func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int, faster bool) []byte {
 	imgsrc, _, err := image.Decode(srcImgData)
 	if err != nil {
 		panic(err)
 	}
-	_ = onFileDone()
+	if onFileDone != nil {
+		_ = onFileDone()
+	}
 
 	origwidth, origheight := imgsrc.Bounds().Max.X, imgsrc.Bounds().Max.Y
 	if origwidth <= maxWidth {
@@ -68,8 +70,11 @@ func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int) [
 	}
 
 	newheight := int(float64(origheight) / (float64(origwidth) / float64(maxWidth)))
-	imgdown := image.NewGray(image.Rect(0, 0, maxWidth, newheight))
-	ImgScaler.Scale(imgdown, imgdown.Bounds(), imgsrc, imgsrc.Bounds(), draw.Over, nil)
+	imgdown, imgscaler := image.NewGray(image.Rect(0, 0, maxWidth, newheight)), ImgScaler
+	if faster {
+		imgscaler = draw.ApproxBiLinear
+	}
+	imgscaler.Scale(imgdown, imgdown.Bounds(), imgsrc, imgsrc.Bounds(), draw.Over, nil)
 	var buf bytes.Buffer
 	if err = PngEncoder.Encode(&buf, imgdown); err != nil {
 		panic(err)
@@ -82,7 +87,9 @@ func imgGrayDistrs(srcImgData io.Reader, onFileDone func() error, numClusters in
 	if err != nil {
 		panic(err)
 	}
-	_ = onFileDone()
+	if onFileDone != nil {
+		_ = onFileDone()
+	}
 
 	r = make([]int, numClusters)
 	m := 256.0 / float64(numClusters)
@@ -111,7 +118,9 @@ func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessT
 	if err != nil {
 		panic(err)
 	}
-	_ = onFileDone()
+	if onFileDone != nil {
+		_ = onFileDone()
+	}
 
 	allbw, imggray := true, image.NewGray(image.Rect(0, 0, imgsrc.Bounds().Max.X, imgsrc.Bounds().Max.Y))
 	for px := 0; px < imgsrc.Bounds().Max.X; px++ {
@@ -133,10 +142,12 @@ func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessT
 			}
 
 			// now black&white-only
-			if colbw < blackIfLessThan {
-				colbw = 0
-			} else {
-				colbw = 255
+			if blackIfLessThan > 0 {
+				if colbw < blackIfLessThan {
+					colbw = 0
+				} else {
+					colbw = 255
+				}
 			}
 
 			imggray.Set(px, py, color.Gray{Y: colbw})
@@ -276,7 +287,9 @@ func imgPanels(srcImgData io.Reader, onFileDone func() error) ImgPanel {
 	if err != nil {
 		panic(err)
 	}
-	_ = onFileDone()
+	if onFileDone != nil {
+		_ = onFileDone()
+	}
 	ret := ImgPanel{Rect: imgsrc.Bounds()}
 	ret.detectSubPanels(imgsrc.(*image.Gray))
 	return ret.flattened()

@@ -1,11 +1,8 @@
 package main
 
 import (
-	"net/http"
 	"os"
 	"os/exec"
-	"path"
-	"path/filepath"
 	"time"
 )
 
@@ -47,32 +44,4 @@ func launchKioskyBrowser() {
 		panic(err)
 	}
 	App.Gui.BrowserClosed = true
-}
-
-func httpListenAndServe() {
-	if err := (&http.Server{
-		Addr:    ":4321",
-		Handler: http.HandlerFunc(httpHandle),
-	}).ListenAndServe(); err != nil {
-		panic(err)
-	}
-}
-
-func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
-	if ext := path.Ext(httpReq.URL.Path); ext == ".css" || ext == ".js" {
-		http.ServeFile(httpResp, httpReq, filepath.Join(App.StaticFilesDirPath, httpReq.URL.Path))
-	} else if ext == ".png" {
-		http.ServeFile(httpResp, httpReq, filepath.Join(".", httpReq.URL.Path)) //looks redudant but isnt!
-	} else if ext != "" {
-		http.ServeFile(httpResp, httpReq, filepath.Join("sitetmpl", httpReq.URL.Path))
-	} else {
-		httpResp.Header().Add("Content-Type", "text/html")
-		var notice string
-		if action := httpReq.FormValue("main_action"); action != "" {
-			if notice = appMainAction(true, action, nil); notice == "" {
-				notice = "Action '" + action + "' completed successfully."
-			}
-		}
-		_, _ = httpResp.Write(guiMain(httpReq, notice))
-	}
 }

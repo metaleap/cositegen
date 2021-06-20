@@ -111,7 +111,7 @@ func (me *SheetVer) ensureMonochrome(force bool) {
 		}
 		if file, err := os.Open(me.meta.bwFilePath); err != nil {
 			panic(err)
-		} else if data := imgDownsized(file, file.Close, int(App.Proj.BwSmallWidth)); data != nil {
+		} else if data := imgDownsized(file, file.Close, int(App.Proj.BwSmallWidth), false); data != nil {
 			writeFile(me.meta.bwSmallFilePath, data)
 		} else if err = os.Symlink(filepath.Base(me.meta.bwFilePath), me.meta.bwSmallFilePath); err != nil {
 			panic(err)
