@@ -24,7 +24,7 @@ func guiMain(r *http.Request, notice string) []byte {
 		}
 	}
 	s += "</style><script type='text/javascript' language='javascript'>const svgTxtPerLineDyCmA4 = " + strconv.FormatFloat(App.Proj.Gen.PanelSvgText.PerLineDyCmA4, 'f', 8, 64) + ", svgTxtFontSizeCmA4 = " + strconv.FormatFloat(App.Proj.Gen.PanelSvgText.FontSizeCmA4, 'f', 8, 64) + ";</script><script src='/main.js' type='text/javascript' language='javascript'></script>"
-	s += "</head><body><form method='POST' action='/' id='main_form'>" + guiHtmlInput("hidden", "main_focus_id", fv("main_focus_id"), nil)
+	s += "</head><body><form method='POST' action='/' id='main_form' novalidate='novalidate'>" + guiHtmlInput("hidden", "main_focus_id", fv("main_focus_id"), nil)
 	if notice != "" {
 		s += "<div class='notice'>" + hEsc(notice) + "</div>"
 	}
@@ -76,7 +76,7 @@ func guiMain(r *http.Request, notice string) []byte {
 
 	s += "</form></body>"
 	if rfv := fv("main_focus_id"); rfv != "" && rfv != "main_action" && notice == "" {
-		s += "<script language='javascript' type='text/javascript'>try { document.getElementById(\"" + rfv + "\").focus(); } catch (ignore) {}</script></html>"
+		s += "<script language='javascript' type='text/javascript'>try { document.getElementById(\"" + rfv + "\").focus(); } catch (e) {alert(e);}</script></html>"
 	}
 	return []byte(s)
 }
@@ -205,7 +205,7 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 		}
 		s += "</div>"
 	}
-	s += "<input type='hidden' name='scannow' id='scannow' value=''/><button id='scanbtn' onclick='kickOffScanJob()'>Begin Scan Now</button>"
+	s += "<input type='hidden' name='scannow' id='scannow' value=''/><button type='button' id='scanbtn' onclick='kickOffScanJob()'>Begin Scan Now</button>"
 	s += "</div>"
 	return
 }
@@ -238,7 +238,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	}
 	s += "</div><div>B&amp;W version at black-threshold of <b>&lt;" + itoa(int(App.Proj.BwThreshold)) + "</b>:</div>"
 	s += "<div class='fullsheet'>" + guiHtmlImg("/"+bwsrc, nil) + "</div>"
-	s += "<div>Compare other B&amp;W thresholds via slow-loading full-size previews: <input type='text' id='previewbwt'/><button onclick='toggleBwtPreviews(\"" + sv.meta.SrcFilePath + "\");'>Go!</button></div>"
+	s += "<div>Compare other B&amp;W thresholds via slow-loading full-size previews: <input type='text' id='previewbwt'/><button type='button' onclick='openBwtPreviews(\"" + sv.meta.SrcFilePath + "\");'>Open all in new windows</button></div>"
 
 	var panelstree func(*ImgPanel) string
 	panelstree = func(panel *ImgPanel) (s string) {
@@ -388,7 +388,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rw", itoa(area.Rect.Max.X-area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": "1", "max": itoa(panel.Rect.Max.X - panel.Rect.Min.X)})
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rh", itoa(area.Rect.Max.Y-area.Rect.Min.Y), A{"onchange": jsrefr, "class": "panelcfgrect", "min": "1", "max": itoa(panel.Rect.Max.Y - panel.Rect.Min.Y)})
 			s += "</div><div style='text-align: center;'>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+"_transform", area.SvgTextTransformAttr, A{
-				"class": "panelcfgtextattr", "title": "translate(x [,y])\nscale(x [,y])\nrotate(a [,oX] [,oY])\nskewX(x)\nskewY(y)\nmatrix(a,b,c,d,e,f)",
+				"class": "panelcfgtextattr", "title": "translate(x [,y])\tscale(x [,y])\trotate(a [,oX] [,oY])\tskewX(x)\tskewY(y)\tmatrix(a,b,c,d,e,f)",
 				"onfocus": jsrefr, "onblur": jsrefr, "onchange": jsrefr, "onkeydown": jsrefr, "onkeyup": jsrefr, "onkeypress": jsrefr,
 			}) + guiHtmlInput("textarea", pid+"t"+itoa(i)+"_style", area.SvgTextTspanStyleAttr, A{
 				"class": "panelcfgtextattr", "title": "style attr for the SVG <tspan> element",

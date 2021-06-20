@@ -46,7 +46,7 @@ func guiHtmlListFrom(name string, noneItemFirst string, prompt bool, from map[st
 }
 
 func guiHtmlButton(id string, text string, attrs map[string]string) string {
-	s := "<button name='" + hEsc(id) + "' id='" + hEsc(id) + "' " + guiHtmlAttrs(attrs) + ">" + hEsc(text) + "</button>"
+	s := "<button type='button' name='" + hEsc(id) + "' id='" + hEsc(id) + "' " + guiHtmlAttrs(attrs) + ">" + hEsc(text) + "</button>"
 	return s
 }
 

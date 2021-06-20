@@ -79,6 +79,5 @@ func httpServeDynPng(httpResp http.ResponseWriter, httpReq *http.Request) {
 	httpResp.Header().Add("Cache-Control", "max-age=8640000")
 	httpResp.Header().Add("Content-Type", "image/png")
 	httpResp.Header().Add("Content-Length", strconv.FormatUint(uint64(len(pngdata)), 10))
-	bl, _ := httpResp.Write(pngdata)
-	printLn(bl, len(pngdata))
+	_, _ = httpResp.Write(pngdata)
 }

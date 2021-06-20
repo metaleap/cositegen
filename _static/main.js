@@ -1,3 +1,5 @@
+let wins = [];
+
 let pLangIdx = 0;
 
 function doPostBack(name) {
@@ -127,16 +129,16 @@ function kickOffScanJob() {
     doPostBack('');
 }
 
-let bwtPrevPage = '';
+// let bwtPrevPage = '';
 
-function toggleBwtPreviews(sheetVerSrcFilePath) {
-    const uipane = document.getElementById('uipane');
-    if (bwtPrevPage && bwtPrevPage.length) {
-        const html = bwtPrevPage;
-        bwtPrevPage = '';
-        uipane.innerHTML = html;
-        return;
-    }
+function openBwtPreviews(sheetVerSrcFilePath) {
+    // const uipane = document.getElementById('uipane');
+    // if (bwtPrevPage && bwtPrevPage.length) {
+    //     const html = bwtPrevPage;
+    //     bwtPrevPage = '';
+    //     uipane.innerHTML = html;
+    //     return;
+    // }
 
     let nums = document.getElementById('previewbwt').value.split(',');
     if (!(nums && nums.length)) {
@@ -151,14 +153,26 @@ function toggleBwtPreviews(sheetVerSrcFilePath) {
         }
     }
 
-    html = "";
+    // html = "";
     for (let i = 0; i < nums.length; i++) {
-        if (i > 0)
-            html += "<hr/>";
-        html += "<div><button onclick='toggleBwtPreviews();'>Close All / Go Back</button>&mdash; B&amp;W threshold <b>&lt;" + nums[i] + "</b> preview:</div>";
-        html += "<div class='previewbwt'><img src='" + sheetVerSrcFilePath + "/" + nums[i] + "' title='" + nums[i] + "' style='width: 100%;'/></div>";
+        const imgsrc = sheetVerSrcFilePath + "/" + nums[i];
+        wins.push(imgsrc);
+        // setTimeout(function () { window.open(imgsrc, sheetVerSrcFilePath.replace(/\//g, '_') + "_" + nums[i]); }, i * 123);
+        // if (i > 0)
+        //     html += "<hr/>";
+        // html += "<div><button onclick='toggleBwtPreviews();'>Close All / Go Back</button>&mdash; B&amp;W threshold <b>&lt;" + nums[i] + "</b> preview:</div>";
+        // html += "<div class='previewbwt'><img src='" + imgsrc + "' title='" + nums[i] + "' style='width: 100%;'/></div>";
     }
 
-    bwtPrevPage = uipane.innerHTML;
-    uipane.innerHTML = html;
+    // bwtPrevPage = uipane.innerHTML;
+    // uipane.innerHTML = html;
 }
+
+setInterval(() => {
+    if (wins.length) {
+        const before = JSON.stringify(wins);
+        const next = wins[wins.length - 1];
+        wins.splice(wins.length - 1);
+        window.open(next, '_blank');
+    }
+}, 1234);
