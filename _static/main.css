@@ -53,7 +53,7 @@ div.panel .panelrect {
     padding: 0;
     line-height: normal;
     position: absolute;
-    opacity: 0.6;
+    opacity: 0.22;/*0.6*/
     z-index: 9999;
     text-overflow: clip;
     overflow: hidden;

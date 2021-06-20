@@ -30,7 +30,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
         if ((!(isNaN(trW) || isNaN(trH) || isNaN(trX) || isNaN(trY))) && (trW > 0) && (trH > 0)) {
             const svgrect = (!(isNaN(trPx) || isNaN(trPy)));
             if (svgrect) {
-                let rw = trW, rh = trH, rx = trX - pOffX, ry = trY - pOffY;
+                let rw = trW, rh = trH, rx = trX - pOffX, ry = trY - pOffY, rpx = trPx - pOffX, rpy = trPy - pOffY;
                 const mmh = px1cm / 22, cmh = px1cm / 2, cmm = px1cm * 1.22;
                 const pl = (rx + mmh), pr = ((rx + rw) - mmh), pt = (ry + mmh), pb = ((ry + rh) - mmh);
                 let poly = [pl + ',' + pt, pr + ',' + pt, pr + ',' + pb, pl + ',' + pb];
@@ -43,10 +43,9 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
                     islb = (ptext.trim() == 'LB'),
                     islt = (ptext.trim() == 'LT');
                 if (isbl) {
-                    // poly = arrIns(poly, 3,
-                    //     [cmh + ',' + (rh - mmh),
-                    //     trPx + ',' + trPy])
-                    // rh = (trPy - trY) + cmm;
+                    poly = arrIns(poly, 3,
+                        [(pl + cmh) + ',' + pb,
+                        rpx + ',' + rpy]);
                 } else if (isbr) {
                 } else if (isrb) {
                 } else if (isrt) {
