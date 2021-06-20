@@ -225,10 +225,9 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 	return buf.Bytes()
 }
 
-func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64) (s string) {
+func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bool) (s string) {
 	aw, ah := pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
 	pxfont, pxline := int(px1cm*App.Proj.Gen.PanelSvgText.FontSizeCmA4), int(px1cm*App.Proj.Gen.PanelSvgText.PerLineDyCmA4)
-	s += "<svg viewbox='0 0 " + itoa(aw) + " " + itoa(ah) + "'>"
 	s += "<text x='0' y='0' style='font-size: " + itoa(pxfont) + "px' transform='" + strings.TrimSpace(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
 	s += "<tspan style='" + strings.TrimSpace(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'>"
 	for _, ln := range strings.Split(svgRepl.Replace(siteGenLocStr(pta.Data, langId)), "\n") {
@@ -237,7 +236,10 @@ func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64) (s string) {
 		}
 		s += "<tspan dy='" + itoa(pxline) + "' x='0'>" + ln + "</tspan>"
 	}
-	s += "</tspan></text></svg>"
+	s += "</tspan></text>"
+	if wrapInSvgTag {
+		s = "<svg viewbox='0 0 " + itoa(aw) + " " + itoa(ah) + "'>" + s + "</svg>"
+	}
 	return
 }
 

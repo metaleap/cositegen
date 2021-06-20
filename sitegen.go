@@ -452,25 +452,16 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 
 			pw, ph := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y
 			s += "<div class='" + App.Proj.Gen.ClsPanel + "'>"
-			s += "<svg x='0' y='0' width='" + itoa(pw) + "' height='" + itoa(ph) + "'>"
-			s += "<rect x='0' y='0' width='100%' height='100%' fill='gold'></rect>"
+			s += "<svg viewbox='0 0 " + itoa(pw) + " " + itoa(ph) + "'>"
+			for _, pta := range sheetVer.panelAreas(pidx) {
+				rx, ry := pta.Rect.Min.X-panel.Rect.Min.X, pta.Rect.Min.Y-panel.Rect.Min.Y
+				s += "<svg x='" + itoa(rx) + "' y='" + itoa(ry) + "'>"
+				s += imgSvgText(&pta, langId, px1cm, false)
+				s += "</svg>"
+			}
 			s += "</svg>"
 			s += "<img id='" + name + "' src='./img/" + name + ".png' class='" + App.Proj.Gen.ClsImgHq + "' " + App.Proj.Gen.ClsImgHq + "='" + hqsrc + "'/>"
 
-			if false {
-				for _, pta := range sheetVer.panelAreas(pidx) {
-					aw, ah := pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
-					wp, hp := 100.0/(float64(pw)/float64(aw)), 100.0/(float64(ph)/float64(ah))
-					ax, ay := pta.Rect.Min.X-panel.Rect.Min.X, pta.Rect.Min.Y-panel.Rect.Min.Y
-					xp, yp := 100.0/(float64(pw)/float64(ax)), 100.0/(float64(ph)/float64(ay))
-					sx, sy, sw, sh := strconv.FormatFloat(xp, 'f', 8, 64), strconv.FormatFloat(yp, 'f', 8, 64), strconv.FormatFloat(wp, 'f', 8, 64), strconv.FormatFloat(hp, 'f', 8, 64)
-					s += "<div class='" + App.Proj.Gen.ClsPanelArea + "' style='top: " + sy + "%; left: " + sx + "%; width: " + sw + "%; height: " + sh + "%; max-width: " + sw + "%; max-height: " + sh + "%;'>"
-					if false {
-						s += imgSvgText(&pta, langId, px1cm)
-					}
-					s += "</div>"
-				}
-			}
 			s += "</div>"
 			pidx++
 		}
