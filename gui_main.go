@@ -34,28 +34,28 @@ func guiMain(r *http.Request, notice string) []byte {
 	}
 
 	App.Gui.State.Sel.Series, _ = guiGetFormSel(fv("series"), &App.Proj).(*Series)
-	s += guiHtmlList("series", "(Series)", len(App.Proj.Series), func(i int) (string, string, bool) {
+	s += guiHtmlList("series", "(Series)", false, len(App.Proj.Series), func(i int) (string, string, bool) {
 		return App.Proj.Series[i].Name, App.Proj.Series[i].Title["en"], App.Gui.State.Sel.Series != nil && App.Proj.Series[i].Name == App.Gui.State.Sel.Series.Name
 	})
 
 	shouldsavemeta := false
 	if series := App.Gui.State.Sel.Series; series != nil {
 		App.Gui.State.Sel.Chapter, _ = guiGetFormSel(fv("chapter"), series).(*Chapter)
-		s += guiHtmlList("chapter", "(Chapters)", len(series.Chapters), func(i int) (string, string, bool) {
+		s += guiHtmlList("chapter", "(Chapters)", false, len(series.Chapters), func(i int) (string, string, bool) {
 			chapter := series.Chapters[i]
 			return chapter.Name, chapter.Title["en"], App.Gui.State.Sel.Chapter != nil && App.Gui.State.Sel.Chapter.Name == chapter.Name
 		})
 		if chapter := App.Gui.State.Sel.Chapter; chapter != nil {
 			App.Gui.State.Sel.Sheet, _ = guiGetFormSel(fv("sheet"), chapter).(*Sheet)
-			s += guiHtmlList("sheet", "(Sheets)", len(chapter.sheets), func(i int) (string, string, bool) {
+			s += guiHtmlList("sheet", "(Sheets)", false, len(chapter.sheets), func(i int) (string, string, bool) {
 				sheet := chapter.sheets[i]
 				return sheet.name, sheet.name, App.Gui.State.Sel.Sheet != nil && App.Gui.State.Sel.Sheet.name == sheet.name
 			})
 			if sheet := App.Gui.State.Sel.Sheet; sheet == nil {
-				s += "<hr/><div class='uipane'>" + guiSheetScan(series, chapter, fv) + "</div>"
+				s += "<hr/><div id='uipane'>" + guiSheetScan(series, chapter, fv) + "</div>"
 			} else if len(sheet.versions) > 0 {
 				App.Gui.State.Sel.Ver, _ = guiGetFormSel(fv("sheetver"), sheet).(*SheetVer)
-				s += guiHtmlList("sheetver", "", len(sheet.versions), func(i int) (string, string, bool) {
+				s += guiHtmlList("sheetver", "", false, len(sheet.versions), func(i int) (string, string, bool) {
 					sheetver := sheet.versions[i]
 					return sheetver.fileName, sheetver.name, App.Gui.State.Sel.Ver != nil && App.Gui.State.Sel.Ver.fileName == sheetver.fileName
 				})
@@ -63,7 +63,7 @@ func guiMain(r *http.Request, notice string) []byte {
 					App.Gui.State.Sel.Ver = sheet.versions[0]
 				}
 				if sheetver := App.Gui.State.Sel.Ver; sheetver != nil {
-					s += "<hr/><div class='uipane'>" + guiSheetEdit(sheetver, fv, &shouldsavemeta) + "</div>"
+					s += "<hr/><div id='uipane'>" + guiSheetEdit(sheetver, fv, &shouldsavemeta) + "</div>"
 				}
 			}
 		}
@@ -72,7 +72,7 @@ func guiMain(r *http.Request, notice string) []byte {
 		App.Proj.save()
 	}
 
-	s += "<hr/>" + guiHtmlListFrom("main_action", "(Project Actions)", AppMainActions)
+	s += "<hr/>" + guiHtmlListFrom("main_action", "(Project Actions)", true, AppMainActions)
 
 	s += "</form></body>"
 	if rfv := fv("main_focus_id"); rfv != "" && rfv != "main_action" && notice == "" {
@@ -218,7 +218,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	}
 	s = "<h3>Full Sheet:&nbsp;"
 	if sw, bw := sv.meta.PanelsTree.Rect.Max.X, int(App.Proj.BwSmallWidth); sw > bw {
-		s += guiHtmlList("srcpx", "", 2, func(i int) (string, string, bool) {
+		s += guiHtmlList("srcpx", "", true, 2, func(i int) (string, string, bool) {
 			if i == 1 {
 				return sv.meta.bwFilePath, itoa(sw) + "px", bwsrc == sv.meta.bwFilePath
 			}
@@ -236,8 +236,9 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		}
 		s += "<div style='background: linear-gradient(to right, rgba(" + cf + "," + cf + "," + cf + ",1.0), rgba(" + ct + "," + ct + "," + ct + ",1.0)); min-width: " + itoa(90/len(graydistrs)) + "%'><span style='" + spanstyle + "'><nobr>" + cf + "-" + ct + "</nobr><br/><b>" + strconv.FormatFloat(100.0*gd[2], 'f', 2, 64) + "%</b><br/><i>(" + strconv.FormatFloat(sum, 'f', 2, 64) + "%)</i>" + "</span></div>"
 	}
-	s += "</div>"
+	s += "</div><div>B&amp;W version at black-threshold of &lt;" + itoa(int(App.Proj.BwThreshold)) + ":</div>"
 	s += "<div class='fullsheet'>" + guiHtmlImg("/"+bwsrc, nil) + "</div>"
+	s += "<div>Compare other B&amp;W thresholds via slow-loading full-size previews: <input type='text' id='previewbwt'/><button onclick=''>Go!</button></div>"
 
 	var panelstree func(*ImgPanel) string
 	panelstree = func(panel *ImgPanel) (s string) {
@@ -267,14 +268,15 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 			maxwidth = w
 		}
 	})
-	s += "<h3>All " + itoa(numpanels) + " panel(s):</h3><div>"
+	s += "<h3>All " + itoa(numpanels) + " panel(s):"
 	for i, lang := range App.Proj.Langs {
 		attrs := A{"name": "plang", "onclick": "refreshAllPanelRects(" + itoa(numpanels) + "," + itoa(i) + ",\"" + lang + "\");"}
 		if i == 0 {
 			attrs["checked"] = "checked"
 		}
-		s += guiHtmlInput("radio", "plang"+itoa(i), itoa(i), attrs) + "<label for='plang" + itoa(i) + "'>" + lang + "</label>"
+		s += "&nbsp;" + guiHtmlInput("radio", "plang"+itoa(i), itoa(i), attrs) + "<label for='plang" + itoa(i) + "'>" + lang + "</label>"
 	}
+	s += "</h3><div>"
 	importlist := map[string]string{}
 	for sheetfilename, panelsareas := range App.Proj.meta.sheetVerPanelAreas {
 		if sheetfilename != sv.fileName {
@@ -285,7 +287,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 			importlist[sheetfilename] = sheetfilename + " (" + itoa(numareas) + " text area(s) in " + itoa(len(panelsareas)) + " panel(s))"
 		}
 	}
-	s += "</div><div>" + guiHtmlListFrom("importpaneltexts", "(Import panel text areas from another sheet where panel indices match)", importlist) + "</div>"
+	s += "</div><div>" + guiHtmlListFrom("importpaneltexts", "(Import panel text areas from another sheet where panel indices match)", true, importlist) + "</div>"
 	var importfrom string
 	if fv("main_focus_id") == "importpaneltexts" {
 		*shouldSaveMeta, importfrom = true, fv("importpaneltexts")

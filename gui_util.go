@@ -12,8 +12,12 @@ func guiHtmlImg(uri string, attrs map[string]string) string {
 	return s
 }
 
-func guiHtmlList(name string, noneItemFirst string, numItems int, getItem func(int) (string, string, bool)) string {
-	s := "<select onchange='doPostBack(\"" + hEsc(name) + "\");' name='" + hEsc(name) + "' id='" + hEsc(name) + "'>"
+func guiHtmlList(name string, noneItemFirst string, prompt bool, numItems int, getItem func(int) (string, string, bool)) string {
+	onchange := "doPostBack(\"" + hEsc(name) + "\");"
+	if prompt {
+		onchange = "if((this.selectedIndex==0)||confirm(this.options[this.selectedIndex].innerText + \": sure?\")){" + onchange + "}else{event.cancelBubble=true;this.selectedIndex=0;return false;}"
+	}
+	s := "<select onchange='" + onchange + "' name='" + hEsc(name) + "' id='" + hEsc(name) + "'>"
 	if noneItemFirst != "" {
 		s += "<option value=''>" + noneItemFirst + "</option>"
 	}
@@ -31,6 +35,14 @@ func guiHtmlList(name string, noneItemFirst string, numItems int, getItem func(i
 	}
 	s += "</select>"
 	return s
+}
+
+func guiHtmlListFrom(name string, noneItemFirst string, prompt bool, from map[string]string) string {
+	var keys, vals []string
+	for k, v := range from {
+		keys, vals = append(keys, k), append(vals, v)
+	}
+	return guiHtmlList(name, noneItemFirst, prompt, len(from), func(i int) (string, string, bool) { return keys[i], vals[i], false })
 }
 
 func guiHtmlButton(id string, text string, attrs map[string]string) string {
@@ -55,14 +67,6 @@ func guiHtmlInput(inputType string, id string, value string, attrs map[string]st
 		s += "/>"
 	}
 	return s
-}
-
-func guiHtmlListFrom(name string, noneItemFirst string, from map[string]string) string {
-	var keys, vals []string
-	for k, v := range from {
-		keys, vals = append(keys, k), append(vals, v)
-	}
-	return guiHtmlList(name, noneItemFirst, len(from), func(i int) (string, string, bool) { return keys[i], vals[i], false })
 }
 
 func guiHtmlAttrs(attrs map[string]string) string {

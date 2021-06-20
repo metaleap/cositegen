@@ -27,10 +27,7 @@ func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
 	} else if ext != "" {
 		http.ServeFile(httpResp, httpReq, filepath.Join("sitetmpl", httpReq.URL.Path))
 	} else if strings.Contains(httpReq.URL.Path, ".png/") {
-		timedLogged(httpReq.URL.String(), func() string {
-			httpServePng(httpResp, httpReq)
-			return ""
-		})
+		httpServePng(httpResp, httpReq)
 	} else {
 		httpResp.Header().Add("Content-Type", "text/html")
 		var notice string

@@ -19,7 +19,7 @@ div.fullsheet img {
     width: 90%;
 }
 
-div.uipane {
+div#uipane {
     font-size: 0.88em;
     padding-left: 1em;
 }
