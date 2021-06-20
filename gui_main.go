@@ -10,7 +10,21 @@ import (
 
 func fV(r *http.Request) func(string) string {
 	var wthDisAintWindoze = strings.NewReplacer("\r\n", "\n")
-	return func(s string) string { return strings.TrimSpace(wthDisAintWindoze.Replace(r.FormValue(s))) }
+	return func(k string) string {
+		isareatext, s := false, wthDisAintWindoze.Replace(r.FormValue(k))
+		if i := strings.IndexByte(k, 't'); k != "" && k[0] == 'p' && i > 1 {
+			for _, langid := range App.Proj.Langs { // p0t1de
+				if j := strings.LastIndex(k, langid); j > (i+1) && j == len(k)-len(langid) {
+					isareatext = true
+					break
+				}
+			}
+		}
+		if !isareatext {
+			s = strings.TrimSpace(s)
+		}
+		return s
+	}
 }
 
 func guiMain(r *http.Request, notice string) []byte {

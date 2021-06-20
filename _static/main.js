@@ -33,21 +33,51 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs
         const trH = parseInt(document.getElementById(pid + "t" + i + "rh").value);
         const trPx = parseInt(document.getElementById(pid + "t" + i + "rpx").value);
         const trPy = parseInt(document.getElementById(pid + "t" + i + "rpy").value);
+        const stroke = (px1cm / 22);
         if ((!(isNaN(trW) || isNaN(trH) || isNaN(trX) || isNaN(trY))) && (trW > 0) && (trH > 0)) {
             const svgrect = (!(isNaN(trPx) || isNaN(trPy)));
-            const svgspeech = svgrect && (trPx > 0) && (trPy > 0);
-            // notes.. pick the closest corner always. L/R side only if pt vertically within y-extent of tr, else T/B sides only.
+            if (svgrect && false) {
+                let poly = [
+                    stroke + ',' + stroke,                  // topleft
+                    (trW - stroke) + ',' + stroke,          // topright
+                    (trW - stroke) + ',' + (trH - stroke),  // bottomright
+                    stroke + ',' + (trH - stroke)           // bottomleft
+                ];
+                if (trPx != 0 && trPy != 0) {
+                    const topleft = false,
+                        topright = false,
+                        righttop = false,
+                        rightbottom = false,
+                        bottomright = true,
+                        bottomleft = false,
+                        leftbottom = false,
+                        lefttop = false;
+                    if (bottomleft) {
+                        poly = arrIns(poly, 3, [(px1cm / 2) + ',' + (trH - stroke), trPx + ',' + trPy])
+                        trH = (trPy - trY) + (px1cm * 1.22);
+                    } else if (bottomright) {
+                        poly = arrIns(poly, 3, [trPx + ',' + trPy, (trW - stroke - (px1cm / 2)) + ',' + (trH - stroke)])
+                        trH = (trPy - trY) + (px1cm * 1.22);
+                    }
+                }
+                if (poly && poly.length) {
+                    innerhtml += "<div class='panelrect col" + i + "' style='left:" + (trX - pOffX) + "px; top:" + (trY - pOffY) + "px; width: " + trW + "px; height: " + trH + "px;'>";
+                    innerhtml += "<svg viewbox='0 0 " + trW + " " + trH + "'>";
+
+                    innerhtml += "<polygon points='" + poly.join(' ') + "' fill='gold' stroke='black' stroke-width='" + stroke + "px'/>"
+                    // notes.. pick the closest corner always. L/R side only if pt vertically within y-extent of tr, else T/B sides only.
+                    innerhtml += "</svg ></div>"
+                }
+            }
+
             innerhtml += "<div class='panelrect col" + i + "' style='left:" + (trX - pOffX) + "px; top:" + (trY - pOffY) + "px; width: " + trW + "px; height: " + trH + "px;'>";
             innerhtml += "<svg viewbox='0 0 " + trW + " " + trH + "'>";
-            if (svgrect) {
-                innerhtml += "<polygon points='0,0 " + trW + ",0 " + trW + "," + trH + " 0," + trH + "' fill='gold' stroke='black' stroke-width='" + (px1cm / 10) + "px'/>"
-            }
             innerhtml += "<text x='0' y='0' style='font-size: " + pxfont + "px' transform='" + document.getElementById(pid + "t" + i + "_transform").value.replace(/\n/g, " ").trim() + "'>"
             innerhtml += "<tspan style='" + document.getElementById(pid + "t" + i + "_style").value.replace(/\n/g, " ").trim() + "'>"
             for (let line of ptext.split('\n')) {
                 if ((!line) || line.length == 0)
                     line = '&nbsp;';
-                innerhtml += "<tspan dy='" + pxline + "' x='0'>"
+                innerhtml += "<tspan dy='" + pxline + "' x='" + (svgrect ? (px1cm / 10) : 0) + "'>"
                     + line
                         .replace(/\s/g, "&nbsp;")
                         .replace(/<b>/g, "<tspan class='b'>")
@@ -58,11 +88,22 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs
                         .replace(/<\/i>/g, "</tspan>")
                     + "</tspan>";
             }
-            innerhtml += "</tspan></text></svg ></div > ";
+            innerhtml += "</tspan></text></svg></div>";
         }
     }
     if (span.innerHTML != innerhtml)
         span.innerHTML = innerhtml;
+}
+
+function arrIns(arr, index, items) {
+    let ret = [];
+    for (let i = 0; i < index; i++)
+        ret.push(arr[i]);
+    for (let i = 0; i < items.length; i++)
+        ret.push(items[i]);
+    for (let i = index; i < arr.length; i++)
+        ret.push(arr[i]);
+    return ret;
 }
 
 function onPanelClick(pid) {
