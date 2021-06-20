@@ -34,32 +34,35 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
                 const mmh = px1cm / 22, cmh = px1cm / 2, cmm = px1cm * 1.22;
                 const pl = (rx + mmh), pr = ((rx + rw) - mmh), pt = (ry + mmh), pb = ((ry + rh) - mmh);
                 let poly = [pl + ',' + pt, pr + ',' + pt, pr + ',' + pb, pl + ',' + pb];
-                const islr = rpy > ry && rpy < (ry + rh);
-                const isbr = (ptext.trim() == 'BR'),
-                    isbl = (ptext.trim() == 'BL'),
-                    istr = (ptext.trim() == 'TR'),
-                    istl = (ptext.trim() == 'TL'),
-                    isrb = islr && (ptext.trim() == 'RB'),
-                    isrt = islr && (ptext.trim() == 'RT'),
-                    islb = islr && (ptext.trim() == 'LB'),
-                    islt = islr && (ptext.trim() == 'LT');
-                const dst = rpx + ',' + rpy; // coords to point towards
-                if (isbl) {
-                    poly = arrIns(poly, 3, [(pl + cmh) + ',' + pb, dst]);
-                } else if (isbr) {
-                    poly = arrIns(poly, 3, [dst, (pr - cmh) + ',' + pb]);
-                } else if (isrb) {
-                    poly = arrIns(poly, 2, [pr + ',' + (pb - cmh), dst])
-                } else if (isrt) {
-                    poly = arrIns(poly, 2, [dst, pr + ',' + (pt + cmh)])
-                } else if (istr) {
-                    poly = arrIns(poly, 1, [(pr - cmh) + ',' + pt, dst])
-                } else if (istl) {
-                    poly = arrIns(poly, 1, [dst, (pl + cmh) + ',' + pt])
-                } else if (islt) {
-                    poly = arrIns(poly, 4, [pl + ',' + (pt + cmh), dst])
-                } else if (islb) {
-                    poly = arrIns(poly, 4, [dst, pl + ',' + (pb - cmh)])
+                if (!((trPx == 0) && (trPy == 0))) {
+                    const isr = rpx > (rx + (rw / 2)), isl = !isr,
+                        isb = rpy > (ry + (rh / 2)), ist = !isb;
+                    const isbr = isb && isr,  // (ptext.trim() == 'BR'),
+                        isbl = isb && isl,  // (ptext.trim() == 'BL'),
+                        istr = ist && isr,  // (ptext.trim() == 'TR'),
+                        istl = ist && isl,  // (ptext.trim() == 'TL'),
+                        isrb = isr && isb,  // (ptext.trim() == 'RB'),
+                        isrt = isr && ist,  // (ptext.trim() == 'RT'),
+                        islb = isl && isb,  // (ptext.trim() == 'LB'),
+                        islt = isl && ist;  // (ptext.trim() == 'LT');
+                    const dst = rpx + ',' + rpy; // coords to point towards
+                    if (isbl) {
+                        poly = arrIns(poly, 3, [(pl + cmh) + ',' + pb, dst]);
+                    } else if (isbr) {
+                        poly = arrIns(poly, 3, [dst, (pr - cmh) + ',' + pb]);
+                    } else if (isrb) {
+                        poly = arrIns(poly, 2, [pr + ',' + (pb - cmh), dst])
+                    } else if (isrt) {
+                        poly = arrIns(poly, 2, [dst, pr + ',' + (pt + cmh)])
+                    } else if (istr) {
+                        poly = arrIns(poly, 1, [(pr - cmh) + ',' + pt, dst])
+                    } else if (istl) {
+                        poly = arrIns(poly, 1, [dst, (pl + cmh) + ',' + pt])
+                    } else if (islt) {
+                        poly = arrIns(poly, 4, [pl + ',' + (pt + cmh), dst])
+                    } else if (islb) {
+                        poly = arrIns(poly, 4, [dst, pl + ',' + (pb - cmh)])
+                    }
                 }
                 innerhtml += "<polygon points='" + poly.join(' ') + "' fill='gold' stroke='black' stroke-width='" + mmh + "px'/>";
             }
