@@ -17,9 +17,9 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
     const pxfont = parseInt(px1cm * svgTxtFontSizeCmA4);
     const pxline = parseInt(px1cm * svgTxtPerLineDyCmA4);
 
-    innerhtml += "<div class='panelrect' style='left: 0px; top: 0px; width: 100%; height: 100%;'>"
-    innerhtml += "<svg style='width: 100%; max-width: 100%;' viewbox='0 0 " + pWidth + " " + pHeight + "'>";
-    const hasborderrects = {};
+    let divshtml = "";
+    innerhtml += "<div class='panelrect panelrectbordered'>";
+    innerhtml += "<svg viewbox='0 0 " + pWidth + " " + pHeight + "'>";
     for (let i = 0; i < maxImagePanelTextAreas; i++) {
         const trX = parseInt(document.getElementById(pid + "t" + i + "rx").value);
         const trY = parseInt(document.getElementById(pid + "t" + i + "ry").value);
@@ -27,72 +27,63 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
         const trH = parseInt(document.getElementById(pid + "t" + i + "rh").value);
         const trPx = parseInt(document.getElementById(pid + "t" + i + "rpx").value);
         const trPy = parseInt(document.getElementById(pid + "t" + i + "rpy").value);
-        if ((!(isNaN(trW) || isNaN(trH) || isNaN(trX) || isNaN(trY) || isNaN(trPx) || isNaN(trPy)))
-            && (trW > 0) && (trH > 0)) {
-            hasborderrects[i] = true;
-            const rw = trW, rh = trH, rx = trX - pOffX, ry = trY - pOffY, rpx = trPx - pOffX, rpy = trPy - pOffY;
-            const mmh = px1cm / 22, cmh = px1cm / 2, cmm = px1cm * 1.22;
-            const pl = (rx + mmh), pr = ((rx + rw) - mmh), pt = (ry + mmh), pb = ((ry + rh) - mmh);
-            let poly = [pl + ',' + pt, pr + ',' + pt, pr + ',' + pb, pl + ',' + pb];
-            if (!((trPx == 0) && (trPy == 0))) {
-                const dx = Math.abs(rpx - (rx + (rw / 2))), dy = Math.abs(rpy - (ry + (rh / 2)));
-                const isr = rpx > (rx + (rw / 2)), isl = !isr,
-                    isb = rpy > (ry + (rh / 2)), ist = !isb,
-                    isbr = isb && isr && dy >= dx,
-                    isbl = isb && isl && dy >= dx,
-                    istr = ist && isr && dy >= dx,
-                    istl = ist && isl && dy >= dx,
-                    isrb = isr && isb && dx >= dy,
-                    islb = isl && isb && dx >= dy,
-                    isrt = isr && ist && dx >= dy,
-                    islt = isl && ist && dx >= dy,
-                    dst = rpx + ',' + rpy; // coords to point towards
-                if (isbl)
-                    poly = arrIns(poly, 3, [(pl + cmh) + ',' + pb, dst]);
-                else if (isbr)
-                    poly = arrIns(poly, 3, [dst, (pr - cmh) + ',' + pb]);
-                else if (istr)
-                    poly = arrIns(poly, 1, [(pr - cmh) + ',' + pt, dst]);
-                else if (istl)
-                    poly = arrIns(poly, 1, [dst, (pl + cmh) + ',' + pt]);
-                else if (isrb)
-                    poly = arrIns(poly, 2, [pr + ',' + (pb - cmh), dst]);
-                else if (isrt)
-                    poly = arrIns(poly, 2, [dst, pr + ',' + (pt + cmh)]);
-                else if (islt)
-                    poly = arrIns(poly, 4, [pl + ',' + (pt + cmh), dst]);
-                else if (islb)
-                    poly = arrIns(poly, 4, [dst, pl + ',' + (pb - cmh)]);
-                innerhtml += "<polygon points='" + poly.join(' ') + "' fill='white' stroke='black' stroke-linejoin='round' stroke-width='" + mmh + "px'/>";
-            }
-        }
-    }
-    innerhtml += "</svg></div>"
-
-    for (let i = 0; i < maxImagePanelTextAreas; i++) {
-        var ptext = document.getElementById(pid + "t" + i + langs[pLangIdx]).value;
-        for (let langidx = 0; langidx < langs.length; langidx++) {
-            const el = document.getElementById(pid + "t" + i + langs[langidx]);
-            if ((el == document.activeElement && el.value && el.value.length) || (langidx == 0 && !ptext)) {
-                ptext = el.value;
-                break;
-            }
-        }
-        const trX = parseInt(document.getElementById(pid + "t" + i + "rx").value);
-        const trY = parseInt(document.getElementById(pid + "t" + i + "ry").value);
-        const trW = parseInt(document.getElementById(pid + "t" + i + "rw").value);
-        const trH = parseInt(document.getElementById(pid + "t" + i + "rh").value);
         if ((!(isNaN(trW) || isNaN(trH) || isNaN(trX) || isNaN(trY))) && (trW > 0) && (trH > 0)) {
-            let divcol = hasborderrects[i] ? "" : "col" + i,
-                tspanx = hasborderrects[i] ? (px1cm / 11) : '0';
-            innerhtml += "<div class='panelrect " + divcol + "' style='left:" + (trX - pOffX) + "px; top:" + (trY - pOffY) + "px; width: " + trW + "px; height: " + trH + "px;'>";
-            innerhtml += "<svg viewbox='0 0 " + trW + " " + trH + "'>";
-            innerhtml += "<text x='0' y='0' style='font-size: " + pxfont + "px' transform='" + document.getElementById(pid + "t" + i + "_transform").value.replace(/\n/g, " ").trim() + "'>"
-            innerhtml += "<tspan style='" + document.getElementById(pid + "t" + i + "_style").value.replace(/\n/g, " ").trim() + "'>"
+            divshtml += "<div class='panelrect col" + i + "' style='left:" + (trX - pOffX) + "px; top:" + (trY - pOffY) + "px; width: " + trW + "px; height: " + trH + "px;'></div>";
+
+            const rw = trW, rh = trH, rx = trX - pOffX, ry = trY - pOffY;
+            if (!(isNaN(trPx) || isNaN(trPy))) { // text-rect wants black border and white fill?
+                const rpx = trPx - pOffX, rpy = trPy - pOffY;
+                const mmh = px1cm / 22, cmh = px1cm / 2, cmm = px1cm * 1.22;
+                const pl = (rx + mmh), pr = ((rx + rw) - mmh), pt = (ry + mmh), pb = ((ry + rh) - mmh);
+                let poly = [pl + ',' + pt, pr + ',' + pt, pr + ',' + pb, pl + ',' + pb];
+                if (!((trPx == 0) && (trPy == 0))) { // speech rect pointing somewhere?
+                    const dx = Math.abs(rpx - (rx + (rw / 2))), dy = Math.abs(rpy - (ry + (rh / 2)));
+                    const isr = rpx > (rx + (rw / 2)), isl = !isr,
+                        isb = rpy > (ry + (rh / 2)), ist = !isb,
+                        isbr = isb && isr && dy >= dx,
+                        isbl = isb && isl && dy >= dx,
+                        istr = ist && isr && dy >= dx,
+                        istl = ist && isl && dy >= dx,
+                        isrb = isr && isb && dx >= dy,
+                        islb = isl && isb && dx >= dy,
+                        isrt = isr && ist && dx >= dy,
+                        islt = isl && ist && dx >= dy,
+                        dst = rpx + ',' + rpy; // coords to point towards
+                    if (isbl)
+                        poly = arrIns(poly, 3, [(pl + cmh) + ',' + pb, dst]);
+                    else if (isbr)
+                        poly = arrIns(poly, 3, [dst, (pr - cmh) + ',' + pb]);
+                    else if (istr)
+                        poly = arrIns(poly, 1, [(pr - cmh) + ',' + pt, dst]);
+                    else if (istl)
+                        poly = arrIns(poly, 1, [dst, (pl + cmh) + ',' + pt]);
+                    else if (isrb)
+                        poly = arrIns(poly, 2, [pr + ',' + (pb - cmh), dst]);
+                    else if (isrt)
+                        poly = arrIns(poly, 2, [dst, pr + ',' + (pt + cmh)]);
+                    else if (islt)
+                        poly = arrIns(poly, 4, [pl + ',' + (pt + cmh), dst]);
+                    else if (islb)
+                        poly = arrIns(poly, 4, [dst, pl + ',' + (pb - cmh)]);
+                    innerhtml += "<polygon points='" + poly.join(' ') + "' fill='white' stroke='black' stroke-linejoin='round' stroke-width='" + mmh + "px'/>";
+                }
+            }
+
+            let ptext = document.getElementById(pid + "t" + i + langs[pLangIdx]).value;
+            for (let langidx = 0; langidx < langs.length; langidx++) {
+                const el = document.getElementById(pid + "t" + i + langs[langidx]);
+                if ((el == document.activeElement && el.value && el.value.length) || (langidx == 0 && !ptext)) {
+                    ptext = el.value;
+                    break;
+                }
+            }
+
+            innerhtml += "<svg x='" + rx + "' y='" + ry + "'><text x='0' y='0' style='font-size: " + pxfont + "px' transform='" + document.getElementById(pid + "t" + i + "_transform").value.replace(/\n/g, " ").trim() + "'>";
+            innerhtml += "<tspan style='" + document.getElementById(pid + "t" + i + "_style").value.replace(/\n/g, " ").trim() + "'>";
             for (let line of ptext.split('\n')) {
                 if ((!line) || line.length == 0)
                     line = '&nbsp;';
-                innerhtml += "<tspan dy='" + pxline + "' x='" + tspanx + "'>"
+                innerhtml += "<tspan dy='" + pxline + "' x='0'>"
                     + line
                         .replace(/\s/g, "&nbsp;")
                         .replace(/<b>/g, "<tspan class='b'>")
@@ -103,9 +94,11 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
                         .replace(/<\/i>/g, "</tspan>")
                     + "</tspan>";
             }
-            innerhtml += "</tspan></text></svg></div>";
+            innerhtml += "</tspan></text></svg>";
         }
     }
+    innerhtml += "</svg></div>" + divshtml
+
     const span = document.getElementById(pid + 'rects');
     if (span && span.innerHTML != innerhtml)
         span.innerHTML = innerhtml;
