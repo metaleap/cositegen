@@ -11,11 +11,66 @@ function refreshAllPanelRects(numPanels, langIdx, langName) {
         document.getElementById('p' + i + 't0' + langName).dispatchEvent(new Event("change"));
 }
 
-function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs, px1cm) {
+function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePanelTextAreas, langs, px1cm) {
     const pid = "p" + panelIdx;
     let innerhtml = "";
     const pxfont = parseInt(px1cm * svgTxtFontSizeCmA4);
     const pxline = parseInt(px1cm * svgTxtPerLineDyCmA4);
+
+    innerhtml += "<div class='panelrect' style='background: gold; left: 0px; top: 0px; width: 100%; height: 100%;'>"
+    innerhtml += "<svg style='width: 100%; max-width: 100%;' viewbox='0 0 " + pWidth + " " + pHeight + "'>";
+    for (let i = 0; i < maxImagePanelTextAreas; i++) {
+        var ptext = document.getElementById(pid + "t" + i + langs[0]).value;
+        const trX = parseInt(document.getElementById(pid + "t" + i + "rx").value);
+        const trY = parseInt(document.getElementById(pid + "t" + i + "ry").value);
+        const trW = parseInt(document.getElementById(pid + "t" + i + "rw").value);
+        const trH = parseInt(document.getElementById(pid + "t" + i + "rh").value);
+        const trPx = parseInt(document.getElementById(pid + "t" + i + "rpx").value);
+        const trPy = parseInt(document.getElementById(pid + "t" + i + "rpy").value);
+        if ((!(isNaN(trW) || isNaN(trH) || isNaN(trX) || isNaN(trY))) && (trW > 0) && (trH > 0)) {
+            const svgrect = (!(isNaN(trPx) || isNaN(trPy)));
+            if (svgrect) {
+                //     textrectcol = "";
+                //     const mmh = px1cm / 22, cmh = px1cm / 2, cmm = px1cm * 1.22;
+                //     let rw = trW, rh = trH;
+                //     let poly = [
+                //         mmh + ',' + mmh,                // topleft
+                //         (rw - mmh) + ',' + mmh,         // topright
+                //         (rw - mmh) + ',' + (rh - mmh),  // bottomright
+                //         mmh + ',' + (rh - mmh)          // bottomleft
+                //     ];
+                //     const isbr = (ptext.trim() == 'BR'),
+                //         isbl = (ptext.trim() == 'BL'),
+                //         istr = (ptext.trim() == 'TR'),
+                //         istl = (ptext.trim() == 'TL'),
+                //         isrb = (ptext.trim() == 'RB'),
+                //         isrt = (ptext.trim() == 'RT'),
+                //         islb = (ptext.trim() == 'LB'),
+                //         islt = (ptext.trim() == 'LT');
+                //     if (isbl) {
+                //         poly = arrIns(poly, 3,
+                //             [cmh + ',' + (rh - mmh),
+                //             trPx + ',' + trPy])
+                //         rh = (trPy - trY) + cmm;
+                //     } else if (isbr) {
+                //     } else if (isrb) {
+                //     } else if (isrt) {
+                //     } else if (istr) {
+                //     } else if (istl) {
+                //     } else if (islb) {
+                //     } else if (islt) {
+                //     }
+                //     let svgw = rw, svgh = rh, divx = trX - pOffX, divy = trY - pOffY;
+                //     if (poly && poly.length) {
+                //         innerhtml += "<div class='panelrect" + "' style='left:" + divx + "px; top:" + divy + "px; width: " + svgw + "px; height: " + svgh + "px;'>";
+                //         innerhtml += "<svg viewbox='0 0 " + svgw + " " + svgh + "'>";
+                //         innerhtml += "<polygon points='" + poly.join(' ') + "' fill='gold' stroke='black' stroke-width='" + mmh + "px'/>";
+                //         innerhtml += "</svg ></div>";
+                //     }
+            }
+        }
+    }
+    innerhtml += "</svg></div>"
 
     for (let i = 0; i < maxImagePanelTextAreas; i++) {
         var ptext = document.getElementById(pid + "t" + i + langs[pLangIdx]).value;
@@ -30,52 +85,8 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs
         const trY = parseInt(document.getElementById(pid + "t" + i + "ry").value);
         const trW = parseInt(document.getElementById(pid + "t" + i + "rw").value);
         const trH = parseInt(document.getElementById(pid + "t" + i + "rh").value);
-        // const trPx = parseInt(document.getElementById(pid + "t" + i + "rpx").value);
-        // const trPy = parseInt(document.getElementById(pid + "t" + i + "rpy").value);
         if ((!(isNaN(trW) || isNaN(trH) || isNaN(trX) || isNaN(trY))) && (trW > 0) && (trH > 0)) {
-            let textrectcol = "col" + i;
-            // const svgrect = (!(isNaN(trPx) || isNaN(trPy)));
-            // if (svgrect) {
-            //     textrectcol = "";
-            //     const mmh = px1cm / 22, cmh = px1cm / 2, cmm = px1cm * 1.22;
-            //     let rw = trW, rh = trH;
-            //     let poly = [
-            //         mmh + ',' + mmh,                // topleft
-            //         (rw - mmh) + ',' + mmh,         // topright
-            //         (rw - mmh) + ',' + (rh - mmh),  // bottomright
-            //         mmh + ',' + (rh - mmh)          // bottomleft
-            //     ];
-            //     const isbr = (ptext.trim() == 'BR'),
-            //         isbl = (ptext.trim() == 'BL'),
-            //         istr = (ptext.trim() == 'TR'),
-            //         istl = (ptext.trim() == 'TL'),
-            //         isrb = (ptext.trim() == 'RB'),
-            //         isrt = (ptext.trim() == 'RT'),
-            //         islb = (ptext.trim() == 'LB'),
-            //         islt = (ptext.trim() == 'LT');
-            //     if (isbl) {
-            //         poly = arrIns(poly, 3,
-            //             [cmh + ',' + (rh - mmh),
-            //             trPx + ',' + trPy])
-            //         rh = (trPy - trY) + cmm;
-            //     } else if (isbr) {
-            //     } else if (isrb) {
-            //     } else if (isrt) {
-            //     } else if (istr) {
-            //     } else if (istl) {
-            //     } else if (islb) {
-            //     } else if (islt) {
-            //     }
-            //     let svgw = rw, svgh = rh, divx = trX - pOffX, divy = trY - pOffY;
-            //     if (poly && poly.length) {
-            //         innerhtml += "<div class='panelrect" + "' style='left:" + divx + "px; top:" + divy + "px; width: " + svgw + "px; height: " + svgh + "px;'>";
-            //         innerhtml += "<svg viewbox='0 0 " + svgw + " " + svgh + "'>";
-            //         innerhtml += "<polygon points='" + poly.join(' ') + "' fill='gold' stroke='black' stroke-width='" + mmh + "px'/>";
-            //         innerhtml += "</svg ></div>";
-            //     }
-            // }
-
-            innerhtml += "<div class='panelrect " + textrectcol + "' style='left:" + (trX - pOffX) + "px; top:" + (trY - pOffY) + "px; width: " + trW + "px; height: " + trH + "px;'>";
+            innerhtml += "<div class='panelrect col" + i + "' style='left:" + (trX - pOffX) + "px; top:" + (trY - pOffY) + "px; width: " + trW + "px; height: " + trH + "px;'>";
             innerhtml += "<svg viewbox='0 0 " + trW + " " + trH + "'>";
             innerhtml += "<text x='0' y='0' style='font-size: " + pxfont + "px' transform='" + document.getElementById(pid + "t" + i + "_transform").value.replace(/\n/g, " ").trim() + "'>"
             innerhtml += "<tspan style='" + document.getElementById(pid + "t" + i + "_style").value.replace(/\n/g, " ").trim() + "'>"
