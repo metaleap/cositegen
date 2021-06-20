@@ -212,17 +212,17 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 
 func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s string) {
 	sv.ensurePrep(false, false)
-	px1cm, bwsrc := float64(sv.meta.PanelsTree.Rect.Max.Y-sv.meta.PanelsTree.Rect.Min.Y)/21.0, fv("srcpx")
-	if bwsrc != sv.meta.bwSmallFilePath && bwsrc != sv.meta.bwFilePath {
-		bwsrc = sv.meta.bwSmallFilePath
+	px1cm, bwsrc := float64(sv.data.PanelsTree.Rect.Max.Y-sv.data.PanelsTree.Rect.Min.Y)/21.0, fv("srcpx")
+	if bwsrc != sv.data.bwSmallFilePath && bwsrc != sv.data.bwFilePath {
+		bwsrc = sv.data.bwSmallFilePath
 	}
 	s = "<h3>Full Sheet:&nbsp;"
-	if sw, bw := sv.meta.PanelsTree.Rect.Max.X, int(App.Proj.BwSmallWidth); sw > bw {
+	if sw, bw := sv.data.PanelsTree.Rect.Max.X, int(App.Proj.BwSmallWidth); sw > bw {
 		s += guiHtmlList("srcpx", "", true, 2, func(i int) (string, string, bool) {
 			if i == 1 {
-				return sv.meta.bwFilePath, itoa(sw) + "px", bwsrc == sv.meta.bwFilePath
+				return sv.data.bwFilePath, itoa(sw) + "px", bwsrc == sv.data.bwFilePath
 			}
-			return sv.meta.bwSmallFilePath, itoa(bw) + "px", true
+			return sv.data.bwSmallFilePath, itoa(bw) + "px", true
 		})
 	}
 	s += "</h3>"
@@ -238,7 +238,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	}
 	s += "</div><div>B&amp;W version at black-threshold of <b>&lt;" + itoa(int(App.Proj.BwThreshold)) + "</b>:</div>"
 	s += "<div class='fullsheet'>" + guiHtmlImg("/"+bwsrc, nil) + "</div>"
-	s += "<div>View other B&amp;W thresholds: <input type='text' id='previewbwt' onchange='addBwtPreviewLinks(\"" + sv.meta.SrcFilePath + "\");'/><div id='previewbwtlinks'></div></div>"
+	s += "<div>View other B&amp;W thresholds: <input type='text' id='previewbwt' onchange='addBwtPreviewLinks(\"" + sv.data.SrcFilePath + "\");'/><div id='previewbwtlinks'></div></div>"
 
 	var panelstree func(*ImgPanel) string
 	panelstree = func(panel *ImgPanel) (s string) {
@@ -260,9 +260,9 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		}
 		return
 	}
-	s += "<h3>Sheet Panels Structure:</h3><ul><li>Sheet coords:" + sv.meta.PanelsTree.Rect.String() + panelstree(sv.meta.PanelsTree) + "</li></ul><hr/>"
+	s += "<h3>Sheet Panels Structure:</h3><ul><li>Sheet coords:" + sv.data.PanelsTree.Rect.String() + panelstree(sv.data.PanelsTree) + "</li></ul><hr/>"
 	pidx, numpanels, maxwidth, zoom, zoomdiv := 0, 0, 0, 100, 1.0
-	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
+	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
 		numpanels++
 		if w := panel.Rect.Max.X - panel.Rect.Min.X; w > maxwidth {
 			maxwidth = w
@@ -302,7 +302,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	if *shouldSaveMeta {
 		App.Proj.data.sheetVerPanelAreas[sv.fileName] = nil
 	}
-	sv.meta.PanelsTree.iter(func(panel *ImgPanel) {
+	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
 		rect, pid := panel.Rect, "p"+itoa(pidx)
 		w, h := rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y
 		cfgdisplay := "none"
@@ -361,7 +361,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		style := `width: ` + itoa(w) + `px; height: ` + itoa(h) + `px;`
 		s += "<div style='position:relative; " + style + "'>"
 		style += `background-image: url("/` + bwsrc + `");`
-		style += `background-size: ` + itoa(sv.meta.PanelsTree.Rect.Max.X-sv.meta.PanelsTree.Rect.Min.X) + `px ` + itoa(sv.meta.PanelsTree.Rect.Max.Y-sv.meta.PanelsTree.Rect.Min.Y) + `px;`
+		style += `background-size: ` + itoa(sv.data.PanelsTree.Rect.Max.X-sv.data.PanelsTree.Rect.Min.X) + `px ` + itoa(sv.data.PanelsTree.Rect.Max.Y-sv.data.PanelsTree.Rect.Min.Y) + `px;`
 		style += `background-position: -` + itoa(rect.Min.X) + `px -` + itoa(rect.Min.Y) + `px;`
 		s += "<div class='panelpic' onauxclick='onPanelAuxClick(event, " + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(App.Proj.MaxImagePanelTextAreas) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + strconv.FormatFloat(zoomdiv, 'f', 8, 64) + ")' style='" + style + "'></div><span id='" + pid + "rects'></span>"
 		s += "</div></div></td><td>"

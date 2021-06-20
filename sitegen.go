@@ -152,7 +152,7 @@ func siteGenPngs() (numPngs int, numSheets int, numPanels int) {
 				for _, sheetver := range sheet.versions {
 					numSheets++
 					sheetver.ensurePrep(false, false)
-					srcimgfile, err := os.Open(sheetver.meta.bwFilePath)
+					srcimgfile, err := os.Open(sheetver.data.bwFilePath)
 					if err != nil {
 						panic(err)
 					}
@@ -165,18 +165,18 @@ func siteGenPngs() (numPngs int, numSheets int, numPanels int) {
 					var pidx int
 					var work sync.WaitGroup
 					contenthash := App.Proj.data.ContentHashes[sheetver.fileName]
-					sheetver.meta.PanelsTree.iter(func(panel *ImgPanel) {
+					sheetver.data.PanelsTree.iter(func(panel *ImgPanel) {
 						work.Add(1)
 						numPanels++
 						go func(pidx int) {
 							for _, quali := range App.Proj.Qualis {
 								name := strings.ToLower(contenthash + itoa(quali.SizeHint) + itoa(pidx))
-								pw, ph, sw := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y, sheetver.meta.PanelsTree.Rect.Max.X-sheetver.meta.PanelsTree.Rect.Min.X
+								pw, ph, sw := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y, sheetver.data.PanelsTree.Rect.Max.X-sheetver.data.PanelsTree.Rect.Min.X
 								width := float64(quali.SizeHint) / (float64(sw) / float64(pw))
 								height := width / (float64(pw) / float64(ph))
 								w, h := int(width), int(height)
 								var wassamesize bool
-								writeFile(".build/img/"+name+".png", imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, quali.SizeHint/640, 0, sheetver.colorLayers, &wassamesize))
+								writeFile(".build/img/"+name+".png", imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, quali.SizeHint/640, 0, false, &wassamesize))
 								numpngs.Store(1 + numpngs.Load().(int))
 								if wassamesize {
 									break
@@ -420,7 +420,7 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 	allpanels := map[string]int{}
 	iter = func(sheetVer *SheetVer, panel *ImgPanel) (s string) {
 		assert(len(panel.SubCols) == 0 || len(panel.SubRows) == 0)
-		px1cm := float64(sheetVer.meta.PanelsTree.Rect.Max.Y-sheetVer.meta.PanelsTree.Rect.Min.Y) / 21.0
+		px1cm := float64(sheetVer.data.PanelsTree.Rect.Max.Y-sheetVer.data.PanelsTree.Rect.Min.Y) / 21.0
 		if len(panel.SubRows) > 0 {
 			s += "<div class='" + App.Proj.Gen.ClsPanelRows + "'>"
 			for i := range panel.SubRows {
@@ -476,7 +476,7 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 		sheetver.ensurePrep(false, false)
 		pidx = 0
 		page.PageContent += "<div class='" + App.Proj.Gen.ClsSheet + "'>"
-		page.PageContent += iter(sheetver, sheetver.meta.PanelsTree)
+		page.PageContent += iter(sheetver, sheetver.data.PanelsTree)
 		page.PageContent += "</div>"
 	}
 	page.PageContent += "</div>"
@@ -542,7 +542,7 @@ func siteGenThumbs() (numPngs int) {
 			for _, chapter := range series.Chapters {
 				for _, sheet := range chapter.sheets {
 					sv := sheet.versions[len(sheet.versions)-1]
-					filenames = append(filenames, sv.meta.bwFilePath)
+					filenames = append(filenames, sv.data.bwFilePath)
 				}
 			}
 			if App.Proj.NumSheetsInHomeBgs > 0 && len(filenames) > App.Proj.NumSheetsInHomeBgs {

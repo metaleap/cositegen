@@ -52,7 +52,7 @@ type Project struct {
 
 	data struct {
 		ContentHashes map[string]string
-		SheetVer      map[string]*SheetVerMeta
+		SheetVer      map[string]*SheetVerData
 
 		sheetVerPanelAreas map[string][][]ImgPanelArea
 	}
@@ -121,7 +121,7 @@ func (me *Project) load() {
 		me.data.ContentHashes = map[string]string{}
 	}
 	if me.data.SheetVer == nil {
-		me.data.SheetVer = map[string]*SheetVerMeta{}
+		me.data.SheetVer = map[string]*SheetVerData{}
 	}
 
 	for filename := range me.data.sheetVerPanelAreas {
