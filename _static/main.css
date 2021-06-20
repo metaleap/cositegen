@@ -107,14 +107,15 @@ div.scandevoptsbox {
 }
 
 textarea.panelcfgtextattr {
-    width: 99%;
-    height: 1em;
+    width: 47%;
+    height: 1.44em;
     font-size: 0.77em;
     font-family: monospace;
 }
 
 textarea.panelcfgtextattr:focus {
-    height: 6em;
+    height: 7em;
+    width: 99%;
 }
 
 textarea.panelcfgtext {
@@ -124,9 +125,10 @@ textarea.panelcfgtext {
 }
 
 textarea.panelcfgtext:focus {
-    height: 6em;
+    height: 5em;
 }
 
 input.panelcfgrect {
-    width: 3.2em;
+    width: 3.11em;
+    font-size: 0.77em;
 }
