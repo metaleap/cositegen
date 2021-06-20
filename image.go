@@ -27,6 +27,7 @@ type ImgPanelArea struct {
 	Data                  map[string]string `json:",omitempty"`
 	SvgTextTransformAttr  string            `json:",omitempty"`
 	SvgTextTspanStyleAttr string            `json:",omitempty"`
+	PointTo               *image.Point      `json:",omitempty"`
 	Rect                  image.Rectangle
 }
 

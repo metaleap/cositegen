@@ -31,9 +31,16 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs
         const trY = parseInt(document.getElementById(pid + "t" + i + "ry").value);
         const trW = parseInt(document.getElementById(pid + "t" + i + "rw").value);
         const trH = parseInt(document.getElementById(pid + "t" + i + "rh").value);
+        const trPx = parseInt(document.getElementById(pid + "t" + i + "rpx").value);
+        const trPy = parseInt(document.getElementById(pid + "t" + i + "rpy").value);
         if ((!(isNaN(trW) || isNaN(trH) || isNaN(trX) || isNaN(trY))) && (trW > 0) && (trH > 0)) {
+            const svgrect = (!(isNaN(trPx) || isNaN(trPy)));
+            const svgspeech = svgrect && (trPx > 0) && (trPy > 0);
             innerhtml += "<div class='panelrect col" + i + "' style='left:" + (trX - pOffX) + "px; top:" + (trY - pOffY) + "px; width: " + trW + "px; height: " + trH + "px;'>";
             innerhtml += "<svg viewbox='0 0 " + trW + " " + trH + "'>";
+            if (svgrect) {
+                innerhtml += "<polygon points='0,0 " + trW + ",0 " + trW + "," + trH + " 0," + trH + "' fill='gold' stroke='black' stroke-width='" + (px1cm / 10) + "px'/>"
+            }
             innerhtml += "<text x='0' y='0' style='font-size: " + pxfont + "px' transform='" + document.getElementById(pid + "t" + i + "_transform").value.replace(/\n/g, " ").trim() + "'>"
             innerhtml += "<tspan style='" + document.getElementById(pid + "t" + i + "_style").value.replace(/\n/g, " ").trim() + "'>"
             for (let line of ptext.split('\n')) {
@@ -50,7 +57,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs
                         .replace(/<\/i>/g, "</tspan>")
                     + "</tspan>";
             }
-            innerhtml += "</tspan></text></svg></div>";
+            innerhtml += "</tspan></text></svg ></div > ";
         }
     }
     if (span.innerHTML != innerhtml)

@@ -10,7 +10,7 @@ import (
 
 func fV(r *http.Request) func(string) string {
 	var wthDisAintWindoze = strings.NewReplacer("\r\n", "\n")
-	return func(s string) string { return wthDisAintWindoze.Replace(r.FormValue(s)) }
+	return func(s string) string { return strings.TrimSpace(wthDisAintWindoze.Replace(r.FormValue(s))) }
 }
 
 func guiMain(r *http.Request, notice string) []byte {
@@ -100,7 +100,7 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 				if opt.Inactive {
 					continue
 				}
-				if formval := strings.TrimSpace(fv(sj.Dev.Ident + "_opt_" + opt.Name)); formval != "" {
+				if formval := fv(sj.Dev.Ident + "_opt_" + opt.Name); formval != "" {
 					sj.Opts[opt.Name] = formval
 				}
 			}
@@ -320,10 +320,11 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 					}
 				}
 
-				area.SvgTextTransformAttr = strings.TrimSpace(fv(pid + "t" + itoa(i) + "_transform"))
-				area.SvgTextTspanStyleAttr = strings.TrimSpace(fv(pid + "t" + itoa(i) + "_style"))
+				area.SvgTextTransformAttr = fv(pid + "t" + itoa(i) + "_transform")
+				area.SvgTextTspanStyleAttr = fv(pid + "t" + itoa(i) + "_style")
 				trx, trw := fv(pid+"t"+itoa(i)+"rx"), fv(pid+"t"+itoa(i)+"rw")
 				try, trh := fv(pid+"t"+itoa(i)+"ry"), fv(pid+"t"+itoa(i)+"rh")
+				rpx, rpy := fv(pid+"t"+itoa(i)+"rpx"), fv(pid+"t"+itoa(i)+"rpy")
 				if rx0, err := strconv.ParseUint(trx, 0, 64); err == nil {
 					if ry0, err := strconv.ParseUint(try, 0, 64); err == nil {
 						if rw, err := strconv.ParseUint(trw, 0, 64); err == nil {
@@ -332,6 +333,13 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 								ry1 := rh + ry0
 								area.Rect = image.Rect(int(rx0), int(ry0), int(rx1), int(ry1))
 								if !area.Rect.Empty() {
+									if rpx != "" && rpy != "" {
+										if rpx, err := strconv.ParseUint(rpx, 0, 64); err == nil {
+											if rpy, err := strconv.ParseUint(rpy, 0, 64); err == nil {
+												area.PointTo = &image.Point{int(rpx), int(rpy)}
+											}
+										}
+									}
 									App.Proj.data.sheetVerPanelAreas[sv.fileName][pidx] = append(App.Proj.data.sheetVerPanelAreas[sv.fileName][pidx], area)
 								}
 							}
@@ -381,12 +389,21 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 					"style": strings.Join(App.Proj.Gen.PanelSvgText.Css[""], ";"),
 					"class": "panelcfgtext col" + itoa(i%8)}) + "</div><div style='text-align: center; white-space: nowrap;'>"
 			}
-			s += "X,Y:"
+
+			s += "xy"
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx", itoa(area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.X), "max": itoa(panel.Rect.Max.X)})
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"ry", itoa(area.Rect.Min.Y), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.Y), "max": itoa(panel.Rect.Max.Y)})
-			s += "W,H:"
+			s += "wh"
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rw", itoa(area.Rect.Max.X-area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": "1", "max": itoa(panel.Rect.Max.X - panel.Rect.Min.X)})
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rh", itoa(area.Rect.Max.Y-area.Rect.Min.Y), A{"onchange": jsrefr, "class": "panelcfgrect", "min": "1", "max": itoa(panel.Rect.Max.Y - panel.Rect.Min.Y)})
+			s += "p"
+			px, py := "", ""
+			if area.PointTo != nil {
+				px, py = itoa(area.PointTo.X), itoa(area.PointTo.Y)
+			}
+			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rpx", px, A{"onchange": jsrefr, "class": "panelcfgrect", "min": "0", "max": itoa(panel.Rect.Max.X)})
+			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rpy", py, A{"onchange": jsrefr, "class": "panelcfgrect", "min": "0", "max": itoa(panel.Rect.Max.Y)})
+
 			s += "</div><div style='text-align: center;'>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+"_transform", area.SvgTextTransformAttr, A{
 				"class": "panelcfgtextattr", "title": "translate(x [,y])\tscale(x [,y])\trotate(a [,oX] [,oY])\tmatrix(a,b,c,d,e,f)\tskewX(x)\tskewY(y)",
 				"onfocus": jsrefr, "onblur": jsrefr, "onchange": jsrefr, "onkeydown": jsrefr, "onkeyup": jsrefr, "onkeypress": jsrefr,
