@@ -64,7 +64,11 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 	case "genpages":
 		action = siteGenPagesOnly
 	default:
-		return "Unknown action: '" + name + "'"
+		s := "Unknown action: '" + name + "', try one of these:"
+		for name, desc := range AppMainActions {
+			s += "\n\t" + name + "\t\t" + desc
+		}
+		return s
 	}
 	if fromGui {
 		go func() { defer func() { appMainActions[name] = false }(); action(args) }()
