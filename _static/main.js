@@ -36,6 +36,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs
         if ((!(isNaN(trW) || isNaN(trH) || isNaN(trX) || isNaN(trY))) && (trW > 0) && (trH > 0)) {
             const svgrect = (!(isNaN(trPx) || isNaN(trPy)));
             const svgspeech = svgrect && (trPx > 0) && (trPy > 0);
+            // notes.. pick the closest corner always. L/R side only if pt vertically within y-extent of tr, else T/B sides only.
             innerhtml += "<div class='panelrect col" + i + "' style='left:" + (trX - pOffX) + "px; top:" + (trY - pOffY) + "px; width: " + trW + "px; height: " + trH + "px;'>";
             innerhtml += "<svg viewbox='0 0 " + trW + " " + trH + "'>";
             if (svgrect) {

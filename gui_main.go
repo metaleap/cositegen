@@ -334,8 +334,8 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 								area.Rect = image.Rect(int(rx0), int(ry0), int(rx1), int(ry1))
 								if !area.Rect.Empty() {
 									if rpx != "" && rpy != "" {
-										if rpx, err := strconv.ParseUint(rpx, 0, 64); err == nil {
-											if rpy, err := strconv.ParseUint(rpy, 0, 64); err == nil {
+										if rpx, err := strconv.ParseInt(rpx, 0, 64); err == nil {
+											if rpy, err := strconv.ParseInt(rpy, 0, 64); err == nil {
 												area.PointTo = &image.Point{int(rpx), int(rpy)}
 											}
 										}
@@ -371,7 +371,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		style += `background-image: url("/` + bwsrc + `");`
 		style += `background-size: ` + itoa(sv.data.PanelsTree.Rect.Max.X-sv.data.PanelsTree.Rect.Min.X) + `px ` + itoa(sv.data.PanelsTree.Rect.Max.Y-sv.data.PanelsTree.Rect.Min.Y) + `px;`
 		style += `background-position: -` + itoa(rect.Min.X) + `px -` + itoa(rect.Min.Y) + `px;`
-		s += "<div class='panelpic' onauxclick='onPanelAuxClick(event, " + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(App.Proj.MaxImagePanelTextAreas) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + strconv.FormatFloat(zoomdiv, 'f', 8, 64) + ")' style='" + style + "'></div><span id='" + pid + "rects'></span>"
+		s += "<div class='panelpic' onauxclick='onPanelAuxClick(event, " + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(App.Proj.MaxImagePanelTextAreas) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + strconv.FormatFloat(zoomdiv, 'f', 8, 64) + ")' onmousemove='this.title=parseInt(" + itoa(panel.Rect.Min.X) + "+event.offsetX*" + strconv.FormatFloat(zoomdiv, 'f', 8, 64) + ")+\",\"+parseInt(" + itoa(panel.Rect.Min.Y) + "+event.offsetY*" + strconv.FormatFloat(zoomdiv, 'f', 8, 64) + ")' style='" + style + "'></div><span id='" + pid + "rects'></span>"
 		s += "</div></div></td><td>"
 
 		s += "<div class='panelcfg' id='" + pid + "cfg' style='display:" + cfgdisplay + ";'>"
