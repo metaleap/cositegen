@@ -35,29 +35,30 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
                 const pl = (rx + mmh), pr = ((rx + rw) - mmh), pt = (ry + mmh), pb = ((ry + rh) - mmh);
                 let poly = [pl + ',' + pt, pr + ',' + pt, pr + ',' + pb, pl + ',' + pb];
                 if (!((trPx == 0) && (trPy == 0))) {
-                    const isr = rpx > (rx + (rw / 2)), isl = !isr,
+                    const dx = Math.abs(rpx - (rx + (rw / 2))), dy = Math.abs(rpy - (ry + (rh / 2)));
+                    let isr = rpx > (rx + (rw / 2)), isl = !isr,
                         isb = rpy > (ry + (rh / 2)), ist = !isb;
-                    const isbr = isb && isr,  // (ptext.trim() == 'BR'),
-                        isbl = isb && isl,  // (ptext.trim() == 'BL'),
-                        istr = ist && isr,  // (ptext.trim() == 'TR'),
-                        istl = ist && isl,  // (ptext.trim() == 'TL'),
-                        isrb = isr && isb,  // (ptext.trim() == 'RB'),
-                        isrt = isr && ist,  // (ptext.trim() == 'RT'),
-                        islb = isl && isb,  // (ptext.trim() == 'LB'),
-                        islt = isl && ist;  // (ptext.trim() == 'LT');
+                    let isbr = isb && isr && dy >= dx,
+                        isbl = isb && isl && dy >= dx,
+                        istr = ist && isr && dy >= dx,
+                        istl = ist && isl && dy >= dx,
+                        isrb = isr && isb && dx >= dy,
+                        islb = isl && isb && dx >= dy,
+                        isrt = isr && ist && dx >= dy,
+                        islt = isl && ist && dx >= dy;
                     const dst = rpx + ',' + rpy; // coords to point towards
                     if (isbl) {
                         poly = arrIns(poly, 3, [(pl + cmh) + ',' + pb, dst]);
                     } else if (isbr) {
                         poly = arrIns(poly, 3, [dst, (pr - cmh) + ',' + pb]);
-                    } else if (isrb) {
-                        poly = arrIns(poly, 2, [pr + ',' + (pb - cmh), dst])
-                    } else if (isrt) {
-                        poly = arrIns(poly, 2, [dst, pr + ',' + (pt + cmh)])
                     } else if (istr) {
                         poly = arrIns(poly, 1, [(pr - cmh) + ',' + pt, dst])
                     } else if (istl) {
                         poly = arrIns(poly, 1, [dst, (pl + cmh) + ',' + pt])
+                    } else if (isrb) {
+                        poly = arrIns(poly, 2, [pr + ',' + (pb - cmh), dst])
+                    } else if (isrt) {
+                        poly = arrIns(poly, 2, [dst, pr + ',' + (pt + cmh)])
                     } else if (islt) {
                         poly = arrIns(poly, 4, [pl + ',' + (pt + cmh), dst])
                     } else if (islb) {
