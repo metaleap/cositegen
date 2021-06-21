@@ -91,6 +91,13 @@ func jsonSave(fileName string, obj Any) {
 	writeFile(fileName, data)
 }
 
+func intAbs(i int) int {
+	if i < 0 {
+		return -i
+	}
+	return i
+}
+
 func timedLogged(logMsg string, do func() string) {
 	printLn(logMsg)
 	tstart := time.Now()

@@ -34,7 +34,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
             const borderandfill = !(isNaN(trPx) || isNaN(trPy));
             if (borderandfill) {
                 const rpx = trPx - pOffX, rpy = trPy - pOffY;
-                const mmh = px1cm / 22, cmh = px1cm / 2;
+                const mmh = px1cm / 15.0, cmh = px1cm / 2.0;
                 const pl = (rx + mmh), pr = ((rx + rw) - mmh), pt = (ry + mmh), pb = ((ry + rh) - mmh);
                 let poly = [pl + ',' + pt, pr + ',' + pt, pr + ',' + pb, pl + ',' + pb];
                 if (!((trPx == 0) && (trPy == 0))) { // "speech-text" pointing somewhere?

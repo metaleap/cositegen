@@ -459,12 +459,35 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 					borderandfill := pta.PointTo != nil
 					if borderandfill {
 						rpx, rpy := pta.PointTo.X-panel.Rect.Min.X, pta.PointTo.Y-panel.Rect.Min.Y
-						mmh, cmh := int(px1cm/22.0), int(px1cm/2.0)
+						mmh, cmh := int(px1cm/15.0), int(px1cm/2.0)
 						pl, pr, pt, pb := (rx + mmh), ((rx + rw) - mmh), (ry + mmh), ((ry + rh) - mmh)
 						poly := [][2]int{{pl, pt}, {pr, pt}, {pr, pb}, {pl, pb}}
+						ins := func(idx int, pts ...[2]int) {
+							head, tail := poly[:idx], poly[idx:]
+							poly = append(head, append(pts, tail...)...)
+						}
 
-						if !(pta.PointTo.X == 0 && pta.PointTo.Y == 0) {
-
+						if !(pta.PointTo.X == 0 && pta.PointTo.Y == 0) { // "speech-text" pointing somewhere?
+							dx, dy := intAbs(rpx-(rx+(rw/2))), intAbs(rpy-(ry+(rh/2)))
+							isr, isb := rpx > (rx+(rw/2)), rpy > (ry+(rh/2))
+							isl, ist, dst := !isr, !isb, [2]int{rpx, rpy}
+							if isbl := (isb && isl && dy >= dx); isbl {
+								ins(3, [2]int{pl + cmh, pb}, dst)
+							} else if isbr := (isb && isr && dy >= dx); isbr {
+								ins(3, dst, [2]int{pr - cmh, pb})
+							} else if istr := (ist && isr && dy >= dx); istr {
+								ins(1, [2]int{pr - cmh, pt}, dst)
+							} else if istl := (ist && isl && dy >= dx); istl {
+								ins(1, dst, [2]int{pl + cmh, pt})
+							} else if isrb := (isr && isb && dx >= dy); isrb {
+								ins(2, [2]int{pr, pb - cmh}, dst)
+							} else if isrt := (isr && ist && dx >= dy); isrt {
+								ins(2, dst, [2]int{pr, pt + cmh})
+							} else if islt := (isl && ist && dx >= dy); islt {
+								ins(4, [2]int{pl, pt + cmh}, dst)
+							} else if islb := (isl && isb && dx >= dy); islb {
+								ins(4, dst, [2]int{pl, pb - cmh})
+							}
 						}
 
 						s += "<polygon points='"
