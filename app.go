@@ -87,13 +87,11 @@ func appPrepWork() {
 				for _, sv := range sheet.versions {
 					if !sv.prep.done {
 						sv.prep.Lock()
-						if sv.prep.done {
-							sv.prep.Unlock()
-						} else {
+						if !sv.prep.done {
 							sv.ensurePrep(true, false)
 							sv.prep.done = true
-							sv.prep.Unlock()
 						}
+						sv.prep.Unlock()
 					}
 				}
 			}

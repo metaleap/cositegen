@@ -20,7 +20,7 @@ func main() {
 	} else {
 		go scanDevicesDetection()
 		go httpListenAndServe()
-		go launchKioskyBrowser()
+		go launchGuiInKioskyBrowser()
 		go appPrepWork()
 		for canexit := false; !canexit; {
 			time.Sleep(time.Second)
@@ -35,7 +35,7 @@ func main() {
 
 var browserCmd = []string{"", "--new-window", "--single-process", "--user-data-dir=./.csg/chromium", "--disable-extensions", "--disk-cache-size=128", "--app=http://localhost:4321"}
 
-func launchKioskyBrowser() {
+func launchGuiInKioskyBrowser() {
 	cmd := exec.Command(browserCmd[0], browserCmd[1:]...)
 	if err := cmd.Start(); err != nil {
 		panic(err)
