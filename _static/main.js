@@ -34,7 +34,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
             const borderandfill = !(isNaN(trPx) || isNaN(trPy));
             if (borderandfill) {
                 const rpx = trPx - pOffX, rpy = trPy - pOffY;
-                const mmh = px1cm / 22, cmh = px1cm / 2, cmm = px1cm * 1.22;
+                const mmh = px1cm / 22, cmh = px1cm / 2;
                 const pl = (rx + mmh), pr = ((rx + rw) - mmh), pt = (ry + mmh), pb = ((ry + rh) - mmh);
                 let poly = [pl + ',' + pt, pr + ',' + pt, pr + ',' + pb, pl + ',' + pb];
                 if (!((trPx == 0) && (trPy == 0))) { // "speech-text" pointing somewhere?
@@ -66,8 +66,8 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
                         poly = arrIns(poly, 4, [pl + ',' + (pt + cmh), dst]);
                     else if (islb)
                         poly = arrIns(poly, 4, [dst, pl + ',' + (pb - cmh)]);
-                    innerhtml += "<polygon points='" + poly.join(' ') + "' fill='white' stroke='black' stroke-linejoin='round' stroke-width='" + mmh + "px'/>";
                 }
+                innerhtml += "<polygon points='" + poly.join(' ') + "' fill='white' stroke='black' stroke-linejoin='round' stroke-width='" + mmh + "px'/>";
             }
 
             let ptext = document.getElementById(pid + "t" + i + langs[pLangIdx]).value.trimEnd();

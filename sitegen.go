@@ -452,14 +452,33 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 
 			pw, ph := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y
 			s += "<div class='" + App.Proj.Gen.ClsPanel + "'>"
-			s += "<svg viewbox='0 0 " + itoa(pw) + " " + itoa(ph) + "'>"
-			for _, pta := range sheetVer.panelAreas(pidx) {
-				rx, ry := pta.Rect.Min.X-panel.Rect.Min.X, pta.Rect.Min.Y-panel.Rect.Min.Y
-				s += "<svg x='" + itoa(rx) + "' y='" + itoa(ry) + "'>"
-				s += imgSvgText(&pta, langId, px1cm, false)
+			if panelareas := sheetVer.panelAreas(pidx); len(panelareas) != 0 {
+				s += "<svg viewbox='0 0 " + itoa(pw) + " " + itoa(ph) + "'>"
+				for _, pta := range panelareas {
+					rx, ry, rw, rh := pta.Rect.Min.X-panel.Rect.Min.X, pta.Rect.Min.Y-panel.Rect.Min.Y, pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
+					borderandfill := pta.PointTo != nil
+					if borderandfill {
+						rpx, rpy := pta.PointTo.X-panel.Rect.Min.X, pta.PointTo.Y-panel.Rect.Min.Y
+						mmh, cmh := int(px1cm/22.0), int(px1cm/2.0)
+						pl, pr, pt, pb := (rx + mmh), ((rx + rw) - mmh), (ry + mmh), ((ry + rh) - mmh)
+						poly := [][2]int{{pl, pt}, {pr, pt}, {pr, pb}, {pl, pb}}
+
+						if !(pta.PointTo.X == 0 && pta.PointTo.Y == 0) {
+
+						}
+
+						s += "<polygon points='"
+						for _, pt := range poly {
+							s += itoa(pt[0]) + "," + itoa(pt[1]) + " "
+						}
+						s += "' fill='white' stroke='black' stroke-linejoin='round' stroke-width='" + itoa(mmh) + "px'/>"
+					}
+					s += "<svg x='" + itoa(rx) + "' y='" + itoa(ry) + "'>"
+					s += imgSvgText(&pta, langId, px1cm, false)
+					s += "</svg>"
+				}
 				s += "</svg>"
 			}
-			s += "</svg>"
 			s += "<img id='" + name + "' src='./img/" + name + ".png' class='" + App.Proj.Gen.ClsImgHq + "' " + App.Proj.Gen.ClsImgHq + "='" + hqsrc + "'/>"
 
 			s += "</div>"
