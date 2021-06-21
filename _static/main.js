@@ -11,7 +11,7 @@ function refreshAllPanelRects(numPanels, langIdx, langName) {
         document.getElementById('p' + i + 't0' + langName).dispatchEvent(new Event("change"));
 }
 
-function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePanelTextAreas, langs, px1cm) {
+function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePanelTextAreas, langs, px1cm, panelSvgTextBoxStyle) {
     const pid = "p" + panelIdx;
     let innerhtml = "";
     const pxfont = parseInt(px1cm * svgTxtFontSizeCmA4);
@@ -67,7 +67,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
                     else if (islb)
                         poly = arrIns(poly, 4, [dst, pl + ',' + (pb - cmh)]);
                 }
-                innerhtml += "<polygon points='" + poly.join(' ') + "' fill='white' stroke='black' stroke-linejoin='round' stroke-width='" + mmh + "px'/>";
+                innerhtml += "<polygon points='" + poly.join(' ') + "' style='" + panelSvgTextBoxStyle + "' stroke-width='" + mmh + "px'/>";
             }
 
             let ptext = document.getElementById(pid + "t" + i + langs[pLangIdx]).value.trimEnd();

@@ -37,7 +37,6 @@ type Project struct {
 		ClsPanelRows  string
 		ClsPanelRow   string
 		ClsPanel      string
-		ClsPanelArea  string
 		ClsSheet      string
 		ClsSheets     string
 		ClsImgHq      string
@@ -45,6 +44,7 @@ type Project struct {
 		PanelSvgText  struct {
 			PerLineDyCmA4 float64
 			FontSizeCmA4  float64
+			BoxStyle      string
 			Css           map[string][]string
 			AppendToFiles map[string]bool
 		}

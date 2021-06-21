@@ -494,7 +494,7 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 						for _, pt := range poly {
 							s += itoa(pt[0]) + "," + itoa(pt[1]) + " "
 						}
-						s += "' fill='white' stroke='black' stroke-linejoin='round' stroke-width='" + itoa(mmh) + "px'/>"
+						s += "' style='" + App.Proj.Gen.PanelSvgText.BoxStyle + "' stroke-width='" + itoa(mmh) + "px'/>"
 					}
 					s += "<svg x='" + itoa(rx) + "' y='" + itoa(ry) + "'>"
 					s += imgSvgText(&pta, langId, px1cm, false)
