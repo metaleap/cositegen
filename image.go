@@ -225,7 +225,7 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 	return buf.Bytes()
 }
 
-func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bool) (s string) {
+func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bool, lineX int) (s string) {
 	aw, ah := pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
 	pxfont, pxline := int(px1cm*App.Proj.Gen.PanelSvgText.FontSizeCmA4), int(px1cm*App.Proj.Gen.PanelSvgText.PerLineDyCmA4)
 	s += "<text x='0' y='0' style='font-size: " + itoa(pxfont) + "px' transform='" + strings.TrimSpace(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
@@ -234,7 +234,7 @@ func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bo
 		if ln == "" {
 			ln = "&nbsp;"
 		}
-		s += "<tspan dy='" + itoa(pxline) + "' x='0'>" + ln + "</tspan>"
+		s += "<tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>" + ln + "</tspan>"
 	}
 	s += "</tspan></text>"
 	if wrapInSvgTag {

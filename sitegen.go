@@ -497,7 +497,11 @@ func sitePrepSheetPage(page *PageGen, langId string, qIdx int, series *Series, c
 						s += "' style='" + App.Proj.Gen.PanelSvgText.BoxStyle + "' stroke-width='" + itoa(mmh) + "px'/>"
 					}
 					s += "<svg x='" + itoa(rx) + "' y='" + itoa(ry) + "'>"
-					s += imgSvgText(&pta, langId, px1cm, false)
+					linex := 0
+					if borderandfill {
+						linex = int(px1cm / 11.0)
+					}
+					s += imgSvgText(&pta, langId, px1cm, false, linex)
 					s += "</svg>"
 				}
 				s += "</svg>"
