@@ -230,7 +230,7 @@ func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bo
 	pxfont, pxline := int(px1cm*App.Proj.Gen.PanelSvgText.FontSizeCmA4), int(px1cm*App.Proj.Gen.PanelSvgText.PerLineDyCmA4)
 	s += "<text x='0' y='0' style='font-size: " + itoa(pxfont) + "px' transform='" + strings.TrimSpace(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
 	s += "<tspan style='" + strings.TrimSpace(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'>"
-	for _, ln := range strings.Split(svgRepl.Replace(siteGenLocStr(pta.Data, langId)), "\n") {
+	for _, ln := range strings.Split(svgRepl.Replace(locStr(pta.Data, langId)), "\n") {
 		if ln == "" {
 			ln = "&nbsp;"
 		}

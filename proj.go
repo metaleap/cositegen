@@ -33,9 +33,7 @@ type Project struct {
 		ClsNonViewerPage string
 		ClsSeries        string
 		ClsChapter       string
-		ClsPanelCols     string
 		ClsPanelCol      string
-		ClsPanelRows     string
 		ClsPanelRow      string
 		ClsPanel         string
 		ClsViewer        string

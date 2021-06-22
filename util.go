@@ -91,6 +91,13 @@ func jsonSave(fileName string, obj Any) {
 	writeFile(fileName, data)
 }
 
+func locStr(m map[string]string, langId string) (s string) {
+	if s = m[langId]; s == "" {
+		s = m[App.Proj.Langs[0]]
+	}
+	return s
+}
+
 func intAbs(i int) int {
 	if i < 0 {
 		return -i
