@@ -80,22 +80,25 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 }
 
 func appPrepWork() {
-	printLn("Preprocessing started...")
-	for _, series := range App.Proj.Series {
-		for _, chapter := range series.Chapters {
-			for _, sheet := range chapter.sheets {
-				for _, sv := range sheet.versions {
-					if !sv.prep.done {
-						sv.prep.Lock()
+	timedLogged("Preprocessing...", func() string {
+		var numjobs int
+		for _, series := range App.Proj.Series {
+			for _, chapter := range series.Chapters {
+				for _, sheet := range chapter.sheets {
+					for _, sv := range sheet.versions {
 						if !sv.prep.done {
-							sv.ensurePrep(true, false)
-							sv.prep.done = true
+							sv.prep.Lock()
+							if !sv.prep.done {
+								sv.ensurePrep(true, false)
+								sv.prep.done, numjobs = true, numjobs+1
+							}
+							sv.prep.Unlock()
 						}
-						sv.prep.Unlock()
 					}
 				}
 			}
 		}
-	}
-	printLn("Preprocessing done.")
+		App.Proj.allPrepsDone = true
+		return "for " + itoa(numjobs) + " preprocessing task(s)"
+	})
 }

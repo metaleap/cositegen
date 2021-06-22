@@ -8,7 +8,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 )
+
+var numBusyRequests int32
 
 func httpListenAndServe() {
 	if err := (&http.Server{
@@ -20,6 +23,9 @@ func httpListenAndServe() {
 }
 
 func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
+	atomic.AddInt32(&numBusyRequests, 1)
+	defer func() { atomic.AddInt32(&numBusyRequests, -1) }()
+
 	if ext := path.Ext(httpReq.URL.Path); ext == ".css" || ext == ".js" {
 		http.ServeFile(httpResp, httpReq, filepath.Join(App.StaticFilesDirPath, httpReq.URL.Path))
 	} else if ext == ".png" {

@@ -22,9 +22,8 @@ type SheetVerData struct {
 	bwFilePath      string
 	bwSmallFilePath string
 
-	SrcFilePath string
-	PanelsTree  *ImgPanel `json:",omitempty"`
-	GrayDistr   []int     `json:",omitempty"`
+	GrayDistr  []int     `json:",omitempty"`
+	PanelsTree *ImgPanel `json:",omitempty"`
 }
 
 type SheetVer struct {
@@ -72,7 +71,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) {
 	}
 	if me.data == nil {
 		shouldsaveprojmeta = true
-		me.data = &SheetVerData{SrcFilePath: me.fileName}
+		me.data = &SheetVerData{}
 		App.Proj.data.SheetVer[curhash] = me.data
 	}
 	me.data.dirPath = ".csg/projdata/" + curhash
@@ -120,7 +119,7 @@ func (me *SheetVer) ensureMonochrome(force bool) {
 
 func (me *SheetVer) ensureColorDistr(force bool) bool {
 	if force || len(me.data.GrayDistr) != App.Proj.NumColorDistrClusters {
-		if file, err := os.Open(me.data.SrcFilePath); err != nil {
+		if file, err := os.Open(me.fileName); err != nil {
 			panic(err)
 		} else {
 			me.data.GrayDistr = imgGrayDistrs(file, file.Close, App.Proj.NumColorDistrClusters)

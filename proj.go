@@ -28,29 +28,34 @@ type Project struct {
 	NumSheetsInHomeBgs     int
 	NumColorDistrClusters  int
 	Gen                    struct {
-		IdQualiList   string
-		ClsSheetsPage string
-		ClsSeries     string
-		ClsChapter    string
-		ClsPanelCols  string
-		ClsPanelCol   string
-		ClsPanelRows  string
-		ClsPanelRow   string
-		ClsPanel      string
-		ClsSheet      string
-		ClsSheets     string
-		ClsImgHq      string
-		APaging       string
-		PanelSvgText  struct {
-			PerLineDyCmA4 float64
-			FontSizeCmA4  float64
-			BoxStyle      string
-			Css           map[string][]string
-			AppendToFiles map[string]bool
+		IdQualiList      string
+		ClsViewerPage    string
+		ClsNonViewerPage string
+		ClsSeries        string
+		ClsChapter       string
+		ClsPanelCols     string
+		ClsPanelCol      string
+		ClsPanelRows     string
+		ClsPanelRow      string
+		ClsPanel         string
+		ClsViewer        string
+		ClsSheetsView    string
+		ClsRowsView      string
+		ClsSheet         string
+		ClsImgHq         string
+		APaging          string
+		PanelSvgText     struct {
+			PerLineDyCmA4        float64
+			FontSizeCmA4         float64
+			BoxPolyStrokeWidthCm float64
+			ClsBoxPoly           string
+			Css                  map[string][]string
+			AppendToFiles        map[string]bool
 		}
 	}
 
-	data struct {
+	allPrepsDone bool
+	data         struct {
 		ContentHashes map[string]string
 		SheetVer      map[string]*SheetVerData
 

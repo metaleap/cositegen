@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"os/exec"
+	"sync/atomic"
 	"time"
 )
 
@@ -22,9 +23,9 @@ func main() {
 		go httpListenAndServe()
 		go launchGuiInKioskyBrowser()
 		go appPrepWork()
-		for canexit := false; !canexit; {
-			time.Sleep(time.Second)
-			canexit = App.Gui.BrowserClosed && scanJob == nil
+		for canexit := false; !canexit; time.Sleep(time.Second) {
+			canexit = App.Gui.BrowserClosed && scanJob == nil &&
+				App.Proj.allPrepsDone && atomic.LoadInt32(&numBusyRequests) == 0
 			for _, busy := range appMainActions {
 				canexit = canexit && !busy
 			}

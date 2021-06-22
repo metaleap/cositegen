@@ -11,7 +11,7 @@ function refreshAllPanelRects(numPanels, langIdx, langName) {
         document.getElementById('p' + i + 't0' + langName).dispatchEvent(new Event("change"));
 }
 
-function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePanelTextAreas, langs, px1cm, panelSvgTextBoxStyle) {
+function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePanelTextAreas, langs, px1cm, panelSvgTextClsBoxPoly, panelSvgTextBoxPolyStrokeWidthCm) {
     const pid = "p" + panelIdx;
     let innerhtml = "";
     const pxfont = parseInt(px1cm * svgTxtFontSizeCmA4);
@@ -34,7 +34,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
             const borderandfill = !(isNaN(trPx) || isNaN(trPy));
             if (borderandfill) {
                 const rpx = trPx - pOffX, rpy = trPy - pOffY;
-                const mmh = px1cm / 15.0, cmh = px1cm / 2.0;
+                const mmh = px1cm * panelSvgTextBoxPolyStrokeWidthCm, cmh = px1cm / 2.0;
                 const pl = (rx + mmh), pr = ((rx + rw) - mmh), pt = (ry + mmh), pb = ((ry + rh) - mmh);
                 let poly = [pl + ',' + pt, pr + ',' + pt, pr + ',' + pb, pl + ',' + pb];
                 if (!((trPx == 0) && (trPy == 0))) { // "speech-text" pointing somewhere?
@@ -67,7 +67,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
                     else if (islb)
                         poly = arrIns(poly, 4, [dst, pl + ',' + (pb - cmh)]);
                 }
-                innerhtml += "<polygon points='" + poly.join(' ') + "' style='" + panelSvgTextBoxStyle + "' stroke-width='" + mmh + "px'/>";
+                innerhtml += "<polygon points='" + poly.join(' ') + "' class='" + panelSvgTextClsBoxPoly + "' stroke-width='" + mmh + "px'/>";
             }
 
             let ptext = document.getElementById(pid + "t" + i + langs[pLangIdx]).value.trimEnd();
