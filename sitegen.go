@@ -391,19 +391,40 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, series *Series, chap
 	pidx, allpanels := 0, map[string]int{}
 	iter = func(sheetVer *SheetVer, panel *ImgPanel) (s string) {
 		assert(len(panel.SubCols) == 0 || len(panel.SubRows) == 0)
-		px1cm := float64(sheetVer.data.PanelsTree.Rect.Max.Y-sheetVer.data.PanelsTree.Rect.Min.Y) / 21.0
+		istop, px1cm := (panel == sheetVer.data.PanelsTree), float64(sheetVer.data.PanelsTree.Rect.Max.Y-sheetVer.data.PanelsTree.Rect.Min.Y)/21.0
+
 		if len(panel.SubRows) > 0 {
 			for i := range panel.SubRows {
 				sr := &panel.SubRows[i]
-				s += "<div class='" + App.Proj.Gen.ClsPanelRow + "'>" + iter(sheetVer, sr) + "</div>"
+				if viewMode == "r" && istop {
+					s += "<td>"
+				}
+				s += "<div class='" + App.Proj.Gen.ClsPanelRow
+				if istop && viewMode == "r" {
+					s += " " + App.Proj.Gen.ClsPanelRow + "t"
+				}
+				s += "'>" + iter(sheetVer, sr) + "</div>"
+				if viewMode == "r" && istop {
+					s += "</td>"
+				}
 			}
+
 		} else if len(panel.SubCols) > 0 {
+			if viewMode == "r" && istop {
+				s += "<td>"
+			}
 			for i := range panel.SubCols {
 				sc := &panel.SubCols[i]
+				s += "<div class='" + App.Proj.Gen.ClsPanelCol + "'"
 				pw, sw := sc.Rect.Max.X-sc.Rect.Min.X, panel.Rect.Max.X-panel.Rect.Min.X
 				pp := 100.0 / (float64(sw) / float64(pw))
-				s += "<div class='" + App.Proj.Gen.ClsPanelCol + "' style='width: " + strconv.FormatFloat(pp, 'f', 8, 64) + "%'>" + iter(sheetVer, sc) + "</div>"
+				s += " style='width: " + strconv.FormatFloat(pp, 'f', 8, 64) + "%'"
+				s += ">" + iter(sheetVer, sc) + "</div>"
 			}
+			if viewMode == "r" && istop {
+				s += "</td>"
+			}
+
 		} else {
 			allpanels[App.Proj.data.ContentHashes[sheetVer.fileName]] = pidx
 			hqsrc, name := "", strings.ToLower(App.Proj.data.ContentHashes[sheetVer.fileName]+itoa(App.Proj.Qualis[0].SizeHint)+itoa(pidx))
@@ -451,7 +472,9 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, series *Series, chap
 		me.page.PageContent += "</tr></table>"
 	}
 	me.page.PageContent += "</div>"
-	me.page.PageContent += pageslist()
+	if viewMode != "r" {
+		me.page.PageContent += pageslist()
+	}
 	me.page.PageContent += "</div>"
 
 	return allpanels

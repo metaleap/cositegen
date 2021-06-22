@@ -123,8 +123,6 @@ function onPanelClick(pid) {
 
 function onPanelAuxClick(evt, panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs, zoomDiv) {
     const pid = "p" + panelIdx;
-    if (evt.target != evt.currentTarget)
-        return;
     const ex = parseInt(evt.offsetX * zoomDiv), ey = parseInt(evt.offsetY * zoomDiv);
     const cfgbox = document.getElementById(pid + "cfg");
     cfgbox.style.display = 'block';
