@@ -77,6 +77,15 @@ type Series struct {
 func (me *Series) At(i int) fmt.Stringer { return me.Chapters[i] }
 func (me *Series) Len() int              { return len(me.Chapters) }
 func (me *Series) String() string        { return me.Name }
+func (me *Series) NextAfter(chapter *Chapter) *Chapter {
+	for now, i := false, 0; i < len(me.Chapters); i++ {
+		if now {
+			return me.Chapters[i]
+		}
+		now = (me.Chapters[i] == chapter)
+	}
+	return me.Chapters[0]
+}
 
 type Chapter struct {
 	Name          string
@@ -88,8 +97,9 @@ type Chapter struct {
 		Notes  map[string]string
 	}
 
-	dirPath string
-	sheets  []*Sheet
+	defaultQuali int
+	dirPath      string
+	sheets       []*Sheet
 }
 
 func (me *Chapter) At(i int) fmt.Stringer { return me.sheets[i] }

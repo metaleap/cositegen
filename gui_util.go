@@ -3,9 +3,23 @@ package main
 import (
 	"fmt"
 	"html"
+	"strconv"
 )
 
 var hEsc = html.EscapeString
+
+func guiHtmlGrayDistrs(grayDistrs [][3]float64) string {
+	sum, s := 0.0, "<div class='graydistrs'>"
+	for _, gd := range grayDistrs {
+		sum += (100 * gd[2])
+		spanstyle, cf, ct := "", itoa(int(gd[0])), itoa(int(gd[1])-1)
+		if gd[0] > 150 {
+			spanstyle = "color: #000000"
+		}
+		s += "<div style='background: linear-gradient(to right, rgba(" + cf + "," + cf + "," + cf + ",1.0), rgba(" + ct + "," + ct + "," + ct + ",1.0)); min-width: " + itoa(90/len(grayDistrs)) + "%'><span style='" + spanstyle + "'><nobr>" + cf + "-" + ct + "</nobr><br/><b>" + strconv.FormatFloat(100.0*gd[2], 'f', 2, 64) + "%</b><br/><i>(" + strconv.FormatFloat(sum, 'f', 2, 64) + "%)</i>" + "</span></div>"
+	}
+	return s + "</div>"
+}
 
 func guiHtmlImg(uri string, attrs map[string]string) string {
 	s := "<img src='" + hEsc(uri) + "' " + guiHtmlAttrs(attrs) + "/>"

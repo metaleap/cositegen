@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"time"
 )
 
 type Sheet struct {
@@ -22,8 +23,9 @@ type SheetVerData struct {
 	bwFilePath      string
 	bwSmallFilePath string
 
-	GrayDistr  []int     `json:",omitempty"`
-	PanelsTree *ImgPanel `json:",omitempty"`
+	DateTimeUnixNano int64
+	GrayDistr        []int     `json:",omitempty"`
+	PanelsTree       *ImgPanel `json:",omitempty"`
 }
 
 type SheetVer struct {
@@ -37,9 +39,15 @@ type SheetVer struct {
 	}
 }
 
+func (me *SheetVer) Px1Cm() float64 {
+	return float64(me.data.PanelsTree.Rect.Max.Y-me.data.PanelsTree.Rect.Min.Y) / 21.0
+}
+
+func (me *SheetVer) Id() string { return App.Proj.data.ContentHashes[me.fileName] }
+
 func (me *SheetVer) String() string { return me.fileName }
 
-func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) {
+func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork bool) {
 	if !fromBgPrep {
 		if me.prep.done {
 			return
@@ -71,7 +79,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) {
 	}
 	if me.data == nil {
 		shouldsaveprojmeta = true
-		me.data = &SheetVerData{}
+		me.data = &SheetVerData{DateTimeUnixNano: time.Now().UnixNano()}
 		App.Proj.data.SheetVer[curhash] = me.data
 	}
 	me.data.dirPath = ".csg/projdata/" + curhash
@@ -79,16 +87,17 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) {
 	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(App.Proj.BwThreshold))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
 	mkDir(me.data.dirPath)
 
-	me.ensureMonochrome(forceFullRedo)
+	didWork = me.ensureMonochrome(forceFullRedo)
 	shouldsaveprojmeta = me.ensurePanels(forceFullRedo) || shouldsaveprojmeta
 	shouldsaveprojmeta = me.ensureColorDistr(forceFullRedo) || shouldsaveprojmeta
 
-	if shouldsaveprojmeta {
+	if didWork = shouldsaveprojmeta || didWork; shouldsaveprojmeta {
 		App.Proj.save()
 	}
+	return
 }
 
-func (me *SheetVer) ensureMonochrome(force bool) {
+func (me *SheetVer) ensureMonochrome(force bool) bool {
 	var exist1, exist2 bool
 	for fname, bptr := range map[string]*bool{me.data.bwFilePath: &exist1, me.data.bwSmallFilePath: &exist2} {
 		if fileinfo, err := os.Stat(fname); err == nil && !fileinfo.IsDir() {
@@ -114,7 +123,9 @@ func (me *SheetVer) ensureMonochrome(force bool) {
 		} else if err = os.Symlink(filepath.Base(me.data.bwFilePath), me.data.bwSmallFilePath); err != nil {
 			panic(err)
 		}
+		return true
 	}
+	return false
 }
 
 func (me *SheetVer) ensureColorDistr(force bool) bool {
@@ -149,7 +160,42 @@ func (me *SheetVer) panelAreas(panelIdx int) []ImgPanelArea {
 	return nil
 }
 
+func (me *SheetVer) panelCount() (numPanels int, numPanelAreas int) {
+	all := App.Proj.data.sheetVerPanelAreas[me.fileName]
+	numPanels = len(all)
+	for _, areas := range all {
+		numPanelAreas += len(areas)
+	}
+	if numPanels == 0 && numPanelAreas == 0 && me.data != nil && me.data.PanelsTree != nil {
+		me.data.PanelsTree.iter(func(p *ImgPanel) {
+			numPanels++
+		})
+	}
+	return
+}
+
+func (me *SheetVer) percentTranslated() map[string]float64 {
+	ret, all := map[string]float64{}, App.Proj.data.sheetVerPanelAreas[me.fileName]
+	for _, areas := range all {
+		for _, area := range areas {
+			for langid, text := range area.Data {
+				if text != "" {
+					ret[langid] = ret[langid] + 1
+				}
+			}
+		}
+	}
+	for _, langid := range App.Proj.Langs[1:] {
+		ret[langid] = ret[langid] * (100.0 / ret[App.Proj.Langs[0]])
+	}
+	delete(ret, App.Proj.Langs[0])
+	return ret
+}
+
 func (me *SheetVer) grayDistrs() (r [][3]float64) {
+	if me.data == nil || len(me.data.GrayDistr) == 0 {
+		return nil
+	}
 	numpx, m := 0, 256.0/float64(len(me.data.GrayDistr))
 	for _, cd := range me.data.GrayDistr {
 		numpx += cd

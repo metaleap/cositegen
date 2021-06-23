@@ -81,7 +81,7 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 
 func appPrepWork() {
 	timedLogged("Preprocessing...", func() string {
-		var numjobs int
+		var numjobs, numwork int
 		for _, series := range App.Proj.Series {
 			for _, chapter := range series.Chapters {
 				for _, sheet := range chapter.sheets {
@@ -89,8 +89,9 @@ func appPrepWork() {
 						if !sv.prep.done {
 							sv.prep.Lock()
 							if !sv.prep.done {
-								sv.ensurePrep(true, false)
-								sv.prep.done, numjobs = true, numjobs+1
+								if sv.prep.done, numjobs = true, numjobs+1; sv.ensurePrep(true, false) {
+									numwork++
+								}
 							}
 							sv.prep.Unlock()
 						}
@@ -99,6 +100,6 @@ func appPrepWork() {
 			}
 		}
 		App.Proj.allPrepsDone = true
-		return "for " + itoa(numjobs) + " preprocessing task(s)"
+		return "for " + itoa(numwork) + "/" + itoa(numjobs) + " preprocessing job(s)"
 	})
 }

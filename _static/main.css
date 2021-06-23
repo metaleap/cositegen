@@ -160,3 +160,17 @@ div#previewbwtlinks {
     display: inline-block;
     padding: 0.44em;
 }
+
+input.collchk {
+    display: none;
+}
+
+div.collchk  {
+    display: none;
+}
+
+input.collchk:checked ~ div.collchk {
+    display: block;
+}
+
+h4 small { font-weight: normal; }

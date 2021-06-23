@@ -228,7 +228,7 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bool, lineX int) (s string) {
 	aw, ah := pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
 	pxfont, pxline := int(px1cm*App.Proj.Gen.PanelSvgText.FontSizeCmA4), int(px1cm*App.Proj.Gen.PanelSvgText.PerLineDyCmA4)
-	s += "<text x='0' y='0' style='font-size: " + itoa(pxfont) + "px' transform='" + strings.TrimSpace(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
+	s += "<text " + /*"x='0' y='0' "+*/ "style='font-size: " + itoa(pxfont) + "px' " + "transform='" + strings.TrimSpace(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
 	s += "<tspan style='" + strings.TrimSpace(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'>"
 	for _, ln := range strings.Split(svgRepl.Replace(locStr(pta.Data, langId)), "\n") {
 		if ln == "" {
@@ -422,4 +422,37 @@ func (me *ImgPanel) iter(onPanel func(*ImgPanel)) {
 	} else {
 		onPanel(me)
 	}
+}
+
+func (me *ImgPanel) nextPanel(parent *Chapter) (foundSheet *SheetVer, foundPanel *ImgPanel, pIdx int, pgNr int) {
+	pastme, pgnr, pgnrme := false, 0, 0
+	for i, sheet := range parent.sheets {
+		if foundPanel != nil {
+			break
+		} else if parent.SheetsPerPage == 0 {
+			pgnr = 1
+		} else if (i % parent.SheetsPerPage) == 0 {
+			pgnr++
+		}
+		assert(len(sheet.versions) == 1)
+		for _, sv := range sheet.versions {
+			_ = sv.ensurePrep(false, false)
+			if sv.data != nil && sv.data.PanelsTree != nil {
+				pidx := 0
+				sv.data.PanelsTree.iter(func(panel *ImgPanel) {
+					if panel == me {
+						pastme, pgnrme = true, pgnr
+					} else if pastme && foundPanel == nil &&
+						(panel.Rect.Min.X != me.Rect.Min.X || pgnrme != pgnr) {
+						foundPanel, foundSheet, pIdx, pgNr = panel, sv, pidx, pgnr
+					}
+					pidx++
+				})
+				if foundPanel != nil {
+					break
+				}
+			}
+		}
+	}
+	return
 }

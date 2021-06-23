@@ -3,6 +3,7 @@ package main
 import (
 	"image"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -35,25 +36,43 @@ func guiMain(r *http.Request, notice string) []byte {
 		scanJobNotice = ""
 	}
 
+	var numseries, numchapters, numsheets int
+	for _, series := range App.Proj.Series {
+		numseries++
+		for _, chapter := range series.Chapters {
+			numchapters, numsheets = numchapters+1, numsheets+len(chapter.sheets)
+		}
+	}
+
 	App.Gui.State.Sel.Series, _ = guiGetFormSel(fv("series"), &App.Proj).(*Series)
-	s += guiHtmlList("series", "(Series)", false, len(App.Proj.Series), func(i int) (string, string, bool) {
-		return App.Proj.Series[i].Name, App.Proj.Series[i].Title["en"], App.Gui.State.Sel.Series != nil && App.Proj.Series[i].Name == App.Gui.State.Sel.Series.Name
+	s += guiHtmlList("series", "("+itoa(numseries)+" series, "+itoa(numchapters)+" chapters, "+itoa(numsheets)+" sheets)", false, len(App.Proj.Series), func(i int) (string, string, bool) {
+		return App.Proj.Series[i].Name, App.Proj.Series[i].Title["en"] + " (" + itoa(len(App.Proj.Series[i].Chapters)) + ")", App.Gui.State.Sel.Series != nil && App.Proj.Series[i].Name == App.Gui.State.Sel.Series.Name
 	})
 
-	shouldsavemeta := false
+	shouldsavemeta, havefullgui := false, false
 	if series := App.Gui.State.Sel.Series; series != nil {
 		App.Gui.State.Sel.Chapter, _ = guiGetFormSel(fv("chapter"), series).(*Chapter)
-		s += guiHtmlList("chapter", "(Chapters)", false, len(series.Chapters), func(i int) (string, string, bool) {
+		s += guiHtmlList("chapter", "("+itoa(len(series.Chapters))+" chapter/s)", false, len(series.Chapters), func(i int) (string, string, bool) {
 			chapter := series.Chapters[i]
-			return chapter.Name, chapter.Title["en"], App.Gui.State.Sel.Chapter != nil && App.Gui.State.Sel.Chapter.Name == chapter.Name
+			return chapter.Name, chapter.Title["en"] + " (" + itoa(len(chapter.sheets)) + ")", App.Gui.State.Sel.Chapter != nil && App.Gui.State.Sel.Chapter.Name == chapter.Name
 		})
 		if chapter := App.Gui.State.Sel.Chapter; chapter != nil {
 			App.Gui.State.Sel.Sheet, _ = guiGetFormSel(fv("sheet"), chapter).(*Sheet)
-			s += guiHtmlList("sheet", "(Sheets)", false, len(chapter.sheets), func(i int) (string, string, bool) {
+			numpages, pgnr := 1, 0
+			if chapter.SheetsPerPage != 0 {
+				numpages = len(chapter.sheets) / chapter.SheetsPerPage
+			}
+			s += guiHtmlList("sheet", "("+itoa(len(chapter.sheets))+" sheet/s, "+itoa(numpages)+" page/s)", false, len(chapter.sheets), func(i int) (string, string, bool) {
 				sheet := chapter.sheets[i]
-				return sheet.name, sheet.name, App.Gui.State.Sel.Sheet != nil && App.Gui.State.Sel.Sheet.name == sheet.name
+				if chapter.SheetsPerPage == 0 {
+					pgnr = 1
+				} else if (i % chapter.SheetsPerPage) == 0 {
+					pgnr++
+				}
+				return sheet.name, "p" + itoa(pgnr) + ": " + sheet.name + " (" + itoa(len(sheet.versions)) + ")", App.Gui.State.Sel.Sheet != nil && App.Gui.State.Sel.Sheet.name == sheet.name
 			})
 			if sheet := App.Gui.State.Sel.Sheet; sheet == nil {
+				havefullgui = true
 				s += "<hr/><div id='uipane'>" + guiSheetScan(series, chapter, fv) + "</div>"
 			} else if len(sheet.versions) > 0 {
 				App.Gui.State.Sel.Ver, _ = guiGetFormSel(fv("sheetver"), sheet).(*SheetVer)
@@ -65,10 +84,14 @@ func guiMain(r *http.Request, notice string) []byte {
 					App.Gui.State.Sel.Ver = sheet.versions[0]
 				}
 				if sheetver := App.Gui.State.Sel.Ver; sheetver != nil {
+					havefullgui = true
 					s += "<hr/><div id='uipane'>" + guiSheetEdit(sheetver, fv, &shouldsavemeta) + "</div>"
 				}
 			}
 		}
+	}
+	if !havefullgui {
+		s += "<hr/><div id='uipane'>" + guiGrayDistrs() + "</div>"
 	}
 	if shouldsavemeta {
 		App.Proj.save()
@@ -81,6 +104,59 @@ func guiMain(r *http.Request, notice string) []byte {
 		s += "<script language='javascript' type='text/javascript'>try { document.getElementById(\"" + rfv + "\").focus(); } catch (e) {alert(e);}</script></html>"
 	}
 	return []byte(s)
+}
+
+func guiGrayDistrs() (s string) {
+	for _, series := range App.Proj.Series {
+		if App.Gui.State.Sel.Series == nil || App.Gui.State.Sel.Series == series {
+			for _, chapter := range series.Chapters {
+				if id := "chk" + itoa(int(time.Now().UnixNano())); App.Gui.State.Sel.Series == nil || App.Gui.State.Sel.Chapter == nil || App.Gui.State.Sel.Chapter == chapter {
+					numpages := 1
+					if chapter.SheetsPerPage != 0 {
+						numpages = len(chapter.sheets) / chapter.SheetsPerPage
+					}
+					s += "<div><input class='collchk' id='" + id + "' type='checkbox' checked='checked'/><h3><label for='" + id + "'>" + series.Title["en"] + "&nbsp;&nbsp;&mdash;&nbsp;&nbsp;" + chapter.Title["en"] + "&nbsp;&nbsp;&mdash;&nbsp;&nbsp;(" + itoa(len(chapter.sheets)) + " sheet/s, " + itoa(numpages) + " page/s)</label></h3>"
+					s += "<div class='collchk'><table width='99%'>"
+					pgnr := 0
+					for i, sheet := range chapter.sheets {
+						if chapter.SheetsPerPage == 0 {
+							pgnr = 1
+						} else if (i % chapter.SheetsPerPage) == 0 {
+							pgnr++
+						}
+						for _, sv := range sheet.versions {
+							s += "<tr><td valign='top'>"
+							numpanels, numpanelareas := sv.panelCount()
+							a := "<a href='./?series=" + url.QueryEscape(series.Name) + "&chapter=" + url.QueryEscape(chapter.Name) + "&sheet=" + url.QueryEscape(sheet.name) + "&sheetver=" + url.QueryEscape(sv.fileName) + "'>"
+							if sv.data != nil {
+								s += a + "<img title='" + hEsc(sheet.name+"_"+sv.name) + "' src='./" + sv.data.bwSmallFilePath + "' style='width: 11em;'/></a>"
+							}
+							s += "</td><td width='98%' valign='top' align='left'><h4 style='margin-top: 0;'>p" + itoa(pgnr) + "&nbsp;&nbsp;&mdash;&nbsp;&nbsp;" + a + hEsc(sheet.name+"_"+sv.name) + "</a>"
+							if numpanels > 0 {
+								s += "<small>&nbsp;&nbsp;&mdash;&nbsp;&nbsp;<b>" + itoa(numpanelareas) + " </b> text-rect(s) in " + itoa(numpanels) + " panel(s)"
+								if numpanelareas > 0 {
+									for langid, percent := range sv.percentTranslated() {
+										s += "&nbsp;(<b>" + langid + "</b>: " + strconv.FormatFloat(percent, 'f', 1, 64) + "%)"
+									}
+								}
+								s += "</small>"
+							}
+							if sv.data != nil {
+								if sv.data.PanelsTree != nil {
+									s += "<small>&nbsp;&mdash;&nbsp;&nbsp;<b>" + itoa(sv.data.PanelsTree.Rect.Max.X) + "&times;" + itoa(sv.data.PanelsTree.Rect.Max.Y) + "</b>px (" + itoa(int(sv.Px1Cm())) + "px/cm)</small>"
+								}
+								s += "<small>&nbsp;&nbsp;&mdash;&nbsp;&nbsp;from <b title='" + hEsc(time.Unix(0, sv.data.DateTimeUnixNano).Format(time.RFC1123)) + "'>" + time.Unix(0, sv.data.DateTimeUnixNano).Format("02 Jan 2006") + "</b></small>"
+							}
+							s += "</h4>" + guiHtmlGrayDistrs(sv.grayDistrs()) + "</td></tr>"
+						}
+					}
+					s += "</table><hr/></div>"
+					s += "</div>"
+				}
+			}
+		}
+	}
+	return
 }
 
 func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s string) {
@@ -113,7 +189,7 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 	if len(scanDevices) == 0 {
 		return "<div>(Scanner device detection still ongoing)</div>"
 	} else if scanJob != nil {
-		s = "<div>Scan job in progress on device <b>" + scanJob.Dev.String() + "</b>:<br/>"
+		s = "<div>Scan job in <a href='/?series=" + url.QueryEscape(scanJob.Series.Name) + "&chapter=" + url.QueryEscape(scanJob.Chapter.Name) + "&t=" + itoa(int(time.Now().UnixNano())) + "'>progress</a> on device <b>" + scanJob.Dev.String() + "</b>:<br/>"
 		if scanJob.Series == series && scanJob.Chapter == chapter {
 			return s + "first into <code>" + scanJob.PnmFileName + "</code>, then <code>" + hEsc(scanJob.PngFileName) + "</code></div>"
 		}
@@ -214,7 +290,7 @@ func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s s
 
 func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s string) {
 	sv.ensurePrep(false, false)
-	numpanels, maxpanelwidth, px1cm, bwsrc := 0, 0, float64(sv.data.PanelsTree.Rect.Max.Y-sv.data.PanelsTree.Rect.Min.Y)/21.0, fv("srcpx")
+	numpanels, maxpanelwidth, bwsrc := 0, 0, fv("srcpx")
 	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
 		numpanels++
 		if w := panel.Rect.Max.X - panel.Rect.Min.X; w > maxpanelwidth {
@@ -235,20 +311,12 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	}
 	s += "&nbsp;&mdash; jump to panel:"
 	for i := 0; i < numpanels; i++ {
-		s += "&nbsp;&nbsp;<a href='#pa" + App.Proj.data.ContentHashes[sv.fileName] + itoa(i) + "'>" + itoa(i+1) + "</a>"
+		s += "&nbsp;&nbsp;<a href='#pa" + sv.Id() + itoa(i) + "'>" + itoa(i+1) + "</a>"
 	}
 	s += "</h3>"
-	graydistrs, sum := sv.grayDistrs(), 0.0
-	s += "<div class='graydistrs'>"
-	for _, gd := range graydistrs {
-		sum += (100 * gd[2])
-		spanstyle, cf, ct := "", itoa(int(gd[0])), itoa(int(gd[1])-1)
-		if gd[0] > 150 {
-			spanstyle = "color: #000000"
-		}
-		s += "<div style='background: linear-gradient(to right, rgba(" + cf + "," + cf + "," + cf + ",1.0), rgba(" + ct + "," + ct + "," + ct + ",1.0)); min-width: " + itoa(90/len(graydistrs)) + "%'><span style='" + spanstyle + "'><nobr>" + cf + "-" + ct + "</nobr><br/><b>" + strconv.FormatFloat(100.0*gd[2], 'f', 2, 64) + "%</b><br/><i>(" + strconv.FormatFloat(sum, 'f', 2, 64) + "%)</i>" + "</span></div>"
-	}
-	s += "</div><div>B&amp;W version at black-threshold of <b>&lt;" + itoa(int(App.Proj.BwThreshold)) + "</b>:</div>"
+	graydistrs := sv.grayDistrs()
+	s += guiHtmlGrayDistrs(graydistrs)
+	s += "<div>B&amp;W version at black-threshold of <b>&lt;" + itoa(int(App.Proj.BwThreshold)) + "</b>:</div>"
 	s += "<div class='fullsheet'>" + guiHtmlImg("/"+bwsrc, nil) + "</div>"
 	s += "<div>View other B&amp;W thresholds: <input type='text' id='previewbwt' onchange='addBwtPreviewLinks(\"" + sv.fileName + "\");'/><div id='previewbwtlinks'></div></div>"
 
@@ -269,7 +337,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 			}
 			s += "</ul>"
 		} else {
-			s += "<ul><li><div><b><a href='#pa" + App.Proj.data.ContentHashes[sv.fileName] + itoa(pidx) + "'>Panel #" + itoa(pidx+1) + "</a></b>: " + panel.Rect.String() + "</div></li></ul>"
+			s += "<ul><li><div><b><a href='#pa" + sv.Id() + itoa(pidx) + "'>Panel #" + itoa(pidx+1) + "</a></b>: " + panel.Rect.String() + "</div></li></ul>"
 			pidx++
 		}
 		return
@@ -278,7 +346,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	zoom, zoomdiv := 100, 1.0
 	s += "<h3>All " + itoa(numpanels) + " panel(s):"
 	for i := 0; i < numpanels; i++ {
-		s += "&nbsp;&nbsp;<a href='#pa" + App.Proj.data.ContentHashes[sv.fileName] + itoa(i) + "'>" + itoa(i+1) + "</a>"
+		s += "&nbsp;&nbsp;<a href='#pa" + sv.Id() + itoa(i) + "'>" + itoa(i+1) + "</a>"
 	}
 	for i, lang := range App.Proj.Langs {
 		attrs := A{"name": "plang", "onclick": "refreshAllPanelRects(" + itoa(numpanels) + "," + itoa(i) + ",\"" + lang + "\");"}
@@ -371,10 +439,10 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		for _, lang := range App.Proj.Langs {
 			langs = append(langs, lang)
 		}
-		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Max.X-panel.Rect.Min.X) + ", " + itoa(panel.Rect.Max.Y-panel.Rect.Min.Y) + ", " + itoa(App.Proj.MaxImagePanelTextAreas) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + strconv.FormatFloat(px1cm, 'f', 8, 64) + ", '" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "', " + strconv.FormatFloat(App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm, 'f', 8, 64) + ");"
+		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Max.X-panel.Rect.Min.X) + ", " + itoa(panel.Rect.Max.Y-panel.Rect.Min.Y) + ", " + itoa(App.Proj.MaxImagePanelTextAreas) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + strconv.FormatFloat(sv.Px1Cm(), 'f', 8, 64) + ", '" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "', " + strconv.FormatFloat(App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm, 'f', 8, 64) + ");"
 		btnhtml := guiHtmlButton(pid+"save", "Save changes (all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 
-		s += "<hr/><h4 id='pa" + App.Proj.data.ContentHashes[sv.fileName] + itoa(pidx) + "'><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(len(sv.panelAreas(pidx))) + " text rect(s)" + "</h4><div>Panel coords: " + rect.String() + "</div>"
+		s += "<hr/><h4 id='pa" + sv.Id() + itoa(pidx) + "'><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(len(sv.panelAreas(pidx))) + " text rect(s)" + "</h4><div>Panel coords: " + rect.String() + "</div>"
 
 		s += "<table><tr><td>"
 		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;' onclick='onPanelClick(\"" + pid + "\")'>"
