@@ -37,11 +37,11 @@ type PageGen struct {
 	FeedHref       string
 }
 
-func (me *Project) siteGenFully(map[string]bool) {
+func siteGenFully(map[string]bool) {
 	siteGen{}.genSite(true)
 }
 
-func (me *Project) siteGenPagesOnly(map[string]bool) {
+func siteGenPagesOnly(map[string]bool) {
 	siteGen{}.genSite(false)
 }
 
@@ -698,7 +698,7 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 	return
 }
 
-func (me *siteGen) genThumbsPngs() (numPngs uint32) {
+func (*siteGen) genThumbsPngs() (numPngs uint32) {
 	var work sync.WaitGroup
 	work.Add(len(App.Proj.Series))
 	for _, series := range App.Proj.Series {

@@ -60,9 +60,9 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 	var action func(map[string]bool)
 	switch name {
 	case "genfully":
-		action = App.Proj.siteGenFully
+		action = siteGenFully
 	case "genpages":
-		action = App.Proj.siteGenPagesOnly
+		action = siteGenPagesOnly
 	default:
 		s := "Unknown action: '" + name + "', try one of these:"
 		for name, desc := range AppMainActions {
