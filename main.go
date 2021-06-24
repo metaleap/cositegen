@@ -21,8 +21,8 @@ func main() {
 	} else {
 		go scanDevicesDetection()
 		go httpListenAndServe()
-		go launchGuiInKioskyBrowser()
 		go appPrepWork()
+		go launchGuiInKioskyBrowser()
 		for canexit := false; !canexit; time.Sleep(time.Second) {
 			canexit = App.Gui.BrowserClosed && scanJob == nil &&
 				App.Proj.allPrepsDone && atomic.LoadInt32(&numBusyRequests) == 0

@@ -2,9 +2,7 @@ package main
 
 import (
 	"bytes"
-	"image"
 	"image/color"
-	_ "image/png"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -37,14 +35,6 @@ type PageGen struct {
 	FeedHref       string
 }
 
-func siteGenFully(map[string]bool) {
-	siteGen{}.genSite(true)
-}
-
-func siteGenPagesOnly(map[string]bool) {
-	siteGen{}.genSite(false)
-}
-
 type siteGen struct {
 	tmpl      *template.Template
 	page      PageGen
@@ -52,7 +42,7 @@ type siteGen struct {
 	onPngSize func(*Chapter, string, int, int)
 }
 
-func (me siteGen) genSite(fully bool) {
+func (me siteGen) genSite(map[string]bool) {
 	var err error
 	tstart := time.Now()
 	printLn("SiteGen started. When done, result will open in new window.")
@@ -62,19 +52,9 @@ func (me siteGen) genSite(fully bool) {
 		}
 	}()
 
-	if fully {
-		rmDir(".build")
-		mkDir(".build")
-		mkDir(".build/img/")
-	} else if fileinfos, err := os.ReadDir(".build"); err == nil {
-		for _, finfo := range fileinfos {
-			if !finfo.IsDir() {
-				_ = os.Remove(".build/" + finfo.Name())
-			}
-		}
-	} else if !os.IsNotExist(err) {
-		panic(err)
-	}
+	rmDir(".build")
+	mkDir(".build")
+	mkDir(".build/img/")
 
 	timedLogged("SiteGen: copying non-markup files to .build...", func() string {
 		numfileswritten, modifycssfiles := 0, App.Proj.Gen.PanelSvgText.AppendToFiles
@@ -110,52 +90,50 @@ func (me siteGen) genSite(fully bool) {
 		return "for " + strconv.Itoa(numfileswritten) + " file(s)"
 	})
 
-	if fully {
-		timedLogged("SiteGen: generating PNGs...", func() string {
-			chapterqstats := map[*Chapter]map[string][]int64{}
-			for _, series := range App.Proj.Series {
-				for _, chapter := range series.Chapters {
-					chapterqstats[chapter] = map[string][]int64{}
-				}
+	timedLogged("SiteGen: generating (plus also copying pre-generated) PNGs...", func() string {
+		chapterqstats := map[*Chapter]map[string][]int64{}
+		for _, series := range App.Proj.Series {
+			for _, chapter := range series.Chapters {
+				chapterqstats[chapter] = map[string][]int64{}
 			}
-			var mu sync.Mutex
-			me.onPngSize = func(chapter *Chapter, id string, qidx int, size int) {
-				mu.Lock()
-				m := chapterqstats[chapter]
-				sl := m[id]
-				if len(sl) == 0 {
-					sl = make([]int64, len(App.Proj.Qualis))
-				}
-				assert(sl[qidx] == 0)
-				sl[qidx] = int64(size)
-				m[id] = sl
-				mu.Unlock()
+		}
+		var mu sync.Mutex
+		me.onPngSize = func(chapter *Chapter, id string, qidx int, size int) {
+			mu.Lock()
+			m := chapterqstats[chapter]
+			sl := m[id]
+			if len(sl) == 0 {
+				sl = make([]int64, len(App.Proj.Qualis))
 			}
-			numpngs, numsheets, numpanels := me.genPngs()
-			numpngs += me.genThumbsPngs()
-			qstats := make(map[*Chapter][]int64, len(chapterqstats))
-			for chapter, namesandsizes := range chapterqstats {
-				min, msg, chq := int64(0), "\t\t"+chapter.Name, make([]int64, len(App.Proj.Qualis))
-				for _, sizes := range namesandsizes {
-					for qidx, size := range sizes {
-						for i := qidx; size == 0; i-- {
-							size = sizes[i]
-						}
-						chq[qidx] += size
+			assert(sl[qidx] == 0)
+			sl[qidx] = int64(size)
+			m[id] = sl
+			mu.Unlock()
+		}
+		numpngs, numsheets, numpanels := me.genOrCopyPanelPngs()
+		numpngs += me.genThumbsPngs()
+		qstats := make(map[*Chapter][]int64, len(chapterqstats))
+		for chapter, namesandsizes := range chapterqstats {
+			min, msg, chq := int64(0), "\t\t"+chapter.Name, make([]int64, len(App.Proj.Qualis))
+			for _, sizes := range namesandsizes {
+				for qidx, size := range sizes {
+					for i := qidx; size == 0; i-- {
+						size = sizes[i]
 					}
+					chq[qidx] += size
 				}
-				qstats[chapter] = chq
-				for qidx, totalsize := range chq {
-					if (min == 0 || totalsize < min) && App.Proj.Qualis[qidx].SizeHint <= 4096 {
-						min, chapter.defaultQuali = totalsize, qidx
-					}
-					msg += "\t\t" + App.Proj.Qualis[qidx].Name + "(" + itoa(App.Proj.Qualis[qidx].SizeHint) + ")" + " => " + itoa(int(totalsize/1024)) + "KB"
-				}
-				printLn(msg)
 			}
-			return "to generate " + itoa(int(numpngs)) + " PNG(s) for " + itoa(int(numpanels)) + " panel(s) from " + itoa(int(numsheets)) + " sheet(s) of " + itoa(len(qstats)) + " chapter(s)"
-		})
-	}
+			qstats[chapter] = chq
+			for qidx, totalsize := range chq {
+				if (min == 0 || totalsize < min) && App.Proj.Qualis[qidx].SizeHint <= 4096 {
+					min, chapter.defaultQuali = totalsize, qidx
+				}
+				msg += "\t\t" + App.Proj.Qualis[qidx].Name + "(" + itoa(App.Proj.Qualis[qidx].SizeHint) + ")" + " => " + itoa(int(totalsize/1024)) + "KB"
+			}
+			printLn(msg)
+		}
+		return "for " + itoa(int(numpngs)) + " PNG(s) from " + itoa(int(numpanels)) + " panel(s) in " + itoa(int(numsheets)) + " sheet(s)"
+	})
 
 	timedLogged("SiteGen: generating markup files...", func() string {
 		numfileswritten := 0
@@ -191,7 +169,7 @@ func (me siteGen) genSite(fully bool) {
 	}
 }
 
-func (me *siteGen) genPngs() (numPngs uint32, numSheets uint32, numPanels uint32) {
+func (me *siteGen) genOrCopyPanelPngs() (numPngs uint32, numSheets uint32, numPanels uint32) {
 	var work sync.WaitGroup
 	atomic.StoreUint32(&numSheets, 0)
 	atomic.StoreUint32(&numPngs, 0)
@@ -201,8 +179,8 @@ func (me *siteGen) genPngs() (numPngs uint32, numSheets uint32, numPanels uint32
 			for _, sheet := range chapter.sheets {
 				work.Add(1)
 				go func(chapter *Chapter, sheet *Sheet) {
-					for _, sheetver := range sheet.versions {
-						npngs, npnls := me.genPngsForSheetVer(sheetver, ".build/img/")
+					for _, sv := range sheet.versions {
+						npngs, npnls := me.genOrCopyPanelPngsOf(sv)
 						atomic.AddUint32(&numSheets, 1)
 						atomic.AddUint32(&numPngs, npngs)
 						atomic.AddUint32(&numPanels, npnls)
@@ -216,17 +194,8 @@ func (me *siteGen) genPngs() (numPngs uint32, numSheets uint32, numPanels uint32
 	return
 }
 
-func (me *siteGen) genPngsForSheetVer(sv *SheetVer, dstDirPath string) (numPngs uint32, numPanels uint32) {
+func (me *siteGen) genOrCopyPanelPngsOf(sv *SheetVer) (numPngs uint32, numPanels uint32) {
 	sv.ensurePrep(false, false)
-	srcimgfile, err := os.Open(sv.data.bwFilePath)
-	if err != nil {
-		panic(err)
-	}
-	imgsrc, _, err := image.Decode(srcimgfile)
-	if err != nil {
-		panic(err)
-	}
-	_ = srcimgfile.Close()
 
 	atomic.StoreUint32(&numPngs, 0)
 	var pidx int
@@ -237,20 +206,17 @@ func (me *siteGen) genPngsForSheetVer(sv *SheetVer, dstDirPath string) (numPngs 
 		numPanels++
 		go func(pidx int) {
 			for qidx, quali := range App.Proj.Qualis {
-				name := me.namePng(sheetid, pidx, quali.SizeHint)
-				pw, ph, sw := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y, sv.data.PanelsTree.Rect.Max.X-sv.data.PanelsTree.Rect.Min.X
-				width := float64(quali.SizeHint) / (float64(sw) / float64(pw))
-				height := width / (float64(pw) / float64(ph))
-				w, h := int(width), int(height)
-				var wassamesize bool
-				pngdata := imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, quali.SizeHint/640, 0, false, &wassamesize)
-				writeFile(filepath.Join(dstDirPath, name+".png"), pngdata)
-				if me.onPngSize != nil {
-					me.onPngSize(sv.parentSheet.parentChapter, sheetid+itoa(pidx), qidx, len(pngdata))
-				}
-				atomic.AddUint32(&numPngs, 1)
-				if wassamesize {
+				srcpath := filepath.Join(sv.data.pngDirPath, itoa(pidx)+"."+itoa(quali.SizeHint)+".png")
+				if pngdata, err := os.ReadFile(srcpath); err == nil {
+					writeFile(filepath.Join(".build/img/", me.namePng(sheetid, pidx, quali.SizeHint)+".png"), pngdata)
+					if me.onPngSize != nil {
+						me.onPngSize(sv.parentSheet.parentChapter, sheetid+itoa(pidx), qidx, len(pngdata))
+					}
+					atomic.AddUint32(&numPngs, 1)
+				} else if os.IsNotExist(err) {
 					break
+				} else {
+					panic(err)
 				}
 			}
 			work.Done()

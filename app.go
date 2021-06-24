@@ -47,8 +47,7 @@ func appOnExit() {
 
 var appMainActions = map[string]bool{}
 var AppMainActions = A{
-	"genpages": "Re-generate site (pages only, keep old PNGs)",
-	"genfully": "Re-generate site fully (incl. PNGs)",
+	"sitegen": "Re-generate site",
 }
 
 func appMainAction(fromGui bool, name string, args map[string]bool) string {
@@ -59,10 +58,8 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 
 	var action func(map[string]bool)
 	switch name {
-	case "genfully":
-		action = siteGenFully
-	case "genpages":
-		action = siteGenPagesOnly
+	case "sitegen":
+		action = siteGen{}.genSite
 	default:
 		s := "Unknown action: '" + name + "', try one of these:"
 		for name, desc := range AppMainActions {

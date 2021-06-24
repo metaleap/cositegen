@@ -4,6 +4,7 @@ import (
 	"image"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -127,9 +128,11 @@ func guiStartView() (s string) {
 						for _, sv := range sheet.versions {
 							s += "<tr><td valign='top'>"
 							numpanels, numpanelareas := sv.panelCount()
-							a := "<a href='./?series=" + url.QueryEscape(series.Name) + "&chapter=" + url.QueryEscape(chapter.Name) + "&sheet=" + url.QueryEscape(sheet.name) + "&sheetver=" + url.QueryEscape(sv.fileName) + "'>"
-							if sv.data != nil {
-								s += a + "<img title='" + hEsc(sheet.name+"_"+sv.name) + "' src='./" + sv.data.bwSmallFilePath + "' style='width: 11em;'/></a>"
+							a := "<a href='./?series=" + url.QueryEscape(series.Name) + "&chapter=" + url.QueryEscape(chapter.Name) + "&sheet=" + url.QueryEscape(sheet.name) + "&sheetver=" + url.QueryEscape(sv.fileName) + "&t=" + itoa(int(time.Now().UnixNano())) + "'>"
+							if sv.prep.done {
+								if _, err := os.Stat(sv.data.bwSmallFilePath); err == nil {
+									s += a + "<img title='" + hEsc(sheet.name+"_"+sv.name) + "' src='./" + sv.data.bwSmallFilePath + "' style='width: 11em;'/></a>"
+								}
 							}
 							s += "</td><td width='98%' valign='top' align='left'><h4 style='margin-top: 0;'>p" + itoa(pgnr) + "&nbsp;&nbsp;&mdash;&nbsp;&nbsp;" + a + hEsc(sheet.name+"_"+sv.name) + "</a>"
 							if numpanels > 0 {
