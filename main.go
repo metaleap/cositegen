@@ -22,6 +22,7 @@ func main() {
 		if msg := appMainAction(false, os.Args[1], args); msg != "" {
 			printLn(msg)
 		}
+		appOnExit(false)
 	} else {
 		go scanDevicesDetection()
 		go httpListenAndServe()
@@ -30,7 +31,7 @@ func main() {
 		for canexit := false; !canexit; time.Sleep(time.Second) {
 			canexit = (App.Gui.BrowserPid == 0) && !appIsBusy()
 		}
-		appOnExit()
+		appOnExit(true)
 	}
 }
 

@@ -77,69 +77,72 @@ type ScanJob struct {
 }
 
 func scanDevicesDetection() {
-	scanDevices = nil
-	var sds []*ScanDevice
-	cmd := exec.Command("scanimage", "--formatted-device-list",
-		`{"Vendor": "%v", "Model": "%m", "Type": "%t", "Ident": "%d", "Nr": %i}`)
-	data, err := cmd.CombinedOutput()
-	if err != nil {
-		panic(err.Error() + ": " + string(data))
-	}
-	dataprefix := []byte(`[{"Vendor": "sane-project.org", "Model": "sane-test", "Type": "sim", "Ident": "test", "Nr": -1},`)
-	if data = bytes.TrimSpace(data); len(data) == 0 {
-		dataprefix = dataprefix[:len(dataprefix)-1]
-	}
-	jsonLoad("", append(dataprefix, append(data, ']')...), &sds)
-
-	prefcat, prefdesc, prefspec := "  ", "        ", "    -"
-	for _, sd := range sds {
-		if sd.Ident = trim(sd.Ident); sd.Ident == "" || html.EscapeString(sd.Ident) != sd.Ident {
-			panic(fmt.Sprintf("TODO prep code for previously unexpected scandev ident format:\t%#v", sd.Ident))
-		}
-		cmdargs := append(saneDefaultArgs, "--device-name", sd.Ident, "--all-options")
-		if sd.Ident == "test" {
-			cmdargs = append(cmdargs, "--enable-test-options")
-		}
-		cmd := exec.Command("scanimage", cmdargs...)
-		data, err = cmd.CombinedOutput()
+	timedLogged("", func() string {
+		scanDevices = nil
+		var sds []*ScanDevice
+		cmd := exec.Command("scanimage", "--formatted-device-list",
+			`{"Vendor": "%v", "Model": "%m", "Type": "%t", "Ident": "%d", "Nr": %i}`)
+		data, err := cmd.CombinedOutput()
 		if err != nil {
 			panic(err.Error() + ": " + string(data))
 		}
-		var cat string
-		var opt ScanOption
-		next := func() {
-			if opt.Name != "" {
-				sd.Options = append(sd.Options, opt)
-			}
-			opt = ScanOption{Category: cat}
+		dataprefix := []byte(`[{"Vendor": "sane-project.org", "Model": "sane-test", "Type": "sim", "Ident": "test", "Nr": -1},`)
+		if data = bytes.TrimSpace(data); len(data) == 0 {
+			dataprefix = dataprefix[:len(dataprefix)-1]
 		}
-		for _, ln := range strings.Split(string(data), "\n") {
-			// this exact ordering of the `if` tests matters here
-			if strings.HasPrefix(ln, prefdesc) {
-				opt.Description = append(opt.Description, trim(ln))
-			} else if strings.HasPrefix(ln, prefspec) {
-				next()
-				ln = trim(ln[len(prefspec):])
-				idx := strings.IndexFunc(ln, func(r rune) bool {
-					return !(r == '-' || (r >= 'a' && r <= 'z'))
-				})
-				opt.Name = strings.TrimLeft(ln, "-")
-				if idx > 0 {
-					opt.Name = strings.TrimLeft(ln[:idx], "-")
-					opt.FormatInfo = trim(ln[idx:])
-					opt.Inactive = strings.HasSuffix(opt.FormatInfo, " [inactive]")
-					opt.IsToggle = strings.HasPrefix(opt.FormatInfo, "[=(") && strings.Contains(opt.FormatInfo, "yes|no)]")
-				} else {
-					opt.IsToggle = true
+		jsonLoad("", append(dataprefix, append(data, ']')...), &sds)
+
+		prefcat, prefdesc, prefspec := "  ", "        ", "    -"
+		for _, sd := range sds {
+			if sd.Ident = trim(sd.Ident); sd.Ident == "" || html.EscapeString(sd.Ident) != sd.Ident {
+				panic(fmt.Sprintf("TODO prep code for previously unexpected scandev ident format:\t%#v", sd.Ident))
+			}
+			cmdargs := append(saneDefaultArgs, "--device-name", sd.Ident, "--all-options")
+			if sd.Ident == "test" {
+				cmdargs = append(cmdargs, "--enable-test-options")
+			}
+			cmd := exec.Command("scanimage", cmdargs...)
+			data, err = cmd.CombinedOutput()
+			if err != nil {
+				panic(err.Error() + ": " + string(data))
+			}
+			var cat string
+			var opt ScanOption
+			next := func() {
+				if opt.Name != "" {
+					sd.Options = append(sd.Options, opt)
 				}
-			} else if strings.HasPrefix(ln, prefcat) {
-				next()
-				cat = trim(ln)
+				opt = ScanOption{Category: cat}
 			}
+			for _, ln := range strings.Split(string(data), "\n") {
+				// this exact ordering of the `if` tests matters here
+				if strings.HasPrefix(ln, prefdesc) {
+					opt.Description = append(opt.Description, trim(ln))
+				} else if strings.HasPrefix(ln, prefspec) {
+					next()
+					ln = trim(ln[len(prefspec):])
+					idx := strings.IndexFunc(ln, func(r rune) bool {
+						return !(r == '-' || (r >= 'a' && r <= 'z'))
+					})
+					opt.Name = strings.TrimLeft(ln, "-")
+					if idx > 0 {
+						opt.Name = strings.TrimLeft(ln[:idx], "-")
+						opt.FormatInfo = trim(ln[idx:])
+						opt.Inactive = strings.HasSuffix(opt.FormatInfo, " [inactive]")
+						opt.IsToggle = strings.HasPrefix(opt.FormatInfo, "[=(") && strings.Contains(opt.FormatInfo, "yes|no)]")
+					} else {
+						opt.IsToggle = true
+					}
+				} else if strings.HasPrefix(ln, prefcat) {
+					next()
+					cat = trim(ln)
+				}
+			}
+			next()
 		}
-		next()
-	}
-	scanDevices = sds
+		scanDevices = sds
+		return itoa(len(scanDevices)) + " scanner(s) detected in"
+	})
 }
 
 func scanJobDo() {

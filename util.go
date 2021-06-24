@@ -102,8 +102,13 @@ func intAbs(i int) int {
 }
 
 func timedLogged(logMsg string, do func() string) {
-	printLn(logMsg)
+	if logMsg != "" {
+		printLn(logMsg)
+	}
 	tstart := time.Now()
-	summary := do()
-	printLn("\t...took", time.Now().Sub(tstart).String(), summary)
+	if summary := do(); logMsg == "" {
+		printLn(summary, time.Now().Sub(tstart).String())
+	} else {
+		printLn("\t...took", time.Now().Sub(tstart).String(), summary)
+	}
 }

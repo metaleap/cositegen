@@ -90,7 +90,7 @@ func (me siteGen) genSite(map[string]bool) {
 		return "for " + strconv.Itoa(numfileswritten) + " file(s)"
 	})
 
-	timedLogged("SiteGen: generating (plus also copying pre-generated) PNGs...", func() string {
+	timedLogged("SiteGen: generating (but mostly copying pre-generated) PNGs...", func() string {
 		chapterqstats := map[*Chapter]map[string][]int64{}
 		for _, series := range App.Proj.Series {
 			for _, chapter := range series.Chapters {

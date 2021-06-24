@@ -41,16 +41,18 @@ func appDetectBrowser() {
 	browserCmd[0] = cmdnames[cmdidx]
 }
 
-func appOnExit() {
-	App.Proj.save()
+func appOnExit(fromGui bool) {
+	if fromGui {
+		App.Proj.save()
+	}
 	rmDir(".csg/tmp")
 }
 
-func appIsBusy() (tooBusy bool) {
-	tooBusy = (scanJob != nil) || (scanDevices == nil) ||
-		(atomic.LoadInt32(&numBusyRequests) > 0) || !App.Proj.allPrepsDone
+func appIsBusy() (isBusy bool) {
+	isBusy = (scanJob != nil) || (scanDevices == nil) ||
+		(0 < atomic.LoadInt32(&numBusyRequests)) || !App.Proj.allPrepsDone
 	for _, busy := range appMainActions {
-		tooBusy = tooBusy || busy
+		isBusy = isBusy || busy
 	}
 	return
 }

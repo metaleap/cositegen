@@ -373,7 +373,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	if fv("main_focus_id") == "importpaneltexts" {
 		*shouldSaveMeta, importfrom = true, fv("importpaneltexts")
 	}
-	if wmax := 320; maxpanelwidth > wmax {
+	if wmax := 480; maxpanelwidth > wmax {
 		zoomdiv = float64(maxpanelwidth) / float64(wmax)
 		zoom = int(100.0 / zoomdiv)
 	}
