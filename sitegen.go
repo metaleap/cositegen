@@ -247,7 +247,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		numFilesWritten += me.genPageExecAndWrite(homename)
 	} else {
 		series := chapter.parentSeries
-		me.page.PageCssClasses = "chapter"
+		me.page.PageCssClasses = App.Proj.Gen.ClsChapter
 		me.page.HrefHome += "#" + strings.ToLower(series.Name)
 		me.page.PageTitle = "<span>" + hEsc(locStr(series.Title, me.lang)) + ":</span> " + hEsc(locStr(chapter.Title, me.lang))
 		me.page.PageTitleTxt = hEsc(locStr(series.Title, me.lang)) + ": " + hEsc(locStr(chapter.Title, me.lang))
