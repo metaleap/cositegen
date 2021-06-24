@@ -582,10 +582,12 @@ func (me *siteGen) genSvgForPanel(sV *SheetVer, panelIdx int, panel *ImgPanel) s
 func (me *siteGen) genPageExecAndWrite(name string) (numFilesWritten int) {
 	me.page.LangsList = ""
 	for _, lang := range App.Proj.Langs {
-		me.page.LangsList += "<div>"
 		if lang == me.lang {
+			me.page.LangsList += "<span><div>"
 			me.page.LangsList += "<b><img title='" + lang + "' alt='" + lang + "' src='./l" + lang + ".svg'/></b>"
+			me.page.LangsList += "</div></span>"
 		} else {
+			me.page.LangsList += "<div>"
 			href := name[:len(name)-len(me.lang)] + lang
 			if name == "index" && me.lang == App.Proj.Langs[0] {
 				href = name + "." + lang
@@ -593,8 +595,8 @@ func (me *siteGen) genPageExecAndWrite(name string) (numFilesWritten int) {
 				href = "index"
 			}
 			me.page.LangsList += "<a href='./" + href + ".html'><img alt='" + lang + "' title='" + lang + "' src='./l" + lang + ".svg'/></a>"
+			me.page.LangsList += "</div>"
 		}
-		me.page.LangsList += "</div>"
 	}
 	if me.page.PageTitleTxt == "" {
 		me.page.PageTitleTxt = me.page.PageTitle
