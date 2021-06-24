@@ -73,7 +73,7 @@ func guiMain(r *http.Request, notice string) []byte {
 			})
 			if sheet := App.Gui.State.Sel.Sheet; sheet == nil {
 				havefullgui = true
-				s += "<hr/><div id='uipane'>" + guiSheetScan(series, chapter, fv) + "</div>"
+				s += "<hr/><div id='uipane'>" + guiSheetScan(chapter, fv) + "</div>"
 			} else if len(sheet.versions) > 0 {
 				App.Gui.State.Sel.Ver, _ = guiGetFormSel(fv("sheetver"), sheet).(*SheetVer)
 				s += guiHtmlList("sheetver", "", false, len(sheet.versions), func(i int) (string, string, bool) {
@@ -159,7 +159,8 @@ func guiStartView() (s string) {
 	return
 }
 
-func guiSheetScan(series *Series, chapter *Chapter, fv func(string) string) (s string) {
+func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
+	series := chapter.parentSeries
 	if fv("scannow") != "" && scanJob == nil {
 		sj := ScanJob{
 			Id:     strconv.FormatInt(time.Now().UnixNano(), 36),

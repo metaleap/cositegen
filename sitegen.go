@@ -711,7 +711,7 @@ func (*siteGen) genThumbsPngs() (numPngs uint32) {
 				}
 			}
 			if App.Proj.NumSheetsInHomeBgs > 0 && len(filenames) > App.Proj.NumSheetsInHomeBgs {
-				filenames = filenames[:App.Proj.NumSheetsInHomeBgs]
+				filenames = filenames[len(filenames)-App.Proj.NumSheetsInHomeBgs:]
 			}
 
 			data := imgStitchHorizontally(filenames, 640, 44, color.NRGBA{0, 0, 0, 0})
