@@ -16,6 +16,15 @@ import (
 var PngEncoder = png.Encoder{CompressionLevel: png.BestCompression}
 var ImgScaler draw.Interpolator = draw.CatmullRom
 var DeNewLineRepl = strings.NewReplacer("\n", " ")
+var svgRepl = strings.NewReplacer(
+	" ", "&nbsp;",
+	"<b>", "<tspan class='b'>",
+	"<u>", "<tspan class='u'>",
+	"<i>", "<tspan class='i'>",
+	"</b>", "</tspan>",
+	"</u>", "</tspan>",
+	"</i>", "</tspan>",
+)
 
 type ImgPanel struct {
 	Rect    image.Rectangle
@@ -228,8 +237,8 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bool, lineX int) (s string) {
 	aw, ah := pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
 	pxfont, pxline := int(px1cm*App.Proj.Gen.PanelSvgText.FontSizeCmA4), int(px1cm*App.Proj.Gen.PanelSvgText.PerLineDyCmA4)
-	s += "<text " + /*"x='0' y='0' "+*/ "style='font-size: " + itoa(pxfont) + "px' " + "transform='" + strings.TrimSpace(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
-	s += "<tspan style='" + strings.TrimSpace(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'>"
+	s += "<text " + /*"x='0' y='0' "+*/ "style='font-size: " + itoa(pxfont) + "px' " + "transform='" + trim(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
+	s += "<tspan style='" + trim(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'>"
 	for _, ln := range strings.Split(svgRepl.Replace(locStr(pta.Data, langId)), "\n") {
 		if ln == "" {
 			ln = "&nbsp;"

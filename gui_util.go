@@ -6,6 +6,11 @@ import (
 	"strconv"
 )
 
+type Indexed interface {
+	At(int) fmt.Stringer
+	Len() int
+}
+
 var hEsc = html.EscapeString
 
 func guiHtmlGrayDistrs(grayDistrs [][3]float64) string {

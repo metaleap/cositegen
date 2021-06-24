@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -15,10 +16,19 @@ type Any = interface{}
 type A = map[string]string
 
 var itoa = strconv.Itoa
+var trim = strings.TrimSpace
+var stdio sync.Mutex
 
-type Indexed interface {
-	At(int) fmt.Stringer
-	Len() int
+func assert(b bool) {
+	if !b {
+		panic("ASSERT")
+	}
+}
+
+func printLn(args ...Any) {
+	stdio.Lock()
+	fmt.Println(args...)
+	stdio.Unlock()
 }
 
 func mkDir(dirPath string) {
@@ -48,20 +58,6 @@ func writeFile(fileName string, data []byte) {
 	if err := os.Rename(tmpfilename, fileName); err != nil {
 		panic(err)
 	}
-}
-
-var stdio sync.Mutex
-
-func assert(b bool) {
-	if !b {
-		panic("ASSERT")
-	}
-}
-
-func printLn(args ...Any) {
-	stdio.Lock()
-	fmt.Println(args...)
-	stdio.Unlock()
 }
 
 func contentHash(content []byte) []byte {

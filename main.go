@@ -3,12 +3,16 @@ package main
 import (
 	"os"
 	"os/exec"
-	"sync/atomic"
+	"path/filepath"
 	"time"
 )
 
+var browserCmd = []string{"", "--new-window", "--single-process", "--user-data-dir=./.csg/chromium", "--disable-extensions", "--disk-cache-size=128"}
+
 func main() {
-	appInit()
+	App.StaticFilesDirPath = filepath.Join(os.Getenv("HOME"), "c/go/src/github.com/metaleap/cositegen/_static")
+	appDetectBrowser()
+	App.Proj.load()
 	if len(os.Args) > 1 {
 		appPrepWork()
 		args := map[string]bool{}
@@ -24,25 +28,21 @@ func main() {
 		go appPrepWork()
 		go launchGuiInKioskyBrowser()
 		for canexit := false; !canexit; time.Sleep(time.Second) {
-			canexit = App.Gui.BrowserClosed && scanJob == nil &&
-				App.Proj.allPrepsDone && atomic.LoadInt32(&numBusyRequests) == 0
-			for _, busy := range appMainActions {
-				canexit = canexit && !busy
-			}
+			canexit = (App.Gui.BrowserPid == 0) && !appIsBusy()
 		}
 		appOnExit()
 	}
 }
 
-var browserCmd = []string{"", "--new-window", "--single-process", "--user-data-dir=./.csg/chromium", "--disable-extensions", "--disk-cache-size=128", "--app=http://localhost:4321"}
-
 func launchGuiInKioskyBrowser() {
-	cmd := exec.Command(browserCmd[0], browserCmd[1:]...)
+	App.Gui.BrowserPid = -1
+	cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=http://localhost:4321")...)
 	if err := cmd.Start(); err != nil {
 		panic(err)
 	}
+	App.Gui.BrowserPid = cmd.Process.Pid
 	if err := cmd.Wait(); err != nil {
 		panic(err)
 	}
-	App.Gui.BrowserClosed = true
+	App.Gui.BrowserPid = 0
 }

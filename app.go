@@ -1,17 +1,21 @@
 package main
 
 import (
-	"os"
 	"os/exec"
-	"path/filepath"
+	"sync/atomic"
 )
+
+var appMainActions = map[string]bool{}
+var AppMainActions = A{
+	"sitegen": "Re-generate site",
+}
 
 var App struct {
 	StaticFilesDirPath string
 	Proj               Project
 	Gui                struct {
-		BrowserClosed bool
-		State         struct {
+		BrowserPid int
+		State      struct {
 			Sel struct {
 				Series  *Series
 				Chapter *Chapter
@@ -22,10 +26,7 @@ var App struct {
 	}
 }
 
-func appInit() {
-	App.StaticFilesDirPath = filepath.Join(os.Getenv("HOME"), "c/go/src/github.com/metaleap/cositegen/_static")
-	App.Proj.load()
-
+func appDetectBrowser() {
 	var cmdidx int
 	cmdnames := []string{"chromium", "chromium-browser", "chrome", "google-chrome"}
 	for i, l := 0, len(cmdnames); i < l; i++ {
@@ -45,9 +46,13 @@ func appOnExit() {
 	rmDir(".csg/tmp")
 }
 
-var appMainActions = map[string]bool{}
-var AppMainActions = A{
-	"sitegen": "Re-generate site",
+func appIsBusy() (tooBusy bool) {
+	tooBusy = (scanJob != nil) || (scanDevices == nil) ||
+		(atomic.LoadInt32(&numBusyRequests) > 0) || !App.Proj.allPrepsDone
+	for _, busy := range appMainActions {
+		tooBusy = tooBusy || busy
+	}
+	return
 }
 
 func appMainAction(fromGui bool, name string, args map[string]bool) string {
@@ -77,6 +82,7 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 }
 
 func appPrepWork() {
+	App.Proj.allPrepsDone = false
 	timedLogged("Preprocessing...", func() string {
 		var numjobs, numwork int
 		for _, series := range App.Proj.Series {

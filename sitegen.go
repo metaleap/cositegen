@@ -162,10 +162,9 @@ func (me siteGen) genSite(map[string]bool) {
 	})
 
 	printLn("SiteGen: DONE after " + time.Now().Sub(tstart).String())
-	browserCmd[len(browserCmd)-1] = "--app=file://" + os.Getenv("PWD") + "/.build/index.html"
-	cmd := exec.Command(browserCmd[0], browserCmd[1:]...)
-	if err := cmd.Run(); err != nil {
-		printLn(err)
+	cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=file://"+os.Getenv("PWD")+"/.build/index.html")...)
+	if cmd.Start() == nil {
+		go cmd.Wait()
 	}
 }
 
@@ -618,16 +617,6 @@ func (me *siteGen) textStr(key string) (s string) {
 	}
 	return s
 }
-
-var svgRepl = strings.NewReplacer(
-	" ", "&nbsp;",
-	"<b>", "<tspan class='b'>",
-	"<u>", "<tspan class='u'>",
-	"<i>", "<tspan class='i'>",
-	"</b>", "</tspan>",
-	"</u>", "</tspan>",
-	"</i>", "</tspan>",
-)
 
 func (me *siteGen) genAtomXml() (numFilesWritten int) {
 	af := App.Proj.AtomFile

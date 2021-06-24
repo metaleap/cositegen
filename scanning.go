@@ -77,6 +77,7 @@ type ScanJob struct {
 }
 
 func scanDevicesDetection() {
+	scanDevices = nil
 	var sds []*ScanDevice
 	cmd := exec.Command("scanimage", "--formatted-device-list",
 		`{"Vendor": "%v", "Model": "%m", "Type": "%t", "Ident": "%d", "Nr": %i}`)
@@ -92,7 +93,7 @@ func scanDevicesDetection() {
 
 	prefcat, prefdesc, prefspec := "  ", "        ", "    -"
 	for _, sd := range sds {
-		if sd.Ident = strings.TrimSpace(sd.Ident); sd.Ident == "" || html.EscapeString(sd.Ident) != sd.Ident {
+		if sd.Ident = trim(sd.Ident); sd.Ident == "" || html.EscapeString(sd.Ident) != sd.Ident {
 			panic(fmt.Sprintf("TODO prep code for previously unexpected scandev ident format:\t%#v", sd.Ident))
 		}
 		cmdargs := append(saneDefaultArgs, "--device-name", sd.Ident, "--all-options")
@@ -115,17 +116,17 @@ func scanDevicesDetection() {
 		for _, ln := range strings.Split(string(data), "\n") {
 			// this exact ordering of the `if` tests matters here
 			if strings.HasPrefix(ln, prefdesc) {
-				opt.Description = append(opt.Description, strings.TrimSpace(ln))
+				opt.Description = append(opt.Description, trim(ln))
 			} else if strings.HasPrefix(ln, prefspec) {
 				next()
-				ln = strings.TrimSpace(ln[len(prefspec):])
+				ln = trim(ln[len(prefspec):])
 				idx := strings.IndexFunc(ln, func(r rune) bool {
 					return !(r == '-' || (r >= 'a' && r <= 'z'))
 				})
 				opt.Name = strings.TrimLeft(ln, "-")
 				if idx > 0 {
 					opt.Name = strings.TrimLeft(ln[:idx], "-")
-					opt.FormatInfo = strings.TrimSpace(ln[idx:])
+					opt.FormatInfo = trim(ln[idx:])
 					opt.Inactive = strings.HasSuffix(opt.FormatInfo, " [inactive]")
 					opt.IsToggle = strings.HasPrefix(opt.FormatInfo, "[=(") && strings.Contains(opt.FormatInfo, "yes|no)]")
 				} else {
@@ -133,7 +134,7 @@ func scanDevicesDetection() {
 				}
 			} else if strings.HasPrefix(ln, prefcat) {
 				next()
-				cat = strings.TrimSpace(ln)
+				cat = trim(ln)
 			}
 		}
 		next()
@@ -186,7 +187,8 @@ func scanJobDo() {
 	})
 	scanJobNotice = "successfully written to " + sj.PngFileName + ", available in editor upon restart"
 	printLn(scanJobNotice)
-	browserCmd[len(browserCmd)-1] = "--app=file://" + os.Getenv("PWD") + "/" + sj.PngFileName
-	cmd := exec.Command(browserCmd[0], browserCmd[1:]...)
-	_ = cmd.Run()
+	cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=file://"+os.Getenv("PWD")+"/"+sj.PngFileName)...)
+	if cmd.Start() == nil {
+		go cmd.Wait()
+	}
 }

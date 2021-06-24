@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-var trim = strings.TrimSpace
-
 func fV(r *http.Request) func(string) string {
 	var wthDisAintWindoze = strings.NewReplacer("\r\n", "\n")
 	return func(k string) string { return wthDisAintWindoze.Replace(r.FormValue(k)) }
