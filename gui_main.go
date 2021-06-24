@@ -91,7 +91,7 @@ func guiMain(r *http.Request, notice string) []byte {
 		}
 	}
 	if !havefullgui {
-		s += "<hr/><div id='uipane'>" + guiGrayDistrs() + "</div>"
+		s += "<hr/><div id='uipane'>" + guiStartView() + "</div>"
 	}
 	if shouldsavemeta {
 		App.Proj.save()
@@ -106,7 +106,7 @@ func guiMain(r *http.Request, notice string) []byte {
 	return []byte(s)
 }
 
-func guiGrayDistrs() (s string) {
+func guiStartView() (s string) {
 	for _, series := range App.Proj.Series {
 		if App.Gui.State.Sel.Series == nil || App.Gui.State.Sel.Series == series {
 			for _, chapter := range series.Chapters {

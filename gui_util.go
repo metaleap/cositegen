@@ -36,9 +36,9 @@ func guiHtmlList(name string, noneItemFirst string, prompt bool, numItems int, g
 		s += "<option value=''>" + noneItemFirst + "</option>"
 	}
 	if getItem != nil {
-		for i := 0; i < numItems || numItems == 0; i++ {
+		for i := 0; i < numItems || numItems < 0; i++ {
 			value, caption, sel := getItem(i)
-			if value == "" && caption == "" && numItems == 0 {
+			if value == "" && caption == "" && numItems < 0 {
 				break
 			}
 			if s += "<option value='" + value + "'"; sel {

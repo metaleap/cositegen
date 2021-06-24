@@ -71,20 +71,25 @@ type Series struct {
 	Author   string
 	Chapters []*Chapter
 
-	dirPath string
+	dirPath    string
+	parentProj *Project
 }
 
 func (me *Series) At(i int) fmt.Stringer { return me.Chapters[i] }
 func (me *Series) Len() int              { return len(me.Chapters) }
 func (me *Series) String() string        { return me.Name }
-func (me *Series) NextAfter(chapter *Chapter) *Chapter {
-	for now, i := false, 0; i < len(me.Chapters); i++ {
-		if now {
-			return me.Chapters[i]
+func (me *Chapter) NextAfter(withSheetsOnly bool) *Chapter {
+	series := me.parentSeries
+	for now, i := false, 0; i < len(series.Chapters); i++ {
+		if now && (len(series.Chapters[i].sheets) > 0 || !withSheetsOnly) {
+			return series.Chapters[i]
 		}
-		now = (me.Chapters[i] == chapter)
+		now = (series.Chapters[i] == me)
 	}
-	return me.Chapters[0]
+	if series.Chapters[0] == me {
+		return nil
+	}
+	return series.Chapters[0]
 }
 
 type Chapter struct {
@@ -100,6 +105,7 @@ type Chapter struct {
 	defaultQuali int
 	dirPath      string
 	sheets       []*Sheet
+	parentSeries *Series
 }
 
 func (me *Chapter) At(i int) fmt.Stringer { return me.sheets[i] }
@@ -151,17 +157,18 @@ func (me *Project) load() {
 	}
 
 	for _, series := range me.Series {
+		series.parentProj = me
 		series.dirPath = "sheets/" + series.Name
 		for _, chapter := range series.Chapters {
+			chapter.parentSeries = series
 			chapter.dirPath = filepath.Join(series.dirPath, chapter.Name)
-			sheetsdirpath := filepath.Join(chapter.dirPath, "sheets")
-			files, err := os.ReadDir(sheetsdirpath)
+			files, err := os.ReadDir(chapter.dirPath)
 			if err != nil {
 				panic(err)
 			}
 			for _, f := range files {
 				if fnamebase := f.Name(); !f.IsDir() {
-					fname := filepath.Join(sheetsdirpath, fnamebase)
+					fname := filepath.Join(chapter.dirPath, fnamebase)
 					fnamebase = fnamebase[:len(fnamebase)-len(filepath.Ext(fnamebase))]
 					versionname := fnamebase[strings.LastIndexByte(fnamebase, '_')+1:]
 					if versionname == fnamebase {
@@ -183,14 +190,14 @@ func (me *Project) load() {
 						}
 					}
 					if sheet == nil {
-						sheet = &Sheet{name: sheetname}
+						sheet = &Sheet{name: sheetname, parentChapter: chapter}
 						chapter.sheets = append(chapter.sheets, sheet)
 					}
 
 					for _, sv := range sheet.versions {
 						assert(sv.name != versionname)
 					}
-					sheetver := &SheetVer{name: versionname, parent: sheet, fileName: fname}
+					sheetver := &SheetVer{name: versionname, parentSheet: sheet, fileName: fname}
 					sheet.versions = append(sheet.versions, sheetver)
 				}
 			}

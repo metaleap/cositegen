@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"image"
+	_ "image/png"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -10,8 +12,9 @@ import (
 )
 
 type Sheet struct {
-	name     string
-	versions []*SheetVer
+	parentChapter *Chapter
+	name          string
+	versions      []*SheetVer
 }
 
 func (me *Sheet) At(i int) fmt.Stringer { return me.versions[i] }
@@ -22,6 +25,7 @@ type SheetVerData struct {
 	dirPath         string
 	bwFilePath      string
 	bwSmallFilePath string
+	pngDirPath      string
 
 	DateTimeUnixNano int64
 	GrayDistr        []int     `json:",omitempty"`
@@ -29,11 +33,11 @@ type SheetVerData struct {
 }
 
 type SheetVer struct {
-	parent   *Sheet
-	name     string
-	fileName string
-	data     *SheetVerData
-	prep     struct {
+	parentSheet *Sheet
+	name        string
+	fileName    string
+	data        *SheetVerData
+	prep        struct {
 		sync.Mutex
 		done bool
 	}
@@ -85,19 +89,26 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	me.data.dirPath = ".csg/projdata/" + curhash
 	me.data.bwFilePath = filepath.Join(me.data.dirPath, "bw."+itoa(int(App.Proj.BwThreshold))+".png")
 	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(App.Proj.BwThreshold))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
+	me.data.pngDirPath = "png." + itoa(int(App.Proj.BwThreshold))
+	for _, q := range App.Proj.Qualis {
+		me.data.pngDirPath += "." + itoa(q.SizeHint)
+	}
+	me.data.pngDirPath = filepath.Join(me.data.dirPath, me.data.pngDirPath)
+
 	mkDir(me.data.dirPath)
 
-	didWork = me.ensureMonochrome(forceFullRedo)
-	shouldsaveprojmeta = me.ensurePanels(forceFullRedo) || shouldsaveprojmeta
+	didWork = me.ensureBwSheetPngs(shouldsaveprojmeta)
+	shouldsaveprojmeta = me.ensurePanels(shouldsaveprojmeta) || shouldsaveprojmeta
+	shouldsaveprojmeta = me.ensureBwPanelPngs(shouldsaveprojmeta) || shouldsaveprojmeta
 	shouldsaveprojmeta = me.ensureColorDistr(forceFullRedo) || shouldsaveprojmeta
 
-	if didWork = shouldsaveprojmeta || didWork; shouldsaveprojmeta {
+	if didWork = didWork || shouldsaveprojmeta; shouldsaveprojmeta {
 		App.Proj.save()
 	}
 	return
 }
 
-func (me *SheetVer) ensureMonochrome(force bool) bool {
+func (me *SheetVer) ensureBwSheetPngs(force bool) bool {
 	var exist1, exist2 bool
 	for fname, bptr := range map[string]*bool{me.data.bwFilePath: &exist1, me.data.bwSmallFilePath: &exist2} {
 		if fileinfo, err := os.Stat(fname); err == nil && !fileinfo.IsDir() {
@@ -106,6 +117,7 @@ func (me *SheetVer) ensureMonochrome(force bool) bool {
 			panic(err)
 		}
 	}
+
 	if force || !(exist1 && exist2) {
 		rmDir(me.data.dirPath) // because BwThreshold or BwSmallWidth might have been..
 		mkDir(me.data.dirPath) // ..changed and thus the file names: so rm stale ones.
@@ -126,6 +138,58 @@ func (me *SheetVer) ensureMonochrome(force bool) bool {
 		return true
 	}
 	return false
+}
+
+func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
+	var numpanels int
+	me.data.PanelsTree.iter(func(panel *ImgPanel) {
+		numpanels++
+	})
+	for pidx := 0; pidx < numpanels && !force; pidx++ {
+		if fileinfo, err := os.Stat(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(App.Proj.Qualis[0].SizeHint)+".png")); err != nil || fileinfo.IsDir() {
+			force = true
+		}
+	}
+	if !force {
+		return false
+	}
+
+	rmDir(me.data.pngDirPath)
+	mkDir(me.data.pngDirPath)
+	srcimgfile, err := os.Open(me.data.bwFilePath)
+	if err != nil {
+		panic(err)
+	}
+	imgsrc, _, err := image.Decode(srcimgfile)
+	if err != nil {
+		panic(err)
+	}
+	_ = srcimgfile.Close()
+
+	var pidx int
+	var work sync.WaitGroup
+	me.data.PanelsTree.iter(func(panel *ImgPanel) {
+		work.Add(1)
+		go func(pidx int) {
+			for _, quali := range App.Proj.Qualis {
+				pw, ph, sw := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y, me.data.PanelsTree.Rect.Max.X-me.data.PanelsTree.Rect.Min.X
+				width := float64(quali.SizeHint) / (float64(sw) / float64(pw))
+				height := width / (float64(pw) / float64(ph))
+				w, h := int(width), int(height)
+				var wassamesize bool
+				pngdata := imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, quali.SizeHint/640, 0, false, &wassamesize)
+				writeFile(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(quali.SizeHint)+".png"), pngdata)
+				if wassamesize {
+					break
+				}
+			}
+			work.Done()
+		}(pidx)
+		pidx++
+	})
+	work.Wait()
+
+	return true
 }
 
 func (me *SheetVer) ensureColorDistr(force bool) bool {
