@@ -30,7 +30,9 @@ type PageGen struct {
 	QualList       string
 	PagesList      string
 	PageContent    string
-	FooterHtml     string
+	HintHtmlR      string
+	HintHtmlS      string
+	LegalHtml      string
 	HrefHome       string
 	FeedHref       string
 }
@@ -229,11 +231,13 @@ func (me *siteGen) genOrCopyPanelPngsOf(sv *SheetVer) (numPngs uint32, numPanels
 func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) {
 	homename := "index"
 	me.page = PageGen{
-		SiteTitle:  hEsc(App.Proj.Title),
-		SiteDesc:   hEsc(locStr(App.Proj.Desc, me.lang)),
-		PageLang:   me.lang,
-		FooterHtml: me.textStr("FooterHtml"),
-		FeedHref:   "./" + App.Proj.AtomFile.Name + "." + me.lang + ".atom",
+		SiteTitle: hEsc(App.Proj.Title),
+		SiteDesc:  hEsc(locStr(App.Proj.Desc, me.lang)),
+		PageLang:  me.lang,
+		HintHtmlR: me.textStr("HintHtmlR"),
+		HintHtmlS: me.textStr("HintHtmlS"),
+		LegalHtml: me.textStr("LegalHtml"),
+		FeedHref:  "./" + App.Proj.AtomFile.Name + "." + me.lang + ".atom",
 	}
 	if me.lang != App.Proj.Langs[0] {
 		homename += "." + me.lang
@@ -247,7 +251,6 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		numFilesWritten += me.genPageExecAndWrite(homename)
 	} else {
 		series := chapter.parentSeries
-		me.page.PageCssClasses = App.Proj.Gen.ClsChapter
 		me.page.HrefHome += "#" + strings.ToLower(series.Name)
 		me.page.PageTitle = "<span>" + hEsc(locStr(series.Title, me.lang)) + ":</span> " + hEsc(locStr(chapter.Title, me.lang))
 		me.page.PageTitleTxt = hEsc(locStr(series.Title, me.lang)) + ": " + hEsc(locStr(chapter.Title, me.lang))
@@ -257,6 +260,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		}
 		me.page.PageDesc = hEsc(locStr(series.Desc, me.lang)) + authorinfo
 		for _, viewmode := range viewModes {
+			me.page.PageCssClasses = App.Proj.Gen.ClsChapter + viewmode
 			for qidx, quali := range App.Proj.Qualis {
 				qname, qsizes, allpanels := quali.Name, map[int]int64{}, me.prepSheetPage(qidx, viewmode, chapter, pageNr)
 				me.page.QualList = ""
@@ -437,7 +441,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, pa
 				if istop && viewMode == "r" {
 					s += " " + App.Proj.Gen.ClsPanelRow + "t"
 				} else if istop {
-					s += "' onfocus='this.scrollIntoView()' tabindex='0"
+					s += "' onfocus='this.scrollIntoView({behavior: \"smooth\"})' tabindex='0"
 				}
 				s += "'>" + iter(sv, sr, false) + "</div>"
 				if viewMode == "r" && istop {
@@ -476,7 +480,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, pa
 
 			s += "<div onclick='jumpNextPanel(this)' class='" + App.Proj.Gen.ClsPanel + "'"
 			if viewMode == "r" {
-				s += " tabindex='0' onfocus='this.scrollIntoView()'"
+				s += " tabindex='0' onfocus='this.scrollIntoView({behavior: \"smooth\"})'"
 			}
 			s += ">" + me.genSvgForPanel(sv, pidx, panel)
 			s += "<img src='./img/" + name + ".png' class='" + App.Proj.Gen.ClsImgHq + "' " + App.Proj.Gen.ClsImgHq + "='" + hqsrc + "'/>"
