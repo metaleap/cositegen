@@ -152,7 +152,7 @@ func (me siteGen) genSite(map[string]bool) {
 			panic(err)
 		}
 		for _, me.lang = range App.Proj.Langs {
-			for _, me.dirRtl = range []bool{true, false} {
+			for _, me.dirRtl = range []bool{true, false /*keep this order of bools*/} {
 				numfileswritten += me.genPages(nil, 0)
 				for _, series := range App.Proj.Series {
 					for _, chapter := range series.Chapters {
@@ -166,7 +166,7 @@ func (me siteGen) genSite(map[string]bool) {
 					}
 				}
 			}
-			if App.Proj.AtomFile.Name != "" && !me.dirRtl {
+			if App.Proj.AtomFile.Name != "" {
 				numfileswritten += me.genAtomXml()
 			}
 		}
