@@ -35,6 +35,7 @@ type PageGen struct {
 	PageContent    string
 	HintHtmlR      string
 	HintHtmlS      string
+	HintDir        string
 	LegalHtml      string
 	HrefHome       string
 	HrefDirLtr     string
@@ -250,6 +251,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		PageLang:  me.lang,
 		HintHtmlR: me.textStr("HintHtmlR"),
 		HintHtmlS: me.textStr("HintHtmlS"),
+		HintDir:   me.textStr("HintDir"),
 		LegalHtml: me.textStr("LegalHtml"),
 		HrefFeed:  "./" + App.Proj.AtomFile.Name + "." + me.lang + ".atom",
 		PageDir:   "ltr",
