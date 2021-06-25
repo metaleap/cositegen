@@ -27,7 +27,11 @@ type Project struct {
 	PageContentTexts       map[string]map[string]string
 	NumSheetsInHomeBgs     int
 	NumColorDistrClusters  int
-	Gen                    struct {
+	DirModes               struct {
+		Ltr map[string]string
+		Rtl map[string]string
+	}
+	Gen struct {
 		IdQualiList      string
 		ClsViewerPage    string
 		ClsNonViewerPage string
