@@ -32,6 +32,8 @@ type PageGen struct {
 	DirAltDesc     string
 	LangsList      string
 	ViewerList     string
+	HrefViewAlt    string
+	HrefViewCur    string
 	QualList       string
 	PagesList      string
 	PageContent    string
@@ -153,7 +155,7 @@ func (me siteGen) genSite(map[string]bool) {
 	})
 
 	printLn("SiteGen: DONE after " + time.Now().Sub(tstart).String())
-	cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=file://"+os.Getenv("PWD")+"/.build/index.html")...)
+	cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=file://"+os.Getenv("PWD")+"/.build/jokes-two-pagers-1280s20v2106.comic.de.html")...)
 	if cmd.Start() == nil {
 		go cmd.Wait()
 	}
@@ -418,44 +420,41 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				}
 			}
 		}
-		if pageNr == numpages && istoplist {
-			if nextchap := chapter.NextAfter(true); nextchap != nil {
-				name := me.namePage(nextchap, quali.SizeHint, 1, viewMode, "", me.lang, svName)
-				s += "<li><a href='./" + name + ".html'>" + locStr(nextchap.Title, me.lang) + "</a></li>"
-			}
+		nextchap := chapter.NextAfter(true)
+		if pageNr == numpages && istoplist && nextchap != nil {
+			name := me.namePage(nextchap, quali.SizeHint, 1, viewMode, "", me.lang, svName)
+			s += "<li><a href='./" + name + ".html'>" + locStr(nextchap.Title, me.lang) + "</a></li>"
 		}
 		if s != "" {
 			var pg int
 			if pg = pageNr - 1; pg < 1 {
 				pg = 1
 			}
-			pvis, prev := "hidden", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svName)
+			pvis, phref := "none", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svName)
 			if pg = pageNr + 1; pg > numpages {
 				pg = numpages
 			}
-			nvis, next := "hidden", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svName)
+			nvis, nhref := "none", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svName)
 			if pageNr > 1 && istoplist {
-				pvis = "visible"
+				pvis = "inline-block"
 			}
 			if pageNr < numpages {
-				nvis = "visible"
-			} else if !istoplist {
-				if nextchap := chapter.NextAfter(true); nextchap != nil {
-					nvis, next = "visible", me.namePage(nextchap, quali.SizeHint, 1, viewMode, "", me.lang, svName)
-				}
+				nvis = "inline-block"
+			} else if !istoplist && nextchap != nil {
+				nvis, nhref = "inline-block", me.namePage(nextchap, quali.SizeHint, 1, viewMode, "", me.lang, svName)
 			}
 			ulid := App.Proj.Gen.APaging
 			if !istoplist {
 				ulid += "b"
 				s = "<ul id='" + ulid + "'>" +
-					"<li><a style='visibility: " + nvis + "' href='./" + strings.ToLower(next) + ".html'>&rarr;</a></li>" +
+					"<li><a style='display: " + nvis + "' href='./" + strings.ToLower(nhref) + ".html'>&rarr;</a></li>" +
 					s +
 					"</ul>"
 			} else {
 				s = "<ul id='" + ulid + "'>" +
-					"<li><a style='visibility: " + pvis + "' href='./" + strings.ToLower(prev) + ".html'>&larr;</a></li>" +
+					"<li><a style='display: " + pvis + "' href='./" + strings.ToLower(phref) + ".html'>&larr;</a></li>" +
 					s +
-					"<li><a style='visibility: " + nvis + "' href='./" + strings.ToLower(next) + ".html'>&rarr;</a></li>" +
+					"<li><a style='display: " + nvis + "' href='./" + strings.ToLower(nhref) + ".html'>&rarr;</a></li>" +
 					"</ul>"
 			}
 		}
@@ -469,10 +468,12 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			me.page.ViewerList += " vc"
 		}
 		me.page.ViewerList += "'>"
-		if viewmode == viewMode {
+		if n := me.namePage(chapter, App.Proj.Qualis[qIdx].SizeHint, pageNr, viewmode, "", me.lang, svName); viewmode == viewMode {
+			me.page.HrefViewCur = "./" + n + ".html"
 			me.page.ViewerList += "<b>&nbsp;</b>"
 		} else {
-			me.page.ViewerList += "<a href='./" + me.namePage(chapter, App.Proj.Qualis[qIdx].SizeHint, pageNr, viewmode, "", me.lang, svName) + ".html'>&nbsp;</a>"
+			me.page.HrefViewAlt = "./" + n + ".html"
+			me.page.ViewerList += "<a href='" + me.page.HrefViewAlt + "'>&nbsp;</a>"
 		}
 		me.page.ViewerList += "</div>"
 	}
