@@ -473,7 +473,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			me.page.ViewerList += "<b>&nbsp;</b>"
 		} else {
 			me.page.HrefViewAlt = "./" + n + ".html"
-			me.page.ViewerList += "<a href='" + me.page.HrefViewAlt + "'>&nbsp;</a>"
+			me.page.ViewerList += "<a class='" + App.Proj.Gen.ClsPanel + "l' href='" + me.page.HrefViewAlt + "'>&nbsp;</a>"
 		}
 		me.page.ViewerList += "</div>"
 	}
@@ -489,11 +489,11 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				if viewMode == "r" && istop {
 					s += "<td>"
 				}
-				s += "<div class='" + App.Proj.Gen.ClsPanelRow
+				s += "<div id='r" + svid + itoa(i) + "' class='" + App.Proj.Gen.ClsPanelRow
 				if istop && viewMode == "r" {
 					s += " " + App.Proj.Gen.ClsPanelRow + "t"
 				} else if istop {
-					s += "' onfocus='this.scrollIntoView({behavior: \"smooth\"})' tabindex='0"
+					s += "' onfocus='" + App.Proj.Gen.ClsPanel + "f(this)' tabindex='0"
 				}
 				s += "'>" + iter(sv, sr, false) + "</div>"
 				if viewMode == "r" && istop {
@@ -530,9 +530,9 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				hqsrc = ""
 			}
 
-			s += "<div onclick='" + App.Proj.Gen.ClsPanel + "(this)' class='" + App.Proj.Gen.ClsPanel + "'"
+			s += "<div id='p" + svid + itoa(pidx) + "' onclick='" + App.Proj.Gen.ClsPanel + "(this)' class='" + App.Proj.Gen.ClsPanel + "'"
 			if viewMode == "r" {
-				s += " tabindex='0' onfocus='this.scrollIntoView({behavior: \"smooth\"})'"
+				s += " tabindex='0' onfocus='" + App.Proj.Gen.ClsPanel + "f(this)'"
 			}
 			s += ">" + me.genSvgForPanel(sv, pidx, panel)
 			me.sheetPgNrs[sv] = pageNr
@@ -663,7 +663,7 @@ func (me *siteGen) genPageExecAndWrite(name string) (numFilesWritten int) {
 					href = "index" + dirmode
 				}
 			}
-			me.page.LangsList += "<a href='./" + href + ".html'><img alt='" + lang + "' title='" + lang + "' src='" + imgsrcpath + "'/></a>"
+			me.page.LangsList += "<a class='" + App.Proj.Gen.ClsPanel + "l' href='./" + href + ".html'><img alt='" + lang + "' title='" + lang + "' src='" + imgsrcpath + "'/></a>"
 			me.page.LangsList += "</div>"
 		}
 	}
