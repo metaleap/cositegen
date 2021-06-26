@@ -530,7 +530,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				hqsrc = ""
 			}
 
-			s += "<div onclick='jumpNextPanel(this)' class='" + App.Proj.Gen.ClsPanel + "'"
+			s += "<div onclick='" + App.Proj.Gen.ClsPanel + "(this)' class='" + App.Proj.Gen.ClsPanel + "'"
 			if viewMode == "r" {
 				s += " tabindex='0' onfocus='this.scrollIntoView({behavior: \"smooth\"})'"
 			}
