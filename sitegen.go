@@ -262,10 +262,10 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 	if me.dirRtl {
 		strrepl = locStr(App.Proj.DirModes.Rtl.Title, me.lang)
 	}
-	homename, repl := "index", strings.NewReplacer("%DIR%", strrepl)
+	homename, repl := "index", strings.NewReplacer("%DIR%", "<span class='"+App.Proj.DirModes.Ltr.Name+App.Proj.DirModes.Rtl.Name+"'>"+strrepl+"</span>")
 	me.page = PageGen{
 		SiteTitle:  hEsc(App.Proj.Title),
-		SiteDesc:   hEsc(repl.Replace(locStr(App.Proj.Desc, me.lang))),
+		SiteDesc:   repl.Replace(hEsc(locStr(App.Proj.Desc, me.lang))),
 		PageLang:   me.lang,
 		HintHtmlR:  me.textStr("HintHtmlR"),
 		HintHtmlS:  me.textStr("HintHtmlS"),
@@ -286,7 +286,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 
 	if chapter == nil {
 		me.page.PageTitle = hEsc(me.textStr("HomeTitle"))
-		me.page.PageDesc = hEsc(repl.Replace(me.textStr("HomeDesc")))
+		me.page.PageDesc = repl.Replace(hEsc(me.textStr("HomeDesc")))
 		if me.lang == App.Proj.Langs[0] {
 			me.page.HrefDirLtr = "./index.html"
 			me.page.HrefDirRtl = "./index." + App.Proj.DirModes.Rtl.Name + ".html"

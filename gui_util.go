@@ -34,7 +34,7 @@ func guiHtmlImg(uri string, attrs map[string]string) string {
 func guiHtmlList(name string, noneItemFirst string, prompt bool, numItems int, getItem func(int) (string, string, bool)) string {
 	onchange := "doPostBack(\"" + hEsc(name) + "\");"
 	if prompt {
-		onchange = "if((this.selectedIndex==0)||confirm(this.options[this.selectedIndex].innerText + \"\\n\\n--- sure about it?\")){" + onchange + "}else{event.cancelBubble=true;this.selectedIndex=0;return false;}"
+		onchange = "if((this.selectedIndex==0)||confirm(this.options[this.selectedIndex].innerText + \"\\n\\n--- sure about it?\")){" + onchange + "}else{event.stopPropagation();this.selectedIndex=0;return false;}"
 	}
 	s := "<select onchange='" + onchange + "' name='" + hEsc(name) + "' id='" + hEsc(name) + "'>"
 	if noneItemFirst != "" {
