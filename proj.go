@@ -17,6 +17,7 @@ type Project struct {
 		SizeHint int
 	}
 	AtomFile struct {
+		PubDates []string
 		Name     string
 		Title    string
 		LinkHref string
@@ -46,6 +47,8 @@ type Project struct {
 		ClsSheet         string
 		ClsImgHq         string
 		APaging          string
+		ImgSrcLang       string
+		PngDirName       string
 		PanelSvgText     struct {
 			PerLineDyCmA4        float64
 			FontSizeCmA4         float64
@@ -100,16 +103,12 @@ type Chapter struct {
 	Name          string
 	Title         map[string]string
 	SheetsPerPage int
-	History       []struct {
-		Date   string
-		PageNr int
-		Notes  map[string]string
-	}
 
-	defaultQuali int
-	dirPath      string
-	sheets       []*Sheet
-	parentSeries *Series
+	defaultQuali  int
+	dirPath       string
+	sheets        []*Sheet
+	parentSeries  *Series
+	sheetVerNames []string
 }
 
 func (me *Chapter) At(i int) fmt.Stringer { return me.sheets[i] }
@@ -202,7 +201,16 @@ func (me *Project) load() {
 						assert(sv.name != versionname)
 					}
 					sheetver := &SheetVer{name: versionname, parentSheet: sheet, fileName: fname}
-					sheet.versions = append(sheet.versions, sheetver)
+					sheet.versions = append([]*SheetVer{sheetver}, sheet.versions...)
+					foundinchapter := false
+					for _, svname := range chapter.sheetVerNames {
+						if foundinchapter = (svname == sheetver.name); foundinchapter {
+							break
+						}
+					}
+					if !foundinchapter {
+						chapter.sheetVerNames = append([]string{sheetver.name}, chapter.sheetVerNames...)
+					}
 				}
 			}
 		}

@@ -116,15 +116,18 @@ func guiStartView() (s string) {
 					}
 					s += "<div><input class='collchk' id='" + id + "' type='checkbox' checked='checked'/><h3><label for='" + id + "'>" + series.Title["en"] + "&nbsp;&nbsp;&mdash;&nbsp;&nbsp;" + chapter.Title["en"] + "&nbsp;&nbsp;&mdash;&nbsp;&nbsp;(" + itoa(len(chapter.sheets)) + " sheet/s, " + itoa(numpages) + " page/s)</label></h3>"
 					s += "<div class='collchk'><table width='99%'>"
-					pgnr := 0
+					pgnr, pgprev := 0, 0
 					for i, sheet := range chapter.sheets {
 						if chapter.SheetsPerPage == 0 {
-							pgnr = 1
+							pgnr, pgprev = 1, 1
 						} else if (i % chapter.SheetsPerPage) == 0 {
 							pgnr++
 						}
-						for _, sv := range sheet.versions {
+						for svidx, sv := range sheet.versions {
 							s += "<tr><td valign='top'>"
+							if pgnr != pgprev {
+								s += "<hr/>"
+							}
 							numpanels, numpanelareas := sv.panelCount()
 							a := "<a href='./?series=" + url.QueryEscape(series.Name) + "&chapter=" + url.QueryEscape(chapter.Name) + "&sheet=" + url.QueryEscape(sheet.name) + "&sheetver=" + url.QueryEscape(sv.fileName) + "&t=" + itoa(int(time.Now().UnixNano())) + "'>"
 							if sv.prep.done {
@@ -132,7 +135,15 @@ func guiStartView() (s string) {
 									s += a + "<img title='" + hEsc(sheet.name+"_"+sv.name) + "' src='./" + sv.data.bwSmallFilePath + "' style='width: 11em;'/></a>"
 								}
 							}
-							s += "</td><td width='98%' valign='top' align='left'><h4 style='margin-top: 0;'>p" + itoa(pgnr) + "&nbsp;&nbsp;&mdash;&nbsp;&nbsp;" + a + hEsc(sheet.name+"_"+sv.name) + "</a>"
+							s += "</td><td width='98%' valign='top' align='left'>"
+							if pgnr != pgprev {
+								s += "<hr/>"
+							}
+							s += "<h4 style='margin-top: 0;'><span"
+							if svidx != 0 {
+								s += " style='visibility:hidden'"
+							}
+							s += ">p" + itoa(pgnr) + "</span>&nbsp;&nbsp;&mdash;&nbsp;&nbsp;" + a + hEsc(sheet.name+"_"+sv.name) + "</a>"
 							if numpanels > 0 {
 								s += "<small>&nbsp;&nbsp;&mdash;&nbsp;&nbsp;<b>" + itoa(numpanelareas) + " </b> text-rect(s) in " + itoa(numpanels) + " panel(s)"
 								if numpanelareas > 0 {
@@ -150,8 +161,9 @@ func guiStartView() (s string) {
 							}
 							s += "</h4>" + guiHtmlGrayDistrs(sv.grayDistrs()) + "</td></tr>"
 						}
+						pgprev = pgnr
 					}
-					s += "</table><hr/></div>"
+					s += "</table></div>"
 					s += "</div>"
 				}
 			}

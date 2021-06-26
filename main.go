@@ -7,6 +7,9 @@ import (
 	"time"
 )
 
+const siteTmplDirName = "sitetmpl"
+const siteTmplFileName = "_tmpl.html"
+
 var browserCmd = []string{"", "--new-window", "--single-process", "--user-data-dir=./.csg/chromium", "--disable-extensions", "--disk-cache-size=128"}
 
 func main() {

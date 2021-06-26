@@ -31,7 +31,7 @@ func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
 	} else if ext == ".png" {
 		http.ServeFile(httpResp, httpReq, filepath.Join("." /*looks redudant but isnt!*/, httpReq.URL.Path))
 	} else if ext != "" {
-		http.ServeFile(httpResp, httpReq, filepath.Join("sitetmpl", httpReq.URL.Path))
+		http.ServeFile(httpResp, httpReq, filepath.Join(siteTmplDirName, httpReq.URL.Path))
 	} else if strings.Contains(httpReq.URL.Path, ".png/") {
 		httpServeDynPng(httpResp, httpReq)
 	} else {
