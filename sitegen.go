@@ -155,7 +155,7 @@ func (me siteGen) genSite(map[string]bool) {
 	})
 
 	printLn("SiteGen: DONE after " + time.Now().Sub(tstart).String())
-	cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=file://"+os.Getenv("PWD")+"/.build/jokes-two-pagers-1280s20v2106.comic.de.html")...)
+	cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=file://"+os.Getenv("PWD")+"/.build/index.html")...)
 	if cmd.Start() == nil {
 		go cmd.Wait()
 	}
