@@ -799,5 +799,5 @@ func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, vie
 			dirMode = App.Proj.DirModes.Rtl.Name
 		}
 	}
-	return strings.ToLower(chapter.parentSeries.Name + "-" + chapter.Name + "-" + itoa(qualiSizeHint) + viewMode + itoa(pageNr) + svName + "." + dirMode + "." + langId)
+	return strings.ToLower(chapter.parentSeries.Name + "-" + chapter.Name + "-" + itoa(pageNr) + svName + viewMode + itoa(qualiSizeHint) + "." + dirMode + "." + langId)
 }
