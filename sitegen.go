@@ -24,9 +24,12 @@ type PageGen struct {
 	PageDesc       string
 	PageLang       string
 	PageCssClasses string
-	PageDir        string
-	DirCur         string
-	DirAlt         string
+	PageDirCur     string
+	PageDirAlt     string
+	DirCurTitle    string
+	DirAltTitle    string
+	DirCurDesc     string
+	DirAltDesc     string
 	LangsList      string
 	ViewerList     string
 	QualList       string
@@ -45,17 +48,18 @@ type PageGen struct {
 }
 
 type siteGen struct {
-	tmpl      *template.Template
-	page      PageGen
-	lang      string
-	dirRtl    bool
-	onPngSize func(*Chapter, string, int, int)
-	pngPages  map[string]string
+	tmpl       *template.Template
+	page       PageGen
+	lang       string
+	dirRtl     bool
+	onPngSize  func(*Chapter, string, int, int)
+	sheetPgNrs map[*SheetVer]int
 }
 
 func (me siteGen) genSite(map[string]bool) {
 	var err error
 	tstart := time.Now()
+	me.sheetPgNrs = map[*SheetVer]int{}
 	printLn("SiteGen started. When done, result will open in new window.")
 	defer func() {
 		// if err := recover(); err != nil {
@@ -254,25 +258,26 @@ func (me *siteGen) genOrCopyPanelPngsOf(sv *SheetVer) (numPngs uint32, numPanels
 }
 
 func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) {
-	strrepl := locStr(App.Proj.DirModes.Ltr, me.lang)
+	strrepl := locStr(App.Proj.DirModes.Ltr.Title, me.lang)
 	if me.dirRtl {
-		strrepl = locStr(App.Proj.DirModes.Rtl, me.lang)
+		strrepl = locStr(App.Proj.DirModes.Rtl.Title, me.lang)
 	}
 	homename, repl := "index", strings.NewReplacer("%DIR%", strrepl)
 	me.page = PageGen{
-		SiteTitle: hEsc(App.Proj.Title),
-		SiteDesc:  hEsc(repl.Replace(locStr(App.Proj.Desc, me.lang))),
-		PageLang:  me.lang,
-		HintHtmlR: me.textStr("HintHtmlR"),
-		HintHtmlS: me.textStr("HintHtmlS"),
-		HintDir:   me.textStr("HintDir"),
-		LegalHtml: me.textStr("LegalHtml"),
-		HrefFeed:  "./" + App.Proj.AtomFile.Name + "." + me.lang + ".atom",
-		PageDir:   "ltr",
+		SiteTitle:  hEsc(App.Proj.Title),
+		SiteDesc:   hEsc(repl.Replace(locStr(App.Proj.Desc, me.lang))),
+		PageLang:   me.lang,
+		HintHtmlR:  me.textStr("HintHtmlR"),
+		HintHtmlS:  me.textStr("HintHtmlS"),
+		HintDir:    me.textStr("HintDir"),
+		LegalHtml:  me.textStr("LegalHtml"),
+		HrefFeed:   "./" + App.Proj.AtomFile.Name + "." + me.lang + ".atom",
+		PageDirCur: "ltr",
+		PageDirAlt: "rtl",
 	}
 	if me.dirRtl {
-		me.page.PageDir = "rtl"
-		homename += "." + App.Proj.DirModes.Rtl[""]
+		me.page.PageDirCur, me.page.PageDirAlt = "rtl", "ltr"
+		homename += "." + App.Proj.DirModes.Rtl.Name
 	}
 	if me.lang != App.Proj.Langs[0] {
 		homename += "." + me.lang
@@ -284,10 +289,10 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		me.page.PageDesc = hEsc(repl.Replace(me.textStr("HomeDesc")))
 		if me.lang == App.Proj.Langs[0] {
 			me.page.HrefDirLtr = "./index.html"
-			me.page.HrefDirRtl = "./index." + App.Proj.DirModes.Rtl[""] + ".html"
+			me.page.HrefDirRtl = "./index." + App.Proj.DirModes.Rtl.Name + ".html"
 		} else {
 			me.page.HrefDirLtr = "./index." + me.lang + ".html"
-			me.page.HrefDirRtl = "./index." + App.Proj.DirModes.Rtl[""] + "." + me.lang + ".html"
+			me.page.HrefDirRtl = "./index." + App.Proj.DirModes.Rtl.Name + "." + me.lang + ".html"
 		}
 		me.prepHomePage()
 		numFilesWritten += me.genPageExecAndWrite(homename)
@@ -336,8 +341,8 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 						me.page.QualList += ">" + q.Name + " (" + imgsizeinfo + ")" + "</option>"
 					}
 					me.page.QualList = "<select disabled='disabled' title='" + hEsc(me.textStr("QualityHint")) + "' name='" + App.Proj.Gen.IdQualiList + "' id='" + App.Proj.Gen.IdQualiList + "'>" + me.page.QualList + "</select>"
-					me.page.HrefDirLtr = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Ltr[""], me.lang, svname) + ".html"
-					me.page.HrefDirRtl = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Rtl[""], me.lang, svname) + ".html"
+					me.page.HrefDirLtr = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Ltr.Name, me.lang, svname) + ".html"
+					me.page.HrefDirRtl = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Rtl.Name, me.lang, svname) + ".html"
 
 					numFilesWritten += me.genPageExecAndWrite(me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svname))
 				}
@@ -529,6 +534,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				s += " tabindex='0' onfocus='this.scrollIntoView({behavior: \"smooth\"})'"
 			}
 			s += ">" + me.genSvgForPanel(sv, pidx, panel)
+			me.sheetPgNrs[sv] = pageNr
 			s += "<img src='./" + App.Proj.Gen.PngDirName + "/" + name + ".png' class='" + App.Proj.Gen.ClsImgHq + "' " + App.Proj.Gen.ClsImgHq + "='" + hqsrc + "'/>"
 			s += "</div>"
 			pidx++
@@ -651,7 +657,7 @@ func (me *siteGen) genPageExecAndWrite(name string) (numFilesWritten int) {
 				} else if lang == App.Proj.Langs[0] {
 					var dirmode string
 					if me.dirRtl {
-						dirmode = "." + App.Proj.DirModes.Rtl[""]
+						dirmode = "." + App.Proj.DirModes.Rtl.Name
 					}
 					href = "index" + dirmode
 				}
@@ -665,10 +671,12 @@ func (me *siteGen) genPageExecAndWrite(name string) (numFilesWritten int) {
 	}
 	if me.dirRtl {
 		me.page.HrefDirCur, me.page.HrefDirAlt = me.page.HrefDirRtl, me.page.HrefDirLtr
-		me.page.DirCur, me.page.DirAlt = locStr(App.Proj.DirModes.Rtl, me.lang), locStr(App.Proj.DirModes.Ltr, me.lang)
+		me.page.DirCurTitle, me.page.DirAltTitle = locStr(App.Proj.DirModes.Rtl.Title, me.lang), locStr(App.Proj.DirModes.Ltr.Title, me.lang)
+		me.page.DirCurDesc, me.page.DirAltDesc = locStr(App.Proj.DirModes.Rtl.Desc, me.lang), locStr(App.Proj.DirModes.Ltr.Desc, me.lang)
 	} else {
 		me.page.HrefDirCur, me.page.HrefDirAlt = me.page.HrefDirLtr, me.page.HrefDirRtl
-		me.page.DirCur, me.page.DirAlt = locStr(App.Proj.DirModes.Ltr, me.lang), locStr(App.Proj.DirModes.Rtl, me.lang)
+		me.page.DirCurTitle, me.page.DirAltTitle = locStr(App.Proj.DirModes.Ltr.Title, me.lang), locStr(App.Proj.DirModes.Rtl.Title, me.lang)
+		me.page.DirCurDesc, me.page.DirAltDesc = locStr(App.Proj.DirModes.Ltr.Desc, me.lang), locStr(App.Proj.DirModes.Rtl.Desc, me.lang)
 	}
 
 	buf := bytes.NewBuffer(nil)
@@ -690,37 +698,61 @@ func (me *siteGen) textStr(key string) (s string) {
 }
 
 func (me *siteGen) genAtomXml() (numFilesWritten int) {
-	// af := App.Proj.AtomFile
-	// s := `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="` + me.lang + `">`
-	// var latestdate string
-	// var xmls []string
-	// for _, series := range App.Proj.Series {
-	// 	for _, chapter := range series.Chapters {
-	// if len(chapter.History) > 0 {
-	// 	for _, entry := range chapter.History {
-	// 		if entry.Date > latestdate {
-	// 			latestdate = entry.Date
-	// 		}
-	// 		xml := `<entry><updated>` + entry.Date + `T00:00:00Z</updated>`
-	// 		xml += `<title>Update: ` + hEsc(locStr(series.Title, me.lang)) + ` - ` + hEsc(locStr(chapter.Title, me.lang)) + `</title>`
-	// 		xml += `<content type="html">` + hEsc(locStr(entry.Notes, me.lang)) + `<hr/>&quot;` + hEsc(locStr(series.Desc, me.lang)) + `&quot;</content>`
-	// 		xml += `<link href="` + strings.TrimRight(af.LinkHref, "/") + "/" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, entry.PageNr, "s", "", me.lang) + ".html" + `"/>`
-	// 		xml += `<author><name>` + af.Title + `</name></author>`
-	// 		xmls = append(xmls, xml+`</entry>`)
-	// 	}
-	// }
-	// 	}
-	// }
+	af := App.Proj.AtomFile
+	if len(af.PubDates) == 0 {
+		return
+	}
+	var xmls []string
+	for i, pubdate := range af.PubDates {
+		nextolderdate := "0000-00-00"
+		if i < len(af.PubDates)-1 {
+			nextolderdate = af.PubDates[i+1]
+		}
+		for _, series := range App.Proj.Series {
+			for _, chapter := range series.Chapters {
+				entries, pgnr, pgnrs := map[string][]*SheetVer{}, 1, map[string]map[int]bool{}
+				for _, sheet := range chapter.sheets {
+					for _, sv := range sheet.versions {
+						dtstr := time.Unix(0, sv.data.DateTimeUnixNano).Format("2006-01-02")
+						if dtstr > nextolderdate && dtstr <= pubdate {
+							if pgnrs[sv.name] == nil {
+								pgnrs[sv.name] = map[int]bool{}
+							}
+							pg := me.sheetPgNrs[sv]
+							entries[sv.name], pgnrs[sv.name][pg] = append(entries[sv.name], sv), true
+							if pg > 0 && pg < pgnr {
+								pgnr = pg
+							}
+						}
+					}
+				}
+				for vername, svs := range entries {
+					numpanels := 0
+					for _, sv := range svs {
+						np, _ := sv.panelCount()
+						numpanels += np
+					}
+					xml := `<entry><updated>` + pubdate + `T00:00:00Z</updated>`
+					xml += `<title>` + hEsc(locStr(chapter.parentSeries.Title, me.lang)) + `: ` + hEsc(locStr(chapter.Title, me.lang)) + " (" + vername + ")" + `</title>`
+					xml += `<link href="` + strings.TrimRight(af.LinkHref, "/") + "/" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, pgnr, "s", "", me.lang, vername) + ".html" + `"/>`
+					xml += `<author><name>` + af.Title + `</name></author>`
+					xml += `<content type="html">` + strings.NewReplacer(
+						"%NUMPNL%", itoa(numpanels),
+						"%NUMPGS%", itoa(len(pgnrs[vername])),
+					).Replace(locStr(af.ContentHtml, me.lang)) + `</content>`
+					xmls = append(xmls, xml+`</entry>`)
+				}
+			}
+		}
+	}
 
-	// if latestdate != "" {
-	// 	s += `<updated>` + latestdate + `T00:00:00Z</updated><title>` + af.Title + `</title><link href="` + af.LinkHref + `"/><id>` + af.LinkHref + "</id>"
-	// 	sort.Strings(xmls)
-	// 	for i := len(xmls) - 1; i >= 0; i-- {
-	// 		s += xmls[i]
-	// 	}
-	// 	writeFile(".build/"+af.Name+"."+me.lang+".atom", []byte(s+"</feed>"))
-	// 	numFilesWritten++
-	// }
+	s := `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="` + me.lang + `">`
+	if len(xmls) > 0 {
+		s += `<updated>` + af.PubDates[0] + `T00:00:00Z</updated><title>` + af.Title + `</title><link href="` + af.LinkHref + `"/><id>` + af.LinkHref + "</id>"
+		s += "\n" + strings.Join(xmls, "\n")
+	}
+	writeFile(".build/"+af.Name+"."+me.lang+".atom", []byte(s+"\n</feed>"))
+	numFilesWritten++
 	return
 }
 
@@ -754,7 +786,7 @@ func (*siteGen) namePng(sheetId string, pIdx int, qualiSizeHint int) string {
 }
 
 func (*siteGen) nameThumb(series *Series) string {
-	return "_" + App.Proj.DirModes.Ltr[""] + "-" + itoa(App.Proj.NumSheetsInHomeBgs) + "-" + App.Proj.DirModes.Rtl[""] + "-" + strings.ToLower(series.Name)
+	return "_" + App.Proj.DirModes.Ltr.Name + "-" + itoa(App.Proj.NumSheetsInHomeBgs) + "-" + App.Proj.DirModes.Rtl.Name + "-" + strings.ToLower(series.Name)
 }
 
 func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, viewMode string, dirMode string, langId string, svName string) string {
@@ -762,8 +794,8 @@ func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, vie
 		pageNr = 1
 	}
 	if dirMode == "" {
-		if dirMode = App.Proj.DirModes.Ltr[""]; me.dirRtl {
-			dirMode = App.Proj.DirModes.Rtl[""]
+		if dirMode = App.Proj.DirModes.Ltr.Name; me.dirRtl {
+			dirMode = App.Proj.DirModes.Rtl.Name
 		}
 	}
 	return strings.ToLower(chapter.parentSeries.Name + "-" + chapter.Name + "-" + itoa(qualiSizeHint) + viewMode + itoa(pageNr) + svName + "." + dirMode + "." + langId)

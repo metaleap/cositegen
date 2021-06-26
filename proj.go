@@ -17,10 +17,11 @@ type Project struct {
 		SizeHint int
 	}
 	AtomFile struct {
-		PubDates []string
-		Name     string
-		Title    string
-		LinkHref string
+		PubDates    []string
+		Name        string
+		Title       string
+		LinkHref    string
+		ContentHtml map[string]string
 	}
 	MaxImagePanelTextAreas int
 	BwThreshold            uint8
@@ -29,8 +30,11 @@ type Project struct {
 	NumSheetsInHomeBgs     int
 	NumColorDistrClusters  int
 	DirModes               struct {
-		Ltr map[string]string
-		Rtl map[string]string
+		Ltr, Rtl struct {
+			Name  string
+			Title map[string]string
+			Desc  map[string]string
+		}
 	}
 	Gen struct {
 		IdQualiList      string

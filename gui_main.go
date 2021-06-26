@@ -114,7 +114,7 @@ func guiStartView() (s string) {
 					if chapter.SheetsPerPage != 0 {
 						numpages = len(chapter.sheets) / chapter.SheetsPerPage
 					}
-					s += "<div><input class='collchk' id='" + id + "' type='checkbox' checked='checked'/><h3><label for='" + id + "'>" + series.Title["en"] + "&nbsp;&nbsp;&mdash;&nbsp;&nbsp;" + chapter.Title["en"] + "&nbsp;&nbsp;&mdash;&nbsp;&nbsp;(" + itoa(len(chapter.sheets)) + " sheet/s, " + itoa(numpages) + " page/s)</label></h3>"
+					s += "<div><input class='collchk' id='" + id + "' type='checkbox' checked='checked'/><h3><label for='" + id + "'>" + series.Title["en"] + "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;" + chapter.Title["en"] + "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;(" + itoa(len(chapter.sheets)) + " sheet/s, " + itoa(numpages) + " page/s)</label></h3>"
 					s += "<div class='collchk'><table width='99%'>"
 					pgnr, pgprev := 0, 0
 					for i, sheet := range chapter.sheets {
@@ -143,9 +143,9 @@ func guiStartView() (s string) {
 							if svidx != 0 {
 								s += " style='visibility:hidden'"
 							}
-							s += ">p" + itoa(pgnr) + "</span>&nbsp;&nbsp;&mdash;&nbsp;&nbsp;" + a + hEsc(sheet.name+"_"+sv.name) + "</a>"
+							s += ">p" + itoa(pgnr) + "</span>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;" + a + hEsc(sheet.name+"_"+sv.name) + "</a>"
 							if numpanels > 0 {
-								s += "<small>&nbsp;&nbsp;&mdash;&nbsp;&nbsp;<b>" + itoa(numpanelareas) + " </b> text-rect(s) in " + itoa(numpanels) + " panel(s)"
+								s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(numpanelareas) + " </b> text-rect(s) in " + itoa(numpanels) + " panel(s)"
 								if numpanelareas > 0 {
 									for langid, percent := range sv.percentTranslated() {
 										s += "&nbsp;(<b>" + langid + "</b>: " + strconv.FormatFloat(percent, 'f', 1, 64) + "%)"
@@ -155,9 +155,9 @@ func guiStartView() (s string) {
 							}
 							if sv.data != nil {
 								if sv.data.PanelsTree != nil {
-									s += "<small>&nbsp;&mdash;&nbsp;&nbsp;<b>" + itoa(sv.data.PanelsTree.Rect.Max.X) + "&times;" + itoa(sv.data.PanelsTree.Rect.Max.Y) + "</b>px (" + itoa(int(sv.Px1Cm())) + "px/cm)</small>"
+									s += "<small>&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(sv.data.PanelsTree.Rect.Max.X) + "&times;" + itoa(sv.data.PanelsTree.Rect.Max.Y) + "</b>px (" + itoa(int(sv.Px1Cm())) + "px/cm)</small>"
 								}
-								s += "<small>&nbsp;&nbsp;&mdash;&nbsp;&nbsp;from <b title='" + hEsc(time.Unix(0, sv.data.DateTimeUnixNano).Format(time.RFC1123)) + "'>" + time.Unix(0, sv.data.DateTimeUnixNano).Format("02 Jan 2006") + "</b></small>"
+								s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;from <b title='" + hEsc(time.Unix(0, sv.data.DateTimeUnixNano).Format(time.RFC1123)) + "'>" + time.Unix(0, sv.data.DateTimeUnixNano).Format("02 Jan 2006") + "</b></small>"
 							}
 							s += "</h4>" + guiHtmlGrayDistrs(sv.grayDistrs()) + "</td></tr>"
 						}
@@ -287,7 +287,7 @@ func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 				if idx := strings.LastIndexByte(fi, '['); fi[len(fi)-1] == ']' && idx > 0 {
 					misc, fi = fi[idx:], fi[:idx]
 				}
-				s += " &mdash; <span title='" + hEsc(misc) + "'>" + hEsc(strings.Replace(fi, "|", " | ", -1)) + "</span>"
+				s += " &horbar; <span title='" + hEsc(misc) + "'>" + hEsc(strings.Replace(fi, "|", " | ", -1)) + "</span>"
 			}
 			s += "</div><div class='scandevoptdesc' id='scandevoptdesc_" + sd.Ident + "_" + opt.Name + "'>"
 			for _, desc := range opt.Description {
@@ -323,7 +323,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 			return sv.data.bwSmallFilePath, itoa(bw) + "px", true
 		})
 	}
-	s += "&nbsp;&mdash; jump to panel:"
+	s += "&nbsp;&horbar; jump to panel:"
 	for i := 0; i < numpanels; i++ {
 		s += "&nbsp;&nbsp;<a href='#pa" + sv.Id() + itoa(i) + "'>" + itoa(i+1) + "</a>"
 	}
