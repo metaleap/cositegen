@@ -396,7 +396,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 					shownums[i] = true
 				}
 			} else {
-				for i, want := 1, 5; numpages >= want && len(shownums) < want && i < numpages; i++ {
+				for i, want := 1, 4; numpages >= want && len(shownums) < want && i < numpages; i++ {
 					if len(shownums) < want && (pageNr+i) < numpages {
 						shownums[pageNr+i] = true
 					}
@@ -405,14 +405,20 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 					}
 				}
 			}
+			pglast := -1
 			for i := range chapter.sheets {
 				if 0 == (i % chapter.SheetsPerPage) {
 					pgnr++
-					if pgnr == pageNr {
-						s += "<li><b>" + itoa(pgnr) + "</b></li>"
-					} else if shownums[pgnr] {
-						name := me.namePage(chapter, quali.SizeHint, pgnr, viewMode, "", me.lang, svName)
+					did, name := false, me.namePage(chapter, quali.SizeHint, pgnr, viewMode, "", me.lang, svName)
+					if did = (pgnr == pageNr); did {
+						s += "<li><b><a href='./" + name + ".html'>" + itoa(pgnr) + "</a></b></li>"
+					} else if did = shownums[pgnr]; did {
 						s += "<li><a href='./" + name + ".html'>" + itoa(pgnr) + "</a></li>"
+					}
+					if did {
+						pglast = pgnr
+					} else if pglast == pgnr-1 {
+						s += "<li><span>...&nbsp;</span></li>"
 					}
 				}
 				if pgnr == pageNr && istoplist {
@@ -479,7 +485,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 	}
 
 	var iter func(*SheetVer, *ImgPanel, bool) string
-	pidx, allpanels := 0, map[string]int{}
+	pidx, allpanels, firstpanel, firstrow := 0, map[string]int{}, "f", "f"
 	iter = func(sv *SheetVer, panel *ImgPanel, istop bool) (s string) {
 		assert(len(panel.SubCols) == 0 || len(panel.SubRows) == 0)
 
@@ -489,8 +495,8 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				if viewMode == "r" && istop {
 					s += "<td>"
 				}
-				s += "<div id='r" + svid + itoa(i) + "' class='" + App.Proj.Gen.ClsPanelRow
-				if istop && viewMode == "r" {
+				s += "<div id='" + firstrow + App.Proj.Gen.ClsPanel + "r" + svid + itoa(i) + "' class='" + App.Proj.Gen.ClsPanelRow
+				if firstrow = ""; istop && viewMode == "r" {
 					s += " " + App.Proj.Gen.ClsPanelRow + "t"
 				} else if istop {
 					s += "' onfocus='" + App.Proj.Gen.ClsPanel + "f(this)' tabindex='0"
@@ -530,8 +536,8 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				hqsrc = ""
 			}
 
-			s += "<div id='p" + svid + itoa(pidx) + "' onclick='" + App.Proj.Gen.ClsPanel + "(this)' class='" + App.Proj.Gen.ClsPanel + "'"
-			if viewMode == "r" {
+			s += "<div id='" + firstpanel + App.Proj.Gen.ClsPanel + "p" + svid + itoa(pidx) + "' onclick='" + App.Proj.Gen.ClsPanel + "(this)' class='" + App.Proj.Gen.ClsPanel + "'"
+			if firstpanel = ""; viewMode == "r" {
 				s += " tabindex='0' onfocus='" + App.Proj.Gen.ClsPanel + "f(this)'"
 			}
 			s += ">" + me.genSvgForPanel(sv, pidx, panel)

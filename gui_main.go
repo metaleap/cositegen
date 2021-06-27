@@ -16,13 +16,19 @@ func fV(r *http.Request) func(string) string {
 }
 
 func guiMain(r *http.Request, notice string) []byte {
-	fv, s := fV(r), "<!DOCTYPE html><html><head><link rel='stylesheet' type='text/css' href='/main.css'/><style type='text/css'>"
+	fv, dirpref, s := fV(r), "", "<!DOCTYPE html><html><head><link rel='stylesheet' type='text/css' href='/main.css'/><style type='text/css'>"
+	for k := range App.Proj.Gen.PanelSvgText.AppendToFiles {
+		if idx := strings.LastIndexByte(k, '/'); idx > 0 {
+			dirpref = k[:idx]
+			break
+		}
+	}
 	for csssel, csslines := range App.Proj.Gen.PanelSvgText.Css {
 		if csssel == "" {
 			csssel = "div.panel .panelrect svg text"
 		}
 		if csslines != nil {
-			s += csssel + "{" + strings.Join(csslines, ";") + "}"
+			s += csssel + "{" + strings.Replace(strings.Join(csslines, ";"), "./", dirpref+"/", -1) + "}"
 		}
 	}
 	s += "</style><script type='text/javascript' language='javascript'>const svgTxtPerLineDyCmA4 = " + strconv.FormatFloat(App.Proj.Gen.PanelSvgText.PerLineDyCmA4, 'f', 8, 64) + ", svgTxtFontSizeCmA4 = " + strconv.FormatFloat(App.Proj.Gen.PanelSvgText.FontSizeCmA4, 'f', 8, 64) + ";</script><script src='/main.js' type='text/javascript' language='javascript'></script>"

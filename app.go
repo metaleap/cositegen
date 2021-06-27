@@ -65,7 +65,7 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 
 	var action func(map[string]bool)
 	switch name {
-	case "sitegen":
+	case "sitegen", "now":
 		action = siteGen{}.genSite
 	default:
 		s := "Unknown action: '" + name + "', try one of these:"
