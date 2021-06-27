@@ -367,7 +367,11 @@ func (me *siteGen) prepHomePage() {
 		for _, chapter := range series.Chapters {
 			s += "<li class='" + App.Proj.Gen.ClsChapter + "'>"
 			if len(chapter.sheets) > 0 {
-				s += "<a href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, chapter.sheetVerNames[0]) + ".html'>" + hEsc(locStr(chapter.Title, me.lang)) + "</a>"
+				s += "<a "
+				if perc, applicable := chapter.PercentTranslated(me.lang, 0, chapter.sheetVerNames[0]); applicable {
+					s += "title='" + me.lang + ": " + strconv.FormatFloat(perc, 'f', 1, 64) + "%' "
+				}
+				s += "href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, chapter.sheetVerNames[0]) + ".html'>" + hEsc(locStr(chapter.Title, me.lang)) + "</a>"
 			} else {
 				s += "<b>" + hEsc(locStr(chapter.Title, me.lang)) + "</b>"
 			}
@@ -413,10 +417,10 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 					if did = (pgnr == pageNr); did {
 						s += "<li><b><a href='./" + name + ".html'>" + itoa(pgnr) + "</a></b></li>"
 					} else if did = shownums[pgnr]; did {
-						if perc := chapter.PercentTranslated(me.lang, pgnr, svName); perc == 100 {
+						if perc, applicable := chapter.PercentTranslated(me.lang, pgnr, svName); perc >= 99.9 || !applicable {
 							s += "<li>"
 						} else {
-							s += "<li class='nolang' title='" + me.lang + ": " + itoa(perc) + "%'>"
+							s += "<li class='nolang' title='" + me.lang + ": " + strconv.FormatFloat(perc, 'f', 1, 64) + "%'>"
 						}
 						s += "<a href='./" + name + ".html'>" + itoa(pgnr) + "</a></li>"
 					}
@@ -562,7 +566,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		me.page.PageContent += "<table><tr>"
 	}
 	for _, sheet := range sheets {
-		sheetver := sheet.versions[len(sheet.versions)-1]
+		sheetver := sheet.versions[0]
 		for i := range sheet.versions {
 			if sheet.versions[i].name == svName {
 				sheetver = sheet.versions[i]
