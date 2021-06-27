@@ -64,9 +64,9 @@ func (me siteGen) genSite(map[string]bool) {
 	me.sheetPgNrs = map[*SheetVer]int{}
 	printLn("SiteGen started. When done, result will open in new window.")
 	defer func() {
-		// if err := recover(); err != nil {
-		// 	printLn("SiteGen Error: ", err)
-		// }
+		if err := recover(); err != nil {
+			printLn("SiteGen Error: ", err)
+		}
 	}()
 
 	rmDir(".build")
@@ -177,9 +177,6 @@ func (me *siteGen) copyStaticFiles(relDirPath string) (numFilesWritten int) {
 				if data, err := os.ReadFile(filepath.Join(srcdirpath, fn)); err != nil {
 					panic(err)
 				} else {
-					if strings.HasSuffix(relpath, ".css") {
-						println(relpath)
-					}
 					if App.Proj.Gen.PanelSvgText.AppendToFiles[relpath] {
 						for csssel, csslines := range App.Proj.Gen.PanelSvgText.Css {
 							if csssel != "" {
@@ -370,11 +367,22 @@ func (me *siteGen) prepHomePage() {
 		for _, chapter := range series.Chapters {
 			s += "<li class='" + App.Proj.Gen.ClsChapter + "'>"
 			if len(chapter.sheets) > 0 {
-				s += "<a "
-				if perc, applicable := chapter.PercentTranslated(me.lang, 0, chapter.sheetVerNames[0]); applicable {
-					s += "title='" + me.lang + ": " + strconv.FormatFloat(perc, 'f', 1, 64) + "%' "
+				numpages := 1
+				if chapter.SheetsPerPage != 0 {
+					numpages = len(chapter.sheets) / chapter.SheetsPerPage
 				}
-				s += "href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, chapter.sheetVerNames[0]) + ".html'>" + hEsc(locStr(chapter.Title, me.lang)) + "</a>"
+				dt1, dt2 := chapter.DateRangeOfSheets()
+				title := strings.NewReplacer(
+					"%NUMPGS%", itoa(numpages),
+					"%NUMPNL%", itoa(chapter.NumPanels()),
+					"%NUMSCN%", itoa(chapter.NumScans()),
+					"%DATE1%", dt1,
+					"%DATE2%", dt2,
+				).Replace(me.textStr("ChapStats"))
+				if perc, applicable := chapter.PercentTranslated(me.lang, 0, chapter.sheetVerNames[0]); applicable {
+					title = "(" + me.textStr("Transl") + ": " + itoa(int(perc)) + "%) " + title
+				}
+				s += "<a title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, chapter.sheetVerNames[0]) + ".html'>" + hEsc(locStr(chapter.Title, me.lang)) + "</a>"
 			} else {
 				s += "<b>" + hEsc(locStr(chapter.Title, me.lang)) + "</b>"
 			}
@@ -664,7 +672,7 @@ func (me *siteGen) genPageExecAndWrite(name string) (numFilesWritten int) {
 	for lidx, lang := range App.Proj.Langs {
 		title, imgsrcpath := lang, strings.Replace(App.Proj.Gen.ImgSrcLang, "%LANG%", lang, -1)
 		if lidx != 0 {
-			title += " (" + strconv.FormatFloat(App.Proj.PercentTranslated(nil, lang), 'f', 1, 64) + "%)"
+			title += " (" + App.Proj.PageContentTexts[lang]["Transl"] + ": " + strconv.FormatFloat(App.Proj.PercentTranslated(nil, lang), 'f', 1, 64) + "%)"
 		}
 		if lang == me.lang {
 			me.page.LangsList += "<span><div>"

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type Project struct {
@@ -116,6 +117,38 @@ func (me *Chapter) NextAfter(withSheetsOnly bool) *Chapter {
 	}
 	return series.Chapters[0]
 }
+
+func (me *Chapter) NumPanels() (ret int) {
+	for _, sheet := range me.sheets {
+		n, _ := sheet.versions[0].panelCount()
+		ret += n
+	}
+	return
+}
+
+func (me *Chapter) NumScans() (ret int) {
+	for _, sheet := range me.sheets {
+		ret += len(sheet.versions)
+	}
+	return
+}
+
+func (me *Chapter) DateRangeOfSheets() (string, string) {
+	var dt1, dt2 int64
+	for _, sheet := range me.sheets {
+		for _, sv := range sheet.versions {
+			sdt := sv.data.DateTimeUnixNano
+			if sdt < dt1 || dt1 == 0 {
+				dt1 = sdt
+			}
+			if sdt > dt2 || dt2 == 0 {
+				dt2 = sdt
+			}
+		}
+	}
+	return time.Unix(0, dt1).Format("2006-01-02"), time.Unix(0, dt2).Format("2006-01-02")
+}
+
 func (me *Chapter) PercentTranslated(langId string, pgNr int, svName string) (float64, bool) {
 	if langId == App.Proj.Langs[0] {
 		return 0, false
