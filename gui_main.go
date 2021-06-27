@@ -31,7 +31,7 @@ func guiMain(r *http.Request, notice string) []byte {
 			s += csssel + "{" + strings.Replace(strings.Join(csslines, ";"), "./", dirpref+"/", -1) + "}"
 		}
 	}
-	s += "</style><script type='text/javascript' language='javascript'>const svgTxtPerLineDyCmA4 = " + strconv.FormatFloat(App.Proj.Gen.PanelSvgText.PerLineDyCmA4, 'f', 8, 64) + ", svgTxtFontSizeCmA4 = " + strconv.FormatFloat(App.Proj.Gen.PanelSvgText.FontSizeCmA4, 'f', 8, 64) + ";</script><script src='/main.js' type='text/javascript' language='javascript'></script>"
+	s += "</style><script type='text/javascript' language='javascript'>const svgTxtPerLineDyCmA4 = " + strconv.FormatFloat(App.Proj.Gen.PanelSvgText.PerLineDyCmA4, 'f', 8, 64) + ", svgTxtFontSizeCmA4 = " + strconv.FormatFloat(App.Proj.Gen.PanelSvgText.FontSizeCmA4, 'f', 8, 64) + ", numImagePanelTextAreas = " + itoa(App.Proj.MaxImagePanelTextAreas) + ";</script><script src='/main.js' type='text/javascript' language='javascript'></script>"
 	s += "</head><body><form method='POST' action='/' id='main_form' novalidate='novalidate'>" + guiHtmlInput("hidden", "main_focus_id", fv("main_focus_id"), nil)
 	if notice != "" {
 		s += "<div class='notice'>" + hEsc(notice) + "</div>"
@@ -310,7 +310,7 @@ func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 
 func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s string) {
 	sv.ensurePrep(false, false)
-	numpanels, maxpanelwidth, bwsrc := 0, 0, fv("srcpx")
+	numpanels, maxpanelwidth, bwsrc, maxnumareas := 0, 0, fv("srcpx"), sv.maxNumTextAreas()
 	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
 		numpanels++
 		if w := panel.Rect.Max.X - panel.Rect.Min.X; w > maxpanelwidth {
@@ -368,13 +368,6 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	for i := 0; i < numpanels; i++ {
 		s += "&nbsp;&nbsp;<a href='#pa" + sv.Id() + itoa(i) + "'>" + itoa(i+1) + "</a>"
 	}
-	for i, lang := range App.Proj.Langs {
-		attrs := A{"name": "plang", "onclick": "refreshAllPanelRects(" + itoa(numpanels) + "," + itoa(i) + ",\"" + lang + "\");"}
-		if i == 0 {
-			attrs["checked"] = "checked"
-		}
-		s += "&nbsp;&nbsp;" + guiHtmlInput("radio", "plang"+itoa(i), itoa(i), attrs) + "<label for='plang" + itoa(i) + "'>" + lang + "</label>"
-	}
 	s += "</h3><div>"
 	importlist := map[string]string{}
 	for sheetfilename, panelsareas := range App.Proj.data.sheetVerPanelAreas {
@@ -386,11 +379,28 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 			importlist[sheetfilename] = sheetfilename + " (" + itoa(numareas) + " text area(s) in " + itoa(len(panelsareas)) + " panel(s))"
 		}
 	}
-	s += "</div><div>" + guiHtmlListFrom("importpaneltexts", "(Import panel text areas from another sheet where panel indices match)", true, importlist) + "</div>"
+	s += "</div><h4>Panel editors:</h4><div><ul><li>" + guiHtmlListFrom("importpaneltexts", "(Import panel text areas from another sheet where panel indices match)", true, importlist)
 	var importfrom string
 	if fv("main_focus_id") == "importpaneltexts" {
 		*shouldSaveMeta, importfrom = true, fv("importpaneltexts")
 	}
+	s += "<li><label for='plang'>Default to showing</label> "
+	for i, lang := range App.Proj.Langs {
+		attrs := A{"name": "plang", "onclick": "refreshAllPanelRects(" + itoa(numpanels) + "," + itoa(i) + ",\"" + lang + "\");"}
+		if _ = maxnumareas; i == 0 {
+			attrs["checked"] = "checked"
+		}
+		s += "&nbsp;&nbsp;" + guiHtmlInput("radio", "plang"+itoa(i), itoa(i), attrs) + "<label for='plang" + itoa(i) + "'>" + lang + "</label>"
+	}
+	s += "</li><li>Default to "
+	numtextrects := fv("numtextrects")
+	if ui, err := strconv.ParseUint(numtextrects, 10, 64); err != nil {
+		numtextrects = itoa(intLim(sv.maxNumTextAreas(), 1, App.Proj.MaxImagePanelTextAreas))
+	} else {
+		numtextrects = itoa(intLim(int(ui), 1, App.Proj.MaxImagePanelTextAreas))
+	}
+	s += guiHtmlInput("number", "numtextrects", numtextrects, A{"min": "1", "max": itoa(App.Proj.MaxImagePanelTextAreas), "onchange": "doPostBack('numtextrects')"})
+	s += "/" + itoa(App.Proj.MaxImagePanelTextAreas) + " text-rect editor(s)</li></ul>"
 	if wmax := 480; maxpanelwidth > wmax {
 		zoomdiv = float64(wmax) / float64(maxpanelwidth)
 		zoom = int(100.0 * zoomdiv)
@@ -460,7 +470,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		for _, lang := range App.Proj.Langs {
 			langs = append(langs, lang)
 		}
-		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Max.X-panel.Rect.Min.X) + ", " + itoa(panel.Rect.Max.Y-panel.Rect.Min.Y) + ", " + itoa(App.Proj.MaxImagePanelTextAreas) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + strconv.FormatFloat(sv.Px1Cm(), 'f', 8, 64) + ", '" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "', " + strconv.FormatFloat(App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm, 'f', 8, 64) + ");"
+		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Max.X-panel.Rect.Min.X) + ", " + itoa(panel.Rect.Max.Y-panel.Rect.Min.Y) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + strconv.FormatFloat(sv.Px1Cm(), 'f', 8, 64) + ", '" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "', " + strconv.FormatFloat(App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm, 'f', 8, 64) + ");"
 		btnhtml := guiHtmlButton(pid+"save", "Save changes (all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 
 		s += "<hr/><h4 id='pa" + sv.Id() + itoa(pidx) + "'><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(len(sv.panelAreas(pidx))) + " text rect(s)" + "</h4><div>Panel coords: " + rect.String() + "</div>"
@@ -468,7 +478,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		s += "<table><tr><td>"
 		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;' onclick='onPanelClick(\"" + pid + "\")'>"
 		style := `width: ` + itoa(w) + `px; height: ` + itoa(h) + `px;`
-		s += "<div style='position:relative; " + style + "' onauxclick='onPanelAuxClick(event, " + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(App.Proj.MaxImagePanelTextAreas) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + strconv.FormatFloat(zoomdiv, 'f', 8, 64) + ")' onmousemove='this.title=parseInt(" + itoa(panel.Rect.Min.X) + "+event.offsetX*" + strconv.FormatFloat(zoomdiv, 'f', 8, 64) + ")+\",\"+parseInt(" + itoa(panel.Rect.Min.Y) + "+event.offsetY*" + strconv.FormatFloat(zoomdiv, 'f', 8, 64) + ")'>"
+		s += "<div style='position:relative; " + style + "' onauxclick='onPanelAuxClick(event, " + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + strconv.FormatFloat(zoomdiv, 'f', 8, 64) + ")' onmousemove='this.title=parseInt(" + itoa(panel.Rect.Min.X) + "+event.offsetX*" + strconv.FormatFloat(zoomdiv, 'f', 8, 64) + ")+\",\"+parseInt(" + itoa(panel.Rect.Min.Y) + "+event.offsetY*" + strconv.FormatFloat(zoomdiv, 'f', 8, 64) + ")'>"
 		style += `background-image: url("/` + bwsrc + `");`
 		style += `background-size: ` + itoa(sv.data.PanelsTree.Rect.Max.X-sv.data.PanelsTree.Rect.Min.X) + `px ` + itoa(sv.data.PanelsTree.Rect.Max.Y-sv.data.PanelsTree.Rect.Min.Y) + `px;`
 		style += `background-position: -` + itoa(rect.Min.X) + `px -` + itoa(rect.Min.Y) + `px;`
@@ -477,12 +487,17 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 
 		s += "<div class='panelcfg' id='" + pid + "cfg' style='text-align: center;display:" + cfgdisplay + ";'>"
 		s += "<div>" + btnhtml + "</div>"
-		for i := 0; i < App.Proj.MaxImagePanelTextAreas; i++ {
-			area := ImgPanelArea{Data: A{}}
+		for i, ntr := 0, atoi(numtextrects, 1, App.Proj.MaxImagePanelTextAreas); i < App.Proj.MaxImagePanelTextAreas; i++ {
+			area, styledisplay := ImgPanelArea{Data: A{}}, "none"
+			if i < ntr {
+				styledisplay = "inline"
+			}
 			if panelareas := sv.panelAreas(pidx); len(panelareas) > i {
 				area = panelareas[i]
+				styledisplay = "inline"
 			}
-			s += "<hr/>"
+
+			s += "<span style='display: " + styledisplay + "'><hr/>"
 			for _, lang := range App.Proj.Langs {
 				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang, area.Data[lang], A{
 					"placeholder": lang,
@@ -511,7 +526,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 			}) + guiHtmlInput("textarea", pid+"t"+itoa(i)+"_style", area.SvgTextTspanStyleAttr, A{
 				"class": "panelcfgtextattr", "title": "style attr for the SVG <tspan> element",
 				"onfocus": jsrefr, "onblur": jsrefr, "onchange": jsrefr, "onkeydown": jsrefr, "onkeyup": jsrefr, "onkeypress": jsrefr,
-			}) + "</div>"
+			}) + "</div></span>"
 		}
 		s += "<hr/>" + btnhtml
 		s += "</div>"

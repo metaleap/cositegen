@@ -101,6 +101,20 @@ func intAbs(i int) int {
 	return i
 }
 
+func intLim(i int, min int, max int) int {
+	if i > max {
+		return max
+	} else if i < min {
+		return min
+	}
+	return i
+}
+
+func atoi(s string, min int, max int) int {
+	v, _ := strconv.Atoi(s)
+	return intLim(v, min, max)
+}
+
 func timedLogged(logMsg string, do func() string) {
 	if logMsg != "" {
 		printLn(logMsg)

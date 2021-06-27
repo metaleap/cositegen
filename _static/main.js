@@ -11,7 +11,7 @@ function refreshAllPanelRects(numPanels, langIdx, langName) {
         document.getElementById('p' + i + 't0' + langName).dispatchEvent(new Event("change"));
 }
 
-function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePanelTextAreas, langs, px1cm, panelSvgTextClsBoxPoly, panelSvgTextBoxPolyStrokeWidthCm) {
+function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm, panelSvgTextClsBoxPoly, panelSvgTextBoxPolyStrokeWidthCm) {
     const pid = "p" + panelIdx;
     let innerhtml = "";
     const pxfont = parseInt(px1cm * svgTxtFontSizeCmA4);
@@ -20,7 +20,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
     let divshtml = "";
     innerhtml += "<div class='panelrect panelrectbordered'>";
     innerhtml += "<svg viewbox='0 0 " + pWidth + " " + pHeight + "'>";
-    for (let i = 0; i < maxImagePanelTextAreas; i++) {
+    for (let i = 0; i < numImagePanelTextAreas; i++) {
         const trX = parseInt(document.getElementById(pid + "t" + i + "rx").value);
         const trY = parseInt(document.getElementById(pid + "t" + i + "ry").value);
         const trW = parseInt(document.getElementById(pid + "t" + i + "rw").value);
@@ -121,20 +121,20 @@ function onPanelClick(pid) {
     cfgbox.style.display = (cfgbox.style.display == 'none') ? 'block' : 'none';
 }
 
-function onPanelAuxClick(evt, panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs, zoomDiv) {
+function onPanelAuxClick(evt, panelIdx, pOffX, pOffY, langs, zoomDiv) {
     const pid = "p" + panelIdx;
     const ex = parseInt(parseFloat(evt.offsetX) * zoomDiv), ey = parseInt(parseFloat(evt.offsetY) * zoomDiv);
     const cfgbox = document.getElementById(pid + "cfg");
     cfgbox.style.display = 'block';
     let ridx = undefined, trX, trY, trW, trH;
-    for (ridx = 0; ridx < maxImagePanelTextAreas; ridx++) {
+    for (ridx = 0; ridx < numImagePanelTextAreas; ridx++) {
         trX = parseInt(document.getElementById(pid + "t" + ridx + "rx").value);
         trY = parseInt(document.getElementById(pid + "t" + ridx + "ry").value);
         trW = parseInt(document.getElementById(pid + "t" + ridx + "rw").value);
         trH = parseInt(document.getElementById(pid + "t" + ridx + "rh").value);
         if (((isNaN(trX) || (trX == 0)) && (isNaN(trY) || (trY == 0))) || ((isNaN(trW) || (trW == 0)) && (isNaN(trH) || (trH == 0))))
             break;
-        else if (ridx == (maxImagePanelTextAreas - 1)) {
+        else if (ridx == (numImagePanelTextAreas - 1)) {
             ridx = undefined;
             break;
         }

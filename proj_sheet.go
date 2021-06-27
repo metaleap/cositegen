@@ -281,6 +281,15 @@ func (me *SheetVer) percentTranslated() map[string]float64 {
 	return ret
 }
 
+func (me *SheetVer) maxNumTextAreas() (max int) {
+	for _, panel := range App.Proj.data.sheetVerPanelAreas[me.fileName] {
+		if l := len(panel); l > max {
+			max = l
+		}
+	}
+	return
+}
+
 func (me *SheetVer) grayDistrs() (r [][3]float64) {
 	if me.data == nil || len(me.data.GrayDistr) == 0 {
 		return nil

@@ -75,6 +75,11 @@ func guiHtmlInput(inputType string, id string, value string, attrs map[string]st
 	} else if attrs["name"] == "" {
 		attrs["name"] = id
 	}
+	if defval := attrs["value"]; defval != "" {
+		if delete(attrs, "value"); value == "" {
+			value = defval
+		}
+	}
 	s := "<input id='" + hEsc(id) + "' type='" + hEsc(inputType) + "' value='" + hEsc(value) + "'"
 	if inputType == "textarea" {
 		s = "<textarea id='" + hEsc(id) + "'"
