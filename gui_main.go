@@ -475,8 +475,8 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		s += "<div class='panelpic' style='" + style + "'></div><span id='" + pid + "rects'></span>"
 		s += "</div></div></td><td>"
 
-		s += "<div class='panelcfg' id='" + pid + "cfg' style='display:" + cfgdisplay + ";'>"
-		s += btnhtml
+		s += "<div class='panelcfg' id='" + pid + "cfg' style='text-align: center;display:" + cfgdisplay + ";'>"
+		s += "<div>" + btnhtml + "</div>"
 		for i := 0; i < App.Proj.MaxImagePanelTextAreas; i++ {
 			area := ImgPanelArea{Data: A{}}
 			if panelareas := sv.panelAreas(pidx); len(panelareas) > i {
@@ -488,10 +488,10 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 					"placeholder": lang,
 					"onfocus":     jsrefr, "onblur": jsrefr, "onchange": jsrefr, "onkeydown": jsrefr, "onkeyup": jsrefr, "onkeypress": jsrefr,
 					"style": strings.Join(App.Proj.Gen.PanelSvgText.Css[""], ";"),
-					"class": "panelcfgtext col" + itoa(i%8)}) + "</div><div style='text-align: center; white-space: nowrap;'>"
+					"class": "panelcfgtext col" + itoa(i%8)}) + "</div>"
 			}
 
-			s += "xy"
+			s += "<div style='text-align: center; white-space: nowrap;'>xy"
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx", itoa(area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.X), "max": itoa(panel.Rect.Max.X)})
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"ry", itoa(area.Rect.Min.Y), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.Y), "max": itoa(panel.Rect.Max.Y)})
 			s += "wh"
