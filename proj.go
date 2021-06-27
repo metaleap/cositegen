@@ -75,6 +75,20 @@ type Project struct {
 func (me *Project) At(i int) fmt.Stringer { return me.Series[i] }
 func (me *Project) Len() int              { return len(me.Series) }
 
+func (me *Project) PercentTranslated(series *Series, langId string) float64 {
+	sum, num := 0.0, 0
+	for _, ser := range me.Series {
+		if ser == series || series == nil {
+			for _, chap := range ser.Chapters {
+				if f, applicable := chap.PercentTranslated(langId, 0, ""); applicable {
+					num, sum = num+1, sum+f
+				}
+			}
+		}
+	}
+	return sum / float64(num)
+}
+
 type Series struct {
 	Name     string
 	Title    map[string]string

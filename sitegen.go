@@ -264,7 +264,10 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 	if me.dirRtl {
 		strrepl = locStr(App.Proj.DirModes.Rtl.Title, me.lang)
 	}
-	homename, repl := "index", strings.NewReplacer("%DIR%", "<span class='"+App.Proj.DirModes.Ltr.Name+App.Proj.DirModes.Rtl.Name+"'>"+strrepl+"</span>")
+	homename, repl := "index", strings.NewReplacer(
+		"%DIR%", "<span class='"+App.Proj.DirModes.Ltr.Name+App.Proj.DirModes.Rtl.Name+"'>"+strrepl+"</span>",
+		"%LANG"+me.lang+"%", itoa(int(App.Proj.PercentTranslated(nil, me.lang))),
+	)
 	me.page = PageGen{
 		SiteTitle:  hEsc(App.Proj.Title),
 		SiteDesc:   repl.Replace(hEsc(locStr(App.Proj.Desc, me.lang))),
@@ -658,11 +661,14 @@ func (me *siteGen) genSvgForPanel(sV *SheetVer, panelIdx int, panel *ImgPanel) s
 
 func (me *siteGen) genPageExecAndWrite(name string) (numFilesWritten int) {
 	me.page.LangsList = ""
-	for _, lang := range App.Proj.Langs {
-		imgsrcpath := strings.Replace(App.Proj.Gen.ImgSrcLang, "%LANG%", lang, -1)
+	for lidx, lang := range App.Proj.Langs {
+		title, imgsrcpath := lang, strings.Replace(App.Proj.Gen.ImgSrcLang, "%LANG%", lang, -1)
+		if lidx != 0 {
+			title += " (" + strconv.FormatFloat(App.Proj.PercentTranslated(nil, lang), 'f', 1, 64) + "%)"
+		}
 		if lang == me.lang {
 			me.page.LangsList += "<span><div>"
-			me.page.LangsList += "<b><img title='" + lang + "' alt='" + lang + "' src='" + imgsrcpath + "'/></b>"
+			me.page.LangsList += "<b><img title='" + title + "' alt='" + title + "' src='" + imgsrcpath + "'/></b>"
 			me.page.LangsList += "</div></span>"
 		} else {
 			me.page.LangsList += "<div>"
@@ -678,7 +684,7 @@ func (me *siteGen) genPageExecAndWrite(name string) (numFilesWritten int) {
 					href = "index" + dirmode
 				}
 			}
-			me.page.LangsList += "<a class='" + App.Proj.Gen.ClsPanel + "l' href='./" + href + ".html'><img alt='" + lang + "' title='" + lang + "' src='" + imgsrcpath + "'/></a>"
+			me.page.LangsList += "<a class='" + App.Proj.Gen.ClsPanel + "l' href='./" + href + ".html'><img alt='" + title + "' title='" + title + "' src='" + imgsrcpath + "'/></a>"
 			me.page.LangsList += "</div>"
 		}
 	}
