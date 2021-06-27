@@ -413,7 +413,12 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 					if did = (pgnr == pageNr); did {
 						s += "<li><b><a href='./" + name + ".html'>" + itoa(pgnr) + "</a></b></li>"
 					} else if did = shownums[pgnr]; did {
-						s += "<li><a href='./" + name + ".html'>" + itoa(pgnr) + "</a></li>"
+						if perc := chapter.PercentTranslated(me.lang, pgnr, svName); perc == 100 {
+							s += "<li>"
+						} else {
+							s += "<li class='nolang' title='" + me.lang + ": " + itoa(perc) + "%'>"
+						}
+						s += "<a href='./" + name + ".html'>" + itoa(pgnr) + "</a></li>"
 					}
 					if did {
 						pglast = pgnr

@@ -102,6 +102,28 @@ func (me *Chapter) NextAfter(withSheetsOnly bool) *Chapter {
 	}
 	return series.Chapters[0]
 }
+func (me *Chapter) PercentTranslated(langId string, pgNr int, svName string) int {
+	if langId == App.Proj.Langs[0] {
+		return 100
+	}
+	sum, num, allnil := 0.0, 0, true
+	for i, sheet := range me.sheets {
+		pgnr := 1
+		if me.SheetsPerPage != 0 {
+			pgnr = 1 + (i / me.SheetsPerPage)
+		}
+		if pgnr == pgNr || pgNr <= 0 {
+			num++
+			if stats := sheet.versionNamedOrLatest(svName).percentTranslated(); stats != nil {
+				allnil, sum = false, sum+stats[langId]
+			}
+		}
+	}
+	if allnil {
+		return 100
+	}
+	return int(sum / float64(num))
+}
 
 type Chapter struct {
 	Name          string

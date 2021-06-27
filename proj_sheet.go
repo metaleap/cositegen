@@ -21,6 +21,15 @@ func (me *Sheet) At(i int) fmt.Stringer { return me.versions[i] }
 func (me *Sheet) Len() int              { return len(me.versions) }
 func (me *Sheet) String() string        { return me.name }
 
+func (me *Sheet) versionNamedOrLatest(verName string) *SheetVer {
+	for _, sv := range me.versions {
+		if sv.name == verName {
+			return sv
+		}
+	}
+	return me.versions[0]
+}
+
 type SheetVerData struct {
 	dirPath         string
 	bwFilePath      string
@@ -238,16 +247,32 @@ func (me *SheetVer) panelCount() (numPanels int, numPanelAreas int) {
 	return
 }
 
-func (me *SheetVer) percentTranslated() map[string]float64 {
-	ret, all := map[string]float64{}, App.Proj.data.sheetVerPanelAreas[me.fileName]
-	for _, areas := range all {
+func (me *SheetVer) haveAnyTexts() bool {
+	for _, areas := range App.Proj.data.sheetVerPanelAreas[me.fileName] {
 		for _, area := range areas {
-			for langid, text := range area.Data {
-				if text != "" {
-					ret[langid] = ret[langid] + 1
+			for _, text := range area.Data {
+				if trim(text) != "" {
+					return true
 				}
 			}
 		}
+	}
+	return false
+}
+
+func (me *SheetVer) percentTranslated() map[string]float64 {
+	haveany, ret := false, map[string]float64{}
+	for _, areas := range App.Proj.data.sheetVerPanelAreas[me.fileName] {
+		for _, area := range areas {
+			for langid, text := range area.Data {
+				if trim(text) != "" {
+					haveany, ret[langid] = true, ret[langid]+1
+				}
+			}
+		}
+	}
+	if !haveany {
+		return nil
 	}
 	for _, langid := range App.Proj.Langs[1:] {
 		ret[langid] = ret[langid] * (100.0 / ret[App.Proj.Langs[0]])
