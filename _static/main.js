@@ -34,13 +34,13 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
             const borderandfill = !(isNaN(trPx) || isNaN(trPy));
             if (borderandfill) {
                 const rpx = trPx - pOffX, rpy = trPy - pOffY;
-                const mmh = px1cm * panelSvgTextBoxPolyStrokeWidthCm, cmh = px1cm / 2.0;
+                const mmh = px1cm * panelSvgTextBoxPolyStrokeWidthCm, cmh = px1cm * 0.5;
                 const pl = (rx + mmh), pr = ((rx + rw) - mmh), pt = (ry + mmh), pb = ((ry + rh) - mmh);
                 let poly = [pl + ',' + pt, pr + ',' + pt, pr + ',' + pb, pl + ',' + pb];
                 if (!((trPx == 0) && (trPy == 0))) { // "speech-text" pointing somewhere?
-                    const dx = Math.abs(rpx - (rx + (rw / 2))), dy = Math.abs(rpy - (ry + (rh / 2)));
-                    const isr = rpx > (rx + (rw / 2)), isl = !isr,
-                        isb = rpy > (ry + (rh / 2)), ist = !isb,
+                    const dx = Math.abs(rpx - (rx + (rw * 0.5))), dy = Math.abs(rpy - (ry + (rh * 0.5)));
+                    const isr = rpx > (rx + (rw * 0.5)), isl = !isr,
+                        isb = rpy > (ry + (rh * 0.5)), ist = !isb,
                         isbr = isb && isr && dy >= dx,
                         isbl = isb && isl && dy >= dx,
                         istr = ist && isr && dy >= dx,
@@ -84,7 +84,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, maxImagePane
             for (let line of ptext.split('\n')) {
                 if ((!line) || line.length == 0)
                     line = '&nbsp;';
-                innerhtml += "<tspan dy='" + pxline + "' x='" + (borderandfill ? (px1cm / 11) : 0) + "'>"
+                innerhtml += "<tspan dy='" + pxline + "' x='" + (borderandfill ? (px1cm * 0.090909091) : 0) + "'>"
                     + line
                         .replace(/\s/g, "&nbsp;")
                         .replace(/<b>/g, "<tspan class='b'>")
@@ -123,7 +123,7 @@ function onPanelClick(pid) {
 
 function onPanelAuxClick(evt, panelIdx, pOffX, pOffY, maxImagePanelTextAreas, langs, zoomDiv) {
     const pid = "p" + panelIdx;
-    const ex = parseInt(evt.offsetX * zoomDiv), ey = parseInt(evt.offsetY * zoomDiv);
+    const ex = parseInt(parseFloat(evt.offsetX) * zoomDiv), ey = parseInt(parseFloat(evt.offsetY) * zoomDiv);
     const cfgbox = document.getElementById(pid + "cfg");
     cfgbox.style.display = 'block';
     let ridx = undefined, trX, trY, trW, trH;

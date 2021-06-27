@@ -392,8 +392,9 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		*shouldSaveMeta, importfrom = true, fv("importpaneltexts")
 	}
 	if wmax := 480; maxpanelwidth > wmax {
-		zoomdiv = float64(maxpanelwidth) / float64(wmax)
-		zoom = int(100.0 / zoomdiv)
+		zoomdiv = float64(wmax) / float64(maxpanelwidth)
+		zoom = int(100.0 * zoomdiv)
+		zoomdiv = 1.0 / zoomdiv
 	}
 	if rfv := fv("main_focus_id"); rfv != "" && rfv[0] == 'p' && strings.HasSuffix(rfv, "save") {
 		*shouldSaveMeta = true
