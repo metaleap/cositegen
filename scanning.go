@@ -141,7 +141,7 @@ func scanDevicesDetection() {
 			next()
 		}
 		scanDevices = sds
-		return itoa(len(scanDevices)) + " scanner/s detected in"
+		return itoa(len(scanDevices)) + " scanner(s) detected in"
 	})
 }
 

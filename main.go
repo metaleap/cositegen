@@ -17,7 +17,7 @@ func main() {
 	appDetectBrowser()
 	timedLogged("Loading project (cosite.json  &  csgtexts.json  &  .csg/svdata.json)...", func() string {
 		numsheets := App.Proj.load()
-		return "for " + itoa(numsheets) + " sheet/s"
+		return "for " + itoa(numsheets) + " sheets"
 	})
 	if len(os.Args) > 1 {
 		appPrepWork()

@@ -40,6 +40,7 @@ type PageGen struct {
 	HintHtmlR      string
 	HintHtmlS      string
 	HintDir        string
+	VerHint        string
 	LegalHtml      string
 	HrefHome       string
 	HrefDirLtr     string
@@ -47,6 +48,8 @@ type PageGen struct {
 	HrefDirCur     string
 	HrefDirAlt     string
 	HrefFeed       string
+	VersList       string
+	ChapTitle      string
 }
 
 type siteGen struct {
@@ -271,6 +274,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		HintHtmlR:  me.textStr("HintHtmlR"),
 		HintHtmlS:  me.textStr("HintHtmlS"),
 		HintDir:    me.textStr("HintDir"),
+		VerHint:    me.textStr("VerHint"),
 		LegalHtml:  me.textStr("LegalHtml"),
 		HrefFeed:   "./" + App.Proj.AtomFile.Name + "." + me.lang + ".atom",
 		PageDirCur: "ltr",
@@ -399,6 +403,21 @@ func (me *siteGen) prepHomePage() {
 
 func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, svName string, pageNr int) map[string]int {
 	quali := App.Proj.Qualis[qIdx]
+	me.page.VersList, me.page.ChapTitle = "", locStr(chapter.Title, me.lang)
+	for i, svname := range chapter.sheetVerNames {
+		text := svname + " "
+		if i == 0 {
+			text += me.textStr("VerNewest")
+		} else {
+			text += me.textStr("VerOlder")
+		}
+		me.page.VersList += "<option value='" + me.namePage(chapter, quali.SizeHint, pageNr, viewMode, "", me.lang, svname) + "'"
+		if svname == svName {
+			me.page.VersList += " selected='selected'"
+		}
+		me.page.VersList += ">" + hEsc(text) + "</option>"
+	}
+
 	var sheets []*Sheet
 	pageslist := func() (s string) {
 		istoplist, numpages := (sheets == nil), 1
