@@ -151,7 +151,7 @@ func guiStartView() (s string) {
 							}
 							s += ">p" + itoa(pgnr) + "</span>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;" + a + hEsc(sheet.name+"_"+sv.name) + "</a>"
 							if numpanels > 0 {
-								s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(numpanelareas) + " </b> text-rect(s) in " + itoa(numpanels) + " panel(s)"
+								s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(numpanelareas) + " </b> text-rect/s in " + itoa(numpanels) + " panel/s"
 								if numpanelareas > 0 {
 									for langid, percent := range sv.percentTranslated() {
 										s += "&nbsp;(<b>" + langid + "</b>: " + strconv.FormatFloat(percent, 'f', 1, 64) + "%)"
@@ -331,7 +331,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	}
 	s += "&nbsp;&horbar; jump to panel:"
 	for i := 0; i < numpanels; i++ {
-		s += "&nbsp;&nbsp;<a href='#pa" + sv.Id() + itoa(i) + "'>" + itoa(i+1) + "</a>"
+		s += "&nbsp;&nbsp;<a href='#pa" + sv.id + itoa(i) + "'>" + itoa(i+1) + "</a>"
 	}
 	s += "</h3>"
 	graydistrs := sv.grayDistrs()
@@ -357,26 +357,30 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 			}
 			s += "</ul>"
 		} else {
-			s += "<ul><li><div><b><a href='#pa" + sv.Id() + itoa(pidx) + "'>Panel #" + itoa(pidx+1) + "</a></b>: " + panel.Rect.String() + "</div></li></ul>"
+			s += "<ul><li><div><b><a href='#pa" + sv.id + itoa(pidx) + "'>Panel #" + itoa(pidx+1) + "</a></b>: " + panel.Rect.String() + "</div></li></ul>"
 			pidx++
 		}
 		return
 	}
 	s += "<h3>Sheet Panels Structure:</h3><ul><li>Sheet coords:" + sv.data.PanelsTree.Rect.String() + panelstree(sv.data.PanelsTree) + "</li></ul><hr/>"
 	zoom, zoomdiv := 100, 1.0
-	s += "<h3>All " + itoa(numpanels) + " panel(s):"
+	s += "<h3>All " + itoa(numpanels) + " panel/s:"
 	for i := 0; i < numpanels; i++ {
-		s += "&nbsp;&nbsp;<a href='#pa" + sv.Id() + itoa(i) + "'>" + itoa(i+1) + "</a>"
+		s += "&nbsp;&nbsp;<a href='#pa" + sv.id + itoa(i) + "'>" + itoa(i+1) + "</a>"
 	}
 	s += "</h3><div>"
 	importlist := map[string]string{}
-	for sheetfilename, panelsareas := range App.Proj.data.sheetVerPanelAreas {
-		if sheetfilename != sv.fileName {
+	for svid, panels := range App.Proj.svData.textRects {
+		if svid != sv.id {
+			sheetfilename := App.Proj.svData.IdsToFileNames[svid]
+			assert(sheetfilename != "")
 			var numareas int
-			for _, panelareas := range panelsareas {
+			for _, panelareas := range panels {
 				numareas += len(panelareas)
 			}
-			importlist[sheetfilename] = sheetfilename + " (" + itoa(numareas) + " text area(s) in " + itoa(len(panelsareas)) + " panel(s))"
+			if numareas != 0 {
+				importlist[sheetfilename] = sheetfilename + " (" + itoa(numareas) + " text area/s in " + itoa(len(panels)) + " panel/s)"
+			}
 		}
 	}
 	s += "</div><h4>Panel editors:</h4><div><ul><li>" + guiHtmlListFrom("importpaneltexts", "(Import panel text areas from another sheet where panel indices match)", true, importlist)
@@ -400,7 +404,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		numtextrects = itoa(intLim(int(ui), 1, App.Proj.MaxImagePanelTextAreas))
 	}
 	s += guiHtmlInput("number", "numtextrects", numtextrects, A{"min": "1", "max": itoa(App.Proj.MaxImagePanelTextAreas), "onchange": "doPostBack('numtextrects')"})
-	s += "/" + itoa(App.Proj.MaxImagePanelTextAreas) + " text-rect editor(s)</li></ul>"
+	s += "/" + itoa(App.Proj.MaxImagePanelTextAreas) + " text-rect editor/s</li></ul>"
 	if wmax := 480; maxpanelwidth > wmax {
 		zoomdiv = float64(wmax) / float64(maxpanelwidth)
 		zoom = int(100.0 * zoomdiv)
@@ -410,7 +414,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		*shouldSaveMeta = true
 	}
 	if *shouldSaveMeta {
-		App.Proj.data.sheetVerPanelAreas[sv.fileName] = nil
+		App.Proj.svData.textRects[sv.id] = nil
 	}
 	pidx = 0
 	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
@@ -418,7 +422,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		w, h := rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y
 		cfgdisplay := "none"
 		if *shouldSaveMeta {
-			App.Proj.data.sheetVerPanelAreas[sv.fileName] = append(App.Proj.data.sheetVerPanelAreas[sv.fileName], []ImgPanelArea{})
+			App.Proj.svData.textRects[sv.id] = append(App.Proj.svData.textRects[sv.id], []ImgPanelArea{})
 			if fv("main_focus_id") == pid+"save" {
 				cfgdisplay = "block"
 			}
@@ -451,17 +455,17 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 											}
 										}
 									}
-									App.Proj.data.sheetVerPanelAreas[sv.fileName][pidx] = append(App.Proj.data.sheetVerPanelAreas[sv.fileName][pidx], area)
+									App.Proj.svData.textRects[sv.id][pidx] = append(App.Proj.svData.textRects[sv.id][pidx], area)
 								}
 							}
 						}
 					}
 				}
 			}
-			if panelsareas := App.Proj.data.sheetVerPanelAreas[importfrom]; len(panelsareas) > pidx {
+			if panelsareas := App.Proj.svData.textRects[importfrom]; len(panelsareas) > pidx {
 				for _, area := range panelsareas[pidx] {
 					if !area.Rect.Empty() {
-						App.Proj.data.sheetVerPanelAreas[sv.fileName][pidx] = append(App.Proj.data.sheetVerPanelAreas[sv.fileName][pidx], area)
+						App.Proj.svData.textRects[sv.fileName][pidx] = append(App.Proj.svData.textRects[sv.fileName][pidx], area)
 					}
 				}
 			}
@@ -473,7 +477,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Max.X-panel.Rect.Min.X) + ", " + itoa(panel.Rect.Max.Y-panel.Rect.Min.Y) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + strconv.FormatFloat(sv.Px1Cm(), 'f', 8, 64) + ", '" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "', " + strconv.FormatFloat(App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm, 'f', 8, 64) + ");"
 		btnhtml := guiHtmlButton(pid+"save", "Save changes (all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 
-		s += "<hr/><h4 id='pa" + sv.Id() + itoa(pidx) + "'><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(len(sv.panelAreas(pidx))) + " text rect(s)" + "</h4><div>Panel coords: " + rect.String() + "</div>"
+		s += "<hr/><h4 id='pa" + sv.id + itoa(pidx) + "'><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(len(sv.panelAreas(pidx))) + " text rect/s" + "</h4><div>Panel coords: " + rect.String() + "</div>"
 
 		s += "<table><tr><td>"
 		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;' onclick='onPanelClick(\"" + pid + "\")'>"
@@ -487,12 +491,13 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 
 		s += "<div class='panelcfg' id='" + pid + "cfg' style='text-align: center;display:" + cfgdisplay + ";'>"
 		s += "<div>" + btnhtml + "</div>"
+		panelareas := sv.panelAreas(pidx)
 		for i, ntr := 0, atoi(numtextrects, 1, App.Proj.MaxImagePanelTextAreas); i < App.Proj.MaxImagePanelTextAreas; i++ {
 			area, styledisplay := ImgPanelArea{Data: A{}}, "none"
 			if i < ntr {
 				styledisplay = "inline"
 			}
-			if panelareas := sv.panelAreas(pidx); len(panelareas) > i {
+			if len(panelareas) > i {
 				area = panelareas[i]
 				styledisplay = "inline"
 			}

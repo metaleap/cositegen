@@ -31,6 +31,7 @@ func (me *Sheet) versionNamedOrLatest(verName string) *SheetVer {
 }
 
 type SheetVerData struct {
+	parentSheetVer  *SheetVer
 	dirPath         string
 	bwFilePath      string
 	bwSmallFilePath string
@@ -43,6 +44,7 @@ type SheetVerData struct {
 
 type SheetVer struct {
 	parentSheet *Sheet
+	id          string
 	name        string
 	fileName    string
 	data        *SheetVerData
@@ -56,9 +58,22 @@ func (me *SheetVer) Px1Cm() float64 {
 	return float64(me.data.PanelsTree.Rect.Max.Y-me.data.PanelsTree.Rect.Min.Y) / 21.0
 }
 
-func (me *SheetVer) Id() string { return App.Proj.data.ContentHashes[me.fileName] }
-
 func (me *SheetVer) String() string { return me.fileName }
+
+func (me *SheetVer) load() {
+	data, err := os.ReadFile(me.fileName)
+	if err != nil {
+		panic(err)
+	}
+
+	me.id = ""
+	for _, b := range contentHash(data) {
+		me.id += strconv.FormatUint(uint64(b), 36)
+	}
+	App.Proj.svData.fileNamesToIds[me.fileName] = me.id
+	App.Proj.svData.IdsToFileNames[me.id] = me.fileName
+	me.data = App.Proj.svData.ById[me.id]
+}
 
 func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork bool) {
 	if !fromBgPrep {
@@ -72,30 +87,13 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 		}
 	}
 	shouldsaveprojmeta := forceFullRedo
-	data, err := os.ReadFile(me.fileName)
-	if err != nil {
-		panic(err)
-	}
-
-	curhash := ""
-	for _, b := range contentHash(data) {
-		curhash += strconv.FormatUint(uint64(b), 36)
-	}
-	oldhash := App.Proj.data.ContentHashes[me.fileName]
-	App.Proj.data.ContentHashes[me.fileName] = curhash
-	if oldhash == curhash {
-		me.data = App.Proj.data.SheetVer[oldhash]
-	} else if oldhash != "" {
-		me.data = nil
-		delete(App.Proj.data.SheetVer, oldhash)
-		rmDir(".csg/projdata/" + oldhash)
-	}
 	if me.data == nil {
 		shouldsaveprojmeta = true
 		me.data = &SheetVerData{DateTimeUnixNano: time.Now().UnixNano()}
-		App.Proj.data.SheetVer[curhash] = me.data
+		App.Proj.svData.ById[me.id] = me.data
 	}
-	me.data.dirPath = ".csg/projdata/" + curhash
+	me.data.parentSheetVer = me
+	me.data.dirPath = ".csg/sv/" + me.id
 	me.data.bwFilePath = filepath.Join(me.data.dirPath, "bw."+itoa(int(App.Proj.BwThreshold))+".png")
 	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(App.Proj.BwThreshold))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
 	me.data.pngDirPath = "png." + itoa(int(App.Proj.BwThreshold))
@@ -106,10 +104,10 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 
 	mkDir(me.data.dirPath)
 
-	didWork = me.ensureBwSheetPngs(shouldsaveprojmeta)
-	shouldsaveprojmeta = me.ensurePanels(shouldsaveprojmeta) || shouldsaveprojmeta
-	shouldsaveprojmeta = me.ensureBwPanelPngs(shouldsaveprojmeta) || shouldsaveprojmeta
-	shouldsaveprojmeta = me.ensureColorDistr(forceFullRedo) || shouldsaveprojmeta
+	didWork = me.ensureBwSheetPngs(forceFullRedo)
+	shouldsaveprojmeta = me.ensurePanels(forceFullRedo || didWork) || shouldsaveprojmeta
+	shouldsaveprojmeta = me.ensureBwPanelPngs(forceFullRedo || didWork) || shouldsaveprojmeta
+	shouldsaveprojmeta = me.ensureColorDistr(forceFullRedo || shouldsaveprojmeta) || shouldsaveprojmeta
 
 	if didWork = didWork || shouldsaveprojmeta; shouldsaveprojmeta {
 		App.Proj.save()
@@ -227,14 +225,14 @@ func (me *SheetVer) ensurePanels(force bool) bool {
 }
 
 func (me *SheetVer) panelAreas(panelIdx int) []ImgPanelArea {
-	if all := App.Proj.data.sheetVerPanelAreas[me.fileName]; len(all) > panelIdx {
+	if all := App.Proj.svData.textRects[me.id]; len(all) > panelIdx {
 		return all[panelIdx]
 	}
 	return nil
 }
 
 func (me *SheetVer) panelCount() (numPanels int, numPanelAreas int) {
-	all := App.Proj.data.sheetVerPanelAreas[me.fileName]
+	all := App.Proj.svData.textRects[me.id]
 	numPanels = len(all)
 	for _, areas := range all {
 		numPanelAreas += len(areas)
@@ -248,7 +246,7 @@ func (me *SheetVer) panelCount() (numPanels int, numPanelAreas int) {
 }
 
 func (me *SheetVer) haveAnyTexts() bool {
-	for _, areas := range App.Proj.data.sheetVerPanelAreas[me.fileName] {
+	for _, areas := range App.Proj.svData.textRects[me.id] {
 		for _, area := range areas {
 			for _, text := range area.Data {
 				if trim(text) != "" {
@@ -262,7 +260,7 @@ func (me *SheetVer) haveAnyTexts() bool {
 
 func (me *SheetVer) percentTranslated() map[string]float64 {
 	haveany, ret := false, map[string]float64{}
-	for _, areas := range App.Proj.data.sheetVerPanelAreas[me.fileName] {
+	for _, areas := range App.Proj.svData.textRects[me.id] {
 		for _, area := range areas {
 			for langid, text := range area.Data {
 				if trim(text) != "" {
@@ -282,7 +280,7 @@ func (me *SheetVer) percentTranslated() map[string]float64 {
 }
 
 func (me *SheetVer) maxNumTextAreas() (max int) {
-	for _, panel := range App.Proj.data.sheetVerPanelAreas[me.fileName] {
+	for _, panel := range App.Proj.svData.textRects[me.id] {
 		if l := len(panel); l > max {
 			max = l
 		}

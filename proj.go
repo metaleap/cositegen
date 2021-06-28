@@ -65,11 +65,12 @@ type Project struct {
 	}
 
 	allPrepsDone bool
-	data         struct {
-		ContentHashes map[string]string
-		SheetVer      map[string]*SheetVerData
+	svData       struct {
+		fileNamesToIds map[string]string
+		IdsToFileNames map[string]string
+		ById           map[string]*SheetVerData
 
-		sheetVerPanelAreas map[string][][]ImgPanelArea
+		textRects map[string][][]ImgPanelArea
 	}
 }
 
@@ -86,6 +87,9 @@ func (me *Project) PercentTranslated(series *Series, langId string) float64 {
 				}
 			}
 		}
+	}
+	if num == 0 {
+		return 0
 	}
 	return sum / float64(num)
 }
@@ -188,47 +192,32 @@ func (me *Chapter) Len() int              { return len(me.sheets) }
 func (me *Chapter) String() string        { return me.Name }
 
 func (me *Project) save() {
-	jsonSave(".csg/projdata.json", &me.data)
-	jsonSave(".csg/panelareas.json", me.data.sheetVerPanelAreas)
+	jsonSave(".csg/svdata.json", &me.svData)
+	jsonSave("csgtexts.json", me.svData.textRects)
 }
 
-func (me *Project) load() {
+func (me *Project) load() (numSheetVers int) {
 	jsonLoad("cosite.json", nil, me) // exits early if no such file, before creating work dirs:
 	rmDir(".csg/tmp")
 	mkDir(".csg")
 	mkDir(".csg/tmp")
-	mkDir(".csg/projdata")
-	if _, err := os.Stat(".csg/projdata.json"); err == nil {
-		jsonLoad(".csg/projdata.json", nil, &me.data)
+	mkDir(".csg/sv")
+	if _, err := os.Stat(".csg/svdata.json"); err == nil {
+		jsonLoad(".csg/svdata.json", nil, &me.svData)
 	} else if !os.IsNotExist(err) {
 		panic(err)
 	}
-	if _, err := os.Stat(".csg/panelareas.json"); err == nil {
-		jsonLoad(".csg/panelareas.json", nil, &me.data.sheetVerPanelAreas)
+	if _, err := os.Stat("csgtexts.json"); err == nil {
+		jsonLoad("csgtexts.json", nil, &me.svData.textRects)
 	} else if !os.IsNotExist(err) {
 		panic(err)
+	} else {
+		me.svData.textRects = map[string][][]ImgPanelArea{}
 	}
-	if me.data.sheetVerPanelAreas == nil {
-		me.data.sheetVerPanelAreas = map[string][][]ImgPanelArea{}
-	}
-	if me.data.ContentHashes == nil {
-		me.data.ContentHashes = map[string]string{}
-	}
-	if me.data.SheetVer == nil {
-		me.data.SheetVer = map[string]*SheetVerData{}
-	}
-
-	for filename := range me.data.sheetVerPanelAreas {
-		if fileinfo, err := os.Stat(filename); err != nil || fileinfo.IsDir() {
-			delete(me.data.sheetVerPanelAreas, filename)
-		}
-	}
-	for filename, contenthash := range me.data.ContentHashes {
-		if fileinfo, err := os.Stat(filename); err != nil || fileinfo.IsDir() {
-			delete(me.data.SheetVer, contenthash)
-			rmDir(".csg/projdata/" + contenthash)
-			delete(me.data.ContentHashes, filename)
-		}
+	me.svData.fileNamesToIds = map[string]string{}
+	me.svData.IdsToFileNames = map[string]string{}
+	if me.svData.ById == nil {
+		me.svData.ById = map[string]*SheetVerData{}
 	}
 
 	for _, series := range me.Series {
@@ -273,7 +262,9 @@ func (me *Project) load() {
 						assert(sv.name != versionname)
 					}
 					sheetver := &SheetVer{name: versionname, parentSheet: sheet, fileName: fname}
+					sheetver.load()
 					sheet.versions = append([]*SheetVer{sheetver}, sheet.versions...)
+					numSheetVers++
 					foundinchapter := false
 					for _, svname := range chapter.sheetVerNames {
 						if foundinchapter = (svname == sheetver.name); foundinchapter {
@@ -287,4 +278,11 @@ func (me *Project) load() {
 			}
 		}
 	}
+	for svid := range me.svData.ById {
+		if me.svData.IdsToFileNames[svid] == "" {
+			delete(me.svData.ById, svid)
+			rmDir(".csg/sv/" + svid)
+		}
+	}
+	return
 }

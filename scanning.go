@@ -141,7 +141,7 @@ func scanDevicesDetection() {
 			next()
 		}
 		scanDevices = sds
-		return itoa(len(scanDevices)) + " scanner(s) detected in"
+		return itoa(len(scanDevices)) + " scanner/s detected in"
 	})
 }
 
@@ -167,6 +167,7 @@ func scanJobDo() {
 		for name, val := range sj.Opts {
 			cmd.Args = append(cmd.Args, "--"+name+"="+val)
 		}
+		printLn("\n\n\nSCANNING via command:\n" + strings.Join(cmd.Args, " ") + "\n\n")
 		if err := cmd.Start(); err != nil {
 			panic(fmt.Errorf("%v %v", err, cmd.Args))
 		}

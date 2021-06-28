@@ -42,9 +42,6 @@ func appDetectBrowser() {
 }
 
 func appOnExit(fromGui bool) {
-	if fromGui {
-		App.Proj.save()
-	}
 	rmDir(".csg/tmp")
 }
 
@@ -105,6 +102,6 @@ func appPrepWork() {
 			}
 		}
 		App.Proj.allPrepsDone = true
-		return "for " + itoa(numwork) + "/" + itoa(numjobs) + " preprocessing job(s)"
+		return "for " + itoa(numwork) + "/" + itoa(numjobs) + " preprocessing jobs"
 	})
 }

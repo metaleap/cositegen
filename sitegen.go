@@ -78,7 +78,7 @@ func (me siteGen) genSite(map[string]bool) {
 			App.Proj.Gen.PanelSvgText.AppendToFiles = map[string]bool{}
 		}
 		numfilescopied := me.copyStaticFiles("")
-		return "for " + strconv.Itoa(numfilescopied) + " file(s)"
+		return "for " + strconv.Itoa(numfilescopied) + " files"
 	})
 
 	timedLogged("SiteGen: generating (but mostly copying pre-generated) PNGs...", func() string {
@@ -123,7 +123,7 @@ func (me siteGen) genSite(map[string]bool) {
 			}
 			printLn(msg)
 		}
-		return "for " + itoa(int(numpngs)) + " PNG(s) from " + itoa(int(numpanels)) + " panel(s) in " + itoa(int(numsheets)) + " sheet(s)"
+		return "for " + itoa(int(numpngs)) + " PNGs from " + itoa(int(numpanels)) + " panels in " + itoa(int(numsheets)) + " sheets"
 	})
 
 	timedLogged("SiteGen: generating markup files...", func() string {
@@ -151,7 +151,7 @@ func (me siteGen) genSite(map[string]bool) {
 				numfileswritten += me.genAtomXml()
 			}
 		}
-		return "for " + strconv.Itoa(numfileswritten) + " file(s)"
+		return "for " + strconv.Itoa(numfileswritten) + " files"
 	})
 
 	printLn("SiteGen: DONE after " + time.Now().Sub(tstart).String())
@@ -229,7 +229,6 @@ func (me *siteGen) genOrCopyPanelPngsOf(sv *SheetVer) (numPngs uint32, numPanels
 	atomic.StoreUint32(&numPngs, 0)
 	var pidx int
 	var work sync.WaitGroup
-	sheetid := sv.Id()
 	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
 		work.Add(1)
 		numPanels++
@@ -237,9 +236,9 @@ func (me *siteGen) genOrCopyPanelPngsOf(sv *SheetVer) (numPngs uint32, numPanels
 			for qidx, quali := range App.Proj.Qualis {
 				srcpath := filepath.Join(sv.data.pngDirPath, itoa(pidx)+"."+itoa(quali.SizeHint)+".png")
 				if pngdata, err := os.ReadFile(srcpath); err == nil {
-					writeFile(filepath.Join(".build/"+App.Proj.Gen.PngDirName+"/", me.namePng(sheetid, pidx, quali.SizeHint)+".png"), pngdata)
+					writeFile(filepath.Join(".build/"+App.Proj.Gen.PngDirName+"/", me.namePng(sv.id, pidx, quali.SizeHint)+".png"), pngdata)
 					if me.onPngSize != nil {
-						me.onPngSize(sv.parentSheet.parentChapter, sheetid+itoa(pidx), qidx, len(pngdata))
+						me.onPngSize(sv.parentSheet.parentChapter, sv.id+itoa(pidx), qidx, len(pngdata))
 					}
 					atomic.AddUint32(&numPngs, 1)
 				} else if os.IsNotExist(err) {
@@ -298,14 +297,18 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		}
 		me.prepHomePage()
 		numFilesWritten += me.genPageExecAndWrite(homename)
+
 	} else {
 		series := chapter.parentSeries
 		me.page.HrefHome += "#" + strings.ToLower(series.Name)
 		me.page.PageTitle = "<span>" + hEsc(locStr(series.Title, me.lang)) + " &bull;</span> " + hEsc(locStr(chapter.Title, me.lang))
 		me.page.PageTitleTxt = hEsc(locStr(series.Title, me.lang)) + ": " + hEsc(locStr(chapter.Title, me.lang))
-		var authorinfo string
-		if series.Author != "" {
-			authorinfo = strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", series.Author, 1)
+		authorinfo := series.Author
+		if authorinfo == "" {
+			authorinfo = me.textStr("Unknown")
+		}
+		if authorinfo != "" {
+			authorinfo = strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", authorinfo, 1)
 		}
 		me.page.PageDesc = hEsc(locStr(series.Desc, me.lang)) + authorinfo
 		for _, viewmode := range viewModes {
@@ -358,9 +361,12 @@ func (me *siteGen) prepHomePage() {
 	s := "<div class='" + App.Proj.Gen.ClsNonViewerPage + "'>"
 	cssanimdirs := []string{"alternate", "alternate-reverse"}
 	for i, series := range App.Proj.Series {
-		var authorinfo string
-		if series.Author != "" {
-			authorinfo = strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", series.Author, 1)
+		authorinfo := series.Author
+		if authorinfo == "" {
+			authorinfo = me.textStr("Unknown")
+		}
+		if authorinfo != "" {
+			authorinfo = strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", authorinfo, 1)
 		}
 		s += "<span class='" + App.Proj.Gen.ClsSeries + "' style='animation-direction: " + cssanimdirs[i%2] + "; background-image: url(\"./" + App.Proj.Gen.PngDirName + "/" + me.nameThumb(series) + ".png\");'><span><h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + "</h5><div class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Desc, me.lang)) + authorinfo + "</div>"
 		s += "<ul class='" + App.Proj.Gen.ClsSeries + "'>"
@@ -438,7 +444,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 					if did {
 						pglast = pgnr
 					} else if pglast == pgnr-1 {
-						s += "<li><span>...&nbsp;</span></li>"
+						s += "<li class='" + App.Proj.Gen.APaging + "s'><span>...&nbsp;</span></li>"
 					}
 				}
 				if pgnr == pageNr && istoplist {
@@ -509,13 +515,13 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 	iter = func(sv *SheetVer, panel *ImgPanel, istop bool) (s string) {
 		assert(len(panel.SubCols) == 0 || len(panel.SubRows) == 0)
 
-		if svid := sv.Id(); len(panel.SubRows) > 0 {
+		if len(panel.SubRows) > 0 {
 			for i := range panel.SubRows {
 				sr := &panel.SubRows[i]
 				if viewMode == "r" && istop {
 					s += "<td>"
 				}
-				s += "<div id='" + firstrow + App.Proj.Gen.ClsPanel + "r" + svid + itoa(i) + "' class='" + App.Proj.Gen.ClsPanelRow
+				s += "<div id='" + firstrow + App.Proj.Gen.ClsPanel + "r" + sv.id + itoa(i) + "' class='" + App.Proj.Gen.ClsPanelRow
 				if firstrow = ""; istop && viewMode == "r" {
 					s += " " + App.Proj.Gen.ClsPanelRow + "t"
 				} else if istop {
@@ -544,10 +550,10 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			}
 
 		} else {
-			allpanels[svid] = pidx
-			hqsrc, name := "", me.namePng(svid, pidx, App.Proj.Qualis[0].SizeHint)
+			allpanels[sv.id] = pidx
+			hqsrc, name := "", me.namePng(sv.id, pidx, App.Proj.Qualis[0].SizeHint)
 			for i := qIdx; i >= 0; i-- {
-				hqsrc = me.namePng(svid, pidx, App.Proj.Qualis[i].SizeHint)
+				hqsrc = me.namePng(sv.id, pidx, App.Proj.Qualis[i].SizeHint)
 				if fileinfo, err := os.Stat(".build/" + App.Proj.Gen.PngDirName + "/" + hqsrc + ".png"); err == nil && (!fileinfo.IsDir()) && fileinfo.Size() > 0 {
 					break
 				}
@@ -556,7 +562,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				hqsrc = ""
 			}
 
-			s += "<div id='" + firstpanel + App.Proj.Gen.ClsPanel + "p" + svid + itoa(pidx) + "' onclick='" + App.Proj.Gen.ClsPanel + "(this)' class='" + App.Proj.Gen.ClsPanel + "'"
+			s += "<div id='" + firstpanel + App.Proj.Gen.ClsPanel + "p" + sv.id + itoa(pidx) + "' onclick='" + App.Proj.Gen.ClsPanel + "(this)' class='" + App.Proj.Gen.ClsPanel + "'"
 			if firstpanel = ""; viewMode == "r" {
 				s += " tabindex='0' onfocus='" + App.Proj.Gen.ClsPanel + "f(this)'"
 			}
@@ -579,15 +585,14 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 	for _, sheet := range sheets {
 		sheetver := sheet.versions[0]
 		for i := range sheet.versions {
-			if sheet.versions[i].name == svName {
+			if sheet.versions[i].name >= svName {
 				sheetver = sheet.versions[i]
 			}
 		}
-
 		sheetver.ensurePrep(false, false)
 		pidx = 0
 		if viewMode != "r" {
-			me.page.PageContent += "<div id='" + sheetver.Id() + "' class='" + App.Proj.Gen.ClsSheet + "'>"
+			me.page.PageContent += "<div id='" + sheetver.id + "' class='" + App.Proj.Gen.ClsSheet + "'>"
 		}
 		me.page.PageContent += iter(sheetver, sheetver.data.PanelsTree, true)
 		if viewMode != "r" {
