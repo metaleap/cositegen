@@ -303,14 +303,11 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		me.page.HrefHome += "#" + strings.ToLower(series.Name)
 		me.page.PageTitle = "<span>" + hEsc(locStr(series.Title, me.lang)) + " &bull;</span> " + hEsc(locStr(chapter.Title, me.lang))
 		me.page.PageTitleTxt = hEsc(locStr(series.Title, me.lang)) + ": " + hEsc(locStr(chapter.Title, me.lang))
-		authorinfo := series.Author
-		if authorinfo == "" {
-			authorinfo = me.textStr("Unknown")
+		author := series.Author
+		if author != "" {
+			author = strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", author, 1)
 		}
-		if authorinfo != "" {
-			authorinfo = strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", authorinfo, 1)
-		}
-		me.page.PageDesc = hEsc(locStr(series.Desc, me.lang)) + authorinfo
+		me.page.PageDesc = hEsc(locStr(series.Desc, me.lang)) + author
 		for _, viewmode := range viewModes {
 			me.page.PageCssClasses = App.Proj.Gen.ClsChapter + viewmode
 			for _, svname := range chapter.sheetVerNames {
