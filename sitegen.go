@@ -292,6 +292,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 	if chapter == nil {
 		me.page.PageTitle = hEsc(me.textStr("HomeTitle"))
 		me.page.PageDesc = repl.Replace(hEsc(me.textStr("HomeDesc")))
+		me.page.PageCssClasses = App.Proj.Gen.ClsChapter + "n"
 		if me.lang == App.Proj.Langs[0] {
 			me.page.HrefDirLtr = "./index.html"
 			me.page.HrefDirRtl = "./index." + App.Proj.DirModes.Rtl.Name + ".html"
