@@ -186,7 +186,7 @@ func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 			Series: series, Chapter: chapter, Opts: map[string]string{},
 			SheetName: trim(fv("sheetname")), SheetVerName: trim(fv("sheetvername")),
 		}
-		sj.PnmFileName, sj.PngFileName = ".csg/tmp/"+sj.Id+".pnm", "sheets/"+series.Name+"/"+chapter.Name+"/sheets/"+sj.SheetName+"_"+sj.SheetVerName+".png"
+		sj.PnmFileName, sj.PngFileName = "/dev/shm/csg"+sj.Id+".pnm", "sheets/"+series.Name+"/"+chapter.Name+"/sheets/"+sj.SheetName+"_"+sj.SheetVerName+".png"
 		for _, sd := range scanDevices {
 			if sd.Ident == fv("scandev") {
 				sj.Dev = sd

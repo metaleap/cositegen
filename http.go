@@ -48,13 +48,13 @@ func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
 
 func httpServeDynPng(httpResp http.ResponseWriter, httpReq *http.Request) {
 	var pngdata []byte
-	tmpfilename := filepath.Join(".csg/tmp", strings.Replace(httpReq.URL.Path, "/", "_", -1))
+	tmpfilename := "/dev/shm/" + strings.Replace(httpReq.URL.Path, "/", "_", -1)
 	pngdata, _ = os.ReadFile(tmpfilename)
 
 	if len(pngdata) == 0 {
 		idx := strings.Index(httpReq.URL.Path, ".png/")
 		urlpath, urlargstr := httpReq.URL.Path[:idx+len(".png")], httpReq.URL.Path[idx+len(".png/"):]
-		filename := filepath.Join("." /*looks redudant but isnt!*/, urlpath)
+		filename := filepath.Join("." /*looks redundant but isnt!*/, urlpath)
 		file, err := os.Open(filename)
 		if err != nil {
 			panic(err)
