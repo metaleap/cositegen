@@ -1,6 +1,8 @@
 package main
 
 import (
+	"io/fs"
+	"os"
 	"os/exec"
 	"sync/atomic"
 )
@@ -14,6 +16,7 @@ var App struct {
 	StaticFilesDirPath string
 	Proj               Project
 	Gui                struct {
+		Exiting    bool
 		BrowserPid int
 		State      struct {
 			Sel struct {
@@ -41,7 +44,8 @@ func appDetectBrowser() {
 	browserCmd[0] = cmdnames[cmdidx]
 }
 
-func appOnExit(fromGui bool) {
+func appOnExit() {
+	App.Proj.save()
 	rmDir(".csg/tmp")
 }
 
@@ -104,4 +108,30 @@ func appPrepWork() {
 		App.Proj.allPrepsDone = true
 		return "for " + itoa(numwork) + "/" + itoa(numjobs) + " preprocessing jobs"
 	})
+}
+
+func pngOptsLoop() {
+	dirfs := os.DirFS(".")
+	for !App.Gui.Exiting {
+		for k := range App.Proj.data.PngOpt {
+			if App.Gui.Exiting {
+				return
+			}
+			if fileinfo, err := os.Stat(k); err != nil || fileinfo.IsDir() {
+				delete(App.Proj.data.PngOpt, k)
+			}
+		}
+
+		matches, err := fs.Glob(dirfs, ".csg/sv/**/*.png")
+		if err != nil {
+			panic(err)
+		}
+		for _, match := range matches {
+			if App.Gui.Exiting {
+				return
+			}
+			printLn("PNGFOUND:\t\t\t" + match)
+		}
+		break
+	}
 }

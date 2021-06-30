@@ -53,9 +53,10 @@ func percent(hundred int, val int) int {
 func writeFile(fileName string, data []byte) {
 	tmpfilename := fileName + "." + strconv.FormatInt(time.Now().UnixNano(), 36)
 	if err := os.WriteFile(tmpfilename, data, os.ModePerm); err != nil {
+		_ = os.Remove(tmpfilename)
 		panic(err)
-	}
-	if err := os.Rename(tmpfilename, fileName); err != nil {
+	} else if err := os.Rename(tmpfilename, fileName); err != nil {
+		_ = os.Remove(tmpfilename)
 		panic(err)
 	}
 }

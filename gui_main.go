@@ -370,9 +370,9 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	}
 	s += "</h3><div>"
 	importlist := map[string]string{}
-	for svid, panels := range App.Proj.svData.textRects {
+	for svid, panels := range App.Proj.data.Sv.textRects {
 		if svid != sv.id {
-			sheetfilename := App.Proj.svData.IdsToFileNames[svid]
+			sheetfilename := App.Proj.data.Sv.IdsToFileNames[svid]
 			assert(sheetfilename != "")
 			var numareas int
 			for _, panelareas := range panels {
@@ -414,7 +414,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		*shouldSaveMeta = true
 	}
 	if *shouldSaveMeta {
-		App.Proj.svData.textRects[sv.id] = nil
+		App.Proj.data.Sv.textRects[sv.id] = nil
 	}
 	pidx = 0
 	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
@@ -422,7 +422,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		w, h := rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y
 		cfgdisplay := "none"
 		if *shouldSaveMeta {
-			App.Proj.svData.textRects[sv.id] = append(App.Proj.svData.textRects[sv.id], []ImgPanelArea{})
+			App.Proj.data.Sv.textRects[sv.id] = append(App.Proj.data.Sv.textRects[sv.id], []ImgPanelArea{})
 			if fv("main_focus_id") == pid+"save" {
 				cfgdisplay = "block"
 			}
@@ -455,17 +455,17 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 											}
 										}
 									}
-									App.Proj.svData.textRects[sv.id][pidx] = append(App.Proj.svData.textRects[sv.id][pidx], area)
+									App.Proj.data.Sv.textRects[sv.id][pidx] = append(App.Proj.data.Sv.textRects[sv.id][pidx], area)
 								}
 							}
 						}
 					}
 				}
 			}
-			if panelsareas := App.Proj.svData.textRects[importfrom]; len(panelsareas) > pidx {
+			if panelsareas := App.Proj.data.Sv.textRects[importfrom]; len(panelsareas) > pidx {
 				for _, area := range panelsareas[pidx] {
 					if !area.Rect.Empty() {
-						App.Proj.svData.textRects[sv.fileName][pidx] = append(App.Proj.svData.textRects[sv.fileName][pidx], area)
+						App.Proj.data.Sv.textRects[sv.fileName][pidx] = append(App.Proj.data.Sv.textRects[sv.fileName][pidx], area)
 					}
 				}
 			}

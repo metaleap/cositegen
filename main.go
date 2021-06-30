@@ -15,7 +15,7 @@ var browserCmd = []string{"", "--new-window", "--single-process", "--user-data-d
 func main() {
 	App.StaticFilesDirPath = filepath.Join(os.Getenv("HOME"), "c/go/src/github.com/metaleap/cositegen/_static")
 	appDetectBrowser()
-	timedLogged("Loading project (cosite.json  &  csgtexts.json  &  .csg/svdata.json)...", func() string {
+	timedLogged("Loading project (cosite.json  &  csgtexts.json  &  .csg/projdata.json)...", func() string {
 		numsheets := App.Proj.load()
 		return "for " + itoa(numsheets) + " sheets"
 	})
@@ -28,16 +28,17 @@ func main() {
 		if msg := appMainAction(false, os.Args[1], args); msg != "" {
 			printLn(msg)
 		}
-		appOnExit(false)
+		appOnExit()
 	} else {
 		go scanDevicesDetection()
 		go httpListenAndServe()
 		go appPrepWork()
 		go launchGuiInKioskyBrowser()
-		for canexit := false; !canexit; time.Sleep(time.Second) {
-			canexit = (App.Gui.BrowserPid == 0) && !appIsBusy()
+		go pngOptsLoop()
+		for App.Gui.Exiting = false; !App.Gui.Exiting; time.Sleep(time.Second) {
+			App.Gui.Exiting = (App.Gui.BrowserPid == 0) && !appIsBusy()
 		}
-		appOnExit(true)
+		appOnExit()
 	}
 }
 

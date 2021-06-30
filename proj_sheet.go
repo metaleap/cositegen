@@ -70,9 +70,9 @@ func (me *SheetVer) load() {
 	for _, b := range contentHash(data) {
 		me.id += strconv.FormatUint(uint64(b), 36)
 	}
-	App.Proj.svData.fileNamesToIds[me.fileName] = me.id
-	App.Proj.svData.IdsToFileNames[me.id] = me.fileName
-	me.data = App.Proj.svData.ById[me.id]
+	App.Proj.data.Sv.fileNamesToIds[me.fileName] = me.id
+	App.Proj.data.Sv.IdsToFileNames[me.id] = me.fileName
+	me.data = App.Proj.data.Sv.ById[me.id]
 }
 
 func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork bool) {
@@ -90,7 +90,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	if me.data == nil {
 		shouldsaveprojmeta = true
 		me.data = &SheetVerData{DateTimeUnixNano: time.Now().UnixNano()}
-		App.Proj.svData.ById[me.id] = me.data
+		App.Proj.data.Sv.ById[me.id] = me.data
 	}
 	me.data.parentSheetVer = me
 	me.data.dirPath = ".csg/sv/" + me.id
@@ -225,14 +225,14 @@ func (me *SheetVer) ensurePanels(force bool) bool {
 }
 
 func (me *SheetVer) panelAreas(panelIdx int) []ImgPanelArea {
-	if all := App.Proj.svData.textRects[me.id]; len(all) > panelIdx {
+	if all := App.Proj.data.Sv.textRects[me.id]; len(all) > panelIdx {
 		return all[panelIdx]
 	}
 	return nil
 }
 
 func (me *SheetVer) panelCount() (numPanels int, numPanelAreas int) {
-	all := App.Proj.svData.textRects[me.id]
+	all := App.Proj.data.Sv.textRects[me.id]
 	numPanels = len(all)
 	for _, areas := range all {
 		numPanelAreas += len(areas)
@@ -246,7 +246,7 @@ func (me *SheetVer) panelCount() (numPanels int, numPanelAreas int) {
 }
 
 func (me *SheetVer) haveAnyTexts() bool {
-	for _, areas := range App.Proj.svData.textRects[me.id] {
+	for _, areas := range App.Proj.data.Sv.textRects[me.id] {
 		for _, area := range areas {
 			for _, text := range area.Data {
 				if trim(text) != "" {
@@ -260,7 +260,7 @@ func (me *SheetVer) haveAnyTexts() bool {
 
 func (me *SheetVer) percentTranslated() map[string]float64 {
 	haveany, ret := false, map[string]float64{}
-	for _, areas := range App.Proj.svData.textRects[me.id] {
+	for _, areas := range App.Proj.data.Sv.textRects[me.id] {
 		for _, area := range areas {
 			for langid, text := range area.Data {
 				if trim(text) != "" {
@@ -280,7 +280,7 @@ func (me *SheetVer) percentTranslated() map[string]float64 {
 }
 
 func (me *SheetVer) maxNumTextAreas() (max int) {
-	for _, panel := range App.Proj.svData.textRects[me.id] {
+	for _, panel := range App.Proj.data.Sv.textRects[me.id] {
 		if l := len(panel); l > max {
 			max = l
 		}

@@ -65,12 +65,15 @@ type Project struct {
 	}
 
 	allPrepsDone bool
-	svData       struct {
-		fileNamesToIds map[string]string
-		IdsToFileNames map[string]string
-		ById           map[string]*SheetVerData
+	data         struct {
+		Sv struct {
+			fileNamesToIds map[string]string
+			IdsToFileNames map[string]string
+			ById           map[string]*SheetVerData
 
-		textRects map[string][][]ImgPanelArea
+			textRects map[string][][]ImgPanelArea
+		}
+		PngOpt map[string][]int64
 	}
 }
 
@@ -192,8 +195,8 @@ func (me *Chapter) Len() int              { return len(me.sheets) }
 func (me *Chapter) String() string        { return me.Name }
 
 func (me *Project) save() {
-	jsonSave(".csg/svdata.json", &me.svData)
-	jsonSave("csgtexts.json", me.svData.textRects)
+	jsonSave(".csg/projdata.json", &me.data)
+	jsonSave("csgtexts.json", me.data.Sv.textRects)
 }
 
 func (me *Project) load() (numSheetVers int) {
@@ -202,22 +205,25 @@ func (me *Project) load() (numSheetVers int) {
 	mkDir(".csg")
 	mkDir(".csg/tmp")
 	mkDir(".csg/sv")
-	if _, err := os.Stat(".csg/svdata.json"); err == nil {
-		jsonLoad(".csg/svdata.json", nil, &me.svData)
+	if _, err := os.Stat(".csg/projdata.json"); err == nil {
+		jsonLoad(".csg/projdata.json", nil, &me.data)
 	} else if !os.IsNotExist(err) {
 		panic(err)
 	}
 	if _, err := os.Stat("csgtexts.json"); err == nil {
-		jsonLoad("csgtexts.json", nil, &me.svData.textRects)
+		jsonLoad("csgtexts.json", nil, &me.data.Sv.textRects)
 	} else if !os.IsNotExist(err) {
 		panic(err)
 	} else {
-		me.svData.textRects = map[string][][]ImgPanelArea{}
+		me.data.Sv.textRects = map[string][][]ImgPanelArea{}
 	}
-	me.svData.fileNamesToIds = map[string]string{}
-	me.svData.IdsToFileNames = map[string]string{}
-	if me.svData.ById == nil {
-		me.svData.ById = map[string]*SheetVerData{}
+	me.data.Sv.fileNamesToIds = map[string]string{}
+	me.data.Sv.IdsToFileNames = map[string]string{}
+	if me.data.Sv.ById == nil {
+		me.data.Sv.ById = map[string]*SheetVerData{}
+	}
+	if me.data.PngOpt == nil {
+		me.data.PngOpt = map[string][]int64{}
 	}
 
 	for _, series := range me.Series {
@@ -278,9 +284,9 @@ func (me *Project) load() (numSheetVers int) {
 			}
 		}
 	}
-	for svid := range me.svData.ById {
-		if me.svData.IdsToFileNames[svid] == "" {
-			delete(me.svData.ById, svid)
+	for svid := range me.data.Sv.ById {
+		if me.data.Sv.IdsToFileNames[svid] == "" {
+			delete(me.data.Sv.ById, svid)
 			rmDir(".csg/sv/" + svid)
 		}
 	}
