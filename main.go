@@ -38,6 +38,9 @@ func main() {
 		for App.Gui.Exiting = false; !App.Gui.Exiting; time.Sleep(time.Second) {
 			App.Gui.Exiting = (App.Gui.BrowserPid == 0) && !appIsBusy()
 		}
+		for App.pngOptBusy {
+			time.Sleep(time.Second)
+		}
 		appOnExit()
 	}
 }

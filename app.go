@@ -27,6 +27,7 @@ var App struct {
 			}
 		}
 	}
+	pngOptBusy bool
 }
 
 func appDetectBrowser() {
@@ -111,6 +112,8 @@ func appPrepWork() {
 }
 
 func pngOptsLoop() {
+	App.pngOptBusy = true
+	defer func() { App.pngOptBusy = false }()
 	dirfs := os.DirFS(".")
 	for !App.Gui.Exiting {
 		for k := range App.Proj.data.PngOpt {
