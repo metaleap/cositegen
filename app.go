@@ -1,10 +1,13 @@
 package main
 
 import (
+	"errors"
 	"io/fs"
 	"os"
 	"os/exec"
+	"strings"
 	"sync/atomic"
+	"time"
 )
 
 var appMainActions = map[string]bool{}
@@ -85,7 +88,7 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 	}
 }
 
-func appPrepWork() {
+func appPrepWork(pngOptsLoopAfter bool) {
 	App.Proj.allPrepsDone = false
 	timedLogged("Preprocessing...", func() string {
 		var numjobs, numwork int
@@ -109,32 +112,94 @@ func appPrepWork() {
 		App.Proj.allPrepsDone = true
 		return "for " + itoa(numwork) + "/" + itoa(numjobs) + " preprocessing jobs"
 	})
+
+	if pngOptsLoopAfter {
+		for len(scanDevices) == 0 {
+			time.Sleep(time.Second)
+		}
+		printLn("ALL INITS DONE, starting eternal background PNG watch&optimize loop...")
+		pngOptsLoop()
+	}
 }
 
 func pngOptsLoop() {
 	App.pngOptBusy = true
 	defer func() { App.pngOptBusy = false }()
-	dirfs := os.DirFS(".")
-	for !App.Gui.Exiting {
+
+	for dirfs := os.DirFS("."); !App.Gui.Exiting; time.Sleep(time.Minute) {
+		dels := false
 		for k := range App.Proj.data.PngOpt {
-			if App.Gui.Exiting {
-				return
-			}
 			if fileinfo, err := os.Stat(k); err != nil || fileinfo.IsDir() {
 				delete(App.Proj.data.PngOpt, k)
+				dels = true
 			}
 		}
-
-		matches, err := fs.Glob(dirfs, ".csg/sv/**/*.png")
-		if err != nil {
-			panic(err)
+		if dels {
+			App.Proj.save()
 		}
-		for _, match := range matches {
+		if App.Gui.Exiting {
+			return
+		}
+
+		numdone, matches, totalsize, errexiting := 0, []string{}, uint64(0), errors.New("exiting")
+		if err := fs.WalkDir(dirfs, ".", func(fspath string, dir fs.DirEntry, err error) error {
+			if App.Gui.Exiting {
+				return errexiting
+			}
+			if fileinfo, err := os.Lstat(fspath); err == nil &&
+				(!fileinfo.IsDir()) && (fileinfo.Mode()&os.ModeSymlink) == 0 &&
+				strings.HasSuffix(fspath, ".png") && !strings.Contains(fspath, ".build/") {
+				matches, totalsize = append(matches, fspath), totalsize+uint64(fileinfo.Size())
+			}
+			return nil
+		}); err == errexiting {
+			return
+		} else if err != nil {
+			printLn("PNGOPT Walk: " + err.Error())
+		}
+
+		printLn("PNGOPT:", len(matches), "files found (~"+itoa(int(totalsize/(1024*1024)))+"MB) to scrutinize...")
+		for _, pngfilename := range matches {
 			if App.Gui.Exiting {
 				return
 			}
-			printLn("PNGFOUND:\t\t\t" + match)
+			curfiledata, err := os.ReadFile(pngfilename)
+			if err != nil {
+				continue
+			}
+			lastopt, skip := App.Proj.data.PngOpt[pngfilename]
+			if skip = skip && (lastopt[1] == itoa(len(curfiledata))) &&
+				(lastopt[2] == string(contentHashStr(curfiledata))); skip {
+				continue
+			} else if App.Gui.Exiting {
+				return
+			}
+
+			cmd := exec.Command("pngbattle", pngfilename)
+			cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+			if err = cmd.Start(); err != nil {
+				printLn(err)
+				continue
+			}
+			go cmd.Wait()
+			for ; cmd.ProcessState == nil; time.Sleep(time.Second) {
+				if App.Gui.Exiting {
+					_ = cmd.Process.Kill()
+				}
+			}
+			if !cmd.ProcessState.Success() {
+				printLn(cmd.ProcessState.String())
+				continue
+			}
+			if filedata, err := os.ReadFile(pngfilename); err == nil {
+				numdone, App.Proj.data.PngOpt[pngfilename] = numdone+1, []string{
+					itoa(len(curfiledata)),
+					itoa(len(filedata)),
+					string(contentHashStr(filedata)),
+				}
+				App.Proj.save()
+			}
 		}
-		break
+		printLn("PNGOPT:", len(matches), "scrutinized &", numdone, "processed, sleeping a minute...")
 	}
 }

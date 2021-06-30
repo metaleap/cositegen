@@ -210,9 +210,8 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 	}
 
 	var imgdst draw.Image
-	*gotSameSizeAsOrig = *width > origwidth
-	if *gotSameSizeAsOrig {
-		*width, *height = origwidth, origheight
+	if *width > origwidth {
+		*gotSameSizeAsOrig, *width, *height = true, origwidth, origheight
 		if !transparent {
 			imgdst = srcImg.SubImage(srcImgRect).(draw.Image)
 		} else {

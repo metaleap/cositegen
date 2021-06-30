@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+const noTransparentPngs = true
 const siteTmplDirName = "sitetmpl"
 const siteTmplFileName = "_tmpl.html"
 
@@ -19,8 +20,9 @@ func main() {
 		numsheets := App.Proj.load()
 		return "for " + itoa(numsheets) + " sheets"
 	})
+
 	if len(os.Args) > 1 {
-		appPrepWork()
+		appPrepWork(false)
 		args := map[string]bool{}
 		for _, arg := range os.Args[2:] {
 			args[arg] = true
@@ -32,14 +34,10 @@ func main() {
 	} else {
 		go scanDevicesDetection()
 		go httpListenAndServe()
-		go appPrepWork()
+		go appPrepWork(true)
 		go launchGuiInKioskyBrowser()
-		go pngOptsLoop()
 		for App.Gui.Exiting = false; !App.Gui.Exiting; time.Sleep(time.Second) {
 			App.Gui.Exiting = (App.Gui.BrowserPid == 0) && !appIsBusy()
-		}
-		for App.pngOptBusy {
-			time.Sleep(time.Second)
 		}
 		appOnExit()
 	}

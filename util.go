@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/md5"
 	"crypto/sha1"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -62,8 +63,20 @@ func writeFile(fileName string, data []byte) {
 }
 
 func contentHash(content []byte) []byte {
+	assert(len(content) != 0)
 	b1, b2 := sha1.Sum(content), md5.Sum(content)
 	return append(b1[:], b2[:]...)
+}
+
+func contentHashStr(content []byte) (s string) {
+	hash := contentHash(content)
+	for (len(hash) % 8) != 0 {
+		hash = append(hash, 0)
+	}
+	for i := 0; i < len(hash); i += 8 {
+		s += strconv.FormatUint(binary.LittleEndian.Uint64(hash[i:i+8]), 36)
+	}
+	return
 }
 
 func jsonLoad(eitherFileName string, orBytes []byte, intoPtr Any) {

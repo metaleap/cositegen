@@ -73,7 +73,7 @@ type Project struct {
 
 			textRects map[string][][]ImgPanelArea
 		}
-		PngOpt map[string][]int64
+		PngOpt map[string][]string
 	}
 }
 
@@ -223,7 +223,7 @@ func (me *Project) load() (numSheetVers int) {
 		me.data.Sv.ById = map[string]*SheetVerData{}
 	}
 	if me.data.PngOpt == nil {
-		me.data.PngOpt = map[string][]int64{}
+		me.data.PngOpt = map[string][]string{}
 	}
 
 	for _, series := range me.Series {
