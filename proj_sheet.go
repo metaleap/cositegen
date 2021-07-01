@@ -152,7 +152,9 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 		if fileinfo, err := os.Stat(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(App.Proj.Qualis[0].SizeHint)+".png")); err != nil || fileinfo.IsDir() {
 			force = true
 		} else if fileinfo, err := os.Stat(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(App.Proj.Qualis[0].SizeHint)+"t.png")); err != nil || fileinfo.IsDir() {
-			force = !noTransparentPngs
+			force = true
+		} else if fileinfo, err := os.Stat(filepath.Join(me.data.dirPath, itoa(pidx)+".svg")); err != nil || fileinfo.IsDir() || fileinfo.Size() == 0 {
+			force = true
 		}
 	}
 	if !force {
@@ -183,9 +185,6 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 				w, h := int(width), int(height)
 				var wassamesize bool
 				for k, transparent := range map[string]bool{"t": true, "": false} {
-					if transparent && noTransparentPngs {
-						continue
-					}
 					pngdata := imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, quali.SizeHint/640, 0, transparent, &wassamesize)
 					writeFile(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(quali.SizeHint)+k+".png"), pngdata)
 				}
@@ -193,6 +192,8 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 					break
 				}
 			}
+			svgdata := imgVectorizeToSvg(imgsrc.(*image.Gray), panel.Rect)
+			writeFile(filepath.Join(me.data.dirPath, itoa(pidx)+".svg"), svgdata)
 			work.Done()
 		}(pidx)
 		pidx++

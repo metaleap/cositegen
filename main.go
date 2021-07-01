@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-const noTransparentPngs = true
 const siteTmplDirName = "sitetmpl"
 const siteTmplFileName = "_tmpl.html"
 

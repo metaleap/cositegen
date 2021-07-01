@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/go-forks/gopnm"
+	"github.com/go-forks/gotrace"
 	"golang.org/x/image/draw"
 )
 
@@ -194,6 +195,15 @@ func imgBwBorder(imgdst draw.Image, bwColor color.Gray, size int, offset int, tr
 }
 
 func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int, whiteBorderSize int, transparent bool, gotSameSizeAsOrig *bool) []byte {
+	imgdst := imgSubRect(srcImg, srcImgRect, width, height, blackBorderSize, whiteBorderSize, transparent, gotSameSizeAsOrig)
+	var buf bytes.Buffer
+	if err := PngEncoder.Encode(&buf, imgdst); err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
+}
+
+func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int, whiteBorderSize int, transparent bool, gotSameSizeAsOrig *bool) image.Image {
 	origwidth, origheight := srcImgRect.Max.X-srcImgRect.Min.X, srcImgRect.Max.Y-srcImgRect.Min.Y
 	assert(((*width < origwidth) == (*height < origheight)) &&
 		((*width > origwidth) == (*height > origheight)))
@@ -226,11 +236,7 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 	}
 	imgBwBorder(imgdst, color.Gray{255}, whiteBorderSize, 0, transparent)
 	imgBwBorder(imgdst, color.Gray{0}, blackBorderSize, whiteBorderSize, transparent)
-	var buf bytes.Buffer
-	if err := PngEncoder.Encode(&buf, imgdst); err != nil {
-		panic(err)
-	}
-	return buf.Bytes()
+	return imgdst
 }
 
 func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bool, lineX int) (s string) {
@@ -285,6 +291,32 @@ func imgStitchHorizontally(fileNames []string, height int, gapWidth int, gapColo
 
 	var buf bytes.Buffer
 	if err := PngEncoder.Encode(&buf, dst); err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
+}
+
+func imgVectorizeToSvg(srcImg *image.Gray, rect image.Rectangle) []byte {
+	dstimg := image.NewNRGBA(image.Rect(0, 0, rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y))
+	for px := rect.Min.X; px < rect.Max.X; px++ {
+		for py := rect.Min.Y; py < rect.Max.Y; py++ {
+			col := srcImg.GrayAt(px, py)
+			dstimg.Set(px-rect.Min.X, py-rect.Min.Y, color.NRGBA{A: 255 - col.Y})
+		}
+	}
+
+	paths, err := gotrace.Trace(gotrace.NewBitmapFromImage(dstimg, nil), &gotrace.Params{
+		TurdSize:     2,                 // despeckling if fewer px than
+		TurnPolicy:   gotrace.TurnBlack, // connecting preference
+		AlphaMax:     1.0,               // 0: no smoothing of polygons; >1.3333: no corners just smooth curves
+		OptiCurve:    true,
+		OptTolerance: 0.2,
+	})
+	if err != nil {
+		panic(err)
+	}
+	var buf bytes.Buffer
+	if err = gotrace.WriteSvg(&buf, dstimg.Bounds(), paths, ""); err != nil {
 		panic(err)
 	}
 	return buf.Bytes()
