@@ -31,7 +31,7 @@ func guiMain(r *http.Request, notice string) []byte {
 			s += csssel + "{" + strings.Replace(strings.Join(csslines, ";"), "./", dirpref+"/", -1) + "}"
 		}
 	}
-	s += "</style><script type='text/javascript' language='javascript'>const svgTxtPerLineDyCmA4 = " + strconv.FormatFloat(App.Proj.Gen.PanelSvgText.PerLineDyCmA4, 'f', 8, 64) + ", svgTxtFontSizeCmA4 = " + strconv.FormatFloat(App.Proj.Gen.PanelSvgText.FontSizeCmA4, 'f', 8, 64) + ", numImagePanelTextAreas = " + itoa(App.Proj.MaxImagePanelTextAreas) + ";</script><script src='/main.js' type='text/javascript' language='javascript'></script>"
+	s += "</style><script type='text/javascript' language='javascript'>const svgTxtPerLineDyCmA4 = " + ftoa(App.Proj.Gen.PanelSvgText.PerLineDyCmA4, 8) + ", svgTxtFontSizeCmA4 = " + ftoa(App.Proj.Gen.PanelSvgText.FontSizeCmA4, 8) + ", numImagePanelTextAreas = " + itoa(App.Proj.MaxImagePanelTextAreas) + ";</script><script src='/main.js' type='text/javascript' language='javascript'></script>"
 	s += "</head><body><form method='POST' action='/' id='main_form' novalidate='novalidate'>" + guiHtmlInput("hidden", "main_focus_id", fv("main_focus_id"), nil)
 	if notice != "" {
 		s += "<div class='notice'>" + hEsc(notice) + "</div>"
@@ -154,7 +154,7 @@ func guiStartView() (s string) {
 								s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(numpanelareas) + " </b> text-rect/s in " + itoa(numpanels) + " panel/s"
 								if numpanelareas > 0 {
 									for langid, percent := range sv.percentTranslated() {
-										s += "&nbsp;(<b>" + langid + "</b>: " + strconv.FormatFloat(percent, 'f', 1, 64) + "%)"
+										s += "&nbsp;(<b>" + langid + "</b>: " + ftoa(percent, 1) + "%)"
 									}
 								}
 								s += "</small>"
@@ -474,7 +474,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		for _, lang := range App.Proj.Langs {
 			langs = append(langs, lang)
 		}
-		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Max.X-panel.Rect.Min.X) + ", " + itoa(panel.Rect.Max.Y-panel.Rect.Min.Y) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + strconv.FormatFloat(sv.Px1Cm(), 'f', 8, 64) + ", '" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "', " + strconv.FormatFloat(App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm, 'f', 8, 64) + ");"
+		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Max.X-panel.Rect.Min.X) + ", " + itoa(panel.Rect.Max.Y-panel.Rect.Min.Y) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + ftoa(sv.Px1Cm(), 8) + ", '" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "', " + ftoa(App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm, 8) + ");"
 		btnhtml := guiHtmlButton(pid+"save", "Save changes (all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 
 		s += "<hr/><h4 id='pa" + sv.id + itoa(pidx) + "'><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(len(sv.panelAreas(pidx))) + " text rect/s" + "</h4><div>Panel coords: " + rect.String() + "</div>"
@@ -482,7 +482,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		s += "<table><tr><td>"
 		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;' onclick='onPanelClick(\"" + pid + "\")'>"
 		style := `width: ` + itoa(w) + `px; height: ` + itoa(h) + `px;`
-		s += "<div style='position:relative; " + style + "' onauxclick='onPanelAuxClick(event, " + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + strconv.FormatFloat(zoomdiv, 'f', 8, 64) + ")' onmousemove='this.title=parseInt(" + itoa(panel.Rect.Min.X) + "+event.offsetX*" + strconv.FormatFloat(zoomdiv, 'f', 8, 64) + ")+\",\"+parseInt(" + itoa(panel.Rect.Min.Y) + "+event.offsetY*" + strconv.FormatFloat(zoomdiv, 'f', 8, 64) + ")'>"
+		s += "<div style='position:relative; " + style + "' onauxclick='onPanelAuxClick(event, " + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + ftoa(zoomdiv, 8) + ")' onmousemove='this.title=parseInt(" + itoa(panel.Rect.Min.X) + "+event.offsetX*" + ftoa(zoomdiv, 8) + ")+\",\"+parseInt(" + itoa(panel.Rect.Min.Y) + "+event.offsetY*" + ftoa(zoomdiv, 8) + ")'>"
 		style += `background-image: url("/` + bwsrc + `");`
 		style += `background-size: ` + itoa(sv.data.PanelsTree.Rect.Max.X-sv.data.PanelsTree.Rect.Min.X) + `px ` + itoa(sv.data.PanelsTree.Rect.Max.Y-sv.data.PanelsTree.Rect.Min.Y) + `px;`
 		style += `background-position: -` + itoa(rect.Min.X) + `px -` + itoa(rect.Min.Y) + `px;`

@@ -351,7 +351,7 @@ func (me ImgPanel) flattened() ImgPanel {
 }
 
 func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
-	cm := srcImg.Rect.Max.Y / 21
+	panelmin := srcImg.Rect.Max.Y / 11 // ~min. 1.9cm
 
 	detectRows := func(area image.Rectangle) (ret []image.Rectangle) {
 		laststart, seps := -1, [][2]int{}
@@ -377,14 +377,14 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 		for _, sep := range seps {
 			assert(sep[1] > sep[0])
 			mid := sep[0] + ((sep[1] - sep[0]) / 2)
-			if mid-prevmid > cm {
+			if mid-prevmid > panelmin {
 				rect := image.Rect(area.Min.X, prevmid, area.Max.X, mid)
 				assert(rect.In(area))
 				ret = append(ret, rect)
 			}
 			prevmid = mid
 		}
-		if area.Max.Y-prevmid > cm {
+		if area.Max.Y-prevmid > panelmin {
 			ret = append(ret, image.Rect(area.Min.X, prevmid, area.Max.X, area.Max.Y))
 		}
 		return
@@ -414,14 +414,14 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 		for _, sep := range seps {
 			assert(sep[1] > sep[0])
 			mid := sep[0] + ((sep[1] - sep[0]) / 2)
-			if mid-prevmid > cm {
+			if mid-prevmid > panelmin {
 				rect := image.Rect(prevmid, area.Min.Y, mid, area.Max.Y)
 				assert(rect.In(area))
 				ret = append(ret, rect)
 			}
 			prevmid = mid
 		}
-		if area.Max.X-prevmid > cm {
+		if area.Max.X-prevmid > panelmin {
 			ret = append(ret, image.Rect(prevmid, area.Min.Y, area.Max.X, area.Max.Y))
 		}
 		return
@@ -436,7 +436,9 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 	if len(cols) == 1 {
 		cols = nil
 	}
-	assert(!(len(rows) > 0 && len(cols) > 0))
+	if len(rows) > 0 {
+		cols = nil
+	}
 	for _, row := range rows {
 		imgpanel := ImgPanel{Rect: row}
 		imgpanel.detectSubPanels(srcImg)

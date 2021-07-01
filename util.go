@@ -32,6 +32,23 @@ func printLn(args ...Any) {
 	stdio.Unlock()
 }
 
+func ftoa(f float64, prec int) string {
+	return strconv.FormatFloat(f, 'f', prec, 64)
+}
+
+func strSize(size int) string {
+	return strSize64(int64(size))
+}
+
+func strSize64(size int64) string {
+	if mb := int64(1024 * 1024); size >= mb {
+		return ftoa(float64(size)*(1.0/float64(mb)), 1) + "MB"
+	} else if kb := int64(1024); size >= kb {
+		return itoa(1+int(float64(size)*(1.0/float64(kb)))) + "KB"
+	}
+	return fmt.Sprintf("%vB", size)
+}
+
 func mkDir(dirPath string) {
 	if err := os.Mkdir(dirPath, os.ModePerm); err != nil && !os.IsExist(err) {
 		panic(err)

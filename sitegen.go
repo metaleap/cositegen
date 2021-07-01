@@ -345,12 +345,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 						if q.Name == qname {
 							me.page.QualList += " selected='selected'"
 						}
-						totalimgsize := qsizes[i]
-						imgsizeinfo := itoa(int(totalimgsize/1024)) + "KB"
-						if mb := totalimgsize / 1048576; mb > 0 {
-							imgsizeinfo = strconv.FormatFloat(float64(totalimgsize)/1048576.0, 1, 'f', 64) + "MB"
-						}
-						me.page.QualList += ">" + q.Name + " (" + imgsizeinfo + ")" + "</option>"
+						me.page.QualList += ">" + q.Name + " (" + strSize64(qsizes[i]) + ")" + "</option>"
 					}
 					me.page.QualList = "<select disabled='disabled' title='" + hEsc(me.textStr("QualityHint")) + "' name='" + App.Proj.Gen.IdQualiList + "' id='" + App.Proj.Gen.IdQualiList + "'>" + me.page.QualList + "</select>"
 					me.page.HrefDirLtr = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Ltr.Name, me.lang, svname) + ".html"
@@ -459,7 +454,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 						if perc, applicable := chapter.PercentTranslated(me.lang, pgnr, svName); perc >= 99.9 || !applicable {
 							s += "<li>"
 						} else {
-							s += "<li class='nolang' title='" + me.lang + ": " + strconv.FormatFloat(perc, 'f', 1, 64) + "%'>"
+							s += "<li class='nolang' title='" + me.lang + ": " + ftoa(perc, 1) + "%'>"
 						}
 						s += "<a href='./" + name + ".html'>" + itoa(pgnr) + "</a></li>"
 					}
@@ -484,13 +479,13 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			if pg = pageNr - 1; pg < 1 {
 				pg = 1
 			}
-			pvis, phref := "none", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svName)
+			pvis, phref := "hidden", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svName)
 			if pg = pageNr + 1; pg > numpages {
 				pg = numpages
 			}
 			nvis, nhref := "none", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svName)
 			if pageNr > 1 && istoplist {
-				pvis = "inline-block"
+				pvis = "visible"
 			}
 			if pageNr < numpages {
 				nvis = "inline-block"
@@ -506,7 +501,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 					"</ul>"
 			} else {
 				s = "<ul id='" + ulid + "'>" +
-					"<li><a style='display: " + pvis + "' href='./" + strings.ToLower(phref) + ".html'>&larr;</a></li>" +
+					"<li><a style='visibility: " + pvis + "' href='./" + strings.ToLower(phref) + ".html'>&larr;</a></li>" +
 					s +
 					"<li><a style='display: " + nvis + "' href='./" + strings.ToLower(nhref) + ".html'>&rarr;</a></li>" +
 					"</ul>"
@@ -564,7 +559,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				s += "<div class='" + App.Proj.Gen.ClsPanelCol + "'"
 				pw, sw := sc.Rect.Max.X-sc.Rect.Min.X, panel.Rect.Max.X-panel.Rect.Min.X
 				pp := 100.0 / (float64(sw) / float64(pw))
-				s += " style='width: " + strconv.FormatFloat(pp, 'f', 8, 64) + "%'"
+				s += " style='width: " + ftoa(pp, 8) + "%'"
 				s += ">" + iter(sv, sc, false) + "</div>"
 			}
 			if viewMode == "r" && istop {
@@ -699,7 +694,7 @@ func (me *siteGen) genPageExecAndWrite(name string) (numFilesWritten int) {
 	for lidx, lang := range App.Proj.Langs {
 		title, imgsrcpath := lang, strings.Replace(App.Proj.Gen.ImgSrcLang, "%LANG%", lang, -1)
 		if lidx != 0 {
-			title += " (" + App.Proj.PageContentTexts[lang]["Transl"] + ": " + strconv.FormatFloat(App.Proj.PercentTranslated(nil, lang), 'f', 1, 64) + "%)"
+			title += " (" + App.Proj.PageContentTexts[lang]["Transl"] + ": " + ftoa(App.Proj.PercentTranslated(nil, lang), 1) + "%)"
 		}
 		if lang == me.lang {
 			me.page.LangsList += "<span><div>"
