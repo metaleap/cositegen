@@ -429,15 +429,10 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 
 	me.SubCols, me.SubRows = nil, nil
 	var rows, cols []image.Rectangle
-	rows, cols = detectRows(me.Rect), detectCols(me.Rect)
-	if len(rows) == 1 {
-		rows = nil
-	}
-	if len(cols) == 1 {
-		cols = nil
-	}
-	if len(rows) > 0 {
-		cols = nil
+	if rows = detectRows(me.Rect); len(rows) <= 1 {
+		if rows, cols = nil, detectCols(me.Rect); len(cols) <= 1 {
+			cols = nil
+		}
 	}
 	for _, row := range rows {
 		imgpanel := ImgPanel{Rect: row}
