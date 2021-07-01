@@ -158,7 +158,7 @@ func pngOptsLoop() {
 			printLn("PNGOPT Walk: " + err.Error())
 		}
 
-		printLn("PNGOPT:", len(matches), "files found (~"+itoa(int(totalsize/(1024*1024)))+"MB) to scrutinize...")
+		printLn("PNGOPT: found", len(matches), "files (~"+itoa(int(totalsize/(1024*1024)))+"MB) to scrutinize...")
 		for _, pngfilename := range matches {
 			if App.Gui.Exiting {
 				return

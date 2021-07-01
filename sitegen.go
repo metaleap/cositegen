@@ -585,7 +585,11 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			}
 			s += ">" + me.genSvgForPanel(sv, pidx, panel)
 			me.sheetPgNrs[sv] = pageNr
-			s += "<img src='./" + App.Proj.Gen.PngDirName + "/" + name + ".png' class='" + App.Proj.Gen.ClsImgHq + "' " + App.Proj.Gen.ClsImgHq + "='" + hqsrc + "'/>"
+			s += "<img src='./" + App.Proj.Gen.PngDirName + "/" + name + ".png' class='" + App.Proj.Gen.ClsImgHq + "'"
+			if hqsrc != "" {
+				s += " " + App.Proj.Gen.ClsImgHq + "='" + hqsrc + "'"
+			}
+			s += "/>"
 			s += "</div>"
 			pidx++
 		}

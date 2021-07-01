@@ -218,7 +218,7 @@ func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 
 	s += "<h3>New Sheet Version Scan</h3>"
 	s += guiHtmlInput("text", "sheetname", "", A{"placeholder": "Sheet Name"})
-	s += guiHtmlInput("text", "sheetvername", "", A{"placeholder": "Sheet Version Name"})
+	s += guiHtmlInput("text", "sheetvername", itoa(int(time.Now().UnixNano())), A{"disabled": "disabled"})
 	s += "<h3>Scanner To Use:</h3>"
 
 	s += "<div><select name='scandev' id='scandev' onchange='toggleScanOptsPane(this.options[this.selectedIndex].value)'>"
