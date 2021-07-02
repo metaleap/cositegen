@@ -100,6 +100,7 @@ func (me *Project) PercentTranslated(series *Series, langId string) float64 {
 
 type Series struct {
 	Name     string
+	UrlName  string
 	Title    map[string]string
 	Desc     map[string]string
 	Author   string
@@ -181,6 +182,7 @@ func (me *Chapter) PercentTranslated(langId string, pgNr int, svDt int64) (float
 
 type Chapter struct {
 	Name          string
+	UrlName       string
 	Title         map[string]string
 	SheetsPerPage int
 
@@ -189,7 +191,10 @@ type Chapter struct {
 	sheets       []*Sheet
 	parentSeries *Series
 	versions     []int64
-	verDtLatest  int64
+	verDtLatest  struct {
+		from  int64
+		until int64
+	}
 }
 
 func (me *Chapter) At(i int) fmt.Stringer { return me.sheets[i] }
@@ -229,11 +234,15 @@ func (me *Project) load() (numSheetVers int) {
 	}
 
 	for _, series := range me.Series {
-		series.parentProj = me
-		series.dirPath = "sheets/" + series.Name
+		series.parentProj, series.dirPath = me, "sheets/"+series.Name
+		if series.UrlName == "" {
+			series.UrlName = series.Name
+		}
 		for _, chapter := range series.Chapters {
-			chapter.parentSeries, chapter.versions = series, []int64{0}
-			chapter.dirPath = filepath.Join(series.dirPath, chapter.Name)
+			chapter.parentSeries, chapter.dirPath = series, filepath.Join(series.dirPath, chapter.Name)
+			if chapter.UrlName == "" {
+				chapter.UrlName = chapter.Name
+			}
 			files, err := os.ReadDir(chapter.dirPath)
 			if err != nil {
 				panic(err)
@@ -271,13 +280,24 @@ func (me *Project) load() (numSheetVers int) {
 					numSheetVers++
 				}
 			}
-			for _, sheet := range chapter.sheets {
-				for i, sheetver := range sheet.versions {
-					if sheetver.dateTimeUnixNano > chapter.verDtLatest {
-						chapter.verDtLatest = sheetver.dateTimeUnixNano
-					}
-					if i > 0 {
-						chapter.versions = append(chapter.versions, sheetver.dateTimeUnixNano)
+			if len(chapter.sheets) > 0 {
+				chapter.versions = []int64{0}
+				for _, sheet := range chapter.sheets {
+					for i, sheetver := range sheet.versions {
+						if i > 0 {
+							if len(chapter.versions) <= i {
+								chapter.versions = append(chapter.versions, sheetver.dateTimeUnixNano)
+							} else if sheetver.dateTimeUnixNano < chapter.versions[i] {
+								chapter.versions[i] = sheetver.dateTimeUnixNano
+							}
+						} else {
+							if sheetver.dateTimeUnixNano > chapter.verDtLatest.until {
+								chapter.verDtLatest.until = sheetver.dateTimeUnixNano
+							}
+							if sheetver.dateTimeUnixNano < chapter.verDtLatest.from || chapter.verDtLatest.from == 0 {
+								chapter.verDtLatest.from = sheetver.dateTimeUnixNano
+							}
+						}
 					}
 				}
 			}

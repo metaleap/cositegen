@@ -51,7 +51,7 @@ func guiMain(r *http.Request, notice string) []byte {
 
 	App.Gui.State.Sel.Series, _ = guiGetFormSel(fv("series"), &App.Proj).(*Series)
 	s += guiHtmlList("series", "("+itoa(numseries)+" series, "+itoa(numchapters)+" chapters, "+itoa(numsheets)+" sheets)", false, len(App.Proj.Series), func(i int) (string, string, bool) {
-		return App.Proj.Series[i].Name, App.Proj.Series[i].Title["en"] + " (" + itoa(len(App.Proj.Series[i].Chapters)) + ")", App.Gui.State.Sel.Series != nil && App.Proj.Series[i].Name == App.Gui.State.Sel.Series.Name
+		return App.Proj.Series[i].Name, App.Proj.Series[i].Name + " (" + itoa(len(App.Proj.Series[i].Chapters)) + ")", App.Gui.State.Sel.Series != nil && App.Proj.Series[i].Name == App.Gui.State.Sel.Series.Name
 	})
 
 	shouldsavemeta, havefullgui := false, false
@@ -59,7 +59,7 @@ func guiMain(r *http.Request, notice string) []byte {
 		App.Gui.State.Sel.Chapter, _ = guiGetFormSel(fv("chapter"), series).(*Chapter)
 		s += guiHtmlList("chapter", "("+itoa(len(series.Chapters))+" chapter/s)", false, len(series.Chapters), func(i int) (string, string, bool) {
 			chapter := series.Chapters[i]
-			return chapter.Name, chapter.Title["en"] + " (" + itoa(len(chapter.sheets)) + ")", App.Gui.State.Sel.Chapter != nil && App.Gui.State.Sel.Chapter.Name == chapter.Name
+			return chapter.Name, chapter.Name + " (" + itoa(len(chapter.sheets)) + ")", App.Gui.State.Sel.Chapter != nil && App.Gui.State.Sel.Chapter.Name == chapter.Name
 		})
 		if chapter := App.Gui.State.Sel.Chapter; chapter != nil {
 			App.Gui.State.Sel.Sheet, _ = guiGetFormSel(fv("sheet"), chapter).(*Sheet)
@@ -120,7 +120,7 @@ func guiStartView() (s string) {
 					if chapter.SheetsPerPage != 0 {
 						numpages = len(chapter.sheets) / chapter.SheetsPerPage
 					}
-					s += "<div><input class='collchk' id='" + id + "' type='checkbox' checked='checked'/><h3><label for='" + id + "'>" + series.Title["en"] + "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;" + chapter.Title["en"] + "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;(" + itoa(len(chapter.sheets)) + " sheet/s, " + itoa(numpages) + " page/s)</label></h3>"
+					s += "<div><input class='collchk' id='" + id + "' type='checkbox' checked='checked'/><h3><label for='" + id + "'>" + series.Name + "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;" + chapter.Name + "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;(" + itoa(len(chapter.sheets)) + " sheet/s, " + itoa(numpages) + " page/s)</label></h3>"
 					s += "<div class='collchk'><table width='99%'>"
 					pgnr, pgprev := 0, 0
 					for i, sheet := range chapter.sheets {

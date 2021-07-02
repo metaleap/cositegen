@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"html"
+	"strings"
 )
 
 type Indexed interface {
@@ -10,7 +11,40 @@ type Indexed interface {
 	Len() int
 }
 
-var hEsc = html.EscapeString
+var hEscs = map[rune]string{
+	'ä':  "&auml;",
+	'ö':  "&ouml;",
+	'ü':  "&uuml;",
+	'Ä':  "&Auml;",
+	'Ö':  "&Ouml;",
+	'Ü':  "&Uuml;",
+	'ß':  "&szlig",
+	'\n': "&#xA;",
+}
+var hEscRepl *strings.Replacer
+
+func init() {
+	repl := make([]string, 0, len(hEscs)*2)
+	for k, v := range hEscs {
+		repl = append(repl, string([]rune{k}), v)
+	}
+	hEscRepl = strings.NewReplacer(repl...)
+}
+
+func hEsc(s string) string {
+	s = html.EscapeString(s)
+	for i, r := range s {
+		if (r < 32 || r > 127) && hEscs[r] == "" {
+			if str := s[i:]; r > 127 {
+				if len(str) > 8 {
+					str = str[:8]
+				}
+				println("!!!!!!!!!!!!!NEEDHESC!!!!!!!!!!!!!" + str)
+			}
+		}
+	}
+	return hEscRepl.Replace(s)
+}
 
 func guiHtmlGrayDistrs(grayDistrs [][3]float64) string {
 	sum, s := 0.0, "<div class='graydistrs'>"

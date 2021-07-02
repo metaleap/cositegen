@@ -388,6 +388,9 @@ func (me *siteGen) prepHomePage() {
 					"%DATE1%", dt1,
 					"%DATE2%", dt2,
 				).Replace(me.textStr("ChapStats"))
+				if numpages <= 1 {
+					title = trim(title[1+strings.IndexByte(title, '/'):])
+				}
 				if perc, applicable := chapter.PercentTranslated(me.lang, 0, -1); applicable {
 					title = "(" + me.textStr("Transl") + ": " + itoa(int(perc)) + "%) " + title
 				}
@@ -407,12 +410,25 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 	quali := App.Proj.Qualis[qIdx]
 	me.page.VersList, me.page.ChapTitle = "", locStr(chapter.Title, me.lang)
 	for i, svdt := range chapter.versions {
-		text := time.Unix(0, svdt).Format("Jan 2006")
+		var text string
 		if i == 0 {
-			text = time.Unix(0, chapter.verDtLatest).Format("Jan 2006")
+			from, until := time.Unix(0, chapter.verDtLatest.from).Format("January 2006"), time.Unix(0, chapter.verDtLatest.until).Format("January 2006")
+			if text = from; from[len(from)-5:] == until[len(until)-5:] && from != until {
+				text = from[:len(from)-5] + " - " + until
+			} else if from != until {
+				text += " - " + until
+			}
 			text += me.textStr("VerNewest")
 		} else {
+			text = time.Unix(0, svdt).Format("January 2006")
 			text += me.textStr("VerOlder")
+		}
+		if me.lang != App.Proj.Langs[0] {
+			for k, v := range App.Proj.PageContentTexts[me.lang] {
+				if strings.HasPrefix(k, "Month_") {
+					text = strings.Replace(text, k[6:], v, -1)
+				}
+			}
 		}
 		me.page.VersList += "<option value='" + me.namePage(chapter, quali.SizeHint, pageNr, viewMode, "", me.lang, svdt) + "'"
 		if svdt == svDt {
@@ -515,7 +531,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 
 	me.page.ViewerList = ""
 	for _, viewmode := range viewModes {
-		if me.page.ViewerList += "<div title='" + me.textStr("ViewMode_"+viewmode) + "' class='v" + viewmode; viewmode == viewMode {
+		if me.page.ViewerList += "<div title='" + hEsc(me.textStr("ViewMode_"+viewmode)) + "' class='v" + viewmode; viewmode == viewMode {
 			me.page.ViewerList += " vc"
 		}
 		me.page.ViewerList += "'>"
@@ -834,12 +850,13 @@ func (me *siteGen) genHomeThumbsPngs() (numPngs uint32) {
 					filenames = append(filenames, sv.data.bwFilePath)
 				}
 			}
-			if App.Proj.NumSheetsInHomeBgs > 0 && len(filenames) > App.Proj.NumSheetsInHomeBgs {
-				filenames = filenames[len(filenames)-App.Proj.NumSheetsInHomeBgs:]
+			if len(filenames) > 0 {
+				if App.Proj.NumSheetsInHomeBgs > 0 && len(filenames) > App.Proj.NumSheetsInHomeBgs {
+					filenames = filenames[len(filenames)-App.Proj.NumSheetsInHomeBgs:]
+				}
+				data := imgStitchHorizontally(filenames, 480, 44, color.NRGBA{0, 0, 0, 0})
+				writeFile("./.build/"+App.Proj.Gen.PngDirName+"/"+me.nameThumb(series)+".png", data)
 			}
-
-			data := imgStitchHorizontally(filenames, 480, 44, color.NRGBA{0, 0, 0, 0})
-			writeFile("./.build/"+App.Proj.Gen.PngDirName+"/"+me.nameThumb(series)+".png", data)
 			work.Done()
 		}(series)
 	}
@@ -856,7 +873,7 @@ func (siteGen) namePanelSvg(sheetId string, pIdx int) string {
 }
 
 func (siteGen) nameThumb(series *Series) string {
-	return "_" + App.Proj.DirModes.Ltr.Name + "-" + itoa(App.Proj.NumSheetsInHomeBgs) + "-" + App.Proj.DirModes.Rtl.Name + "-" + strings.ToLower(series.Name)
+	return "_" + App.Proj.DirModes.Ltr.Name + "-" + itoa(App.Proj.NumSheetsInHomeBgs) + "-" + App.Proj.DirModes.Rtl.Name + "-" + strings.ToLower(series.UrlName)
 }
 
 func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, viewMode string, dirMode string, langId string, svDt int64) string {
@@ -868,5 +885,5 @@ func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, vie
 			dirMode = App.Proj.DirModes.Rtl.Name
 		}
 	}
-	return strings.ToLower(chapter.parentSeries.Name + "-" + chapter.Name + "-" + itoa(pageNr) + strconv.FormatInt(svDt, 36) + viewMode + itoa(qualiSizeHint) + "-" + dirMode + "." + langId)
+	return strings.ToLower(chapter.parentSeries.UrlName + "-" + chapter.UrlName + "-" + itoa(pageNr) + strconv.FormatInt(svDt, 36) + viewMode + itoa(qualiSizeHint) + "-" + dirMode + "." + langId)
 }
