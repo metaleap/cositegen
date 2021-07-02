@@ -113,7 +113,7 @@ func appPrepWork(pngOptsLoopAfter bool) {
 		return "for " + itoa(numwork) + "/" + itoa(numjobs) + " preprocessing jobs"
 	})
 
-	if pngOptsLoopAfter {
+	if pngOptsLoopAfter && false {
 		for len(scanDevices) == 0 {
 			time.Sleep(time.Second)
 		}

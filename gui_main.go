@@ -181,11 +181,11 @@ func guiStartView() (s string) {
 func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 	series := chapter.parentSeries
 	if fv("scannow") != "" && scanJob == nil {
-		sheetname, sheetvername, sj := trim(fv("sheetname")), trim(fv("sheetvername")), ScanJob{
+		sheetname, sheetvername, sj := trim(fv("sheetname")), strconv.FormatInt(time.Now().UnixNano(), 10), ScanJob{
 			Id:     strconv.FormatInt(time.Now().UnixNano(), 36),
 			Series: series, Chapter: chapter, Opts: map[string]string{},
 		}
-		sj.PnmFileName, sj.PngFileName = "/dev/shm/csg"+sj.Id+".pnm", "sheets/"+series.Name+"/"+chapter.Name+"/sheets/"+sheetname+"."+sheetvername+".png"
+		sj.PnmFileName, sj.PngFileName = "/dev/shm/csg"+sj.Id+".pnm", "sheets/"+series.Name+"/"+chapter.Name+"/"+sheetname+"."+sheetvername+".png"
 		for _, sd := range scanDevices {
 			if sd.Ident == fv("scandev") {
 				sj.Dev = sd
@@ -217,7 +217,7 @@ func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 
 	s += "<h3>New Sheet Version Scan</h3>"
 	s += guiHtmlInput("text", "sheetname", "", A{"placeholder": "Sheet Name"}) +
-		"." + guiHtmlInput("text", "sheetvername", strconv.FormatInt(time.Now().UnixNano(), 10), A{"disabled": "disabled"}) + ".png"
+		"." + guiHtmlInput("text", "sheetvername", "(timestamp)", A{"disabled": "disabled"}) + ".png"
 	s += "<h3>Scanner To Use:</h3>"
 
 	s += "<div><select name='scandev' id='scandev' onchange='toggleScanOptsPane(this.options[this.selectedIndex].value)'>"

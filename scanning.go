@@ -23,10 +23,10 @@ var (
 			"resolution":              "1200dpi",
 			"mode":                    "Gray",
 			"disable-dynamic-lineart": "yes",
+			"source":                  "Flatbed",
+			"depth":                   "8",
 		},
 		"test": {
-			"depth":        "8",
-			"source":       "Flatbed",
 			"test-picture": "Grid",
 		},
 	}
@@ -148,6 +148,7 @@ func scanJobDo() {
 	defer func() {
 		scanJob = nil
 		if err := recover(); err != nil {
+			_ = os.Remove(sj.PnmFileName)
 			_ = os.Remove(sj.PngFileName)
 			scanJobNotice = "[" + sj.PngFileName + "] " + fmt.Sprintf("%v", err)
 		}
@@ -174,23 +175,22 @@ func scanJobDo() {
 		}
 		return "for " + sj.PnmFileName
 	})
-	timedLogged("SheetScan: convert to PNG...", func() string {
-		pnmfile, err := os.Open(sj.PnmFileName)
+
+	scanJobNotice = "scan completed, background PNG conversion kicked off."
+	printLn(scanJobNotice)
+
+	pnmfilename, pngfilename := sj.PnmFileName, sj.PngFileName
+	go timedLogged("SheetScan: converting to "+pngfilename+"...", func() string {
+		pnmfile, err := os.Open(pnmfilename)
 		if err != nil {
-			panic(sj.PnmFileName + ": " + err.Error())
+			panic(pnmfilename + ": " + err.Error())
 		}
-		pngfile, err := os.Create(sj.PngFileName)
+		pngfile, err := os.Create(pngfilename)
 		if err != nil {
-			panic(sj.PngFileName + ": " + err.Error())
+			panic(pngfilename + ": " + err.Error())
 		}
 		imgPnmToPng(pnmfile, pngfile, true)
-		_ = os.Remove(sj.PnmFileName)
-		return "for " + sj.PngFileName
+		_ = os.Remove(pnmfilename)
+		return "for " + pngfilename
 	})
-	scanJobNotice = "successfully written to " + sj.PngFileName + ", available in editor upon restart"
-	printLn(scanJobNotice)
-	cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=file://"+os.Getenv("PWD")+"/"+sj.PngFileName)...)
-	if cmd.Start() == nil {
-		go cmd.Wait()
-	}
 }
