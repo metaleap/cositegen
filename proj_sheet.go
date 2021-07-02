@@ -55,7 +55,7 @@ type SheetVer struct {
 }
 
 func (me *SheetVer) Px1Cm() float64 {
-	return float64(me.data.PanelsTree.Rect.Max.Y-me.data.PanelsTree.Rect.Min.Y) / 21.0
+	return 472 // float64(me.data.PanelsTree.Rect.Max.Y-me.data.PanelsTree.Rect.Min.Y) / 21.0
 }
 
 func (me *SheetVer) DtName() string {
