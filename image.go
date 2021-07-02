@@ -350,7 +350,7 @@ func (me ImgPanel) flattened() ImgPanel {
 }
 
 func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
-	panelmin := srcImg.Rect.Max.Y / 11 // ~min. 1.9cm
+	panelmin := srcImg.Rect.Max.X / 15 // ~min. 1.9cm
 
 	detectRows := func(area image.Rectangle) (ret []image.Rectangle) {
 		laststart, seps := -1, [][2]int{}
@@ -372,19 +372,17 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 		if laststart != -1 {
 			seps = append(seps, [2]int{laststart, area.Max.Y})
 		}
-		prevmid := area.Min.Y
+		prev := area.Min.Y
 		for _, sep := range seps {
 			assert(sep[1] > sep[0])
-			mid := sep[0] + ((sep[1] - sep[0]) / 2)
-			if mid-prevmid > panelmin {
-				rect := image.Rect(area.Min.X, prevmid, area.Max.X, mid)
-				assert(rect.In(area))
+			rect := image.Rect(area.Min.X, prev, area.Max.X, sep[0])
+			if assert(rect.In(area)); (rect.Max.Y - rect.Min.Y) > panelmin {
 				ret = append(ret, rect)
 			}
-			prevmid = mid
+			prev = sep[1]
 		}
-		if area.Max.Y-prevmid > panelmin {
-			ret = append(ret, image.Rect(area.Min.X, prevmid, area.Max.X, area.Max.Y))
+		if area.Max.Y-prev > panelmin {
+			ret = append(ret, image.Rect(area.Min.X, prev, area.Max.X, area.Max.Y))
 		}
 		return
 	}
@@ -409,19 +407,17 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 		if laststart != -1 {
 			seps = append(seps, [2]int{laststart, area.Max.X})
 		}
-		prevmid := area.Min.X
+		prev := area.Min.X
 		for _, sep := range seps {
 			assert(sep[1] > sep[0])
-			mid := sep[0] + ((sep[1] - sep[0]) / 2)
-			if mid-prevmid > panelmin {
-				rect := image.Rect(prevmid, area.Min.Y, mid, area.Max.Y)
-				assert(rect.In(area))
+			rect := image.Rect(prev, area.Min.Y, sep[0], area.Max.Y)
+			if assert(rect.In(area)); (rect.Max.X - rect.Min.X) > panelmin {
 				ret = append(ret, rect)
 			}
-			prevmid = mid
+			prev = sep[1]
 		}
-		if area.Max.X-prevmid > panelmin {
-			ret = append(ret, image.Rect(prevmid, area.Min.Y, area.Max.X, area.Max.Y))
+		if (area.Max.X - prev) > panelmin {
+			ret = append(ret, image.Rect(prev, area.Min.Y, area.Max.X, area.Max.Y))
 		}
 		return
 	}

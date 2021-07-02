@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync/atomic"
 	"time"
 )
 
@@ -21,7 +22,7 @@ func main() {
 	})
 
 	if len(os.Args) > 1 {
-		appPrepWork(false)
+		appPrepWork()
 		args := map[string]bool{}
 		for _, arg := range os.Args[2:] {
 			args[arg] = true
@@ -33,10 +34,15 @@ func main() {
 	} else {
 		go scanDevicesDetection()
 		go httpListenAndServe()
-		go appPrepWork(true)
+		go appPrepWork()
 		go launchGuiInKioskyBrowser()
 		for App.Gui.Exiting = false; !App.Gui.Exiting; time.Sleep(time.Second) {
-			App.Gui.Exiting = (App.Gui.BrowserPid == 0) && !appIsBusy()
+			appbusy := (scanJob != nil) || (scanDevices == nil) ||
+				(0 < atomic.LoadInt32(&numBusyRequests)) || !App.Proj.allPrepsDone
+			for _, busy := range appMainActions {
+				appbusy = appbusy || busy
+			}
+			App.Gui.Exiting = (App.Gui.BrowserPid == 0) && !appbusy
 		}
 		appOnExit()
 	}

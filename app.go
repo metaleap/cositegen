@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"sort"
 	"strings"
-	"sync/atomic"
 	"time"
 )
 
@@ -54,15 +53,6 @@ func appOnExit() {
 	rmDir(".csg/tmp")
 }
 
-func appIsBusy() (isBusy bool) {
-	isBusy = (scanJob != nil) || (scanDevices == nil) ||
-		(0 < atomic.LoadInt32(&numBusyRequests)) || !App.Proj.allPrepsDone
-	for _, busy := range appMainActions {
-		isBusy = isBusy || busy
-	}
-	return
-}
-
 func appMainAction(fromGui bool, name string, args map[string]bool) string {
 	if appMainActions[name] {
 		return "Action '" + name + "' already in progress and not yet done."
@@ -89,7 +79,7 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 	}
 }
 
-func appPrepWork(pngOptsLoopAfter bool) {
+func appPrepWork() {
 	App.Proj.allPrepsDone = false
 	timedLogged("Preprocessing...", func() string {
 		var numjobs, numwork int
@@ -98,8 +88,9 @@ func appPrepWork(pngOptsLoopAfter bool) {
 				for _, sheet := range chapter.sheets {
 					for _, sv := range sheet.versions {
 						if !sv.prep.done {
-							sv.prep.Lock()
-							if !sv.prep.done {
+							if sv.prep.Lock(); App.Gui.BrowserPid == 0 {
+								break // no need to Unlock
+							} else if !sv.prep.done {
 								if sv.prep.done, numjobs = true, numjobs+1; sv.ensurePrep(true, false) {
 									numwork++
 								}
@@ -113,14 +104,6 @@ func appPrepWork(pngOptsLoopAfter bool) {
 		App.Proj.allPrepsDone = true
 		return "for " + itoa(numwork) + "/" + itoa(numjobs) + " preprocessing jobs"
 	})
-
-	if pngOptsLoopAfter {
-		for len(scanDevices) == 0 {
-			time.Sleep(time.Second)
-		}
-		printLn("ALL INITS DONE, starting eternal background PNG watch&optimize loop...")
-		pngOptsLoop()
-	}
 }
 
 func pngOptsLoop() {

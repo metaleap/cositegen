@@ -105,9 +105,6 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 
 	mkDir(me.data.dirPath)
 
-	if forceFullRedo || shouldsaveprojmeta {
-		printLn("\tPrep: " + me.fileName + "...")
-	}
 	didWork = me.ensureBwSheetPngs(forceFullRedo)
 	shouldsaveprojmeta = me.ensurePanels(forceFullRedo || didWork) || shouldsaveprojmeta
 	shouldsaveprojmeta = me.ensureBwPanelPngs(forceFullRedo || didWork) || shouldsaveprojmeta
@@ -161,8 +158,8 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 			force = true
 		} else if fileinfo, err := os.Stat(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(App.Proj.Qualis[0].SizeHint)+"t.png")); err != nil || fileinfo.IsDir() {
 			force = true
-		} else if fileinfo, err := os.Stat(filepath.Join(me.data.dirPath, itoa(pidx)+".svg")); err != nil || fileinfo.IsDir() || fileinfo.Size() == 0 {
-			force = true
+			// } else if fileinfo, err := os.Stat(filepath.Join(me.data.dirPath, itoa(pidx)+".svg")); err != nil || fileinfo.IsDir() || fileinfo.Size() == 0 {
+			// 	force = true
 		}
 	}
 	if !force {

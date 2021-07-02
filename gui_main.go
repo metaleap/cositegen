@@ -137,7 +137,7 @@ func guiStartView() (s string) {
 							numpanels, numpanelareas := sv.panelCount()
 							a := "<a href='./?series=" + url.QueryEscape(series.Name) + "&chapter=" + url.QueryEscape(chapter.Name) + "&sheet=" + url.QueryEscape(sheet.name) + "&sheetver=" + url.QueryEscape(sv.fileName) + "&t=" + itoa(int(time.Now().UnixNano())) + "'>"
 							if sv.data != nil {
-								if fi, _ := os.Stat(sv.data.bwSmallFilePath); fi.Size() > 0 {
+								if fi, _ := os.Stat(sv.data.bwSmallFilePath); fi != nil && fi.Size() > 0 {
 									s += a + "<img title='" + hEsc(sheet.name) + "' src='./" + sv.data.bwSmallFilePath + "' style='width: 11em;'/></a>"
 								}
 							}
