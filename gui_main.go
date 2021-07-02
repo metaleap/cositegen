@@ -136,8 +136,8 @@ func guiStartView() (s string) {
 							}
 							numpanels, numpanelareas := sv.panelCount()
 							a := "<a href='./?series=" + url.QueryEscape(series.Name) + "&chapter=" + url.QueryEscape(chapter.Name) + "&sheet=" + url.QueryEscape(sheet.name) + "&sheetver=" + url.QueryEscape(sv.fileName) + "&t=" + itoa(int(time.Now().UnixNano())) + "'>"
-							if sv.prep.done {
-								if _, err := os.Stat(sv.data.bwSmallFilePath); err == nil {
+							if sv.data != nil {
+								if fi, _ := os.Stat(sv.data.bwSmallFilePath); fi.Size() > 0 {
 									s += a + "<img title='" + hEsc(sheet.name) + "' src='./" + sv.data.bwSmallFilePath + "' style='width: 11em;'/></a>"
 								}
 							}
@@ -159,12 +159,10 @@ func guiStartView() (s string) {
 								}
 								s += "</small>"
 							}
-							if sv.data != nil {
-								if sv.data.PanelsTree != nil {
-									s += "<small>&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(sv.data.PanelsTree.Rect.Max.X) + "&times;" + itoa(sv.data.PanelsTree.Rect.Max.Y) + "</b>px (" + itoa(int(sv.Px1Cm())) + "px/cm)</small>"
-								}
-								s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;from <b>" + time.Unix(0, sv.dateTimeUnixNano).Format("02 Jan 2006") + "</b></small>"
+							if sv.data != nil && sv.data.PanelsTree != nil {
+								s += "<small>&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(sv.data.PanelsTree.Rect.Max.X) + "&times;" + itoa(sv.data.PanelsTree.Rect.Max.Y) + "</b>px (" + itoa(int(sv.Px1Cm())) + "px/cm)</small>"
 							}
+							s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;from <b>" + time.Unix(0, sv.dateTimeUnixNano).Format("02 Jan 2006") + "</b></small>"
 							s += "</h4>" + guiHtmlGrayDistrs(sv.grayDistrs()) + "</td></tr>"
 						}
 						pgprev = pgnr

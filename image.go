@@ -194,8 +194,8 @@ func imgBwBorder(imgdst draw.Image, bwColor color.Gray, size int, offset int, tr
 	}
 }
 
-func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int, whiteBorderSize int, transparent bool, gotSameSizeAsOrig *bool) []byte {
-	imgdst := imgSubRect(srcImg, srcImgRect, width, height, blackBorderSize, whiteBorderSize, transparent, gotSameSizeAsOrig)
+func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int, transparent bool, gotSameSizeAsOrig *bool) []byte {
+	imgdst := imgSubRect(srcImg, srcImgRect, width, height, blackBorderSize, transparent, gotSameSizeAsOrig)
 	var buf bytes.Buffer
 	if err := PngEncoder.Encode(&buf, imgdst); err != nil {
 		panic(err)
@@ -203,7 +203,7 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 	return buf.Bytes()
 }
 
-func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int, whiteBorderSize int, transparent bool, gotSameSizeAsOrig *bool) image.Image {
+func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int, transparent bool, gotSameSizeAsOrig *bool) image.Image {
 	origwidth, origheight := srcImgRect.Max.X-srcImgRect.Min.X, srcImgRect.Max.Y-srcImgRect.Min.Y
 	assert(((*width < origwidth) == (*height < origheight)) &&
 		((*width > origwidth) == (*height > origheight)))
@@ -234,8 +234,7 @@ func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, heig
 		}
 		ImgScaler.Scale(imgdst, imgdst.Bounds(), srcimg, srcImgRect, draw.Over, nil)
 	}
-	imgBwBorder(imgdst, color.Gray{255}, whiteBorderSize, 0, transparent)
-	imgBwBorder(imgdst, color.Gray{0}, blackBorderSize, whiteBorderSize, transparent)
+	imgBwBorder(imgdst, color.Gray{255}, blackBorderSize, 0, transparent)
 	return imgdst
 }
 
