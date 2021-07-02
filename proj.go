@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -252,7 +251,8 @@ func (me *Project) load() (numSheetVers int) {
 					fname := filepath.Join(chapter.dirPath, fnamebase)
 					fnamebase = fnamebase[:len(fnamebase)-len(".png")]
 					versionname := fnamebase[1+strings.LastIndexByte(fnamebase, '.'):]
-					dt, _ := strconv.ParseInt(versionname, 10, 64)
+					t, _ := time.Parse("20060102", versionname)
+					dt := t.UnixNano()
 					if dt <= 0 {
 						printLn("SkipWip: " + fname)
 						continue

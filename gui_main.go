@@ -83,7 +83,7 @@ func guiMain(r *http.Request, notice string) []byte {
 				App.Gui.State.Sel.Ver, _ = guiGetFormSel(fv("sheetver"), sheet).(*SheetVer)
 				s += guiHtmlList("sheetver", "", false, len(sheet.versions), func(i int) (string, string, bool) {
 					sheetver := sheet.versions[i]
-					return sheetver.fileName, time.Unix(0, sheetver.dateTimeUnixNano).Format("2006-01-02 15:04:05"), App.Gui.State.Sel.Ver != nil && App.Gui.State.Sel.Ver.fileName == sheetver.fileName
+					return sheetver.fileName, time.Unix(0, sheetver.dateTimeUnixNano).Format("2006-01-02"), App.Gui.State.Sel.Ver != nil && App.Gui.State.Sel.Ver.fileName == sheetver.fileName
 				})
 				if App.Gui.State.Sel.Ver == nil {
 					App.Gui.State.Sel.Ver = sheet.versions[0]
@@ -163,7 +163,7 @@ func guiStartView() (s string) {
 								if sv.data.PanelsTree != nil {
 									s += "<small>&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(sv.data.PanelsTree.Rect.Max.X) + "&times;" + itoa(sv.data.PanelsTree.Rect.Max.Y) + "</b>px (" + itoa(int(sv.Px1Cm())) + "px/cm)</small>"
 								}
-								s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;from <b title='" + hEsc(time.Unix(0, sv.dateTimeUnixNano).Format(time.RFC1123)) + "'>" + time.Unix(0, sv.dateTimeUnixNano).Format("02 Jan 2006") + "</b></small>"
+								s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;from <b>" + time.Unix(0, sv.dateTimeUnixNano).Format("02 Jan 2006") + "</b></small>"
 							}
 							s += "</h4>" + guiHtmlGrayDistrs(sv.grayDistrs()) + "</td></tr>"
 						}
@@ -181,7 +181,7 @@ func guiStartView() (s string) {
 func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 	series := chapter.parentSeries
 	if fv("scannow") != "" && scanJob == nil {
-		sheetname, sheetvername, sj := trim(fv("sheetname")), strconv.FormatInt(time.Now().UnixNano(), 10), ScanJob{
+		sheetname, sheetvername, sj := trim(fv("sheetname")), time.Now().Format("20060102"), ScanJob{
 			Id:     strconv.FormatInt(time.Now().UnixNano(), 36),
 			Series: series, Chapter: chapter, Opts: map[string]string{},
 		}
