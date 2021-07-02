@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -85,7 +86,7 @@ func (me *Project) PercentTranslated(series *Series, langId string) float64 {
 	for _, ser := range me.Series {
 		if ser == series || series == nil {
 			for _, chap := range ser.Chapters {
-				if f, applicable := chap.PercentTranslated(langId, 0, ""); applicable {
+				if f, applicable := chap.PercentTranslated(langId, 0, -1); applicable {
 					num, sum = num+1, sum+f
 				}
 			}
@@ -144,7 +145,7 @@ func (me *Chapter) DateRangeOfSheets() (string, string) {
 	var dt1, dt2 int64
 	for _, sheet := range me.sheets {
 		for _, sv := range sheet.versions {
-			sdt := sv.data.DateTimeUnixNano
+			sdt := sv.dateTimeUnixNano
 			if sdt < dt1 || dt1 == 0 {
 				dt1 = sdt
 			}
@@ -156,7 +157,7 @@ func (me *Chapter) DateRangeOfSheets() (string, string) {
 	return time.Unix(0, dt1).Format("2006-01-02"), time.Unix(0, dt2).Format("2006-01-02")
 }
 
-func (me *Chapter) PercentTranslated(langId string, pgNr int, svName string) (float64, bool) {
+func (me *Chapter) PercentTranslated(langId string, pgNr int, svDt int64) (float64, bool) {
 	if langId == App.Proj.Langs[0] {
 		return 0, false
 	}
@@ -167,7 +168,7 @@ func (me *Chapter) PercentTranslated(langId string, pgNr int, svName string) (fl
 			pgnr = 1 + (i / me.SheetsPerPage)
 		}
 		if pgnr == pgNr || pgNr <= 0 {
-			if stats := sheet.versionNamedOrLatest(svName).percentTranslated(); stats != nil {
+			if stats := sheet.versionNoOlderThanOrLatest(svDt).percentTranslated(); stats != nil {
 				allnil, sum, num = false, sum+stats[langId], num+1
 			}
 		}
@@ -183,11 +184,11 @@ type Chapter struct {
 	Title         map[string]string
 	SheetsPerPage int
 
-	defaultQuali  int
-	dirPath       string
-	sheets        []*Sheet
-	parentSeries  *Series
-	sheetVerNames []string
+	defaultQuali int
+	dirPath      string
+	sheets       []*Sheet
+	parentSeries *Series
+	versions     []int64
 }
 
 func (me *Chapter) At(i int) fmt.Stringer { return me.sheets[i] }
@@ -230,24 +231,23 @@ func (me *Project) load() (numSheetVers int) {
 		series.parentProj = me
 		series.dirPath = "sheets/" + series.Name
 		for _, chapter := range series.Chapters {
-			chapter.parentSeries = series
+			chapter.parentSeries, chapter.versions = series, []int64{0}
 			chapter.dirPath = filepath.Join(series.dirPath, chapter.Name)
 			files, err := os.ReadDir(chapter.dirPath)
 			if err != nil {
 				panic(err)
 			}
 			for _, f := range files {
-				if fnamebase := f.Name(); !f.IsDir() {
+				if fnamebase := f.Name(); strings.HasSuffix(fnamebase, ".png") && !f.IsDir() {
 					fname := filepath.Join(chapter.dirPath, fnamebase)
-					fnamebase = fnamebase[:len(fnamebase)-len(filepath.Ext(fnamebase))]
-					versionname := fnamebase[strings.LastIndexByte(fnamebase, '_')+1:]
-					if versionname == fnamebase {
-						panic("invalid sheet-file name: " + fname)
-					} else if versionname == "" {
+					fnamebase = fnamebase[:len(fnamebase)-len(".png")]
+					versionname := fnamebase[1+strings.LastIndexByte(fnamebase, '.'):]
+					dt, _ := strconv.ParseInt(versionname, 10, 64)
+					if dt <= 0 {
 						printLn("SkipWip: " + fname)
 						continue
 					}
-					sheetname := fnamebase[:strings.LastIndexByte(fnamebase, '_')]
+					sheetname := fnamebase[:strings.LastIndexByte(fnamebase, '.')]
 					if sheetname == "" {
 						panic("invalid sheet-file name: " + fname)
 					}
@@ -264,22 +264,15 @@ func (me *Project) load() (numSheetVers int) {
 						chapter.sheets = append(chapter.sheets, sheet)
 					}
 
-					for _, sv := range sheet.versions {
-						assert(sv.name != versionname)
-					}
-					sheetver := &SheetVer{name: versionname, parentSheet: sheet, fileName: fname}
+					sheetver := &SheetVer{dateTimeUnixNano: dt, parentSheet: sheet, fileName: fname}
 					sheetver.load()
 					sheet.versions = append([]*SheetVer{sheetver}, sheet.versions...)
 					numSheetVers++
-					foundinchapter := false
-					for _, svname := range chapter.sheetVerNames {
-						if foundinchapter = (svname == sheetver.name); foundinchapter {
-							break
-						}
-					}
-					if !foundinchapter {
-						chapter.sheetVerNames = append([]string{sheetver.name}, chapter.sheetVerNames...)
-					}
+				}
+			}
+			for _, sheet := range chapter.sheets {
+				for _, sheetver := range sheet.versions[1:] {
+					chapter.versions = append(chapter.versions, sheetver.dateTimeUnixNano)
 				}
 			}
 		}

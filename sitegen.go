@@ -320,9 +320,9 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		me.page.PageDesc = hEsc(locStr(series.Desc, me.lang)) + author
 		for _, viewmode := range viewModes {
 			me.page.PageCssClasses = App.Proj.Gen.ClsChapter + viewmode
-			for _, svname := range chapter.sheetVerNames {
+			for _, svdt := range chapter.versions {
 				for qidx, quali := range App.Proj.Qualis {
-					qname, qsizes, allpanels := quali.Name, map[int]int64{}, me.prepSheetPage(qidx, viewmode, chapter, svname, pageNr)
+					qname, qsizes, allpanels := quali.Name, map[int]int64{}, me.prepSheetPage(qidx, viewmode, chapter, svdt, pageNr)
 					me.page.QualList = ""
 					for i, q := range App.Proj.Qualis {
 						var totalimgsize int64
@@ -341,17 +341,17 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 						}
 					}
 					for i, q := range App.Proj.Qualis[:len(qsizes)] {
-						me.page.QualList += "<option value='" + me.namePage(chapter, q.SizeHint, pageNr, viewmode, "", me.lang, svname) + "'"
+						me.page.QualList += "<option value='" + me.namePage(chapter, q.SizeHint, pageNr, viewmode, "", me.lang, svdt) + "'"
 						if q.Name == qname {
 							me.page.QualList += " selected='selected'"
 						}
 						me.page.QualList += ">" + q.Name + " (" + strSize64(qsizes[i]) + ")" + "</option>"
 					}
 					me.page.QualList = "<select disabled='disabled' title='" + hEsc(me.textStr("QualityHint")) + "' name='" + App.Proj.Gen.IdQualiList + "' id='" + App.Proj.Gen.IdQualiList + "'>" + me.page.QualList + "</select>"
-					me.page.HrefDirLtr = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Ltr.Name, me.lang, svname) + ".html"
-					me.page.HrefDirRtl = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Rtl.Name, me.lang, svname) + ".html"
+					me.page.HrefDirLtr = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Ltr.Name, me.lang, svdt) + ".html"
+					me.page.HrefDirRtl = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Rtl.Name, me.lang, svdt) + ".html"
 
-					numFilesWritten += me.genPageExecAndWrite(me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svname))
+					numFilesWritten += me.genPageExecAndWrite(me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svdt))
 				}
 			}
 		}
@@ -387,10 +387,10 @@ func (me *siteGen) prepHomePage() {
 					"%DATE1%", dt1,
 					"%DATE2%", dt2,
 				).Replace(me.textStr("ChapStats"))
-				if perc, applicable := chapter.PercentTranslated(me.lang, 0, chapter.sheetVerNames[0]); applicable {
+				if perc, applicable := chapter.PercentTranslated(me.lang, 0, -1); applicable {
 					title = "(" + me.textStr("Transl") + ": " + itoa(int(perc)) + "%) " + title
 				}
-				s += "<a title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, chapter.sheetVerNames[0]) + ".html'>" + hEsc(locStr(chapter.Title, me.lang)) + "</a>"
+				s += "<a title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0) + ".html'>" + hEsc(locStr(chapter.Title, me.lang)) + "</a>"
 			} else {
 				s += "<b>" + hEsc(locStr(chapter.Title, me.lang)) + "</b>"
 			}
@@ -402,18 +402,19 @@ func (me *siteGen) prepHomePage() {
 	me.page.PageContent = s
 }
 
-func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, svName string, pageNr int) map[string]int {
+func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, svDt int64, pageNr int) map[string]int {
 	quali := App.Proj.Qualis[qIdx]
 	me.page.VersList, me.page.ChapTitle = "", locStr(chapter.Title, me.lang)
-	for i, svname := range chapter.sheetVerNames {
+	for i, svdt := range chapter.versions {
+		svname := strconv.FormatInt(svdt, 0)
 		text := svname + " "
 		if i == 0 {
 			text += me.textStr("VerNewest")
 		} else {
 			text += me.textStr("VerOlder")
 		}
-		me.page.VersList += "<option value='" + me.namePage(chapter, quali.SizeHint, pageNr, viewMode, "", me.lang, svname) + "'"
-		if svname == svName {
+		me.page.VersList += "<option value='" + me.namePage(chapter, quali.SizeHint, pageNr, viewMode, "", me.lang, svdt) + "'"
+		if svdt == svDt {
 			me.page.VersList += " selected='selected'"
 		}
 		me.page.VersList += ">" + hEsc(text) + "</option>"
@@ -447,11 +448,11 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			for i := range chapter.sheets {
 				if 0 == (i % chapter.SheetsPerPage) {
 					pgnr++
-					did, name := false, me.namePage(chapter, quali.SizeHint, pgnr, viewMode, "", me.lang, svName)
+					did, name := false, me.namePage(chapter, quali.SizeHint, pgnr, viewMode, "", me.lang, svDt)
 					if did = (pgnr == pageNr); did {
 						s += "<li><b><a href='./" + name + ".html'>" + itoa(pgnr) + "</a></b></li>"
 					} else if did = shownums[pgnr]; did {
-						if perc, applicable := chapter.PercentTranslated(me.lang, pgnr, svName); perc >= 99.9 || !applicable {
+						if perc, applicable := chapter.PercentTranslated(me.lang, pgnr, svDt); perc >= 99.9 || !applicable {
 							s += "<li>"
 						} else {
 							s += "<li class='nolang' title='" + me.lang + ": " + ftoa(perc, 1) + "%'>"
@@ -471,7 +472,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		}
 		nextchap := chapter.NextAfter(true)
 		if pageNr == numpages && istoplist && nextchap != nil {
-			name := me.namePage(nextchap, quali.SizeHint, 1, viewMode, "", me.lang, svName)
+			name := me.namePage(nextchap, quali.SizeHint, 1, viewMode, "", me.lang, svDt)
 			s += "<li><a href='./" + name + ".html'>" + locStr(nextchap.Title, me.lang) + "</a></li>"
 		}
 		if s != "" {
@@ -479,18 +480,18 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			if pg = pageNr - 1; pg < 1 {
 				pg = 1
 			}
-			pvis, phref := "hidden", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svName)
+			pvis, phref := "hidden", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svDt)
 			if pg = pageNr + 1; pg > numpages {
 				pg = numpages
 			}
-			nvis, nhref := "none", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svName)
+			nvis, nhref := "none", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svDt)
 			if pageNr > 1 && istoplist {
 				pvis = "visible"
 			}
 			if pageNr < numpages {
 				nvis = "inline-block"
 			} else if !istoplist && nextchap != nil {
-				nvis, nhref = "inline-block", me.namePage(nextchap, quali.SizeHint, 1, viewMode, "", me.lang, svName)
+				nvis, nhref = "inline-block", me.namePage(nextchap, quali.SizeHint, 1, viewMode, "", me.lang, svDt)
 			}
 			ulid := App.Proj.Gen.APaging
 			if !istoplist {
@@ -517,7 +518,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			me.page.ViewerList += " vc"
 		}
 		me.page.ViewerList += "'>"
-		if n := me.namePage(chapter, App.Proj.Qualis[qIdx].SizeHint, pageNr, viewmode, "", me.lang, svName); viewmode == viewMode {
+		if n := me.namePage(chapter, App.Proj.Qualis[qIdx].SizeHint, pageNr, viewmode, "", me.lang, svDt); viewmode == viewMode {
 			me.page.HrefViewCur = "./" + n + ".html"
 			me.page.ViewerList += "<b>&nbsp;</b>"
 		} else {
@@ -606,7 +607,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 	for _, sheet := range sheets {
 		sheetver := sheet.versions[0]
 		for i := range sheet.versions {
-			if sheet.versions[i].name >= svName {
+			if sheet.versions[i].dateTimeUnixNano >= svDt {
 				sheetver = sheet.versions[i]
 			}
 		}
@@ -754,7 +755,7 @@ func (me *siteGen) textStr(key string) (s string) {
 }
 
 func (me *siteGen) genAtomXml() (numFilesWritten int) {
-	af := App.Proj.AtomFile
+	af, islatest := App.Proj.AtomFile, true
 	if len(af.PubDates) == 0 {
 		return
 	}
@@ -766,40 +767,46 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 		}
 		for _, series := range App.Proj.Series {
 			for _, chapter := range series.Chapters {
-				entries, pgnr, pgnrs := map[string][]*SheetVer{}, 1, map[string]map[int]bool{}
+				pgnr, numpanels, pages := -1, 0, map[int]bool{}
+				var dtoldest int64
 				for _, sheet := range chapter.sheets {
 					for _, sv := range sheet.versions {
-						dtstr := time.Unix(0, sv.data.DateTimeUnixNano).Format("2006-01-02")
-						if dtstr > nextolderdate && dtstr <= pubdate {
-							if pgnrs[sv.name] == nil {
-								pgnrs[sv.name] = map[int]bool{}
+						if dtstr := time.Unix(0, sv.dateTimeUnixNano).Format("2006-01-02"); dtstr > nextolderdate && dtstr <= pubdate {
+							if dtoldest == 0 || sv.dateTimeUnixNano < dtoldest {
+								dtoldest = sv.dateTimeUnixNano
 							}
 							pg := me.sheetPgNrs[sv]
-							entries[sv.name], pgnrs[sv.name][pg] = append(entries[sv.name], sv), true
+							pages[pg] = true
+							npnl, _ := sv.panelCount()
+							numpanels += npnl
+							if pgnr == -1 {
+								if pgnr = 1; pg > 0 {
+									pgnr = pg
+								}
+							}
 							if pg > 0 && pg < pgnr {
 								pgnr = pg
 							}
 						}
 					}
 				}
-				for vername, svs := range entries {
-					numpanels := 0
-					for _, sv := range svs {
-						np, _ := sv.panelCount()
-						numpanels += np
-					}
+				if dtoldest != 0 && pgnr >= 1 {
 					xml := `<entry><updated>` + pubdate + `T00:00:00Z</updated>`
-					xml += `<title>` + hEsc(locStr(chapter.parentSeries.Title, me.lang)) + `: ` + hEsc(locStr(chapter.Title, me.lang)) + " (" + vername + ")" + `</title>`
-					xml += `<link href="` + strings.TrimRight(af.LinkHref, "/") + "/" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, pgnr, "s", "", me.lang, vername) + ".html" + `"/>`
+					xml += `<title>` + hEsc(locStr(chapter.parentSeries.Title, me.lang)) + `: ` + hEsc(locStr(chapter.Title, me.lang)) + `</title>`
+					if islatest {
+						dtoldest = 0
+					}
+					xml += `<link href="` + strings.TrimRight(af.LinkHref, "/") + "/" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, pgnr, "s", "", me.lang, dtoldest) + ".html" + `"/>`
 					xml += `<author><name>` + af.Title + `</name></author>`
 					xml += `<content type="html">` + strings.NewReplacer(
 						"%NUMPNL%", itoa(numpanels),
-						"%NUMPGS%", itoa(len(pgnrs[vername])),
+						"%NUMPGS%", itoa(len(pages)),
 					).Replace(locStr(af.ContentHtml, me.lang)) + `</content>`
 					xmls = append(xmls, xml+`</entry>`)
 				}
 			}
 		}
+		islatest = false
 	}
 
 	s := `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="` + me.lang + `">`
@@ -849,7 +856,7 @@ func (siteGen) nameThumb(series *Series) string {
 	return "_" + App.Proj.DirModes.Ltr.Name + "-" + itoa(App.Proj.NumSheetsInHomeBgs) + "-" + App.Proj.DirModes.Rtl.Name + "-" + strings.ToLower(series.Name)
 }
 
-func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, viewMode string, dirMode string, langId string, svName string) string {
+func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, viewMode string, dirMode string, langId string, svDt int64) string {
 	if pageNr < 1 {
 		pageNr = 1
 	}
@@ -858,5 +865,5 @@ func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, vie
 			dirMode = App.Proj.DirModes.Rtl.Name
 		}
 	}
-	return strings.ToLower(chapter.parentSeries.Name + "-" + chapter.Name + "-" + itoa(pageNr) + svName + viewMode + itoa(qualiSizeHint) + "-" + dirMode + "." + langId)
+	return strings.ToLower(chapter.parentSeries.Name + "-" + chapter.Name + "-" + itoa(pageNr) + strconv.FormatInt(svDt, 0) + viewMode + itoa(qualiSizeHint) + "-" + dirMode + "." + langId)
 }

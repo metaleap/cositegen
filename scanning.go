@@ -65,15 +65,13 @@ type ScanOption struct {
 }
 
 type ScanJob struct {
-	Id           string
-	Series       *Series
-	Chapter      *Chapter
-	SheetName    string
-	SheetVerName string
-	PnmFileName  string
-	PngFileName  string
-	Dev          *ScanDevice
-	Opts         map[string]string
+	Id          string
+	Series      *Series
+	Chapter     *Chapter
+	PnmFileName string
+	PngFileName string
+	Dev         *ScanDevice
+	Opts        map[string]string
 }
 
 func scanDevicesDetection() {
@@ -151,7 +149,7 @@ func scanJobDo() {
 		scanJob = nil
 		if err := recover(); err != nil {
 			_ = os.Remove(sj.PngFileName)
-			scanJobNotice = "[" + sj.SheetName + "_" + sj.SheetVerName + "] " + fmt.Sprintf("%v", err)
+			scanJobNotice = "[" + sj.PngFileName + "] " + fmt.Sprintf("%v", err)
 		}
 	}()
 	for _, fname := range []string{sj.PngFileName, sj.PnmFileName} {

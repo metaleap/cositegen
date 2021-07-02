@@ -6,8 +6,8 @@ import (
 	_ "image/png"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
-	"time"
 )
 
 type Sheet struct {
@@ -20,10 +20,12 @@ func (me *Sheet) At(i int) fmt.Stringer { return me.versions[i] }
 func (me *Sheet) Len() int              { return len(me.versions) }
 func (me *Sheet) String() string        { return me.name }
 
-func (me *Sheet) versionNamedOrLatest(verName string) *SheetVer {
-	for _, sv := range me.versions {
-		if sv.name == verName {
-			return sv
+func (me *Sheet) versionNoOlderThanOrLatest(dt int64) *SheetVer {
+	if dt > 0 {
+		for i := len(me.versions) - 1; i > 0; i-- {
+			if me.versions[i].dateTimeUnixNano >= dt {
+				return me.versions[i]
+			}
 		}
 	}
 	return me.versions[0]
@@ -36,18 +38,17 @@ type SheetVerData struct {
 	bwSmallFilePath string
 	pngDirPath      string
 
-	DateTimeUnixNano int64
-	GrayDistr        []int     `json:",omitempty"`
-	PanelsTree       *ImgPanel `json:",omitempty"`
+	GrayDistr  []int     `json:",omitempty"`
+	PanelsTree *ImgPanel `json:",omitempty"`
 }
 
 type SheetVer struct {
-	parentSheet *Sheet
-	id          string
-	name        string
-	fileName    string
-	data        *SheetVerData
-	prep        struct {
+	parentSheet      *Sheet
+	id               string
+	dateTimeUnixNano int64
+	fileName         string
+	data             *SheetVerData
+	prep             struct {
 		sync.Mutex
 		done bool
 	}
@@ -55,6 +56,10 @@ type SheetVer struct {
 
 func (me *SheetVer) Px1Cm() float64 {
 	return float64(me.data.PanelsTree.Rect.Max.Y-me.data.PanelsTree.Rect.Min.Y) / 21.0
+}
+
+func (me *SheetVer) DtName() string {
+	return strconv.FormatInt(me.dateTimeUnixNano, 10)
 }
 
 func (me *SheetVer) String() string { return me.fileName }
@@ -85,7 +90,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	shouldsaveprojmeta := forceFullRedo
 	if me.data == nil {
 		shouldsaveprojmeta = true
-		me.data = &SheetVerData{DateTimeUnixNano: time.Now().UnixNano()}
+		me.data = &SheetVerData{}
 		App.Proj.data.Sv.ById[me.id] = me.data
 	}
 	me.data.parentSheetVer = me

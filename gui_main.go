@@ -83,7 +83,7 @@ func guiMain(r *http.Request, notice string) []byte {
 				App.Gui.State.Sel.Ver, _ = guiGetFormSel(fv("sheetver"), sheet).(*SheetVer)
 				s += guiHtmlList("sheetver", "", false, len(sheet.versions), func(i int) (string, string, bool) {
 					sheetver := sheet.versions[i]
-					return sheetver.fileName, sheetver.name, App.Gui.State.Sel.Ver != nil && App.Gui.State.Sel.Ver.fileName == sheetver.fileName
+					return sheetver.fileName, sheetver.DtName(), App.Gui.State.Sel.Ver != nil && App.Gui.State.Sel.Ver.fileName == sheetver.fileName
 				})
 				if App.Gui.State.Sel.Ver == nil {
 					App.Gui.State.Sel.Ver = sheet.versions[0]
@@ -138,7 +138,7 @@ func guiStartView() (s string) {
 							a := "<a href='./?series=" + url.QueryEscape(series.Name) + "&chapter=" + url.QueryEscape(chapter.Name) + "&sheet=" + url.QueryEscape(sheet.name) + "&sheetver=" + url.QueryEscape(sv.fileName) + "&t=" + itoa(int(time.Now().UnixNano())) + "'>"
 							if sv.prep.done {
 								if _, err := os.Stat(sv.data.bwSmallFilePath); err == nil {
-									s += a + "<img title='" + hEsc(sheet.name+"_"+sv.name) + "' src='./" + sv.data.bwSmallFilePath + "' style='width: 11em;'/></a>"
+									s += a + "<img title='" + hEsc(sheet.name) + "' src='./" + sv.data.bwSmallFilePath + "' style='width: 11em;'/></a>"
 								}
 							}
 							s += "</td><td width='98%' valign='top' align='left'>"
@@ -149,7 +149,7 @@ func guiStartView() (s string) {
 							if svidx != 0 {
 								s += " style='visibility:hidden'"
 							}
-							s += ">p" + itoa(pgnr) + "</span>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;" + a + hEsc(sheet.name+"_"+sv.name) + "</a>"
+							s += ">p" + itoa(pgnr) + "</span>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;" + a + hEsc(sheet.name) + "</a>"
 							if numpanels > 0 {
 								s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(numpanelareas) + " </b> text-rect/s in " + itoa(numpanels) + " panel/s"
 								if numpanelareas > 0 {
@@ -163,7 +163,7 @@ func guiStartView() (s string) {
 								if sv.data.PanelsTree != nil {
 									s += "<small>&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(sv.data.PanelsTree.Rect.Max.X) + "&times;" + itoa(sv.data.PanelsTree.Rect.Max.Y) + "</b>px (" + itoa(int(sv.Px1Cm())) + "px/cm)</small>"
 								}
-								s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;from <b title='" + hEsc(time.Unix(0, sv.data.DateTimeUnixNano).Format(time.RFC1123)) + "'>" + time.Unix(0, sv.data.DateTimeUnixNano).Format("02 Jan 2006") + "</b></small>"
+								s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;from <b title='" + hEsc(time.Unix(0, sv.dateTimeUnixNano).Format(time.RFC1123)) + "'>" + time.Unix(0, sv.dateTimeUnixNano).Format("02 Jan 2006") + "</b></small>"
 							}
 							s += "</h4>" + guiHtmlGrayDistrs(sv.grayDistrs()) + "</td></tr>"
 						}
@@ -181,12 +181,11 @@ func guiStartView() (s string) {
 func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 	series := chapter.parentSeries
 	if fv("scannow") != "" && scanJob == nil {
-		sj := ScanJob{
+		sheetname, sheetvername, sj := trim(fv("sheetname")), trim(fv("sheetvername")), ScanJob{
 			Id:     strconv.FormatInt(time.Now().UnixNano(), 36),
 			Series: series, Chapter: chapter, Opts: map[string]string{},
-			SheetName: trim(fv("sheetname")), SheetVerName: trim(fv("sheetvername")),
 		}
-		sj.PnmFileName, sj.PngFileName = "/dev/shm/csg"+sj.Id+".pnm", "sheets/"+series.Name+"/"+chapter.Name+"/sheets/"+sj.SheetName+"_"+sj.SheetVerName+".png"
+		sj.PnmFileName, sj.PngFileName = "/dev/shm/csg"+sj.Id+".pnm", "sheets/"+series.Name+"/"+chapter.Name+"/sheets/"+sheetname+"."+sheetvername+".png"
 		for _, sd := range scanDevices {
 			if sd.Ident == fv("scandev") {
 				sj.Dev = sd
@@ -218,7 +217,7 @@ func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 
 	s += "<h3>New Sheet Version Scan</h3>"
 	s += guiHtmlInput("text", "sheetname", "", A{"placeholder": "Sheet Name"})
-	s += guiHtmlInput("text", "sheetvername", itoa(int(time.Now().UnixNano())), A{"disabled": "disabled"})
+	s += guiHtmlInput("text", "sheetvername", strconv.FormatInt(time.Now().UnixNano(), 10), A{"disabled": "disabled"})
 	s += "<h3>Scanner To Use:</h3>"
 
 	s += "<div><select name='scandev' id='scandev' onchange='toggleScanOptsPane(this.options[this.selectedIndex].value)'>"
