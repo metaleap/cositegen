@@ -22,7 +22,7 @@ func main() {
 	})
 
 	if len(os.Args) > 1 {
-		appPrepWork()
+		appPrepWork(false)
 		args := map[string]bool{}
 		for _, arg := range os.Args[2:] {
 			args[arg] = true
@@ -34,7 +34,7 @@ func main() {
 	} else {
 		go scanDevicesDetection()
 		go httpListenAndServe()
-		go appPrepWork()
+		go appPrepWork(true)
 		go launchGuiInKioskyBrowser()
 		for App.Gui.Exiting = false; !App.Gui.Exiting; time.Sleep(time.Second) {
 			appbusy := (scanJob != nil) || (scanDevices == nil) ||

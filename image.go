@@ -234,7 +234,7 @@ func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, heig
 		}
 		ImgScaler.Scale(imgdst, imgdst.Bounds(), srcimg, srcImgRect, draw.Over, nil)
 	}
-	imgBwBorder(imgdst, color.Gray{255}, blackBorderSize, 0, transparent)
+	imgBwBorder(imgdst, color.Gray{0}, blackBorderSize, 0, transparent)
 	return imgdst
 }
 

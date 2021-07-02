@@ -79,7 +79,7 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 	}
 }
 
-func appPrepWork() {
+func appPrepWork(fromGui bool) {
 	App.Proj.allPrepsDone = false
 	timedLogged("Preprocessing...", func() string {
 		var numjobs, numwork int
@@ -88,9 +88,8 @@ func appPrepWork() {
 				for _, sheet := range chapter.sheets {
 					for _, sv := range sheet.versions {
 						if !sv.prep.done {
-							if sv.prep.Lock(); App.Gui.BrowserPid == 0 {
-								break // no need to Unlock
-							} else if !sv.prep.done {
+							sv.prep.Lock()
+							if !sv.prep.done {
 								if sv.prep.done, numjobs = true, numjobs+1; sv.ensurePrep(true, false) {
 									numwork++
 								}

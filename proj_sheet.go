@@ -97,9 +97,9 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	me.data.dirPath = ".csg/sv/" + me.id
 	me.data.bwFilePath = filepath.Join(me.data.dirPath, "bw."+itoa(int(App.Proj.BwThreshold))+".png")
 	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(App.Proj.BwThreshold))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
-	me.data.pngDirPath = "png." + itoa(int(App.Proj.BwThreshold))
+	me.data.pngDirPath = "png_" + itoa(int(App.Proj.BwThreshold)) + "_" + ftoa(App.Proj.PanelBorderCm, -1)
 	for _, q := range App.Proj.Qualis {
-		me.data.pngDirPath += "." + itoa(q.SizeHint)
+		me.data.pngDirPath += "_" + itoa(q.SizeHint)
 	}
 	me.data.pngDirPath = filepath.Join(me.data.dirPath, me.data.pngDirPath)
 
@@ -188,9 +188,10 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 				width := float64(quali.SizeHint) / (float64(sw) / float64(pw))
 				height := width / (float64(pw) / float64(ph))
 				w, h := int(width), int(height)
+				px1cm := me.Px1Cm() / (float64(sw) / float64(quali.SizeHint))
 				var wassamesize bool
 				for k, transparent := range map[string]bool{"t": true, "": false} {
-					pngdata := imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, quali.SizeHint/640, transparent, &wassamesize)
+					pngdata := imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, int(px1cm*App.Proj.PanelBorderCm), transparent, &wassamesize)
 					writeFile(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(quali.SizeHint)+k+".png"), pngdata)
 				}
 				if wassamesize {

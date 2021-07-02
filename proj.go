@@ -27,6 +27,7 @@ type Project struct {
 	MaxImagePanelTextAreas int
 	BwThreshold            uint8
 	BwSmallWidth           uint16
+	PanelBorderCm          float64
 	PageContentTexts       map[string]map[string]string
 	NumSheetsInHomeBgs     int
 	NumColorDistrClusters  int
