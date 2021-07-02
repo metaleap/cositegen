@@ -83,7 +83,7 @@ func guiMain(r *http.Request, notice string) []byte {
 				App.Gui.State.Sel.Ver, _ = guiGetFormSel(fv("sheetver"), sheet).(*SheetVer)
 				s += guiHtmlList("sheetver", "", false, len(sheet.versions), func(i int) (string, string, bool) {
 					sheetver := sheet.versions[i]
-					return sheetver.fileName, sheetver.DtName(), App.Gui.State.Sel.Ver != nil && App.Gui.State.Sel.Ver.fileName == sheetver.fileName
+					return sheetver.fileName, time.Unix(0, sheetver.dateTimeUnixNano).Format("2006-01-02 15:04:05"), App.Gui.State.Sel.Ver != nil && App.Gui.State.Sel.Ver.fileName == sheetver.fileName
 				})
 				if App.Gui.State.Sel.Ver == nil {
 					App.Gui.State.Sel.Ver = sheet.versions[0]
@@ -216,8 +216,8 @@ func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 	}
 
 	s += "<h3>New Sheet Version Scan</h3>"
-	s += guiHtmlInput("text", "sheetname", "", A{"placeholder": "Sheet Name"})
-	s += guiHtmlInput("text", "sheetvername", strconv.FormatInt(time.Now().UnixNano(), 10), A{"disabled": "disabled"})
+	s += guiHtmlInput("text", "sheetname", "", A{"placeholder": "Sheet Name"}) +
+		"." + guiHtmlInput("text", "sheetvername", strconv.FormatInt(time.Now().UnixNano(), 10), A{"disabled": "disabled"}) + ".png"
 	s += "<h3>Scanner To Use:</h3>"
 
 	s += "<div><select name='scandev' id='scandev' onchange='toggleScanOptsPane(this.options[this.selectedIndex].value)'>"

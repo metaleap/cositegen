@@ -189,6 +189,7 @@ type Chapter struct {
 	sheets       []*Sheet
 	parentSeries *Series
 	versions     []int64
+	verDtLatest  int64
 }
 
 func (me *Chapter) At(i int) fmt.Stringer { return me.sheets[i] }
@@ -271,8 +272,13 @@ func (me *Project) load() (numSheetVers int) {
 				}
 			}
 			for _, sheet := range chapter.sheets {
-				for _, sheetver := range sheet.versions[1:] {
-					chapter.versions = append(chapter.versions, sheetver.dateTimeUnixNano)
+				for i, sheetver := range sheet.versions {
+					if sheetver.dateTimeUnixNano > chapter.verDtLatest {
+						chapter.verDtLatest = sheetver.dateTimeUnixNano
+					}
+					if i > 0 {
+						chapter.versions = append(chapter.versions, sheetver.dateTimeUnixNano)
+					}
 				}
 			}
 		}

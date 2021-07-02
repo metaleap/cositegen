@@ -61,17 +61,18 @@ type siteGen struct {
 	sheetPgNrs map[*SheetVer]int
 }
 
-func (me siteGen) genSite(map[string]bool) {
+func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 	var err error
 	tstart := time.Now()
 	me.sheetPgNrs = map[*SheetVer]int{}
 	printLn("SiteGen started. When done, result will open in new window.")
-	defer func() {
-		if err := recover(); err != nil {
-			printLn("SiteGen Error: ", err)
-		}
-	}()
-
+	if fromGui {
+		defer func() {
+			if err := recover(); err != nil {
+				printLn("SiteGen Error: ", err)
+			}
+		}()
+	}
 	rmDir(".build")
 	mkDir(".build")
 	mkDir(".build/" + App.Proj.Gen.PngDirName)
@@ -406,9 +407,9 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 	quali := App.Proj.Qualis[qIdx]
 	me.page.VersList, me.page.ChapTitle = "", locStr(chapter.Title, me.lang)
 	for i, svdt := range chapter.versions {
-		svname := strconv.FormatInt(svdt, 0)
-		text := svname + " "
+		text := time.Unix(0, svdt).Format("Jan 2006")
 		if i == 0 {
+			text = time.Unix(0, chapter.verDtLatest).Format("Jan 2006")
 			text += me.textStr("VerNewest")
 		} else {
 			text += me.textStr("VerOlder")
@@ -606,9 +607,11 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 	}
 	for _, sheet := range sheets {
 		sheetver := sheet.versions[0]
-		for i := range sheet.versions {
-			if sheet.versions[i].dateTimeUnixNano >= svDt {
-				sheetver = sheet.versions[i]
+		if svDt > 0 {
+			for i := range sheet.versions {
+				if sheet.versions[i].dateTimeUnixNano >= svDt {
+					sheetver = sheet.versions[i]
+				}
 			}
 		}
 		sheetver.ensurePrep(false, false)
@@ -865,5 +868,5 @@ func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, vie
 			dirMode = App.Proj.DirModes.Rtl.Name
 		}
 	}
-	return strings.ToLower(chapter.parentSeries.Name + "-" + chapter.Name + "-" + itoa(pageNr) + strconv.FormatInt(svDt, 0) + viewMode + itoa(qualiSizeHint) + "-" + dirMode + "." + langId)
+	return strings.ToLower(chapter.parentSeries.Name + "-" + chapter.Name + "-" + itoa(pageNr) + strconv.FormatInt(svDt, 10) + viewMode + itoa(qualiSizeHint) + "-" + dirMode + "." + langId)
 }
