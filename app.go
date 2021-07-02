@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -141,7 +142,7 @@ func pngOptsLoop() {
 			return
 		}
 
-		numdone, matches, totalsize, errexiting := 0, []string{}, uint64(0), errors.New("exiting")
+		numdone, matches, totalsize, errexiting := 0, FilePathsSortingByFileSize{}, uint64(0), errors.New("exiting")
 		if err := fs.WalkDir(dirfs, ".", func(fspath string, dir fs.DirEntry, err error) error {
 			if App.Gui.Exiting {
 				return errexiting
@@ -157,6 +158,7 @@ func pngOptsLoop() {
 		} else if err != nil {
 			printLn("PNGOPT Walk: " + err.Error())
 		}
+		sort.Sort(matches)
 
 		printLn("PNGOPT: found", len(matches), "files (~"+itoa(int(totalsize/(1024*1024)))+"MB) to scrutinize...")
 		for _, pngfilename := range matches {
@@ -202,4 +204,14 @@ func pngOptsLoop() {
 		}
 		printLn("PNGOPT:", len(matches), "scrutinized &", numdone, "processed, sleeping a minute...")
 	}
+}
+
+type FilePathsSortingByFileSize []string
+
+func (me FilePathsSortingByFileSize) Len() int          { return len(me) }
+func (me FilePathsSortingByFileSize) Swap(i int, j int) { me[i], me[j] = me[j], me[i] }
+func (me FilePathsSortingByFileSize) Less(i int, j int) bool {
+	fi1, _ := os.Stat(me[i])
+	fi2, _ := os.Stat(me[j])
+	return fi1.Size() < fi2.Size()
 }

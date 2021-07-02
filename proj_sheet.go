@@ -105,6 +105,9 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 
 	mkDir(me.data.dirPath)
 
+	if forceFullRedo || shouldsaveprojmeta {
+		printLn("\tPrep: " + me.fileName + "...")
+	}
 	didWork = me.ensureBwSheetPngs(forceFullRedo)
 	shouldsaveprojmeta = me.ensurePanels(forceFullRedo || didWork) || shouldsaveprojmeta
 	shouldsaveprojmeta = me.ensureBwPanelPngs(forceFullRedo || didWork) || shouldsaveprojmeta
