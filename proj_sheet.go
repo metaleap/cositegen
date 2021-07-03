@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"image"
 	_ "image/png"
@@ -33,7 +34,6 @@ func (me *Sheet) versionNoOlderThanOrLatest(dt int64) *SheetVer {
 }
 
 type SheetVerData struct {
-	parentSheetVer  *SheetVer
 	dirPath         string
 	bwFilePath      string
 	bwSmallFilePath string
@@ -48,15 +48,12 @@ type SheetVer struct {
 	id               string
 	dateTimeUnixNano int64
 	fileName         string
+	pxCm             float64
 	data             *SheetVerData
 	prep             struct {
 		sync.Mutex
 		done bool
 	}
-}
-
-func (me *SheetVer) Px1Cm() float64 {
-	return 472 // float64(me.data.PanelsTree.Rect.Max.Y-me.data.PanelsTree.Rect.Min.Y) / 21.0
 }
 
 func (me *SheetVer) DtName() string {
@@ -69,6 +66,12 @@ func (me *SheetVer) load() {
 	data, err := os.ReadFile(me.fileName)
 	if err != nil {
 		panic(err)
+	}
+	me.pxCm = 472.424242424 //1200dpi
+	if img, _, err := image.Decode(bytes.NewReader(data)); err != nil {
+		panic(err)
+	} else if w := img.Bounds().Max.X; w < 10000 {
+		me.pxCm *= 0.5 //600dpi
 	}
 
 	me.id = contentHashStr(data)
@@ -94,7 +97,6 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 		me.data = &SheetVerData{}
 		App.Proj.data.Sv.ById[me.id] = me.data
 	}
-	me.data.parentSheetVer = me
 	me.data.dirPath = ".csg/sv/" + me.id
 	me.data.bwFilePath = filepath.Join(me.data.dirPath, "bw."+itoa(int(App.Proj.BwThreshold))+".png")
 	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(App.Proj.BwThreshold))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
@@ -197,7 +199,7 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 				width := float64(quali.SizeHint) / (float64(sw) / float64(pw))
 				height := width / (float64(pw) / float64(ph))
 				w, h := int(width), int(height)
-				px1cm := me.Px1Cm() / (float64(sw) / float64(quali.SizeHint))
+				px1cm := me.pxCm / (float64(sw) / float64(quali.SizeHint))
 				var wassamesize bool
 				for k, transparent := range map[string]bool{"t": true, "": false} {
 					pngdata := imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, int(px1cm*App.Proj.PanelBorderCm), transparent, &wassamesize)

@@ -651,7 +651,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 }
 
 func (me *siteGen) genSvgForPanel(sV *SheetVer, panelIdx int, panel *ImgPanel) string {
-	panelareas, px1cm := sV.panelAreas(panelIdx), sV.Px1Cm()
+	panelareas, px1cm := sV.panelAreas(panelIdx), sV.pxCm
 	if len(panelareas) == 0 {
 		return ""
 	}

@@ -274,7 +274,6 @@ func (me *Project) load() (numSheetVers int) {
 						sheet = &Sheet{name: sheetname, parentChapter: chapter}
 						chapter.sheets = append(chapter.sheets, sheet)
 					}
-
 					sheetver := &SheetVer{dateTimeUnixNano: dt, parentSheet: sheet, fileName: fname}
 					sheetver.load()
 					sheet.versions = append([]*SheetVer{sheetver}, sheet.versions...)
