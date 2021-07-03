@@ -702,11 +702,14 @@ func (me *siteGen) genSvgForPanel(sV *SheetVer, panelIdx int, panel *ImgPanel) s
 			s += "' class='" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "' stroke-width='" + itoa(mmh) + "px'/>"
 		}
 		s += "<svg x='" + itoa(rx) + "' y='" + itoa(ry) + "'>"
-		linex := 0
+		linex := 0.0
 		if borderandfill {
-			linex = int(px1cm / 11.0)
+			linex = px1cm * App.Proj.Gen.PanelSvgText.BoxPolyDxCmA4
 		}
-		s += imgSvgText(&pta, me.lang, px1cm, false, linex)
+		if px1cm < 472 { // low-dpi special-casing just for the 2 	frog sheets...
+			px1cm *= (float64(sV.data.PanelsTree.Rect.Max.X) / 7016.0)
+		}
+		s += imgSvgText(&pta, me.lang, px1cm, false, int(linex))
 		s += "</svg>"
 	}
 

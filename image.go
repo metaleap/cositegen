@@ -39,7 +39,7 @@ type ImgPanelArea struct {
 	Rect                  image.Rectangle
 }
 
-func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide bool) {
+func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide bool, snipLeftAndBottomEdges bool) {
 	srcimg, err := pnm.Decode(srcImgData)
 	if err != nil {
 		panic(err)
@@ -57,6 +57,39 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 			}
 		}
 		srcimg = dstimg
+	}
+	if threshold, img := 96, srcimg.(*image.Gray); snipLeftAndBottomEdges {
+		var minwidth, minheight int
+		for y := img.Rect.Max.Y - 1; y >= 0 && minheight == 0; y-- {
+			rowbrightsum := 0
+			for x := 0; x < img.Rect.Max.X; x++ {
+				rowbrightsum += int(img.GrayAt(x, y).Y)
+			}
+			if rowbright := (rowbrightsum / img.Rect.Max.X); rowbright < threshold {
+				minheight = y
+			}
+		}
+		for x := 0; x < img.Rect.Max.X && minwidth == 0; x++ {
+			colbrightsum := 0
+			for y := 0; y < minheight; y++ {
+				colbrightsum += int(img.GrayAt(x, y).Y)
+			}
+			if colbright := (colbrightsum / minheight); colbright < threshold {
+				minwidth = img.Rect.Max.X - x
+			}
+		}
+		dstw, dsth := minwidth, minheight
+		imgdst := image.NewGray(image.Rect(0, 0, dstw, dsth))
+		imgDrawRect(imgdst, imgdst.Rect, 472, 0)
+		ddx, ddy, dsx := (dstw-minwidth)/2, (dsth-minheight)/2, (img.Rect.Max.X - minwidth)
+		for x := 0; x < minwidth; x++ {
+			for y := 0; y < minheight; y++ {
+				col := img.GrayAt(dsx+x, y)
+				imgdst.SetGray(x+ddx, y+ddy, col)
+			}
+		}
+		imgDrawRect(imgdst, imgdst.Rect, 44, 0)
+		srcimg = imgdst
 	}
 	if err := PngEncoder.Encode(dstImgFile, srcimg); err != nil {
 		panic(err)

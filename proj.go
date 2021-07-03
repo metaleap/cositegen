@@ -57,10 +57,11 @@ type Project struct {
 		ImgSrcLang       string
 		PngDirName       string
 		PanelSvgText     struct {
-			PerLineDyCmA4        float64
-			FontSizeCmA4         float64
 			BoxPolyStrokeWidthCm float64
 			ClsBoxPoly           string
+			BoxPolyDxCmA4        float64
+			PerLineDyCmA4        float64
+			FontSizeCmA4         float64
 			Css                  map[string][]string
 			AppendToFiles        map[string]bool
 		}
