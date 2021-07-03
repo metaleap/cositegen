@@ -841,14 +841,14 @@ func (me *siteGen) genHomeThumbsPngs() (numPngs uint32) {
 			for _, chapter := range series.Chapters {
 				for _, sheet := range chapter.sheets {
 					sv := sheet.versions[0]
-					filenames = append(filenames, sv.data.bwFilePath)
+					filenames = append(filenames, sv.data.bwSmallFilePath)
 				}
 			}
 			if len(filenames) > 0 {
 				if App.Proj.NumSheetsInHomeBgs > 0 && len(filenames) > App.Proj.NumSheetsInHomeBgs {
 					filenames = filenames[len(filenames)-App.Proj.NumSheetsInHomeBgs:]
 				}
-				data := imgStitchHorizontally(filenames, 480, 44, color.NRGBA{0, 0, 0, 0})
+				data := imgStitchHorizontally(filenames, 320, 44, color.NRGBA{0, 0, 0, 0})
 				writeFile("./.build/"+App.Proj.Gen.PngDirName+"/"+me.nameThumb(series)+".png", data)
 			}
 			work.Done()
