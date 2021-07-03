@@ -6,7 +6,6 @@ import (
 	"image/color"
 	"image/png"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/go-forks/gopnm"
@@ -258,9 +257,8 @@ func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bo
 func imgStitchHorizontally(fileNames []string, height int, gapWidth int, gapColor color.Color) []byte {
 	totalwidth, srcimgs := 0, make(map[image.Image]int, len(fileNames))
 	for _, fname := range fileNames {
-		if data, err := os.ReadFile(fname); err != nil {
-			panic(err)
-		} else if img, _, err := image.Decode(bytes.NewReader(data)); err != nil {
+		data := readFile(fname)
+		if img, _, err := image.Decode(bytes.NewReader(data)); err != nil {
 			panic(err)
 		} else {
 			width := int(float64(img.Bounds().Max.X) / (float64(img.Bounds().Max.Y) / float64(height)))

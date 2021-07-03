@@ -57,7 +57,7 @@ type siteGen struct {
 	page       PageGen
 	lang       string
 	dirRtl     bool
-	onPngSize  func(*Chapter, string, int, int)
+	onPngSize  func(*Chapter, string, int, int64)
 	sheetPgNrs map[*SheetVer]int
 }
 
@@ -93,14 +93,14 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 			}
 		}
 		var mu sync.Mutex
-		me.onPngSize = func(chapter *Chapter, id string, qidx int, size int) {
+		me.onPngSize = func(chapter *Chapter, id string, qidx int, size int64) {
 			mu.Lock()
 			m := chapterqstats[chapter]
 			sl := m[id]
 			if len(sl) == 0 {
 				sl = make([]int64, len(App.Proj.Qualis))
 			}
-			sl[qidx] += int64(size)
+			sl[qidx] += size
 			m[id] = sl
 			mu.Unlock()
 		}
@@ -177,24 +177,19 @@ func (me *siteGen) copyStaticFiles(relDirPath string) (numFilesWritten int) {
 				mkDir(dstpath)
 				numFilesWritten += me.copyStaticFiles(relpath)
 			} else if fn != siteTmplFileName {
-				if data, err := os.ReadFile(filepath.Join(srcdirpath, fn)); err != nil {
-					panic(err)
-				} else {
-					if App.Proj.Gen.PanelSvgText.AppendToFiles[relpath] {
-						for csssel, csslines := range App.Proj.Gen.PanelSvgText.Css {
-							if csssel != "" {
-								if csslines == nil {
-									csslines = App.Proj.Gen.PanelSvgText.Css[""]
-								}
-								data = append([]byte(csssel+"{"+strings.Join(csslines, ";")+"}\n"), data...)
+				data := readFile(filepath.Join(srcdirpath, fn))
+				if App.Proj.Gen.PanelSvgText.AppendToFiles[relpath] {
+					for csssel, csslines := range App.Proj.Gen.PanelSvgText.Css {
+						if csssel != "" {
+							if csslines == nil {
+								csslines = App.Proj.Gen.PanelSvgText.Css[""]
 							}
+							data = append([]byte(csssel+"{"+strings.Join(csslines, ";")+"}\n"), data...)
 						}
 					}
-					if err := os.WriteFile(dstpath, data, os.ModePerm); err != nil {
-						panic(err)
-					}
-					numFilesWritten++
 				}
+				writeFile(dstpath, data)
+				numFilesWritten++
 			}
 		}
 	}
@@ -228,7 +223,6 @@ func (me *siteGen) genOrCopyPanelPics() (numPngs uint32, numSheets uint32, numPa
 
 func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numPngs uint32, numPanels uint32) {
 	sv.ensurePrep(false, false)
-
 	atomic.StoreUint32(&numPngs, 0)
 	var pidx int
 	var work sync.WaitGroup
@@ -240,10 +234,13 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numPngs uint32, numPanels
 				var transparent string
 			copyone:
 				srcpath := filepath.Join(sv.data.pngDirPath, itoa(pidx)+"."+itoa(quali.SizeHint)+transparent+".png")
-				if pngdata, err := os.ReadFile(srcpath); err == nil {
-					writeFile(filepath.Join(".build/"+App.Proj.Gen.PngDirName+"/", me.namePanelPng(sv.id, pidx, quali.SizeHint, transparent)+".png"), pngdata)
+				dstpath := filepath.Join(".build/"+App.Proj.Gen.PngDirName+"/", me.namePanelPng(sv.id, pidx, quali.SizeHint, transparent)+".png")
+				if fileinfo, err := os.Stat(srcpath); err == nil && !fileinfo.IsDir() {
+					if err = os.Symlink("../../"+srcpath, dstpath); err != nil {
+						panic(err)
+					}
 					if me.onPngSize != nil {
-						me.onPngSize(sv.parentSheet.parentChapter, sv.id+itoa(pidx), qidx, len(pngdata))
+						me.onPngSize(sv.parentSheet.parentChapter, sv.id+itoa(pidx), qidx, fileinfo.Size())
 					}
 					atomic.AddUint32(&numPngs, 1)
 				} else if os.IsNotExist(err) {

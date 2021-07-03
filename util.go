@@ -68,6 +68,18 @@ func percent(hundred int, val int) int {
 	return 100 / (hundred / val)
 }
 
+func copyFile(srcPath string, dstPath string) {
+	writeFile(dstPath, readFile(srcPath))
+}
+
+func readFile(fileName string) []byte {
+	data, err := os.ReadFile(fileName)
+	if err != nil {
+		panic(err)
+	}
+	return data
+}
+
 func writeFile(fileName string, data []byte) {
 	tmpfilename := fileName + "." + strconv.FormatInt(time.Now().UnixNano(), 36)
 	if err := os.WriteFile(tmpfilename, data, os.ModePerm); err != nil {
@@ -97,15 +109,11 @@ func contentHashStr(content []byte) (s string) {
 }
 
 func jsonLoad(eitherFileName string, orBytes []byte, intoPtr Any) {
-	var data []byte = orBytes
-	var err error
+	data := orBytes
 	if eitherFileName != "" {
-		data, err = os.ReadFile(eitherFileName)
-		if err != nil {
-			panic(err)
-		}
+		data = readFile(eitherFileName)
 	}
-	if err = json.Unmarshal(data, intoPtr); err != nil {
+	if err := json.Unmarshal(data, intoPtr); err != nil {
 		panic(err)
 	}
 }

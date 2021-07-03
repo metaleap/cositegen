@@ -78,10 +78,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 		shouldsaveprojdata = true
 		me.data = &SheetVerData{PxCm: 472.424242424} //1200dpi
 		{
-			pngdata, err := os.ReadFile(me.fileName)
-			if err != nil {
-				panic(err)
-			}
+			pngdata := readFile(me.fileName)
 			if img, _, err := image.Decode(bytes.NewReader(pngdata)); err != nil {
 				panic(err)
 			} else if w := img.Bounds().Max.X; w < 10000 {

@@ -150,10 +150,7 @@ func pngOptsLoop() {
 			if App.Gui.Exiting {
 				return
 			}
-			curfiledata, err := os.ReadFile(pngfilename)
-			if err != nil {
-				continue
-			}
+			curfiledata := readFile(pngfilename)
 			lastopt, skip := App.Proj.data.PngOpt[pngfilename]
 			if skip = skip && (lastopt[1] == itoa(len(curfiledata))) &&
 				(lastopt[2] == string(contentHashStr(curfiledata))); skip {
@@ -164,7 +161,7 @@ func pngOptsLoop() {
 
 			cmd := exec.Command("pngbattle", pngfilename)
 			cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
-			if err = cmd.Start(); err != nil {
+			if err := cmd.Start(); err != nil {
 				printLn(err)
 				continue
 			}

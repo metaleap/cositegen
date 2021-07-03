@@ -285,10 +285,7 @@ func (me *Project) load() (numSheetVers int) {
 
 					work.Add(1)
 					go func(sv *SheetVer) {
-						data, err := os.ReadFile(sv.fileName)
-						if err != nil {
-							panic(err)
-						}
+						data := readFile(sv.fileName)
 						sv.id = contentHashStr(data)
 						work.Lock()
 						App.Proj.data.Sv.fileNamesToIds[sv.fileName] = sv.id
