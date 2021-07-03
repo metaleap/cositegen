@@ -122,7 +122,7 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 				if (min == 0 || totalsize < min) && App.Proj.Qualis[qidx].SizeHint <= 4096 {
 					min, chapter.defaultQuali = totalsize, qidx
 				}
-				msg += "\t\t" + App.Proj.Qualis[qidx].Name + "(" + itoa(App.Proj.Qualis[qidx].SizeHint) + ")" + " => " + itoa(int(totalsize/1024)) + "KB"
+				msg += "\t\t" + App.Proj.Qualis[qidx].Name + "(" + itoa(App.Proj.Qualis[qidx].SizeHint) + ")" + " => " + strSize64(totalsize)
 			}
 			printLn(msg)
 		}
