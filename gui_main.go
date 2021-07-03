@@ -15,7 +15,7 @@ func fV(r *http.Request) func(string) string {
 }
 
 func guiMain(r *http.Request, notice string) []byte {
-	fv, dirpref, s := fV(r), "", "<!DOCTYPE html><html><head><link rel='stylesheet' type='text/css' href='/main.css'/><style type='text/css'>"
+	fv, dirpref, s := fV(r), "", "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><link rel='stylesheet' type='text/css' href='/main.css'/><style type='text/css'>"
 	for k := range App.Proj.Gen.PanelSvgText.AppendToFiles {
 		if idx := strings.LastIndexByte(k, '/'); idx > 0 {
 			dirpref = k[:idx]

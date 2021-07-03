@@ -12,6 +12,9 @@ function refreshAllPanelRects(numPanels, langIdx, langName) {
 }
 
 function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm, panelSvgTextClsBoxPoly, panelSvgTextBoxPolyStrokeWidthCm) {
+    if (px1cm < 472) // special-casing the 2 lodpi frog sheets
+        px1cm *= 1.33;
+
     const pid = "p" + panelIdx;
     let innerhtml = "";
     const pxfont = parseInt(px1cm * svgTxtFontSizeCmA4);
@@ -28,10 +31,19 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm
         const trPx = parseInt(document.getElementById(pid + "t" + i + "rpx").value);
         const trPy = parseInt(document.getElementById(pid + "t" + i + "rpy").value);
         if ((!(isNaN(trW) || isNaN(trH) || isNaN(trX) || isNaN(trY))) && (trW > 0) && (trH > 0)) {
-            divshtml += "<div class='panelrect col" + i + "' style='left:" + (trX - pOffX) + "px; top:" + (trY - pOffY) + "px; width: " + trW + "px; height: " + trH + "px;'></div>";
+            const borderandfill = !(isNaN(trPx) || isNaN(trPy));
+            let ptext = document.getElementById(pid + "t" + i + langs[pLangIdx]).value.trimEnd();
+            for (let langidx = 0; langidx < langs.length; langidx++) {
+                const el = document.getElementById(pid + "t" + i + langs[langidx]);
+                if ((el == document.activeElement && el.value && el.value.length) || (langidx == 0 && !ptext)) {
+                    ptext = el.value;
+                    break;
+                }
+            }
+
+            divshtml += "<div class='panelrect col" + ((ptext && ptext.trim().length && borderandfill) ? "" : i) + "' style='left:" + (trX - pOffX) + "px; top:" + (trY - pOffY) + "px; width: " + trW + "px; height: " + trH + "px;'></div>";
 
             const rw = trW, rh = trH, rx = trX - pOffX, ry = trY - pOffY;
-            const borderandfill = !(isNaN(trPx) || isNaN(trPy));
             if (borderandfill) {
                 const rpx = trPx - pOffX, rpy = trPy - pOffY;
                 const mmh = px1cm * panelSvgTextBoxPolyStrokeWidthCm, cmh = px1cm * 0.5;
@@ -70,21 +82,12 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm
                 innerhtml += "<polygon points='" + poly.join(' ') + "' class='" + panelSvgTextClsBoxPoly + "' stroke-width='" + mmh + "px'/>";
             }
 
-            let ptext = document.getElementById(pid + "t" + i + langs[pLangIdx]).value.trimEnd();
-            for (let langidx = 0; langidx < langs.length; langidx++) {
-                const el = document.getElementById(pid + "t" + i + langs[langidx]);
-                if ((el == document.activeElement && el.value && el.value.length) || (langidx == 0 && !ptext)) {
-                    ptext = el.value;
-                    break;
-                }
-            }
-
             innerhtml += "<svg x='" + rx + "' y='" + ry + "'><text x='0' y='0' style='font-size: " + pxfont + "px' transform='" + document.getElementById(pid + "t" + i + "_transform").value.replace(/\n/g, " ").trim() + "'>";
             innerhtml += "<tspan style='" + document.getElementById(pid + "t" + i + "_style").value.replace(/\n/g, " ").trim() + "'>";
             for (let line of ptext.split('\n')) {
                 if ((!line) || line.length == 0)
                     line = '&nbsp;';
-                innerhtml += "<tspan dy='" + pxline + "' x='" + (borderandfill ? (px1cm * 0.090909091) : 0) + "'>"
+                innerhtml += "<tspan dy='" + pxline + "' x='" + (borderandfill ? (px1cm * 0.44) : 0) + "'>"
                     + line
                         .replace(/\s/g, "&nbsp;")
                         .replace(/<b>/g, "<tspan class='b'>")

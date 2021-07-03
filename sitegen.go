@@ -652,7 +652,10 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 }
 
 func (me *siteGen) genSvgForPanel(sV *SheetVer, panelIdx int, panel *ImgPanel) string {
-	panelareas, px1cm := sV.panelAreas(panelIdx), sV.data.PxCm
+	panelareas, pxcm := sV.panelAreas(panelIdx), sV.data.PxCm
+	if pxcm < 472 { // low-dpi special-casing just for the 2 	frog sheets...
+		pxcm *= (float64(sV.data.PanelsTree.Rect.Max.X) / 7016.0)
+	}
 	if len(panelareas) == 0 {
 		return ""
 	}
@@ -664,7 +667,7 @@ func (me *siteGen) genSvgForPanel(sV *SheetVer, panelIdx int, panel *ImgPanel) s
 		borderandfill := pta.PointTo != nil
 		if borderandfill {
 			rpx, rpy := pta.PointTo.X-panel.Rect.Min.X, pta.PointTo.Y-panel.Rect.Min.Y
-			mmh, cmh := int(px1cm*App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm), int(px1cm/2.0)
+			mmh, cmh := int(pxcm*App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm), int(pxcm/2.0)
 			pl, pr, pt, pb := (rx + mmh), ((rx + rw) - mmh), (ry + mmh), ((ry + rh) - mmh)
 			poly := [][2]int{{pl, pt}, {pr, pt}, {pr, pb}, {pl, pb}}
 			ins := func(idx int, pts ...[2]int) {
@@ -704,12 +707,9 @@ func (me *siteGen) genSvgForPanel(sV *SheetVer, panelIdx int, panel *ImgPanel) s
 		s += "<svg x='" + itoa(rx) + "' y='" + itoa(ry) + "'>"
 		linex := 0.0
 		if borderandfill {
-			linex = px1cm * App.Proj.Gen.PanelSvgText.BoxPolyDxCmA4
+			linex = pxcm * App.Proj.Gen.PanelSvgText.BoxPolyDxCmA4
 		}
-		if px1cm < 472 { // low-dpi special-casing just for the 2 	frog sheets...
-			px1cm *= (float64(sV.data.PanelsTree.Rect.Max.X) / 7016.0)
-		}
-		s += imgSvgText(&pta, me.lang, px1cm, false, int(linex))
+		s += imgSvgText(&pta, me.lang, pxcm, false, int(linex))
 		s += "</svg>"
 	}
 
