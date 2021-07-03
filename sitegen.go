@@ -835,13 +835,14 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 func (me *siteGen) copyHomeThumbsPngs() (numPngs uint32) {
 	for _, series := range App.Proj.Series {
 		thumbfilename := me.nameThumb(series) + ".png"
-		srcfilepath := ".csg/sv/" + thumbfilename
-		dstfilepath := ".build/" + App.Proj.Gen.PngDirName + "/" + thumbfilename
-		if err := os.Symlink("../../"+srcfilepath, dstfilepath); err != nil {
-			panic(err)
+		if srcfilepath, dstfilepath := ".csg/sv/"+thumbfilename, ".build/"+App.Proj.Gen.PngDirName+"/"+thumbfilename; statFileOnly(srcfilepath) != nil {
+			numPngs++
+			if err := os.Symlink("../../"+srcfilepath, dstfilepath); err != nil {
+				panic(err)
+			}
 		}
 	}
-	return uint32(len(App.Proj.Series))
+	return
 }
 
 func (siteGen) namePanelPng(sheetId string, pIdx int, qualiSizeHint int, transparent string) string {
@@ -853,7 +854,7 @@ func (siteGen) namePanelSvg(sheetId string, pIdx int) string {
 }
 
 func (siteGen) nameThumb(series *Series) string {
-	return "_" + App.Proj.DirModes.Ltr.Name + "-" + itoa(App.Proj.NumSheetsInHomeBgs) + "-" + App.Proj.DirModes.Rtl.Name + "-" + strings.ToLower(series.UrlName)
+	return "_" + App.Proj.DirModes.Ltr.Name + "-" + App.Proj.DirModes.Rtl.Name + "-" + strings.ToLower(series.UrlName)
 }
 
 func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, viewMode string, dirMode string, langId string, svDt int64) string {

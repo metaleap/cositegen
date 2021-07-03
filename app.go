@@ -89,7 +89,7 @@ func appPrepWork(fromGui bool) {
 			var didanywork bool
 			for _, chapter := range series.Chapters {
 				for _, sheet := range chapter.sheets {
-					for _, sv := range sheet.versions {
+					for i, sv := range sheet.versions {
 						if !sv.prep.done {
 							sv.prep.Lock()
 							if !sv.prep.done {
@@ -100,7 +100,9 @@ func appPrepWork(fromGui bool) {
 							}
 							sv.prep.Unlock()
 						}
-						thumbsrcfilenames = append(thumbsrcfilenames, sv.data.bwSmallFilePath)
+						if i == 0 {
+							thumbsrcfilenames = append(thumbsrcfilenames, sv.data.bwSmallFilePath)
+						}
 					}
 				}
 			}
@@ -113,8 +115,7 @@ func appPrepWork(fromGui bool) {
 				if len(thumbsrcfilenames) > App.Proj.NumSheetsInHomeBgs {
 					thumbsrcfilenames = thumbsrcfilenames[len(thumbsrcfilenames)-App.Proj.NumSheetsInHomeBgs:]
 				}
-				data := imgStitchHorizontally(thumbsrcfilenames, 320, 44, color.NRGBA{0, 0, 0, 0})
-				writeFile(thumbfilepath, data)
+				writeFile(thumbfilepath, imgStitchHorizontally(thumbsrcfilenames, 320, 44, color.NRGBA{0, 0, 0, 0}))
 			}
 		}
 		App.Proj.allPrepsDone = true
