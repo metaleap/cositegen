@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -247,6 +248,10 @@ func (me *Project) load() (numSheetVers int) {
 			if err != nil {
 				panic(err)
 			}
+			var work = struct {
+				sync.WaitGroup
+				sync.Mutex
+			}{}
 			for _, f := range files {
 				if fnamebase := f.Name(); strings.HasSuffix(fnamebase, ".png") && !f.IsDir() {
 					fname := filepath.Join(chapter.dirPath, fnamebase)
@@ -275,11 +280,27 @@ func (me *Project) load() (numSheetVers int) {
 						chapter.sheets = append(chapter.sheets, sheet)
 					}
 					sheetver := &SheetVer{dateTimeUnixNano: dt, parentSheet: sheet, fileName: fname}
-					sheetver.load()
 					sheet.versions = append([]*SheetVer{sheetver}, sheet.versions...)
 					numSheetVers++
+
+					work.Add(1)
+					go func(sv *SheetVer) {
+						data, err := os.ReadFile(sv.fileName)
+						if err != nil {
+							panic(err)
+						}
+						sv.id = contentHashStr(data)
+						work.Lock()
+						App.Proj.data.Sv.fileNamesToIds[sv.fileName] = sv.id
+						App.Proj.data.Sv.IdsToFileNames[sv.id] = sv.fileName
+						work.Unlock()
+						sv.data = App.Proj.data.Sv.ById[sv.id]
+						work.Done()
+					}(sheetver)
 				}
 			}
+			work.Wait()
+
 			if len(chapter.sheets) > 0 {
 				chapter.versions = []int64{0}
 				for _, sheet := range chapter.sheets {

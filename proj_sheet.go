@@ -41,6 +41,7 @@ type SheetVerData struct {
 
 	GrayDistr  []int     `json:",omitempty"`
 	PanelsTree *ImgPanel `json:",omitempty"`
+	PxCm       float64
 }
 
 type SheetVer struct {
@@ -48,7 +49,6 @@ type SheetVer struct {
 	id               string
 	dateTimeUnixNano int64
 	fileName         string
-	pxCm             float64
 	data             *SheetVerData
 	prep             struct {
 		sync.Mutex
@@ -61,24 +61,6 @@ func (me *SheetVer) DtName() string {
 }
 
 func (me *SheetVer) String() string { return me.fileName }
-
-func (me *SheetVer) load() {
-	data, err := os.ReadFile(me.fileName)
-	if err != nil {
-		panic(err)
-	}
-	me.pxCm = 472.424242424 //1200dpi
-	if img, _, err := image.Decode(bytes.NewReader(data)); err != nil {
-		panic(err)
-	} else if w := img.Bounds().Max.X; w < 10000 {
-		me.pxCm *= 0.5 //600dpi
-	}
-
-	me.id = contentHashStr(data)
-	App.Proj.data.Sv.fileNamesToIds[me.fileName] = me.id
-	App.Proj.data.Sv.IdsToFileNames[me.id] = me.fileName
-	me.data = App.Proj.data.Sv.ById[me.id]
-}
 
 func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork bool) {
 	if !fromBgPrep {
@@ -94,7 +76,18 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	shouldsaveprojdata := forceFullRedo
 	if me.data == nil {
 		shouldsaveprojdata = true
-		me.data = &SheetVerData{}
+		me.data = &SheetVerData{PxCm: 472.424242424} //1200dpi
+		{
+			pngdata, err := os.ReadFile(me.fileName)
+			if err != nil {
+				panic(err)
+			}
+			if img, _, err := image.Decode(bytes.NewReader(pngdata)); err != nil {
+				panic(err)
+			} else if w := img.Bounds().Max.X; w < 10000 {
+				me.data.PxCm *= 0.5 //600dpi
+			}
+		}
 		App.Proj.data.Sv.ById[me.id] = me.data
 	}
 	me.data.dirPath = ".csg/sv/" + me.id
@@ -199,7 +192,7 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 				width := float64(quali.SizeHint) / (float64(sw) / float64(pw))
 				height := width / (float64(pw) / float64(ph))
 				w, h := int(width), int(height)
-				px1cm := me.pxCm / (float64(sw) / float64(quali.SizeHint))
+				px1cm := me.data.PxCm / (float64(sw) / float64(quali.SizeHint))
 				var wassamesize bool
 				for k, transparent := range map[string]bool{"t": true, "": false} {
 					pngdata := imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, int(px1cm*App.Proj.PanelBorderCm), transparent, &wassamesize)
