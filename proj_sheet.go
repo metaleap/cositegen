@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -97,7 +98,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	me.data.dirPath = ".csg/sv/" + me.id
 	me.data.bwFilePath = filepath.Join(me.data.dirPath, "bw."+itoa(int(App.Proj.BwThreshold))+".png")
 	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(App.Proj.BwThreshold))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
-	me.data.pngDirPath = "png_" + itoa(int(App.Proj.BwThreshold)) + "_" + ftoa(App.Proj.PanelBorderCm, -1)
+	me.data.pngDirPath = "__panelpng__" + itoa(int(App.Proj.BwThreshold)) + "_" + ftoa(App.Proj.PanelBorderCm, -1)
 	for _, q := range App.Proj.Qualis {
 		me.data.pngDirPath += "_" + itoa(q.SizeHint)
 	}
@@ -164,6 +165,14 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 	}
 	if !force {
 		return false
+	} else if diritems, err := os.ReadDir(me.data.dirPath); err != nil {
+		panic(err)
+	} else {
+		for _, fileinfo := range diritems {
+			if fileinfo.IsDir() && strings.HasPrefix(fileinfo.Name(), "__panelpng__") {
+				rmDir(filepath.Join(me.data.dirPath, fileinfo.Name()))
+			}
+		}
 	}
 
 	rmDir(me.data.pngDirPath)
