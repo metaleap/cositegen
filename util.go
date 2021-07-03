@@ -91,6 +91,17 @@ func writeFile(fileName string, data []byte) {
 	}
 }
 
+func statFileOnly(fileName string) os.FileInfo {
+	fileinfo, err := os.Stat(fileName)
+	if err != nil && !os.IsNotExist(err) {
+		panic(err)
+	}
+	if fileinfo != nil && !fileinfo.IsDir() {
+		return fileinfo
+	}
+	return nil
+}
+
 func contentHash(content []byte) []byte {
 	assert(len(content) != 0)
 	b1, b2 := sha1.Sum(content), md5.Sum(content)

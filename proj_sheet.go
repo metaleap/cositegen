@@ -112,11 +112,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 func (me *SheetVer) ensureBwSheetPngs(force bool) bool {
 	var exist1, exist2 bool
 	for fname, bptr := range map[string]*bool{me.data.bwFilePath: &exist1, me.data.bwSmallFilePath: &exist2} {
-		if fileinfo, err := os.Stat(fname); err == nil && !fileinfo.IsDir() {
-			*bptr = true
-		} else if !os.IsNotExist(err) {
-			panic(err)
-		}
+		*bptr = (statFileOnly(fname) != nil)
 	}
 
 	if force || !(exist1 && exist2) {
@@ -147,12 +143,10 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 		numpanels++
 	})
 	for pidx := 0; pidx < numpanels && !force; pidx++ {
-		if fileinfo, err := os.Stat(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(App.Proj.Qualis[0].SizeHint)+".png")); err != nil || fileinfo.IsDir() {
+		if (nil == statFileOnly(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(App.Proj.Qualis[0].SizeHint)+".png"))) ||
+			(nil == statFileOnly(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(App.Proj.Qualis[0].SizeHint)+"t.png"))) {
+			// nil==statFileOnly(filepath.Join(me.data.dirPath, itoa(pidx)+".svg"))
 			force = true
-		} else if fileinfo, err := os.Stat(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(App.Proj.Qualis[0].SizeHint)+"t.png")); err != nil || fileinfo.IsDir() {
-			force = true
-			// } else if fileinfo, err := os.Stat(filepath.Join(me.data.dirPath, itoa(pidx)+".svg")); err != nil || fileinfo.IsDir() || fileinfo.Size() == 0 {
-			// 	force = true
 		}
 	}
 	if !force {

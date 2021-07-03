@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"image/color"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -85,7 +84,7 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 		return "for " + strconv.Itoa(numfilescopied) + " files"
 	})
 
-	timedLogged("SiteGen: generating (but mostly copying pre-generated) PNGs & SVGs...", func() string {
+	timedLogged("SiteGen: copying pre-generated PNGs & SVGs...", func() string {
 		chapterqstats := map[*Chapter]map[string][]int64{}
 		for _, series := range App.Proj.Series {
 			for _, chapter := range series.Chapters {
@@ -105,10 +104,10 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 			mu.Unlock()
 		}
 		numpngs, numsheets, numpanels := me.genOrCopyPanelPics()
-		numpngs += me.genHomeThumbsPngs()
+		numpngs += me.copyHomeThumbsPngs()
 		qstats := make(map[*Chapter][]int64, len(chapterqstats))
 		for chapter, namesandsizes := range chapterqstats {
-			min, msg, chq := int64(0), "\t\t"+chapter.Name, make([]int64, len(App.Proj.Qualis))
+			min, chq := int64(0), make([]int64, len(App.Proj.Qualis))
 			for _, sizes := range namesandsizes {
 				for qidx, size := range sizes {
 					for i := qidx; size == 0; i-- {
@@ -122,9 +121,12 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 				if (min == 0 || totalsize < min) && App.Proj.Qualis[qidx].SizeHint <= 4096 {
 					min, chapter.defaultQuali = totalsize, qidx
 				}
-				msg += "\t\t" + App.Proj.Qualis[qidx].Name + "(" + itoa(App.Proj.Qualis[qidx].SizeHint) + ")" + " => " + strSize64(totalsize)
+				pref := chapter.Name
+				if qidx > 0 {
+					pref = strings.Repeat(" ", len(pref))
+				}
+				printLn("\t\t" + pref + "\t\t" + App.Proj.Qualis[qidx].Name + "(" + itoa(App.Proj.Qualis[qidx].SizeHint) + ")" + " => " + strSize64(totalsize))
 			}
-			printLn(msg)
 		}
 		return "for " + itoa(int(numpngs)) + " PNGs from " + itoa(int(numpanels)) + " panels in " + itoa(int(numsheets)) + " sheets"
 	})
@@ -235,18 +237,16 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numPngs uint32, numPanels
 			copyone:
 				srcpath := filepath.Join(sv.data.pngDirPath, itoa(pidx)+"."+itoa(quali.SizeHint)+transparent+".png")
 				dstpath := filepath.Join(".build/"+App.Proj.Gen.PngDirName+"/", me.namePanelPng(sv.id, pidx, quali.SizeHint, transparent)+".png")
-				if fileinfo, err := os.Stat(srcpath); err == nil && !fileinfo.IsDir() {
-					if err = os.Symlink("../../"+srcpath, dstpath); err != nil {
+				if fileinfo := statFileOnly(srcpath); fileinfo == nil {
+					break
+				} else {
+					if err := os.Symlink("../../"+srcpath, dstpath); err != nil {
 						panic(err)
 					}
 					if me.onPngSize != nil {
 						me.onPngSize(sv.parentSheet.parentChapter, sv.id+itoa(pidx), qidx, fileinfo.Size())
 					}
 					atomic.AddUint32(&numPngs, 1)
-				} else if os.IsNotExist(err) {
-					break
-				} else {
-					panic(err)
 				}
 				if transparent == "" {
 					transparent = "t"
@@ -327,7 +327,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 						for contenthash, maxpidx := range allpanels {
 							for pidx := 0; pidx <= maxpidx; pidx++ {
 								name := me.namePanelPng(contenthash, pidx, q.SizeHint, "")
-								if fileinfo, err := os.Stat(strings.ToLower(".build/" + App.Proj.Gen.PngDirName + "/" + name + ".png")); err == nil {
+								if fileinfo := statFileOnly(strings.ToLower(".build/" + App.Proj.Gen.PngDirName + "/" + name + ".png")); fileinfo != nil {
 									totalimgsize += fileinfo.Size()
 								}
 							}
@@ -590,7 +590,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			hqsrc, name := "", me.namePanelPng(sv.id, pidx, App.Proj.Qualis[0].SizeHint, "")
 			for i := qIdx; i >= 0; i-- {
 				hqsrc = me.namePanelPng(sv.id, pidx, App.Proj.Qualis[i].SizeHint, "")
-				if fileinfo, err := os.Stat(".build/" + App.Proj.Gen.PngDirName + "/" + hqsrc + ".png"); err == nil && (!fileinfo.IsDir()) && fileinfo.Size() > 0 {
+				if fileinfo := statFileOnly(".build/" + App.Proj.Gen.PngDirName + "/" + hqsrc + ".png"); fileinfo != nil && fileinfo.Size() > 0 {
 					break
 				}
 			}
@@ -832,29 +832,15 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 	return
 }
 
-func (me *siteGen) genHomeThumbsPngs() (numPngs uint32) {
-	var work sync.WaitGroup
-	work.Add(len(App.Proj.Series))
+func (me *siteGen) copyHomeThumbsPngs() (numPngs uint32) {
 	for _, series := range App.Proj.Series {
-		go func(series *Series) {
-			var filenames []string
-			for _, chapter := range series.Chapters {
-				for _, sheet := range chapter.sheets {
-					sv := sheet.versions[0]
-					filenames = append(filenames, sv.data.bwSmallFilePath)
-				}
-			}
-			if len(filenames) > 0 {
-				if App.Proj.NumSheetsInHomeBgs > 0 && len(filenames) > App.Proj.NumSheetsInHomeBgs {
-					filenames = filenames[len(filenames)-App.Proj.NumSheetsInHomeBgs:]
-				}
-				data := imgStitchHorizontally(filenames, 320, 44, color.NRGBA{0, 0, 0, 0})
-				writeFile("./.build/"+App.Proj.Gen.PngDirName+"/"+me.nameThumb(series)+".png", data)
-			}
-			work.Done()
-		}(series)
+		thumbfilename := me.nameThumb(series) + ".png"
+		srcfilepath := ".csg/sv/" + thumbfilename
+		dstfilepath := ".build/" + App.Proj.Gen.PngDirName + "/" + thumbfilename
+		if err := os.Symlink("../../"+srcfilepath, dstfilepath); err != nil {
+			panic(err)
+		}
 	}
-	work.Wait()
 	return uint32(len(App.Proj.Series))
 }
 

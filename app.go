@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"image/color"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -84,20 +85,36 @@ func appPrepWork(fromGui bool) {
 	timedLogged("Preprocessing...", func() string {
 		var numjobs, numwork int
 		for _, series := range App.Proj.Series {
+			var thumbsrcfilenames []string
+			var didanywork bool
 			for _, chapter := range series.Chapters {
 				for _, sheet := range chapter.sheets {
 					for _, sv := range sheet.versions {
 						if !sv.prep.done {
 							sv.prep.Lock()
 							if !sv.prep.done {
-								if sv.prep.done, numjobs = true, numjobs+1; sv.ensurePrep(true, false) {
-									numwork++
+								didwork := sv.ensurePrep(true, false)
+								if sv.prep.done, numjobs = true, numjobs+1; didwork {
+									numwork, didanywork = numwork+1, true
 								}
 							}
 							sv.prep.Unlock()
 						}
+						thumbsrcfilenames = append(thumbsrcfilenames, sv.data.bwSmallFilePath)
 					}
 				}
+			}
+			thumbfilepath := ".csg/sv/" + siteGen{}.nameThumb(series) + ".png"
+			if didanywork || len(thumbsrcfilenames) == 0 || App.Proj.NumSheetsInHomeBgs == 0 {
+				_ = os.Remove(thumbfilepath)
+			}
+			if len(thumbsrcfilenames) > 0 && App.Proj.NumSheetsInHomeBgs > 0 &&
+				(didanywork || nil == statFileOnly(thumbfilepath)) {
+				if len(thumbsrcfilenames) > App.Proj.NumSheetsInHomeBgs {
+					thumbsrcfilenames = thumbsrcfilenames[len(thumbsrcfilenames)-App.Proj.NumSheetsInHomeBgs:]
+				}
+				data := imgStitchHorizontally(thumbsrcfilenames, 320, 44, color.NRGBA{0, 0, 0, 0})
+				writeFile(thumbfilepath, data)
 			}
 		}
 		App.Proj.allPrepsDone = true
@@ -115,7 +132,7 @@ func pngOptsLoop() {
 	for dirfs := os.DirFS("."); !App.Gui.Exiting; time.Sleep(time.Minute) {
 		dels := false
 		for k := range App.Proj.data.PngOpt {
-			if fileinfo, err := os.Stat(k); err != nil || fileinfo.IsDir() {
+			if statFileOnly(k) == nil {
 				delete(App.Proj.data.PngOpt, k)
 				dels = true
 			}
@@ -193,7 +210,6 @@ type FilePathsSortingByFileSize []string
 func (me FilePathsSortingByFileSize) Len() int          { return len(me) }
 func (me FilePathsSortingByFileSize) Swap(i int, j int) { me[i], me[j] = me[j], me[i] }
 func (me FilePathsSortingByFileSize) Less(i int, j int) bool {
-	fi1, _ := os.Stat(me[i])
-	fi2, _ := os.Stat(me[j])
-	return fi1.Size() < fi2.Size()
+	fi1, fi2 := statFileOnly(me[i]), statFileOnly(me[j])
+	return fi1 == nil || fi2 == nil || fi1.Size() < fi2.Size()
 }

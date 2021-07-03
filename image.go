@@ -254,6 +254,17 @@ func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bo
 	return
 }
 
+func imgDrawRect(imgDst *image.Gray, rect image.Rectangle, thickness int, gray uint8) {
+	for x := rect.Min.X; x < rect.Max.X; x++ {
+		for y := rect.Min.Y; y < rect.Max.Y; y++ {
+			if x < (rect.Min.X+thickness) || x > (rect.Max.X-thickness) ||
+				y < (rect.Min.Y+thickness) || y > (rect.Max.Y-thickness) {
+				imgDst.SetGray(x, y, color.Gray{gray})
+			}
+		}
+	}
+}
+
 func imgStitchHorizontally(fileNames []string, height int, gapWidth int, gapColor color.Color) []byte {
 	totalwidth, srcimgs := 0, make(map[image.Image]int, len(fileNames))
 	for _, fname := range fileNames {

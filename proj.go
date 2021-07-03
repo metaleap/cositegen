@@ -213,15 +213,11 @@ func (me *Project) load() (numSheetVers int) {
 	mkDir(".csg")
 	mkDir(".csg/tmp")
 	mkDir(".csg/sv")
-	if _, err := os.Stat(".csg/projdata.json"); err == nil {
+	if statFileOnly(".csg/projdata.json") != nil {
 		jsonLoad(".csg/projdata.json", nil, &me.data)
-	} else if !os.IsNotExist(err) {
-		panic(err)
 	}
-	if _, err := os.Stat("csgtexts.json"); err == nil {
+	if statFileOnly("csgtexts.json") != nil {
 		jsonLoad("csgtexts.json", nil, &me.data.Sv.textRects)
-	} else if !os.IsNotExist(err) {
-		panic(err)
 	} else {
 		me.data.Sv.textRects = map[string][][]ImgPanelArea{}
 	}
