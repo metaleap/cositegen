@@ -88,9 +88,9 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 			return
 		}
 	}
-	shouldsaveprojmeta := forceFullRedo
+	shouldsaveprojdata := forceFullRedo
 	if me.data == nil {
-		shouldsaveprojmeta = true
+		shouldsaveprojdata = true
 		me.data = &SheetVerData{}
 		App.Proj.data.Sv.ById[me.id] = me.data
 	}
@@ -106,12 +106,12 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 
 	mkDir(me.data.dirPath)
 
-	didWork = me.ensureBwSheetPngs(forceFullRedo)
-	shouldsaveprojmeta = me.ensurePanels(forceFullRedo || didWork) || shouldsaveprojmeta
-	shouldsaveprojmeta = me.ensureBwPanelPngs(forceFullRedo || didWork) || shouldsaveprojmeta
-	shouldsaveprojmeta = me.ensureColorDistr(forceFullRedo || shouldsaveprojmeta) || shouldsaveprojmeta
+	didgraydistr := me.ensureGrayDistr(forceFullRedo || shouldsaveprojdata)
+	didbwsheet := me.ensureBwSheetPngs(forceFullRedo)
+	didpanels := me.ensurePanels(forceFullRedo || didbwsheet || shouldsaveprojdata)
+	didpnlpics := me.ensureBwPanelPngs(forceFullRedo || didpanels)
 
-	if didWork = didWork || shouldsaveprojmeta; shouldsaveprojmeta {
+	if didWork = didgraydistr || didbwsheet || didpanels || didpnlpics; shouldsaveprojdata {
 		App.Proj.save()
 	}
 	return
@@ -220,7 +220,7 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 	return true
 }
 
-func (me *SheetVer) ensureColorDistr(force bool) bool {
+func (me *SheetVer) ensureGrayDistr(force bool) bool {
 	if force || len(me.data.GrayDistr) != App.Proj.NumColorDistrClusters {
 		if file, err := os.Open(me.fileName); err != nil {
 			panic(err)
