@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/go-forks/gopnm"
-	"github.com/go-forks/gotrace"
 	"golang.org/x/image/draw"
 )
 
@@ -296,29 +295,7 @@ func imgStitchHorizontally(fileNames []string, height int, gapWidth int, gapColo
 }
 
 func imgVectorizeToSvg(srcImg *image.Gray, rect image.Rectangle) []byte {
-	dstimg := image.NewNRGBA(image.Rect(0, 0, rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y))
-	for px := rect.Min.X; px < rect.Max.X; px++ {
-		for py := rect.Min.Y; py < rect.Max.Y; py++ {
-			col := srcImg.GrayAt(px, py)
-			dstimg.Set(px-rect.Min.X, py-rect.Min.Y, color.NRGBA{A: 255 - col.Y})
-		}
-	}
-
-	paths, err := gotrace.Trace(gotrace.NewBitmapFromImage(dstimg, nil), &gotrace.Params{
-		TurdSize:     2,                 // despeckling if fewer px than
-		TurnPolicy:   gotrace.TurnBlack, // connecting preference
-		AlphaMax:     1.0,               // 0: no smoothing of polygons; >1.3333: no corners just smooth curves
-		OptiCurve:    true,
-		OptTolerance: 0.2,
-	})
-	if err != nil {
-		panic(err)
-	}
-	var buf bytes.Buffer
-	if err = gotrace.WriteSvg(&buf, dstimg.Bounds(), paths, ""); err != nil {
-		panic(err)
-	}
-	return buf.Bytes()
+	return nil
 }
 
 func imgPanels(srcImgData io.Reader, onFileDone func() error) ImgPanel {

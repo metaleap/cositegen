@@ -39,9 +39,9 @@ type SheetVerData struct {
 	bwSmallFilePath string
 	pngDirPath      string
 
+	PxCm       float64
 	GrayDistr  []int     `json:",omitempty"`
 	PanelsTree *ImgPanel `json:",omitempty"`
-	PxCm       float64
 }
 
 type SheetVer struct {
