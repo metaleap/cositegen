@@ -122,7 +122,7 @@ func (me *Chapter) NextAfter(withSheetsOnly bool) *Chapter {
 		}
 		now = (series.Chapters[i] == me)
 	}
-	if series.Chapters[0] == me {
+	if series.Chapters[0] == me || (withSheetsOnly && 0 == len(series.Chapters[0].sheets)) {
 		return nil
 	}
 	return series.Chapters[0]
@@ -143,20 +143,20 @@ func (me *Chapter) NumScans() (ret int) {
 	return
 }
 
-func (me *Chapter) DateRangeOfSheets() (string, string) {
+func (me *Chapter) DateRangeOfSheets() (time.Time, time.Time) {
 	var dt1, dt2 int64
 	for _, sheet := range me.sheets {
 		for _, sv := range sheet.versions {
-			sdt := sv.dateTimeUnixNano
-			if sdt < dt1 || dt1 == 0 {
-				dt1 = sdt
+			dt := sv.dateTimeUnixNano
+			if dt < dt1 || dt1 == 0 {
+				dt1 = dt
 			}
-			if sdt > dt2 || dt2 == 0 {
-				dt2 = sdt
+			if dt > dt2 || dt2 == 0 {
+				dt2 = dt
 			}
 		}
 	}
-	return time.Unix(0, dt1).Format("2006-01-02"), time.Unix(0, dt2).Format("2006-01-02")
+	return time.Unix(0, dt1), time.Unix(0, dt2)
 }
 
 func (me *Chapter) PercentTranslated(langId string, pgNr int, svDt int64) (float64, bool) {

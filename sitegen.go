@@ -381,12 +381,16 @@ func (me *siteGen) prepHomePage() {
 					numpages = len(chapter.sheets) / chapter.SheetsPerPage
 				}
 				dt1, dt2 := chapter.DateRangeOfSheets()
+				sdt1, sdt2 := dt1.Format("Jan 2006"), dt2.Format("Jan 2006")
+				sdt := sdt1 + " - " + sdt2
+				if sdt1 == sdt2 {
+					sdt = sdt1
+				}
 				title := strings.NewReplacer(
 					"%NUMPGS%", itoa(numpages),
 					"%NUMPNL%", itoa(chapter.NumPanels()),
 					"%NUMSCN%", itoa(chapter.NumScans()),
-					"%DATE1%", dt1,
-					"%DATE2%", dt2,
+					"%DATEINFO%", sdt,
 				).Replace(me.textStr("ChapStats"))
 				if numpages <= 1 {
 					title = trim(title[1+strings.IndexByte(title, '/'):])
@@ -774,7 +778,7 @@ func (me *siteGen) textStr(key string) (s string) {
 }
 
 func (me *siteGen) genAtomXml() (numFilesWritten int) {
-	af, islatest := App.Proj.AtomFile, true
+	af := App.Proj.AtomFile
 	if len(af.PubDates) == 0 {
 		return
 	}
@@ -786,18 +790,14 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 		}
 		for _, series := range App.Proj.Series {
 			for _, chapter := range series.Chapters {
-				pgnr, numpanels, pages := -1, 0, map[int]bool{}
-				var dtoldest int64
+				pgnr, numpanels, numsheets, pages := -1, 0, 0, map[int]bool{}
 				for _, sheet := range chapter.sheets {
 					for _, sv := range sheet.versions {
 						if dtstr := time.Unix(0, sv.dateTimeUnixNano).Format("2006-01-02"); dtstr > nextolderdate && dtstr <= pubdate {
-							if dtoldest == 0 || sv.dateTimeUnixNano < dtoldest {
-								dtoldest = sv.dateTimeUnixNano
-							}
 							pg := me.sheetPgNrs[sv]
 							pages[pg] = true
 							npnl, _ := sv.panelCount()
-							numpanels += npnl
+							numsheets, numpanels = numsheets+1, numpanels+npnl
 							if pgnr == -1 {
 								if pgnr = 1; pg > 0 {
 									pgnr = pg
@@ -809,15 +809,13 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 						}
 					}
 				}
-				if dtoldest != 0 && pgnr >= 1 {
+				if pgnr >= 1 {
 					xml := `<entry><updated>` + pubdate + `T00:00:00Z</updated>`
 					xml += `<title>` + hEsc(locStr(chapter.parentSeries.Title, me.lang)) + `: ` + hEsc(locStr(chapter.Title, me.lang)) + `</title>`
-					if islatest {
-						dtoldest = 0
-					}
-					xml += `<link href="` + strings.TrimRight(af.LinkHref, "/") + "/" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, pgnr, "s", "", me.lang, dtoldest) + ".html" + `"/>`
+					xml += `<link href="` + strings.TrimRight(af.LinkHref, "/") + "/" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, pgnr, "s", "", me.lang, 0) + ".html" + `"/>`
 					xml += `<author><name>` + af.Title + `</name></author>`
 					xml += `<content type="html">` + strings.NewReplacer(
+						"%NUMSVS%", itoa(numsheets),
 						"%NUMPNL%", itoa(numpanels),
 						"%NUMPGS%", itoa(len(pages)),
 					).Replace(locStr(af.ContentHtml, me.lang)) + `</content>`
@@ -825,7 +823,6 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 				}
 			}
 		}
-		islatest = false
 	}
 
 	s := `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="` + me.lang + `">`
