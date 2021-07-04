@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"image"
 	_ "image/png"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type Sheet struct {
@@ -224,17 +226,35 @@ func (me *SheetVer) ensureGrayDistr(force bool) bool {
 	return false
 }
 
-func (me *SheetVer) ensurePanels(force bool) bool {
-	if force || me.data.PanelsTree == nil {
+func (me *SheetVer) ensurePanels(force bool) (did bool) {
+	filebasename := filepath.Base(me.fileName)
+	bgtmplsvgfilename := strings.TrimSuffix(filebasename, ".png") + ".svg"
+	bgtmplsvgfilepath := filepath.Join(me.data.dirPath, bgtmplsvgfilename)
+	if did = force || me.data.PanelsTree == nil; did {
+		_ = os.Remove(bgtmplsvgfilepath)
 		if file, err := os.Open(me.data.bwFilePath); err != nil {
 			panic(err)
 		} else {
 			imgpanel := imgPanels(file, file.Close)
 			me.data.PanelsTree = &imgpanel
-			return true
 		}
 	}
-	return false
+	if pw, ph := itoa(me.data.PanelsTree.Rect.Max.X), itoa(me.data.PanelsTree.Rect.Max.Y); did || nil == fileStat(bgtmplsvgfilepath) {
+		svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+		<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="` + pw + `" height="` + ph + `" viewBox="0 0 ` + pw + ` ` + ph + `">
+			<image x="0" y="0" width="` + pw + `" height="` + ph + `" xlink:href="` + filebasename + `"/>
+			<image x="0" y="0" width="` + pw + `" height="` + ph + `" xlink:href="` + filepath.Base(me.data.bwSmallFilePath) + `"/>`
+		me.data.PanelsTree.iter(func(p *ImgPanel) {
+			rand.Seed(time.Now().UnixNano())
+			r, g, b := 32+rand.Intn(128+32), 16+rand.Intn(128+48), 64+rand.Intn(128+0)
+			x, y, w, h := p.Rect.Min.X, p.Rect.Min.Y, p.Rect.Max.X-p.Rect.Min.X, p.Rect.Max.Y-p.Rect.Min.Y
+			svg += `<rect x="` + itoa(x) + `" y="` + itoa(y) + `" style="opacity: 0.5"
+				fill="` + fmt.Sprintf("#%X%X%X", r, g, b) + `"  stroke="#000000"
+				stroke-width="1" width="` + itoa(w) + `" height="` + itoa(h) + `"></rect>`
+		})
+		fileWrite(bgtmplsvgfilepath, []byte(svg+"</svg>"))
+	}
+	return
 }
 
 func (me *SheetVer) panelAreas(panelIdx int) []ImgPanelArea {
