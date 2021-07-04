@@ -98,15 +98,23 @@ func fileWrite(fileName string, data []byte) {
 	}
 }
 
-func fileStat(fileName string) os.FileInfo {
+func stat(fileName string, isDir bool) os.FileInfo {
 	fileinfo, err := os.Stat(fileName)
 	if err != nil && !os.IsNotExist(err) {
 		panic(err)
 	}
-	if fileinfo != nil && !fileinfo.IsDir() {
+	if fileinfo != nil && isDir == fileinfo.IsDir() {
 		return fileinfo
 	}
 	return nil
+}
+
+func dirStat(fileName string) os.FileInfo {
+	return stat(fileName, true)
+}
+
+func fileStat(fileName string) os.FileInfo {
+	return stat(fileName, false)
 }
 
 func contentHash(content []byte) []byte {

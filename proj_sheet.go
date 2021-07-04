@@ -136,32 +136,40 @@ func (me *SheetVer) ensureBwSheetPngs(force bool) bool {
 }
 
 func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
-	var numpanels int
-	me.data.PanelsTree.iter(func(panel *ImgPanel) {
-		numpanels++
-	})
-	for pidx := 0; pidx < numpanels && !force; pidx++ {
-		if pngdir := me.data.PngDirPath(App.Proj.Qualis[0].SizeHint); (nil == fileStat(filepath.Join(pngdir, itoa(pidx)+".png"))) ||
-			(nil == fileStat(filepath.Join(pngdir, itoa(pidx)+"t.png"))) {
-			// nil==statFileOnly(filepath.Join(pngdir, itoa(pidx)+".svg"))
-			force = true
+	numpanels, _ := me.panelCount()
+	diritems, err := os.ReadDir(me.data.dirPath)
+	if err != nil {
+		panic(err)
+	}
+	for _, quali := range App.Proj.Qualis {
+		force = (nil == dirStat(me.data.PngDirPath(quali.SizeHint))) || force
+	}
+	for pidx, pngdir := 0, me.data.PngDirPath(App.Proj.Qualis[0].SizeHint); pidx < numpanels && !force; pidx++ {
+		force = (nil == fileStat(filepath.Join(pngdir, itoa(pidx)+".png"))) ||
+			(nil == fileStat(filepath.Join(pngdir, itoa(pidx)+"t.png"))) //||
+		// (nil == fileStat(filepath.Join(pngdir, itoa(pidx)+".svg")))
+	}
+	for _, fileinfo := range diritems {
+		if rm, name := force, fileinfo.Name(); fileinfo.IsDir() && strings.HasPrefix(name, "__panelpng__") {
+			if got, qstr := false, name[strings.LastIndexByte(name, '_')+1:]; (!rm) && qstr != "" {
+				q, _ := strconv.ParseUint(qstr, 10, 64)
+				for _, quali := range App.Proj.Qualis {
+					got = (quali.SizeHint == int(q)) || got
+				}
+				rm = !got
+			}
+			if rm {
+				rmDir(filepath.Join(me.data.dirPath, name))
+			}
 		}
 	}
 	if !force {
 		return false
-	} else if diritems, err := os.ReadDir(me.data.dirPath); err != nil {
-		panic(err)
-	} else {
-		for _, fileinfo := range diritems {
-			if fileinfo.IsDir() && strings.HasPrefix(fileinfo.Name(), "__panelpng__") {
-				rmDir(filepath.Join(me.data.dirPath, fileinfo.Name()))
-			}
-		}
-		for _, quali := range App.Proj.Qualis {
-			mkDir(me.data.PngDirPath(quali.SizeHint))
-		}
 	}
 
+	for _, quali := range App.Proj.Qualis {
+		mkDir(me.data.PngDirPath(quali.SizeHint))
+	}
 	srcimgfile, err := os.Open(me.data.bwFilePath)
 	if err != nil {
 		panic(err)
