@@ -84,7 +84,7 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 		return "for " + strconv.Itoa(numfilescopied) + " files"
 	})
 
-	timedLogged("SiteGen: copying pre-generated PNGs & SVGs...", func() string {
+	timedLogged("SiteGen: generating (but mostly copying pre-generated) PNGs & SVGs...", func() string {
 		chapterqstats := map[*Chapter]map[string][]int64{}
 		for _, series := range App.Proj.Series {
 			for _, chapter := range series.Chapters {
@@ -257,6 +257,20 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 		}(pidx)
 		pidx++
 	})
+
+	if bgsrcpath := strings.TrimSuffix(sv.fileName, ".png") + ".svg"; nil != fileStat(bgsrcpath) {
+		bgdstpath := ".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + "bg.svg"
+		svgsrc := string(fileRead(bgsrcpath))
+		for again, pref, suff := true, `<image x="0" width="`, `.png" y="0" />`; again; {
+			i1, i2 := strings.Index(svgsrc, pref), strings.Index(svgsrc, suff)
+			if again = i1 > 0 && i2 > i1; again {
+				svgsrc = svgsrc[:i1] + svgsrc[i2+len(suff):]
+			}
+		}
+		fileWrite(bgdstpath, []byte(svgsrc))
+		atomic.AddUint32(&numSvgs, 1)
+	}
+
 	work.Wait()
 	return
 }
@@ -325,6 +339,9 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 					for i, q := range App.Proj.Qualis {
 						var totalimgsize int64
 						for contenthash, maxpidx := range allpanels {
+							if bgfile := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + contenthash + "bg.svg"); bgfile != nil {
+								totalimgsize += bgfile.Size()
+							}
 							for pidx := 0; pidx <= maxpidx; pidx++ {
 								name := me.namePanelPic(contenthash, pidx, q.SizeHint)
 								if fileinfo := fileStat(strings.ToLower(".build/" + App.Proj.Gen.PicDirName + "/" + name + strIf(q.SizeHint == 0, ".svg", ".png"))); fileinfo != nil {
@@ -609,6 +626,10 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			s += "<img src='./" + App.Proj.Gen.PicDirName + "/" + name + ".png' class='" + App.Proj.Gen.ClsImgHq + "'"
 			if hqsrc != "" {
 				s += " " + App.Proj.Gen.ClsImgHq + "='" + hqsrc + "'"
+			}
+			if bgsvg := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + "bg.svg"); bgsvg != nil {
+				pr := panel.Rect
+				s += " style='background-size: " + itoa(pr.Max.X-pr.Min.X) + " auto; background-image:url(\"./" + App.Proj.Gen.PicDirName + "/" + sv.id + "bg.svg\"); background-position: -" + itoa(pr.Min.X) + "px -" + itoa(pr.Min.Y) + "px;'"
 			}
 			s += "/>"
 			s += "</div>"
