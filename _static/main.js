@@ -1,8 +1,8 @@
 let pLangIdx = 0;
 
 function doPostBack(name) {
-    document.getElementById("main_focus_id").value = name;
-    document.getElementById("main_form").submit();
+    $.main_focus_id.value = name;
+    $.main_form.submit();
 }
 
 function refreshAllPanelRects(numPanels, langIdx, langName) {
@@ -172,24 +172,24 @@ function toggleScanOptsPane(curScanDev) {
 }
 
 function kickOffScanJob() {
-    const txt = document.getElementById('sheetname');
+    const txt = $.sheetname;
     txt.value = txt.value.trim();
     if (!(txt.value && txt.value.length)) {
         txt.focus();
         alert("Sheet name missing but required.");
         return;
     }
-    const btn = document.getElementById('scanbtn');
+    const btn = $.scanbtn;
     btn.disabled = 'disabled';
     btn.innerText = 'Wait...';
-    const hid = document.getElementById('scannow');
+    const hid = $.scannow;
     hid.value = '1';
     doPostBack('');
 }
 
 function addBwtPreviewLinks(sheetVerSrcFilePath) {
-    document.getElementById('previewbwtlinks').innerHTML = '';
-    let nums = document.getElementById('previewbwt').value.split(',');
+    $.previewbwtlinks.innerHTML = '';
+    let nums = $.previewbwt.value.split(',');
     if (!(nums && nums.length)) {
         return;
     }
@@ -204,6 +204,6 @@ function addBwtPreviewLinks(sheetVerSrcFilePath) {
         const imgsrc = sheetVerSrcFilePath + "/" + nums[i];
         html += "<a id='previewbwtlink" + i + "' href='" + imgsrc + "' target='" + imgsrc.replace(/\//g, '_') + "'>&nbsp;" + nums[i] + "&nbsp;</a>"
     }
-    document.getElementById('previewbwtlinks').innerHTML = html;
-    document.getElementById('previewbwtlink0').focus()
+    $.previewbwtlinks.innerHTML = html;
+    $.previewbwtlink0.focus()
 }

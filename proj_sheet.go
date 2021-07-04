@@ -37,11 +37,14 @@ type SheetVerData struct {
 	dirPath         string
 	bwFilePath      string
 	bwSmallFilePath string
-	pngDirPath      string
 
 	PxCm       float64
 	GrayDistr  []int     `json:",omitempty"`
 	PanelsTree *ImgPanel `json:",omitempty"`
+}
+
+func (me *SheetVerData) PngDirPath(quali int) string {
+	return filepath.Join(me.dirPath, "__panelpng__"+itoa(int(App.Proj.BwThreshold))+"_"+ftoa(App.Proj.PanelBorderCm, -1)+"_"+itoa(quali))
 }
 
 type SheetVer struct {
@@ -90,11 +93,6 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	me.data.dirPath = ".csg/sv/" + me.id
 	me.data.bwFilePath = filepath.Join(me.data.dirPath, "bw."+itoa(int(App.Proj.BwThreshold))+".png")
 	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(App.Proj.BwThreshold))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
-	me.data.pngDirPath = "__panelpng__" + itoa(int(App.Proj.BwThreshold)) + "_" + ftoa(App.Proj.PanelBorderCm, -1)
-	for _, q := range App.Proj.Qualis {
-		me.data.pngDirPath += "_" + itoa(q.SizeHint)
-	}
-	me.data.pngDirPath = filepath.Join(me.data.dirPath, me.data.pngDirPath)
 
 	mkDir(me.data.dirPath)
 
@@ -143,9 +141,9 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 		numpanels++
 	})
 	for pidx := 0; pidx < numpanels && !force; pidx++ {
-		if (nil == fileStat(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(App.Proj.Qualis[0].SizeHint)+".png"))) ||
-			(nil == fileStat(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(App.Proj.Qualis[0].SizeHint)+"t.png"))) {
-			// nil==statFileOnly(filepath.Join(me.data.dirPath, itoa(pidx)+".svg"))
+		if pngdir := me.data.PngDirPath(App.Proj.Qualis[0].SizeHint); (nil == fileStat(filepath.Join(pngdir, itoa(pidx)+".png"))) ||
+			(nil == fileStat(filepath.Join(pngdir, itoa(pidx)+"t.png"))) {
+			// nil==statFileOnly(filepath.Join(pngdir, itoa(pidx)+".svg"))
 			force = true
 		}
 	}
@@ -159,10 +157,11 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 				rmDir(filepath.Join(me.data.dirPath, fileinfo.Name()))
 			}
 		}
+		for _, quali := range App.Proj.Qualis {
+			mkDir(me.data.PngDirPath(quali.SizeHint))
+		}
 	}
 
-	rmDir(me.data.pngDirPath)
-	mkDir(me.data.pngDirPath)
 	srcimgfile, err := os.Open(me.data.bwFilePath)
 	if err != nil {
 		panic(err)
@@ -187,7 +186,7 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 				var wassamesize bool
 				for k, transparent := range map[string]bool{"t": true, "": false} {
 					pngdata := imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, int(px1cm*App.Proj.PanelBorderCm), transparent, &wassamesize)
-					fileWrite(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(quali.SizeHint)+k+".png"), pngdata)
+					fileWrite(filepath.Join(me.data.PngDirPath(quali.SizeHint), itoa(pidx)+k+".png"), pngdata)
 				}
 				if wassamesize {
 					break

@@ -30,7 +30,7 @@ func guiMain(r *http.Request, notice string) []byte {
 			s += csssel + "{" + strings.Replace(strings.Join(csslines, ";"), "./", dirpref+"/", -1) + "}"
 		}
 	}
-	s += "</style><script type='text/javascript' language='javascript'>const svgTxtPerLineDyCmA4 = " + ftoa(App.Proj.Gen.PanelSvgText.PerLineDyCmA4, 8) + ", svgTxtFontSizeCmA4 = " + ftoa(App.Proj.Gen.PanelSvgText.FontSizeCmA4, 8) + ", numImagePanelTextAreas = " + itoa(App.Proj.MaxImagePanelTextAreas) + ";</script><script src='/main.js' type='text/javascript' language='javascript'></script>"
+	s += "</style><script type='text/javascript' language='javascript'>const $ = window, svgTxtPerLineDyCmA4 = " + ftoa(App.Proj.Gen.PanelSvgText.PerLineDyCmA4, 8) + ", svgTxtFontSizeCmA4 = " + ftoa(App.Proj.Gen.PanelSvgText.FontSizeCmA4, 8) + ", numImagePanelTextAreas = " + itoa(App.Proj.MaxImagePanelTextAreas) + ";</script><script src='/main.js' type='text/javascript' language='javascript'></script>"
 	s += "</head><body><form method='POST' action='/' id='main_form' novalidate='novalidate'>" + guiHtmlInput("hidden", "main_focus_id", fv("main_focus_id"), nil)
 	if notice != "" {
 		s += "<div class='notice'>" + hEsc(notice) + "</div>"
@@ -105,7 +105,7 @@ func guiMain(r *http.Request, notice string) []byte {
 
 	s += "</form></body>"
 	if rfv := fv("main_focus_id"); rfv != "" && rfv != "main_action" && notice == "" {
-		s += "<script language='javascript' type='text/javascript'>try { document.getElementById(\"" + rfv + "\").focus(); } catch (e) {alert(e);}</script></html>"
+		s += "<script language='javascript' type='text/javascript'>try { $." + rfv + ".focus(); } catch (e) {alert(e);}</script></html>"
 	}
 	return []byte(s)
 }

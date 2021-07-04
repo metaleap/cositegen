@@ -125,7 +125,7 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 				if qidx > 0 {
 					pref = strings.Repeat(" ", len(pref))
 				}
-				printLn("\t\t" + pref + "\t\t" + App.Proj.Qualis[qidx].Name + "(" + itoa(App.Proj.Qualis[qidx].SizeHint) + ")" + " => " + strSize64(totalsize))
+				printLn("\t\t" + pref + "\t\t" + App.Proj.Qualis[qidx].Name + "(" + itoa(App.Proj.Qualis[qidx].SizeHint) + ") => " + strSize64(totalsize))
 			}
 		}
 		return "for " + itoa(int(numpngs)) + " PNGs from " + itoa(int(numpanels)) + " panels in " + itoa(int(numsheets)) + " sheets"
@@ -235,7 +235,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numPngs uint32, numPanels
 			for qidx, quali := range App.Proj.Qualis {
 				var transparent string
 			copyone:
-				srcpath := filepath.Join(sv.data.pngDirPath, itoa(pidx)+"."+itoa(quali.SizeHint)+transparent+".png")
+				srcpath := filepath.Join(sv.data.PngDirPath(quali.SizeHint), itoa(pidx)+transparent+".png")
 				dstpath := filepath.Join(".build/"+App.Proj.Gen.PngDirName+"/", me.namePanelPng(sv.id, pidx, quali.SizeHint, transparent)+".png")
 				if fileinfo := fileStat(srcpath); fileinfo == nil {
 					break
@@ -341,7 +341,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 						if q.Name == qname {
 							me.page.QualList += " selected='selected'"
 						}
-						me.page.QualList += ">" + q.Name + " (" + strSize64(qsizes[i]) + ")" + "</option>"
+						me.page.QualList += ">" + q.Name + " (" + strSize64(qsizes[i]) + ")</option>"
 					}
 					me.page.QualList = "<select disabled='disabled' title='" + hEsc(me.textStr("QualityHint")) + "' name='" + App.Proj.Gen.IdQualiList + "' id='" + App.Proj.Gen.IdQualiList + "'>" + me.page.QualList + "</select>"
 					me.page.HrefDirLtr = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Ltr.Name, me.lang, svdt) + ".html"
@@ -407,7 +407,7 @@ func (me *siteGen) prepHomePage() {
 
 func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, svDt int64, pageNr int) map[string]int {
 	quali := App.Proj.Qualis[qIdx]
-	me.page.VersList, me.page.ChapTitle = "", locStr(chapter.Title, me.lang)
+	me.page.VersList, me.page.ChapTitle, svgTxtCounter = "", locStr(chapter.Title, me.lang), 0
 	for i, svdt := range chapter.versions {
 		var text string
 		if i == 0 {
@@ -659,7 +659,7 @@ func (me *siteGen) genSvgForPanel(sV *SheetVer, panelIdx int, panel *ImgPanel) s
 	}
 
 	pw, ph := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y
-	s := "<svg onload='this.style.visibility=\"hidden\";' viewbox='0 0 " + itoa(pw) + " " + itoa(ph) + "'>"
+	s := "<svg viewbox='0 0 " + itoa(pw) + " " + itoa(ph) + "'>"
 	for _, pta := range panelareas {
 		rx, ry, rw, rh := pta.Rect.Min.X-panel.Rect.Min.X, pta.Rect.Min.Y-panel.Rect.Min.Y, pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
 		borderandfill := pta.PointTo != nil

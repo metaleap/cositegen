@@ -269,10 +269,13 @@ func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, heig
 	return imgdst
 }
 
+var svgTxtCounter int
+
 func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bool, lineX int) (s string) {
 	aw, ah := pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
 	pxfont, pxline := int(px1cm*App.Proj.Gen.PanelSvgText.FontSizeCmA4), int(px1cm*App.Proj.Gen.PanelSvgText.PerLineDyCmA4)
-	s += "<text " + /*"x='0' y='0' "+*/ "style='font-size: " + itoa(pxfont) + "px' " + "transform='" + trim(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
+	svgTxtCounter++
+	s += "<text id='t" + itoa(svgTxtCounter) + "' style='font-size: " + itoa(pxfont) + "px' transform='" + trim(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
 	s += "<tspan style='" + trim(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'>"
 	for _, ln := range strings.Split(svgRepl.Replace(locStr(pta.Data, langId)), "\n") {
 		if ln == "" {
@@ -280,7 +283,7 @@ func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bo
 		}
 		s += "<tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>" + ln + "</tspan>"
 	}
-	s += "</tspan></text>"
+	s += "</tspan></text><script>$.t" + itoa(svgTxtCounter) + ".style.visibility='hidden';</script>"
 	if wrapInSvgTag {
 		s = "<svg viewbox='0 0 " + itoa(aw) + " " + itoa(ah) + "'>" + s + "</svg>"
 	}
