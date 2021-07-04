@@ -204,15 +204,15 @@ func (me *Chapter) Len() int              { return len(me.sheets) }
 func (me *Chapter) String() string        { return me.Name }
 
 func (me *Project) save() {
-	jsonSave(".cache/projdata.json", &me.data)
+	jsonSave(".cache/data.json", &me.data)
 	jsonSave("texts.json", me.data.Sv.textRects)
 }
 
 func (me *Project) load() (numSheetVers int) {
 	jsonLoad("comicsite.json", nil, me) // exits early if no such file, before creating work dirs:
 	mkDir(".cache")
-	if fileStat(".cache/projdata.json") != nil {
-		jsonLoad(".cache/projdata.json", nil, &me.data)
+	if fileStat(".cache/data.json") != nil {
+		jsonLoad(".cache/data.json", nil, &me.data)
 	}
 	if fileStat("texts.json") != nil {
 		jsonLoad("texts.json", nil, &me.data.Sv.textRects)
