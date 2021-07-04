@@ -205,18 +205,18 @@ func (me *Chapter) String() string        { return me.Name }
 
 func (me *Project) save() {
 	jsonSave(".cache/projdata.json", &me.data)
-	jsonSave("csgtexts.json", me.data.Sv.textRects)
+	jsonSave("texts.json", me.data.Sv.textRects)
 }
 
 func (me *Project) load() (numSheetVers int) {
-	jsonLoad("cosite.json", nil, me) // exits early if no such file, before creating work dirs:
+	jsonLoad("comicsite.json", nil, me) // exits early if no such file, before creating work dirs:
 	mkDir(".cache")
 	mkDir(".cache/sv")
 	if fileStat(".cache/projdata.json") != nil {
 		jsonLoad(".cache/projdata.json", nil, &me.data)
 	}
-	if fileStat("csgtexts.json") != nil {
-		jsonLoad("csgtexts.json", nil, &me.data.Sv.textRects)
+	if fileStat("texts.json") != nil {
+		jsonLoad("texts.json", nil, &me.data.Sv.textRects)
 	} else {
 		me.data.Sv.textRects = map[string][][]ImgPanelArea{}
 	}

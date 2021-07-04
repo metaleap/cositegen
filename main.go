@@ -16,7 +16,7 @@ var browserCmd = []string{"", "--new-window", "--single-process", "--user-data-d
 func main() {
 	App.StaticFilesDirPath = filepath.Join(os.Getenv("HOME"), "c/go/src/github.com/metaleap/cositegen/_static")
 	appDetectBrowser()
-	timedLogged("Loading project (cosite.json  &  csgtexts.json  &  .cache/projdata.json)...", func() string {
+	timedLogged("Loading project (comicsite.json  &  texts.json  &  .cache/projdata.json)...", func() string {
 		numsheets := App.Proj.load()
 		return "for " + itoa(numsheets) + " sheets"
 	})
