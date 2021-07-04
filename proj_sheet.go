@@ -78,7 +78,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 		shouldsaveprojdata = true
 		me.data = &SheetVerData{PxCm: 472.424242424} //1200dpi
 		{
-			pngdata := readFile(me.fileName)
+			pngdata := fileRead(me.fileName)
 			if img, _, err := image.Decode(bytes.NewReader(pngdata)); err != nil {
 				panic(err)
 			} else if w := img.Bounds().Max.X; w < 10000 {
@@ -112,7 +112,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 func (me *SheetVer) ensureBwSheetPngs(force bool) bool {
 	var exist1, exist2 bool
 	for fname, bptr := range map[string]*bool{me.data.bwFilePath: &exist1, me.data.bwSmallFilePath: &exist2} {
-		*bptr = (statFileOnly(fname) != nil)
+		*bptr = (fileStat(fname) != nil)
 	}
 
 	if force || !(exist1 && exist2) {
@@ -121,14 +121,14 @@ func (me *SheetVer) ensureBwSheetPngs(force bool) bool {
 		if file, err := os.Open(me.fileName); err != nil {
 			panic(err)
 		} else if data := imgToMonochrome(file, file.Close, uint8(App.Proj.BwThreshold)); data != nil {
-			writeFile(me.data.bwFilePath, data)
+			fileWrite(me.data.bwFilePath, data)
 		} else if err = os.Symlink("../../../"+me.fileName, me.data.bwFilePath); err != nil {
 			panic(err)
 		}
 		if file, err := os.Open(me.data.bwFilePath); err != nil {
 			panic(err)
 		} else if data := imgDownsized(file, file.Close, int(App.Proj.BwSmallWidth)); data != nil {
-			writeFile(me.data.bwSmallFilePath, data)
+			fileWrite(me.data.bwSmallFilePath, data)
 		} else if err = os.Symlink(filepath.Base(me.data.bwFilePath), me.data.bwSmallFilePath); err != nil {
 			panic(err)
 		}
@@ -143,8 +143,8 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 		numpanels++
 	})
 	for pidx := 0; pidx < numpanels && !force; pidx++ {
-		if (nil == statFileOnly(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(App.Proj.Qualis[0].SizeHint)+".png"))) ||
-			(nil == statFileOnly(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(App.Proj.Qualis[0].SizeHint)+"t.png"))) {
+		if (nil == fileStat(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(App.Proj.Qualis[0].SizeHint)+".png"))) ||
+			(nil == fileStat(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(App.Proj.Qualis[0].SizeHint)+"t.png"))) {
 			// nil==statFileOnly(filepath.Join(me.data.dirPath, itoa(pidx)+".svg"))
 			force = true
 		}
@@ -187,7 +187,7 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 				var wassamesize bool
 				for k, transparent := range map[string]bool{"t": true, "": false} {
 					pngdata := imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, int(px1cm*App.Proj.PanelBorderCm), transparent, &wassamesize)
-					writeFile(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(quali.SizeHint)+k+".png"), pngdata)
+					fileWrite(filepath.Join(me.data.pngDirPath, itoa(pidx)+"."+itoa(quali.SizeHint)+k+".png"), pngdata)
 				}
 				if wassamesize {
 					break
@@ -195,7 +195,7 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 			}
 			if false {
 				svgdata := imgVectorizeToSvg(imgsrc.(*image.Gray), panel.Rect)
-				writeFile(filepath.Join(me.data.dirPath, itoa(pidx)+".svg"), svgdata)
+				fileWrite(filepath.Join(me.data.dirPath, itoa(pidx)+".svg"), svgdata)
 			}
 			work.Done()
 		}(pidx)

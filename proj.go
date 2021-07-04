@@ -214,10 +214,10 @@ func (me *Project) load() (numSheetVers int) {
 	mkDir(".csg")
 	mkDir(".csg/tmp")
 	mkDir(".csg/sv")
-	if statFileOnly(".csg/projdata.json") != nil {
+	if fileStat(".csg/projdata.json") != nil {
 		jsonLoad(".csg/projdata.json", nil, &me.data)
 	}
-	if statFileOnly("csgtexts.json") != nil {
+	if fileStat("csgtexts.json") != nil {
 		jsonLoad("csgtexts.json", nil, &me.data.Sv.textRects)
 	} else {
 		me.data.Sv.textRects = map[string][][]ImgPanelArea{}
@@ -282,7 +282,7 @@ func (me *Project) load() (numSheetVers int) {
 
 					work.Add(1)
 					go func(sv *SheetVer) {
-						data := readFile(sv.fileName)
+						data := fileRead(sv.fileName)
 						sv.id = contentHashStr(data)
 						work.Lock()
 						App.Proj.data.Sv.fileNamesToIds[sv.fileName] = sv.id

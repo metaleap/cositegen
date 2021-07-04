@@ -111,11 +111,11 @@ func appPrepWork(fromGui bool) {
 				_ = os.Remove(thumbfilepath)
 			}
 			if len(thumbsrcfilenames) > 0 && App.Proj.NumSheetsInHomeBgs > 0 &&
-				(didanywork || nil == statFileOnly(thumbfilepath)) {
+				(didanywork || nil == fileStat(thumbfilepath)) {
 				if len(thumbsrcfilenames) > App.Proj.NumSheetsInHomeBgs {
 					thumbsrcfilenames = thumbsrcfilenames[len(thumbsrcfilenames)-App.Proj.NumSheetsInHomeBgs:]
 				}
-				writeFile(thumbfilepath, imgStitchHorizontally(thumbsrcfilenames, 320, 44, color.NRGBA{0, 0, 0, 0}))
+				fileWrite(thumbfilepath, imgStitchHorizontally(thumbsrcfilenames, 320, 44, color.NRGBA{0, 0, 0, 0}))
 			}
 		}
 		App.Proj.allPrepsDone = true
@@ -133,7 +133,7 @@ func pngOptsLoop() {
 	for dirfs := os.DirFS("."); !App.Gui.Exiting; time.Sleep(time.Minute) {
 		dels := false
 		for k := range App.Proj.data.PngOpt {
-			if statFileOnly(k) == nil {
+			if fileStat(k) == nil {
 				delete(App.Proj.data.PngOpt, k)
 				dels = true
 			}
@@ -168,7 +168,7 @@ func pngOptsLoop() {
 			if App.Gui.Exiting {
 				return
 			}
-			curfiledata := readFile(pngfilename)
+			curfiledata := fileRead(pngfilename)
 			lastopt, skip := App.Proj.data.PngOpt[pngfilename]
 			if skip = skip && (lastopt[1] == itoa(len(curfiledata))) &&
 				(lastopt[2] == string(contentHashStr(curfiledata))); skip {
@@ -211,6 +211,6 @@ type FilePathsSortingByFileSize []string
 func (me FilePathsSortingByFileSize) Len() int          { return len(me) }
 func (me FilePathsSortingByFileSize) Swap(i int, j int) { me[i], me[j] = me[j], me[i] }
 func (me FilePathsSortingByFileSize) Less(i int, j int) bool {
-	fi1, fi2 := statFileOnly(me[i]), statFileOnly(me[j])
+	fi1, fi2 := fileStat(me[i]), fileStat(me[j])
 	return fi1 == nil || fi2 == nil || fi1.Size() < fi2.Size()
 }

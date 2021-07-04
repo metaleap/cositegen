@@ -301,7 +301,7 @@ func imgDrawRect(imgDst *image.Gray, rect image.Rectangle, thickness int, gray u
 func imgStitchHorizontally(fileNames []string, height int, gapWidth int, gapColor color.Color) []byte {
 	totalwidth, srcimgs := 0, make(map[image.Image]int, len(fileNames))
 	for _, fname := range fileNames {
-		data := readFile(fname)
+		data := fileRead(fname)
 		if img, _, err := image.Decode(bytes.NewReader(data)); err != nil {
 			panic(err)
 		} else {

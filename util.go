@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -68,11 +69,17 @@ func percent(hundred int, val int) int {
 	return 100 / (hundred / val)
 }
 
-func copyFile(srcPath string, dstPath string) {
-	writeFile(dstPath, readFile(srcPath))
+func fileLinkOrCopy(srcPath string, dstPath string) {
+	if os.Getenv("NOLINKS") != "" {
+		fileWrite(dstPath, fileRead(srcPath))
+	} else if srcpathabs, err := filepath.Abs(srcPath); err != nil {
+		panic(err)
+	} else if err := os.Symlink(srcpathabs, dstPath); err != nil {
+		panic(err)
+	}
 }
 
-func readFile(fileName string) []byte {
+func fileRead(fileName string) []byte {
 	data, err := os.ReadFile(fileName)
 	if err != nil {
 		panic(err)
@@ -80,7 +87,7 @@ func readFile(fileName string) []byte {
 	return data
 }
 
-func writeFile(fileName string, data []byte) {
+func fileWrite(fileName string, data []byte) {
 	tmpfilename := fileName + "." + strconv.FormatInt(time.Now().UnixNano(), 36)
 	if err := os.WriteFile(tmpfilename, data, os.ModePerm); err != nil {
 		_ = os.Remove(tmpfilename)
@@ -91,7 +98,7 @@ func writeFile(fileName string, data []byte) {
 	}
 }
 
-func statFileOnly(fileName string) os.FileInfo {
+func fileStat(fileName string) os.FileInfo {
 	fileinfo, err := os.Stat(fileName)
 	if err != nil && !os.IsNotExist(err) {
 		panic(err)
@@ -122,7 +129,7 @@ func contentHashStr(content []byte) (s string) {
 func jsonLoad(eitherFileName string, orBytes []byte, intoPtr Any) {
 	data := orBytes
 	if eitherFileName != "" {
-		data = readFile(eitherFileName)
+		data = fileRead(eitherFileName)
 	}
 	if err := json.Unmarshal(data, intoPtr); err != nil {
 		panic(err)
@@ -134,7 +141,7 @@ func jsonSave(fileName string, obj Any) {
 	if err != nil {
 		panic(err)
 	}
-	writeFile(fileName, data)
+	fileWrite(fileName, data)
 }
 
 func locStr(m map[string]string, langId string) (s string) {

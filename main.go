@@ -32,10 +32,12 @@ func main() {
 		}
 		appOnExit()
 	} else {
-		go scanDevicesDetection()
-		go httpListenAndServe()
 		go appPrepWork(true)
-		go launchGuiInKioskyBrowser()
+		if App.Gui.BrowserPid = -1; os.Getenv("NOGUI") == "" {
+			go scanDevicesDetection()
+			go httpListenAndServe()
+			go launchGuiInKioskyBrowser()
+		}
 		for App.Gui.Exiting = false; !App.Gui.Exiting; time.Sleep(time.Second) {
 			appbusy := (scanJob != nil) || (scanDevices == nil) ||
 				(0 < atomic.LoadInt32(&numBusyRequests)) || !App.Proj.allPrepsDone
@@ -49,7 +51,6 @@ func main() {
 }
 
 func launchGuiInKioskyBrowser() {
-	App.Gui.BrowserPid = -1
 	cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=http://localhost:4321")...)
 	if err := cmd.Start(); err != nil {
 		panic(err)

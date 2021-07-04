@@ -179,7 +179,7 @@ func (me *siteGen) copyStaticFiles(relDirPath string) (numFilesWritten int) {
 				mkDir(dstpath)
 				numFilesWritten += me.copyStaticFiles(relpath)
 			} else if fn != siteTmplFileName {
-				data := readFile(filepath.Join(srcdirpath, fn))
+				data := fileRead(filepath.Join(srcdirpath, fn))
 				if App.Proj.Gen.PanelSvgText.AppendToFiles[relpath] {
 					for csssel, csslines := range App.Proj.Gen.PanelSvgText.Css {
 						if csssel != "" {
@@ -190,7 +190,7 @@ func (me *siteGen) copyStaticFiles(relDirPath string) (numFilesWritten int) {
 						}
 					}
 				}
-				writeFile(dstpath, data)
+				fileWrite(dstpath, data)
 				numFilesWritten++
 			}
 		}
@@ -237,12 +237,10 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numPngs uint32, numPanels
 			copyone:
 				srcpath := filepath.Join(sv.data.pngDirPath, itoa(pidx)+"."+itoa(quali.SizeHint)+transparent+".png")
 				dstpath := filepath.Join(".build/"+App.Proj.Gen.PngDirName+"/", me.namePanelPng(sv.id, pidx, quali.SizeHint, transparent)+".png")
-				if fileinfo := statFileOnly(srcpath); fileinfo == nil {
+				if fileinfo := fileStat(srcpath); fileinfo == nil {
 					break
 				} else {
-					if err := os.Symlink("../../"+srcpath, dstpath); err != nil {
-						panic(err)
-					}
+					fileLinkOrCopy(srcpath, dstpath)
 					if me.onPngSize != nil {
 						me.onPngSize(sv.parentSheet.parentChapter, sv.id+itoa(pidx), qidx, fileinfo.Size())
 					}
@@ -327,7 +325,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 						for contenthash, maxpidx := range allpanels {
 							for pidx := 0; pidx <= maxpidx; pidx++ {
 								name := me.namePanelPng(contenthash, pidx, q.SizeHint, "")
-								if fileinfo := statFileOnly(strings.ToLower(".build/" + App.Proj.Gen.PngDirName + "/" + name + ".png")); fileinfo != nil {
+								if fileinfo := fileStat(strings.ToLower(".build/" + App.Proj.Gen.PngDirName + "/" + name + ".png")); fileinfo != nil {
 									totalimgsize += fileinfo.Size()
 								}
 							}
@@ -590,7 +588,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			hqsrc, name := "", me.namePanelPng(sv.id, pidx, App.Proj.Qualis[0].SizeHint, "")
 			for i := qIdx; i >= 0; i-- {
 				hqsrc = me.namePanelPng(sv.id, pidx, App.Proj.Qualis[i].SizeHint, "")
-				if fileinfo := statFileOnly(".build/" + App.Proj.Gen.PngDirName + "/" + hqsrc + ".png"); fileinfo != nil && fileinfo.Size() > 0 {
+				if fileinfo := fileStat(".build/" + App.Proj.Gen.PngDirName + "/" + hqsrc + ".png"); fileinfo != nil && fileinfo.Size() > 0 {
 					break
 				}
 			}
@@ -763,7 +761,7 @@ func (me *siteGen) genPageExecAndWrite(name string) (numFilesWritten int) {
 	if err := me.tmpl.ExecuteTemplate(buf, "_tmpl.html", &me.page); err != nil {
 		panic(err)
 	}
-	writeFile(".build/"+strings.ToLower(name)+".html", buf.Bytes())
+	fileWrite(".build/"+strings.ToLower(name)+".html", buf.Bytes())
 	numFilesWritten++
 	return
 }
@@ -830,7 +828,7 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 		s += `<updated>` + af.PubDates[0] + `T00:00:00Z</updated><title>` + af.Title + `</title><link href="` + af.LinkHref + `"/><id>` + af.LinkHref + "</id>"
 		s += "\n" + strings.Join(xmls, "\n")
 	}
-	writeFile(".build/"+af.Name+"."+me.lang+".atom", []byte(s+"\n</feed>"))
+	fileWrite(".build/"+af.Name+"."+me.lang+".atom", []byte(s+"\n</feed>"))
 	numFilesWritten++
 	return
 }
@@ -838,11 +836,9 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 func (me *siteGen) copyHomeThumbsPngs() (numPngs uint32) {
 	for _, series := range App.Proj.Series {
 		thumbfilename := me.nameThumb(series) + ".png"
-		if srcfilepath, dstfilepath := ".csg/sv/"+thumbfilename, ".build/"+App.Proj.Gen.PngDirName+"/"+thumbfilename; statFileOnly(srcfilepath) != nil {
+		if srcfilepath, dstfilepath := ".csg/sv/"+thumbfilename, ".build/"+App.Proj.Gen.PngDirName+"/"+thumbfilename; fileStat(srcfilepath) != nil {
 			numPngs++
-			if err := os.Symlink("../../"+srcfilepath, dstfilepath); err != nil {
-				panic(err)
-			}
+			fileLinkOrCopy(srcfilepath, dstfilepath)
 		}
 	}
 	return
