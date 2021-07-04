@@ -44,7 +44,7 @@ type SheetVerData struct {
 }
 
 func (me *SheetVerData) PngDirPath(quali int) string {
-	return filepath.Join(me.dirPath, "__panelpng__"+itoa(int(App.Proj.BwThreshold))+"_"+ftoa(App.Proj.PanelBorderCm, -1)+"_"+itoa(quali))
+	return filepath.Join(me.dirPath, "__panels__"+itoa(int(App.Proj.BwThreshold))+"_"+ftoa(App.Proj.PanelBorderCm, -1)+"_"+itoa(quali))
 }
 
 type SheetVer struct {
@@ -146,11 +146,10 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 	}
 	for pidx, pngdir := 0, me.data.PngDirPath(App.Proj.Qualis[0].SizeHint); pidx < numpanels && !force; pidx++ {
 		force = (nil == fileStat(filepath.Join(pngdir, itoa(pidx)+".png"))) ||
-			(nil == fileStat(filepath.Join(pngdir, itoa(pidx)+"t.png"))) //||
-		// (nil == fileStat(filepath.Join(pngdir, itoa(pidx)+".svg")))
+			(nil == fileStat(filepath.Join(pngdir, itoa(pidx)+"t.png")))
 	}
 	for _, fileinfo := range diritems {
-		if rm, name := force, fileinfo.Name(); fileinfo.IsDir() && strings.HasPrefix(name, "__panelpng__") {
+		if rm, name := force, fileinfo.Name(); fileinfo.IsDir() && strings.HasPrefix(name, "__panels__") {
 			if got, qstr := false, name[strings.LastIndexByte(name, '_')+1:]; (!rm) && qstr != "" {
 				q, _ := strconv.ParseUint(qstr, 10, 64)
 				for _, quali := range App.Proj.Qualis {
