@@ -133,7 +133,7 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 
 	timedLogged("SiteGen: generating markup files...", func() string {
 		numfileswritten := 0
-		me.tmpl, err = template.New("foo").ParseFiles(siteTmplDirName + "/_tmpl.html")
+		me.tmpl, err = template.New("foo").ParseFiles(siteTmplDirName + "/site.html")
 		if err != nil {
 			panic(err)
 		}
@@ -758,7 +758,7 @@ func (me *siteGen) genPageExecAndWrite(name string) (numFilesWritten int) {
 	}
 
 	buf := bytes.NewBuffer(nil)
-	if err := me.tmpl.ExecuteTemplate(buf, "_tmpl.html", &me.page); err != nil {
+	if err := me.tmpl.ExecuteTemplate(buf, "site.html", &me.page); err != nil {
 		panic(err)
 	}
 	fileWrite(".build/"+strings.ToLower(name)+".html", buf.Bytes())
@@ -836,7 +836,7 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 func (me *siteGen) copyHomeThumbsPngs() (numPngs uint32) {
 	for _, series := range App.Proj.Series {
 		thumbfilename := me.nameThumb(series) + ".png"
-		if srcfilepath, dstfilepath := ".cache/sv/"+thumbfilename, ".build/"+App.Proj.Gen.PngDirName+"/"+thumbfilename; fileStat(srcfilepath) != nil {
+		if srcfilepath, dstfilepath := ".cache/"+thumbfilename, ".build/"+App.Proj.Gen.PngDirName+"/"+thumbfilename; fileStat(srcfilepath) != nil {
 			numPngs++
 			fileLinkOrCopy(srcfilepath, dstfilepath)
 		}

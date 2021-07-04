@@ -182,7 +182,7 @@ func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 			Id:     strconv.FormatInt(time.Now().UnixNano(), 36),
 			Series: series, Chapter: chapter, Opts: map[string]string{},
 		}
-		sj.PnmFileName, sj.PngFileName = "/dev/shm/csg"+sj.Id+".pnm", "sheets/"+series.Name+"/"+chapter.Name+"/"+sheetname+"."+sheetvername+".png"
+		sj.PnmFileName, sj.PngFileName = "/dev/shm/csg"+sj.Id+".pnm", "scans/"+series.Name+"/"+chapter.Name+"/"+sheetname+"."+sheetvername+".png"
 		for _, sd := range scanDevices {
 			if sd.Ident == fv("scandev") {
 				sj.Dev = sd

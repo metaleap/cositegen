@@ -211,7 +211,6 @@ func (me *Project) save() {
 func (me *Project) load() (numSheetVers int) {
 	jsonLoad("comicsite.json", nil, me) // exits early if no such file, before creating work dirs:
 	mkDir(".cache")
-	mkDir(".cache/sv")
 	if fileStat(".cache/projdata.json") != nil {
 		jsonLoad(".cache/projdata.json", nil, &me.data)
 	}
@@ -230,7 +229,7 @@ func (me *Project) load() (numSheetVers int) {
 	}
 
 	for _, series := range me.Series {
-		series.parentProj, series.dirPath = me, "sheets/"+series.Name
+		series.parentProj, series.dirPath = me, "scans/"+series.Name
 		if series.UrlName == "" {
 			series.UrlName = series.Name
 		}
@@ -319,7 +318,7 @@ func (me *Project) load() (numSheetVers int) {
 	for svid := range me.data.Sv.ById {
 		if me.data.Sv.IdsToFileNames[svid] == "" {
 			delete(me.data.Sv.ById, svid)
-			rmDir(".cache/sv/" + svid)
+			rmDir(".cache/" + svid)
 		}
 	}
 	return

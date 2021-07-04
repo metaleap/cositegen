@@ -105,7 +105,7 @@ func appPrepWork(fromGui bool) {
 					}
 				}
 			}
-			thumbfilepath := ".cache/sv/" + siteGen{}.nameThumb(series) + ".png"
+			thumbfilepath := ".cache/" + siteGen{}.nameThumb(series) + ".png"
 			if didanywork || len(thumbsrcfilenames) == 0 || App.Proj.NumSheetsInHomeBgs == 0 {
 				_ = os.Remove(thumbfilepath)
 			}
