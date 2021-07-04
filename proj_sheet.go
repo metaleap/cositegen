@@ -251,8 +251,12 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 			x, y, w, h := p.Rect.Min.X, p.Rect.Min.Y, p.Rect.Max.X-p.Rect.Min.X, p.Rect.Max.Y-p.Rect.Min.Y
 			svg += `<rect x="` + itoa(x) + `" y="` + itoa(y) + `" style="opacity: 0.5"
 				fill="` + fmt.Sprintf("#%X%X%X", r, g, b) + `"  stroke="#ff0000"
-				stroke-width="88" width="` + itoa(w) + `" height="` + itoa(h) + `"></rect>
+				stroke-width="44" width="` + itoa(w) + `" height="` + itoa(h) + `"></rect>
 			`
+			if true {
+				svg += `<rect stroke-width="22" stroke="#ffcc00" x="` + itoa(x+(w/2)) + `" y="` + itoa(y) + `" width="22" height="` + itoa(h) + `"></rect>`
+				svg += `<rect stroke-width="22" stroke="#ffcc00" x="` + itoa(x) + `" y="` + itoa(y+(h/2)) + `" width="` + itoa(w) + `" height="22"></rect>`
+			}
 		})
 		fileWrite(bgtmplsvgfilepath, []byte(svg+"</svg>"))
 	}

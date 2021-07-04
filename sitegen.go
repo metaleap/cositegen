@@ -629,7 +629,10 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			}
 			if bgsvg := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + "bg.svg"); bgsvg != nil {
 				pr := panel.Rect
-				s += " style='background-size: " + itoa(pr.Max.X-pr.Min.X) + " auto; background-image:url(\"./" + App.Proj.Gen.PicDirName + "/" + sv.id + "bg.svg\"); background-position: -" + itoa(pr.Min.X) + "px -" + itoa(pr.Min.Y) + "px;'"
+				pw, sw, sh := pr.Max.X-pr.Min.X, sv.data.PanelsTree.Rect.Max.X, sv.data.PanelsTree.Rect.Max.Y
+				pwp := float64(sw) / float64(pw)
+				pxp, pyp := 100.0/(float64(sw)/float64(pr.Min.X)), 100.0/(float64(sh)/float64(pr.Min.Y))
+				s += " style='background-size: " + ftoa((100.0*pwp)-1.0, 8) + "% auto; background-image:url(\"./" + App.Proj.Gen.PicDirName + "/" + sv.id + "bg.svg\"); background-position: " + ftoa(pxp, 8) + "% " + ftoa(pyp, 8) + "%;'"
 			}
 			s += "/>"
 			s += "</div>"
