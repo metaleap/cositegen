@@ -306,7 +306,7 @@ func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 
 func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s string) {
 	sv.ensurePrep(false, false)
-	numpanels, maxpanelwidth, bwsrc, maxnumareas := 0, 0, fv("srcpx"), sv.maxNumTextAreas()
+	numpanels, maxpanelwidth, bwsrc := 0, 0, fv("srcpx")
 	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
 		numpanels++
 		if w := panel.Rect.Max.X - panel.Rect.Min.X; w > maxpanelwidth {
@@ -384,15 +384,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	if fv("main_focus_id") == "importpaneltexts" {
 		*shouldSaveMeta, importfrom = true, fv("importpaneltexts")
 	}
-	s += "<li><label for='plang'>Default to showing</label> "
-	for i, lang := range App.Proj.Langs {
-		attrs := A{"name": "plang", "onclick": "refreshAllPanelRects(" + itoa(numpanels) + "," + itoa(i) + ",\"" + lang + "\");"}
-		if _ = maxnumareas; i == 0 {
-			attrs["checked"] = "checked"
-		}
-		s += "&nbsp;&nbsp;" + guiHtmlInput("radio", "plang"+itoa(i), itoa(i), attrs) + "<label for='plang" + itoa(i) + "'>" + lang + "</label>"
-	}
-	s += "</li><li>Default to "
+	s += "<li>Default to "
 	numtextrects := fv("numtextrects")
 	if ui, err := strconv.ParseUint(numtextrects, 10, 64); err != nil {
 		numtextrects = itoa(intLim(sv.maxNumTextAreas(), 1, App.Proj.MaxImagePanelTextAreas))
@@ -473,7 +465,11 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Max.X-panel.Rect.Min.X) + ", " + itoa(panel.Rect.Max.Y-panel.Rect.Min.Y) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + ftoa(sv.data.PxCm, 8) + ", '" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "', " + ftoa(App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm, 8) + ");"
 		btnhtml := guiHtmlButton(pid+"save", "Save changes (all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 
-		s += "<hr/><h4 id='pa" + sv.id + itoa(pidx) + "'><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(len(sv.panelAreas(pidx))) + " text rect/s" + "</h4><div>Panel coords: " + rect.String() + "</div>"
+		s += "<hr/><h4 id='pa" + sv.id + itoa(pidx) + "'><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(len(sv.panelAreas(pidx))) + " text rect/s"
+		for i, lang := range App.Proj.Langs {
+			s += "&nbsp;&nbsp;<a href='javascript:refreshAllPanelRects(" + itoa(numpanels) + "," + itoa(i) + ",\"" + lang + "\");'><b>" + lang + "</b></a>"
+		}
+		s += "</h4><div>Panel coords: " + rect.String() + "</div>"
 
 		s += "<table><tr><td>"
 		s += "<div class='panel' style='zoom: " + itoa(zoom) + "%;' onclick='onPanelClick(\"" + pid + "\")'>"
