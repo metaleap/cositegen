@@ -56,7 +56,7 @@ type siteGen struct {
 	page       PageGen
 	lang       string
 	dirRtl     bool
-	onPngSize  func(*Chapter, string, int, int64)
+	onPicSize  func(*Chapter, string, int, int64)
 	sheetPgNrs map[*SheetVer]int
 }
 
@@ -74,7 +74,7 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 	}
 	rmDir(".build")
 	mkDir(".build")
-	mkDir(".build/" + App.Proj.Gen.PngDirName)
+	mkDir(".build/" + App.Proj.Gen.PicDirName)
 
 	timedLogged("SiteGen: copying static files to .build...", func() string {
 		if App.Proj.Gen.PanelSvgText.AppendToFiles == nil {
@@ -92,7 +92,7 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 			}
 		}
 		var mu sync.Mutex
-		me.onPngSize = func(chapter *Chapter, id string, qidx int, size int64) {
+		me.onPicSize = func(chapter *Chapter, id string, qidx int, size int64) {
 			mu.Lock()
 			m := chapterqstats[chapter]
 			sl := m[id]
@@ -103,7 +103,7 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 			m[id] = sl
 			mu.Unlock()
 		}
-		numpngs, numsheets, numpanels := me.genOrCopyPanelPics()
+		numsvgs, numpngs, numsheets, numpanels := me.genOrCopyPanelPics()
 		numpngs += me.copyHomeThumbsPngs()
 		qstats := make(map[*Chapter][]int64, len(chapterqstats))
 		for chapter, namesandsizes := range chapterqstats {
@@ -118,7 +118,7 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 			}
 			qstats[chapter] = chq
 			for qidx, totalsize := range chq {
-				if (min == 0 || totalsize < min) && App.Proj.Qualis[qidx].SizeHint <= 4096 {
+				if (min == 0 || totalsize < min) && App.Proj.Qualis[qidx].SizeHint <= 4096 && App.Proj.Qualis[qidx].SizeHint > 0 {
 					min, chapter.defaultQuali = totalsize, qidx
 				}
 				pref := chapter.Name
@@ -128,7 +128,7 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 				printLn("\t\t" + pref + "\t\t" + App.Proj.Qualis[qidx].Name + "(" + itoa(App.Proj.Qualis[qidx].SizeHint) + ") => " + strSize64(totalsize))
 			}
 		}
-		return "for " + itoa(int(numpngs)) + " PNGs from " + itoa(int(numpanels)) + " panels in " + itoa(int(numsheets)) + " sheets"
+		return "for " + itoa(int(numpngs)) + " PNGs & " + itoa(int(numsvgs)) + " SVGs from " + itoa(int(numpanels)) + " panels in " + itoa(int(numsheets)) + " sheets"
 	})
 
 	timedLogged("SiteGen: generating markup files...", func() string {
@@ -198,10 +198,11 @@ func (me *siteGen) copyStaticFiles(relDirPath string) (numFilesWritten int) {
 	return
 }
 
-func (me *siteGen) genOrCopyPanelPics() (numPngs uint32, numSheets uint32, numPanels uint32) {
+func (me *siteGen) genOrCopyPanelPics() (numSvgs uint32, numPngs uint32, numSheets uint32, numPanels uint32) {
 	var work sync.WaitGroup
 	atomic.StoreUint32(&numSheets, 0)
 	atomic.StoreUint32(&numPngs, 0)
+	atomic.StoreUint32(&numSvgs, 0)
 	atomic.StoreUint32(&numPanels, 0)
 	for _, series := range App.Proj.Series {
 		for _, chapter := range series.Chapters {
@@ -209,10 +210,11 @@ func (me *siteGen) genOrCopyPanelPics() (numPngs uint32, numSheets uint32, numPa
 				work.Add(1)
 				go func(chapter *Chapter, sheet *Sheet) {
 					for _, sv := range sheet.versions {
-						npngs, npnls := me.genOrCopyPanelPicsOf(sv)
+						nsvgs, npngs, npnls := me.genOrCopyPanelPicsOf(sv)
 						atomic.AddUint32(&numSheets, 1)
 						atomic.AddUint32(&numPngs, npngs)
 						atomic.AddUint32(&numPanels, npnls)
+						atomic.AddUint32(&numSvgs, nsvgs)
 					}
 					work.Done()
 				}(chapter, sheet)
@@ -223,9 +225,10 @@ func (me *siteGen) genOrCopyPanelPics() (numPngs uint32, numSheets uint32, numPa
 	return
 }
 
-func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numPngs uint32, numPanels uint32) {
+func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs uint32, numPanels uint32) {
 	sv.ensurePrep(false, false)
 	atomic.StoreUint32(&numPngs, 0)
+	atomic.StoreUint32(&numSvgs, 0)
 	var pidx int
 	var work sync.WaitGroup
 	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
@@ -233,22 +236,21 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numPngs uint32, numPanels
 		numPanels++
 		go func(pidx int) {
 			for qidx, quali := range App.Proj.Qualis {
-				var transparent string
-			copyone:
-				srcpath := filepath.Join(sv.data.PngDirPath(quali.SizeHint), itoa(pidx)+transparent+".png")
-				dstpath := filepath.Join(".build/"+App.Proj.Gen.PngDirName+"/", me.namePanelPng(sv.id, pidx, quali.SizeHint, transparent)+".png")
-				if fileinfo := fileStat(srcpath); fileinfo == nil {
+				fext := strIf(quali.SizeHint == 0, ".svg", ".png")
+				srcpath := filepath.Join(sv.data.PicDirPath(quali.SizeHint), itoa(pidx)+fext)
+				dstpath := filepath.Join(".build/"+App.Proj.Gen.PicDirName+"/", me.namePanelPic(sv.id, pidx, quali.SizeHint)+fext)
+				if fileinfo := fileStat(srcpath); fileinfo == nil && quali.SizeHint != 0 {
 					break
 				} else {
 					fileLinkOrCopy(srcpath, dstpath)
-					if me.onPngSize != nil {
-						me.onPngSize(sv.parentSheet.parentChapter, sv.id+itoa(pidx), qidx, fileinfo.Size())
+					if me.onPicSize != nil {
+						me.onPicSize(sv.parentSheet.parentChapter, sv.id+itoa(pidx), qidx, fileinfo.Size())
 					}
-					atomic.AddUint32(&numPngs, 1)
-				}
-				if transparent == "" {
-					transparent = "t"
-					goto copyone
+					if quali.SizeHint == 0 {
+						atomic.AddUint32(&numSvgs, 1)
+					} else {
+						atomic.AddUint32(&numPngs, 1)
+					}
 				}
 			}
 			work.Done()
@@ -314,18 +316,18 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 			author = strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", author, 1)
 		}
 		me.page.PageDesc = hEsc(locStr(series.Desc, me.lang)) + author
-		for _, viewmode := range viewModes {
-			me.page.PageCssClasses = App.Proj.Gen.ClsChapter + viewmode
-			for _, svdt := range chapter.versions {
-				for qidx, quali := range App.Proj.Qualis {
+		for qidx, quali := range App.Proj.Qualis {
+			for _, viewmode := range viewModes {
+				me.page.PageCssClasses = App.Proj.Gen.ClsChapter + viewmode
+				for _, svdt := range chapter.versions {
 					qname, qsizes, allpanels := quali.Name, map[int]int64{}, me.prepSheetPage(qidx, viewmode, chapter, svdt, pageNr)
 					me.page.QualList = ""
 					for i, q := range App.Proj.Qualis {
 						var totalimgsize int64
 						for contenthash, maxpidx := range allpanels {
 							for pidx := 0; pidx <= maxpidx; pidx++ {
-								name := me.namePanelPng(contenthash, pidx, q.SizeHint, "")
-								if fileinfo := fileStat(strings.ToLower(".build/" + App.Proj.Gen.PngDirName + "/" + name + ".png")); fileinfo != nil {
+								name := me.namePanelPic(contenthash, pidx, q.SizeHint)
+								if fileinfo := fileStat(strings.ToLower(".build/" + App.Proj.Gen.PicDirName + "/" + name + strIf(q.SizeHint == 0, ".svg", ".png"))); fileinfo != nil {
 									totalimgsize += fileinfo.Size()
 								}
 							}
@@ -366,7 +368,7 @@ func (me *siteGen) prepHomePage() {
 		if authorinfo != "" {
 			authorinfo = strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", authorinfo, 1)
 		}
-		s += "<span class='" + App.Proj.Gen.ClsSeries + "' style='animation-direction: " + cssanimdirs[i%2] + "; background-image: url(\"./" + App.Proj.Gen.PngDirName + "/" + me.nameThumb(series) + ".png\");'><span><h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + "</h5><div class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Desc, me.lang)) + authorinfo + "</div>"
+		s += "<span class='" + App.Proj.Gen.ClsSeries + "' style='animation-direction: " + cssanimdirs[i%2] + "; background-image: url(\"./" + App.Proj.Gen.PicDirName + "/" + me.nameThumb(series) + ".png\");'><span><h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + "</h5><div class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Desc, me.lang)) + authorinfo + "</div>"
 		s += "<ul class='" + App.Proj.Gen.ClsSeries + "'>"
 		for _, chapter := range series.Chapters {
 			s += "<li class='" + App.Proj.Gen.ClsChapter + "'>"
@@ -536,7 +538,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			me.page.ViewerList += " vc"
 		}
 		me.page.ViewerList += "'>"
-		if n := me.namePage(chapter, App.Proj.Qualis[qIdx].SizeHint, pageNr, viewmode, "", me.lang, svDt); viewmode == viewMode {
+		if n := me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svDt); viewmode == viewMode {
 			me.page.HrefViewCur = "./" + n + ".html"
 			me.page.ViewerList += "<b>&nbsp;</b>"
 		} else {
@@ -587,14 +589,14 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 
 		} else {
 			allpanels[sv.id] = pidx
-			hqsrc, name := "", me.namePanelPng(sv.id, pidx, App.Proj.Qualis[0].SizeHint, "")
-			for i := qIdx; i >= 0; i-- {
-				hqsrc = me.namePanelPng(sv.id, pidx, App.Proj.Qualis[i].SizeHint, "")
-				if fileinfo := fileStat(".build/" + App.Proj.Gen.PngDirName + "/" + hqsrc + ".png"); fileinfo != nil && fileinfo.Size() > 0 {
+			hqsrc, name := "", me.namePanelPic(sv.id, pidx, App.Proj.Qualis[0].SizeHint)
+			for i := qIdx; i > 0; i-- {
+				hqsrc = me.namePanelPic(sv.id, pidx, App.Proj.Qualis[i].SizeHint) + strIf(App.Proj.Qualis[i].SizeHint == 0, ".svg", ".png")
+				if fileinfo := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + hqsrc); fileinfo != nil && fileinfo.Size() > 0 {
 					break
 				}
 			}
-			if hqsrc == name {
+			if len(hqsrc) > 4 && hqsrc[:len(hqsrc)-4] == name {
 				hqsrc = ""
 			}
 
@@ -604,7 +606,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			}
 			s += ">" + me.genSvgForPanel(sv, pidx, panel)
 			me.sheetPgNrs[sv] = pageNr
-			s += "<img src='./" + App.Proj.Gen.PngDirName + "/" + name + ".png' class='" + App.Proj.Gen.ClsImgHq + "'"
+			s += "<img src='./" + App.Proj.Gen.PicDirName + "/" + name + ".png' class='" + App.Proj.Gen.ClsImgHq + "'"
 			if hqsrc != "" {
 				s += " " + App.Proj.Gen.ClsImgHq + "='" + hqsrc + "'"
 			}
@@ -838,7 +840,7 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 func (me *siteGen) copyHomeThumbsPngs() (numPngs uint32) {
 	for _, series := range App.Proj.Series {
 		thumbfilename := me.nameThumb(series) + ".png"
-		if srcfilepath, dstfilepath := ".cache/"+thumbfilename, ".build/"+App.Proj.Gen.PngDirName+"/"+thumbfilename; fileStat(srcfilepath) != nil {
+		if srcfilepath, dstfilepath := ".cache/"+thumbfilename, ".build/"+App.Proj.Gen.PicDirName+"/"+thumbfilename; fileStat(srcfilepath) != nil {
 			numPngs++
 			fileLinkOrCopy(srcfilepath, dstfilepath)
 		}
@@ -846,12 +848,8 @@ func (me *siteGen) copyHomeThumbsPngs() (numPngs uint32) {
 	return
 }
 
-func (siteGen) namePanelPng(sheetId string, pIdx int, qualiSizeHint int, transparent string) string {
-	return sheetId + itoa(pIdx) + itoa(qualiSizeHint) + transparent
-}
-
-func (siteGen) namePanelSvg(sheetId string, pIdx int) string {
-	return sheetId + itoa(pIdx)
+func (siteGen) namePanelPic(sheetId string, pIdx int, qualiSizeHint int) string {
+	return sheetId + itoa(pIdx) + itoa(qualiSizeHint)
 }
 
 func (siteGen) nameThumb(series *Series) string {

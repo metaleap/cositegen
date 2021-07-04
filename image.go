@@ -6,7 +6,11 @@ import (
 	"image/color"
 	"image/png"
 	"io"
+	"os"
+	"os/exec"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-forks/gopnm"
 	"golang.org/x/image/draw"
@@ -225,6 +229,28 @@ func imgBwBorder(imgdst draw.Image, bwColor color.Gray, size int, offset int, tr
 	}
 }
 
+func imgSubRectSvg(srcImg *image.Gray, srcImgRect image.Rectangle, blackBorderSize int) (ret []byte) {
+	if blackBorderSize != 0 {
+		imgDrawRect(srcImg, srcImgRect, blackBorderSize, 0)
+	}
+	var buf bytes.Buffer
+	name := strconv.FormatInt(time.Now().UnixNano(), 36)
+	pnmpath, svgpath := "/dev/shm/"+name+".pbm", "/dev/shm/"+name+".svg"
+	if err := pnm.Encode(&buf, srcImg.SubImage(srcImgRect), pnm.PBM); err != nil {
+		panic(err)
+	}
+	fileWrite(pnmpath, buf.Bytes())
+	output, err := exec.Command("potrace", "-s", pnmpath, "-o", svgpath).CombinedOutput()
+	if err != nil {
+		panic(err)
+	} else if s := trim(string(output)); s != "" {
+		panic(s)
+	}
+	ret = fileRead(svgpath)
+	_, _ = os.Remove(pnmpath), os.Remove(svgpath)
+	return
+}
+
 func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int, transparent bool, gotSameSizeAsOrig *bool) []byte {
 	imgdst := imgSubRect(srcImg, srcImgRect, width, height, blackBorderSize, transparent, gotSameSizeAsOrig)
 	var buf bytes.Buffer
@@ -338,10 +364,6 @@ func imgStitchHorizontally(fileNames []string, height int, gapWidth int, gapColo
 		panic(err)
 	}
 	return buf.Bytes()
-}
-
-func imgVectorizeToSvg(srcImg *image.Gray, rect image.Rectangle) []byte {
-	return nil
 }
 
 func imgPanels(srcImgData io.Reader, onFileDone func() error) ImgPanel {

@@ -43,7 +43,7 @@ type SheetVerData struct {
 	PanelsTree *ImgPanel `json:",omitempty"`
 }
 
-func (me *SheetVerData) PngDirPath(quali int) string {
+func (me *SheetVerData) PicDirPath(quali int) string {
 	return filepath.Join(me.dirPath, "__panels__"+itoa(int(App.Proj.BwThreshold))+"_"+ftoa(App.Proj.PanelBorderCm, -1)+"_"+itoa(quali))
 }
 
@@ -99,7 +99,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	didgraydistr := me.ensureGrayDistr(forceFullRedo || shouldsaveprojdata)
 	didbwsheet := me.ensureBwSheetPngs(forceFullRedo)
 	didpanels := me.ensurePanels(forceFullRedo || didbwsheet || shouldsaveprojdata)
-	didpnlpics := me.ensureBwPanelPngs(forceFullRedo || didpanels)
+	didpnlpics := me.ensureBwPanelPics(forceFullRedo || didpanels)
 
 	if didWork = didgraydistr || didbwsheet || didpanels || didpnlpics; shouldsaveprojdata {
 		App.Proj.save()
@@ -135,27 +135,28 @@ func (me *SheetVer) ensureBwSheetPngs(force bool) bool {
 	return false
 }
 
-func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
+func (me *SheetVer) ensureBwPanelPics(force bool) bool {
 	numpanels, _ := me.panelCount()
 	diritems, err := os.ReadDir(me.data.dirPath)
 	if err != nil {
 		panic(err)
 	}
 	for _, quali := range App.Proj.Qualis {
-		force = (nil == dirStat(me.data.PngDirPath(quali.SizeHint))) || force
+		force = force || (nil == dirStat(me.data.PicDirPath(quali.SizeHint)))
 	}
-	for pidx, pngdir := 0, me.data.PngDirPath(App.Proj.Qualis[0].SizeHint); pidx < numpanels && !force; pidx++ {
+	for pidx, pngdir := 0, me.data.PicDirPath(App.Proj.Qualis[0].SizeHint); pidx < numpanels && !force; pidx++ {
 		force = (nil == fileStat(filepath.Join(pngdir, itoa(pidx)+".png"))) ||
-			(nil == fileStat(filepath.Join(pngdir, itoa(pidx)+"t.png")))
+			(nil == fileStat(filepath.Join(me.data.PicDirPath(0), itoa(pidx)+".svg")))
 	}
 	for _, fileinfo := range diritems {
 		if rm, name := force, fileinfo.Name(); fileinfo.IsDir() && strings.HasPrefix(name, "__panels__") {
 			if got, qstr := false, name[strings.LastIndexByte(name, '_')+1:]; (!rm) && qstr != "" {
-				q, _ := strconv.ParseUint(qstr, 10, 64)
-				for _, quali := range App.Proj.Qualis {
-					got = (quali.SizeHint == int(q)) || got
+				if q, err := strconv.ParseUint(qstr, 10, 64); err == nil {
+					for _, quali := range App.Proj.Qualis {
+						got = (quali.SizeHint == int(q)) || got
+					}
+					rm = !got
 				}
-				rm = !got
 			}
 			if rm {
 				rmDir(filepath.Join(me.data.dirPath, name))
@@ -167,7 +168,7 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 	}
 
 	for _, quali := range App.Proj.Qualis {
-		mkDir(me.data.PngDirPath(quali.SizeHint))
+		mkDir(me.data.PicDirPath(quali.SizeHint))
 	}
 	srcimgfile, err := os.Open(me.data.bwFilePath)
 	if err != nil {
@@ -184,25 +185,24 @@ func (me *SheetVer) ensureBwPanelPngs(force bool) bool {
 	me.data.PanelsTree.iter(func(panel *ImgPanel) {
 		work.Add(1)
 		go func(pidx int) {
+			pw, ph, sw := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y, me.data.PanelsTree.Rect.Max.X-me.data.PanelsTree.Rect.Min.X
 			for _, quali := range App.Proj.Qualis {
-				pw, ph, sw := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y, me.data.PanelsTree.Rect.Max.X-me.data.PanelsTree.Rect.Min.X
+				if quali.SizeHint == 0 {
+					continue
+				}
 				width := float64(quali.SizeHint) / (float64(sw) / float64(pw))
 				height := width / (float64(pw) / float64(ph))
 				w, h := int(width), int(height)
 				px1cm := me.data.PxCm / (float64(sw) / float64(quali.SizeHint))
 				var wassamesize bool
-				for k, transparent := range map[string]bool{"t": true, "": false} {
-					pngdata := imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, int(px1cm*App.Proj.PanelBorderCm), transparent, &wassamesize)
-					fileWrite(filepath.Join(me.data.PngDirPath(quali.SizeHint), itoa(pidx)+k+".png"), pngdata)
-				}
+				pngdata := imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, int(px1cm*App.Proj.PanelBorderCm), true, &wassamesize)
+				fileWrite(filepath.Join(me.data.PicDirPath(quali.SizeHint), itoa(pidx)+".png"), pngdata)
 				if wassamesize {
 					break
 				}
 			}
-			if false {
-				svgdata := imgVectorizeToSvg(imgsrc.(*image.Gray), panel.Rect)
-				fileWrite(filepath.Join(me.data.dirPath, itoa(pidx)+".svg"), svgdata)
-			}
+			fileWrite(filepath.Join(me.data.PicDirPath(0), itoa(pidx)+".svg"),
+				imgSubRectSvg(imgsrc.(*image.Gray), panel.Rect, int(me.data.PxCm*App.Proj.PanelBorderCm)))
 			work.Done()
 		}(pidx)
 		pidx++

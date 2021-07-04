@@ -37,6 +37,13 @@ func ftoa(f float64, prec int) string {
 	return strconv.FormatFloat(f, 'f', prec, 64)
 }
 
+func strIf(b bool, sThen string, sElse string) string {
+	if b {
+		return sThen
+	}
+	return sElse
+}
+
 func strSize(size int) string {
 	return strSize64(int64(size))
 }

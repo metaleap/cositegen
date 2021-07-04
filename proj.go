@@ -55,7 +55,7 @@ type Project struct {
 		ClsImgHq         string
 		APaging          string
 		ImgSrcLang       string
-		PngDirName       string
+		PicDirName       string
 		PanelSvgText     struct {
 			BoxPolyStrokeWidthCm float64
 			ClsBoxPoly           string
