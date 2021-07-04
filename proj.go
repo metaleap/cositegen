@@ -204,18 +204,16 @@ func (me *Chapter) Len() int              { return len(me.sheets) }
 func (me *Chapter) String() string        { return me.Name }
 
 func (me *Project) save() {
-	jsonSave(".csg/projdata.json", &me.data)
+	jsonSave(".cache/projdata.json", &me.data)
 	jsonSave("csgtexts.json", me.data.Sv.textRects)
 }
 
 func (me *Project) load() (numSheetVers int) {
 	jsonLoad("cosite.json", nil, me) // exits early if no such file, before creating work dirs:
-	rmDir(".csg/tmp")
-	mkDir(".csg")
-	mkDir(".csg/tmp")
-	mkDir(".csg/sv")
-	if fileStat(".csg/projdata.json") != nil {
-		jsonLoad(".csg/projdata.json", nil, &me.data)
+	mkDir(".cache")
+	mkDir(".cache/sv")
+	if fileStat(".cache/projdata.json") != nil {
+		jsonLoad(".cache/projdata.json", nil, &me.data)
 	}
 	if fileStat("csgtexts.json") != nil {
 		jsonLoad("csgtexts.json", nil, &me.data.Sv.textRects)
@@ -321,7 +319,7 @@ func (me *Project) load() (numSheetVers int) {
 	for svid := range me.data.Sv.ById {
 		if me.data.Sv.IdsToFileNames[svid] == "" {
 			delete(me.data.Sv.ById, svid)
-			rmDir(".csg/sv/" + svid)
+			rmDir(".cache/sv/" + svid)
 		}
 	}
 	return

@@ -51,7 +51,6 @@ func appDetectBrowser() {
 
 func appOnExit() {
 	App.Proj.save()
-	rmDir(".csg/tmp")
 }
 
 func appMainAction(fromGui bool, name string, args map[string]bool) string {
@@ -106,7 +105,7 @@ func appPrepWork(fromGui bool) {
 					}
 				}
 			}
-			thumbfilepath := ".csg/sv/" + siteGen{}.nameThumb(series) + ".png"
+			thumbfilepath := ".cache/sv/" + siteGen{}.nameThumb(series) + ".png"
 			if didanywork || len(thumbsrcfilenames) == 0 || App.Proj.NumSheetsInHomeBgs == 0 {
 				_ = os.Remove(thumbfilepath)
 			}

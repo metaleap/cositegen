@@ -90,7 +90,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 		}
 		App.Proj.data.Sv.ById[me.id] = me.data
 	}
-	me.data.dirPath = ".csg/sv/" + me.id
+	me.data.dirPath = ".cache/sv/" + me.id
 	me.data.bwFilePath = filepath.Join(me.data.dirPath, "bw."+itoa(int(App.Proj.BwThreshold))+".png")
 	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(App.Proj.BwThreshold))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
 

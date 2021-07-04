@@ -836,7 +836,7 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 func (me *siteGen) copyHomeThumbsPngs() (numPngs uint32) {
 	for _, series := range App.Proj.Series {
 		thumbfilename := me.nameThumb(series) + ".png"
-		if srcfilepath, dstfilepath := ".csg/sv/"+thumbfilename, ".build/"+App.Proj.Gen.PngDirName+"/"+thumbfilename; fileStat(srcfilepath) != nil {
+		if srcfilepath, dstfilepath := ".cache/sv/"+thumbfilename, ".build/"+App.Proj.Gen.PngDirName+"/"+thumbfilename; fileStat(srcfilepath) != nil {
 			numPngs++
 			fileLinkOrCopy(srcfilepath, dstfilepath)
 		}

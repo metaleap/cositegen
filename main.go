@@ -11,12 +11,12 @@ import (
 const siteTmplDirName = "sitetmpl"
 const siteTmplFileName = "_tmpl.html"
 
-var browserCmd = []string{"", "--new-window", "--single-process", "--user-data-dir=./.csg/chromium", "--disable-extensions", "--disk-cache-size=128"}
+var browserCmd = []string{"", "--new-window", "--single-process", "--user-data-dir=./.cache/chromium", "--disable-extensions", "--disk-cache-size=128"}
 
 func main() {
 	App.StaticFilesDirPath = filepath.Join(os.Getenv("HOME"), "c/go/src/github.com/metaleap/cositegen/_static")
 	appDetectBrowser()
-	timedLogged("Loading project (cosite.json  &  csgtexts.json  &  .csg/projdata.json)...", func() string {
+	timedLogged("Loading project (cosite.json  &  csgtexts.json  &  .cache/projdata.json)...", func() string {
 		numsheets := App.Proj.load()
 		return "for " + itoa(numsheets) + " sheets"
 	})
