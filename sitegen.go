@@ -266,7 +266,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 	}
 	homename, repl := "index", strings.NewReplacer(
 		"%DIR%", "<span class='"+App.Proj.DirModes.Ltr.Name+App.Proj.DirModes.Rtl.Name+"'>"+strrepl+"</span>",
-		"%LANG"+me.lang+"%", itoa(int(App.Proj.PercentTranslated(nil, me.lang))),
+		"%LANG"+me.lang+"%", itoa(int(App.Proj.percentTranslated(me.lang, nil, nil, nil, -1))),
 	)
 	me.page = PageGen{
 		SiteTitle:  hEsc(App.Proj.Title),
@@ -390,8 +390,10 @@ func (me *siteGen) prepHomePage() {
 				if numpages <= 1 {
 					title = trim(title[1+strings.IndexByte(title, '/'):])
 				}
-				if perc, applicable := chapter.PercentTranslated(me.lang, 0, -1); applicable {
-					title = "(" + me.textStr("Transl") + ": " + itoa(int(perc)) + "%) " + title
+				if me.lang != App.Proj.Langs[0] {
+					if perc := App.Proj.percentTranslated(me.lang, nil, chapter, nil, -1); perc >= 0.0 {
+						title = "(" + me.textStr("Transl") + ": " + itoa(int(perc)) + "%) " + title
+					}
 				}
 				s += "<a title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0) + ".html'>" + hEsc(locStr(chapter.Title, me.lang)) + "</a>"
 			} else {
@@ -468,7 +470,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 					if did = (pgnr == pageNr); did {
 						s += "<li><b><a href='./" + name + ".html'>" + itoa(pgnr) + "</a></b></li>"
 					} else if did = shownums[pgnr]; did {
-						if perc, applicable := chapter.PercentTranslated(me.lang, pgnr, svDt); perc >= 99.9 || !applicable {
+						if perc := App.Proj.percentTranslated(me.lang, nil, chapter, nil, pgnr); perc < 0.0 || perc >= 99.9 {
 							s += "<li>"
 						} else {
 							s += "<li class='nolang' title='" + me.lang + ": " + ftoa(perc, 1) + "%'>"
@@ -720,7 +722,7 @@ func (me *siteGen) genPageExecAndWrite(name string) (numFilesWritten int) {
 	for lidx, lang := range App.Proj.Langs {
 		title, imgsrcpath := lang, strings.Replace(App.Proj.Gen.ImgSrcLang, "%LANG%", lang, -1)
 		if lidx != 0 {
-			title += " (" + App.Proj.PageContentTexts[lang]["Transl"] + ": " + ftoa(App.Proj.PercentTranslated(nil, lang), 1) + "%)"
+			title += " (" + App.Proj.PageContentTexts[lang]["Transl"] + ": " + itoa(int(App.Proj.percentTranslated(lang, nil, nil, nil, -1))) + "%)"
 		}
 		if lang == me.lang {
 			me.page.LangsList += "<span><div>"

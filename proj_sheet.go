@@ -272,27 +272,6 @@ func (me *SheetVer) haveAnyTexts() bool {
 	return false
 }
 
-func (me *SheetVer) percentTranslated() map[string]float64 {
-	haveany, ret := false, map[string]float64{}
-	for _, areas := range App.Proj.data.Sv.textRects[me.id] {
-		for _, area := range areas {
-			for langid, text := range area.Data {
-				if trim(text) != "" {
-					haveany, ret[langid] = true, ret[langid]+1
-				}
-			}
-		}
-	}
-	if !haveany {
-		return nil
-	}
-	for _, langid := range App.Proj.Langs[1:] {
-		ret[langid] = ret[langid] * (100.0 / ret[App.Proj.Langs[0]])
-	}
-	delete(ret, App.Proj.Langs[0])
-	return ret
-}
-
 func (me *SheetVer) maxNumTextAreas() (max int) {
 	for _, panel := range App.Proj.data.Sv.textRects[me.id] {
 		if l := len(panel); l > max {

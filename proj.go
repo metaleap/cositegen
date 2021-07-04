@@ -83,23 +83,6 @@ type Project struct {
 func (me *Project) At(i int) fmt.Stringer { return me.Series[i] }
 func (me *Project) Len() int              { return len(me.Series) }
 
-func (me *Project) PercentTranslated(series *Series, langId string) float64 {
-	sum, num := 0.0, 0
-	for _, ser := range me.Series {
-		if ser == series || series == nil {
-			for _, chap := range ser.Chapters {
-				if f, applicable := chap.PercentTranslated(langId, 0, -1); applicable {
-					num, sum = num+1, sum+f
-				}
-			}
-		}
-	}
-	if num == 0 {
-		return 0
-	}
-	return sum / float64(num)
-}
-
 type Series struct {
 	Name     string
 	UrlName  string
@@ -115,6 +98,7 @@ type Series struct {
 func (me *Series) At(i int) fmt.Stringer { return me.Chapters[i] }
 func (me *Series) Len() int              { return len(me.Chapters) }
 func (me *Series) String() string        { return me.Name }
+
 func (me *Chapter) NextAfter(withSheetsOnly bool) *Chapter {
 	series := me.parentSeries
 	for now, i := false, 0; i < len(series.Chapters); i++ {
@@ -144,6 +128,13 @@ func (me *Chapter) NumScans() (ret int) {
 	return
 }
 
+func (me *Chapter) IsSheetOnPage(pgNr int, sheetIdx int) (is bool) {
+	if is = len(me.sheets) > sheetIdx; is && me.SheetsPerPage > 0 {
+		is = (pgNr == (1 + (sheetIdx / me.SheetsPerPage)))
+	}
+	return
+}
+
 func (me *Chapter) DateRangeOfSheets() (time.Time, time.Time) {
 	var dt1, dt2 int64
 	for _, sheet := range me.sheets {
@@ -158,28 +149,6 @@ func (me *Chapter) DateRangeOfSheets() (time.Time, time.Time) {
 		}
 	}
 	return time.Unix(0, dt1), time.Unix(0, dt2)
-}
-
-func (me *Chapter) PercentTranslated(langId string, pgNr int, svDt int64) (float64, bool) {
-	if langId == App.Proj.Langs[0] {
-		return 0, false
-	}
-	sum, num, allnil := 0.0, 0, true
-	for i, sheet := range me.sheets {
-		pgnr := 1
-		if me.SheetsPerPage != 0 {
-			pgnr = 1 + (i / me.SheetsPerPage)
-		}
-		if pgnr == pgNr || pgNr <= 0 {
-			if stats := sheet.versionNoOlderThanOrLatest(svDt).percentTranslated(); stats != nil {
-				allnil, sum, num = false, sum+stats[langId], num+1
-			}
-		}
-	}
-	if allnil {
-		return 0, false
-	}
-	return sum / float64(num), true
 }
 
 type Chapter struct {
@@ -322,4 +291,41 @@ func (me *Project) load() (numSheetVers int) {
 		}
 	}
 	return
+}
+
+func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sheetVer *SheetVer, pgNr int) float64 {
+	numtotal, numtrans := 0, 0
+	for _, series := range me.Series {
+		if ser != nil && ser != series {
+			continue
+		}
+		for _, chapter := range series.Chapters {
+			if chap != nil && chap != chapter {
+				continue
+			}
+			for i, sheet := range chapter.sheets {
+				if pgNr > 0 && !chapter.IsSheetOnPage(pgNr, i) {
+					continue
+				}
+				for _, sv := range sheet.versions {
+					if sheetVer != nil && sheetVer != sv {
+						continue
+					}
+					for _, areas := range App.Proj.data.Sv.textRects[sv.id] {
+						for _, area := range areas {
+							if def := trim(area.Data[App.Proj.Langs[0]]); def != "" {
+								if numtotal++; trim(area.Data[lang]) != "" {
+									numtrans++
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if numtotal == 0 {
+		return -1.0
+	}
+	return float64(numtrans) * (100.0 / float64(numtotal))
 }

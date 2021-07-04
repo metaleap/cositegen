@@ -105,7 +105,7 @@ func guiMain(r *http.Request, notice string) []byte {
 
 	s += "</form></body>"
 	if rfv := fv("main_focus_id"); rfv != "" && rfv != "main_action" && notice == "" {
-		s += "<script language='javascript' type='text/javascript'>try { $." + rfv + ".focus(); } catch (e) {alert(e);}</script></html>"
+		s += "<script language='javascript' type='text/javascript'>try { document.getElementById('" + rfv + "').focus(); } catch (e) {alert(e);}</script></html>"
 	}
 	return []byte(s)
 }
@@ -152,8 +152,8 @@ func guiStartView() (s string) {
 							if numpanels > 0 {
 								s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(numpanelareas) + " </b> text-rect/s in " + itoa(numpanels) + " panel/s"
 								if numpanelareas > 0 {
-									for langid, percent := range sv.percentTranslated() {
-										s += "&nbsp;(<b>" + langid + "</b>: " + ftoa(percent, 1) + "%)"
+									for _, langid := range App.Proj.Langs[1:] {
+										s += "&nbsp;(<b>" + langid + "</b>: " + ftoa(App.Proj.percentTranslated(langid, nil, nil, sv, -1), 1) + "%)"
 									}
 								}
 								s += "</small>"
