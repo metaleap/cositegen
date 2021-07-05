@@ -167,42 +167,51 @@ func pngOptsLoop() {
 			if App.Gui.Exiting {
 				return
 			}
-			curfiledata := fileRead(pngfilename)
-			lastopt, skip := App.Proj.data.PngOpt[pngfilename]
-			if skip = skip && (lastopt[1] == itoa(len(curfiledata))) &&
-				(lastopt[2] == string(contentHashStr(curfiledata))); skip {
-				continue
-			} else if App.Gui.Exiting {
-				return
-			}
-
-			cmd := exec.Command("pngbattle", pngfilename)
-			cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
-			if err := cmd.Start(); err != nil {
-				printLn(err)
-				continue
-			}
-			go cmd.Wait()
-			for ; cmd.ProcessState == nil; time.Sleep(time.Second) {
-				if App.Gui.Exiting {
-					_ = cmd.Process.Kill()
-				}
-			}
-			if !cmd.ProcessState.Success() {
-				printLn(cmd.ProcessState.String())
-				continue
-			}
-			if filedata, err := os.ReadFile(pngfilename); err == nil {
-				numdone, App.Proj.data.PngOpt[pngfilename] = numdone+1, []string{
-					itoa(len(curfiledata)),
-					itoa(len(filedata)),
-					string(contentHashStr(filedata)),
-				}
+			if pngOpt(pngfilename) {
+				numdone++
 				App.Proj.save()
 			}
 		}
 		printLn("PNGOPT:", len(matches), "scrutinized &", numdone, "processed, sleeping a minute...")
 	}
+}
+
+func pngOpt(pngFilePath string) bool {
+	curfiledata := fileRead(pngFilePath)
+	lastopt, skip := App.Proj.data.PngOpt[pngFilePath]
+	if skip = skip && (lastopt[1] == itoa(len(curfiledata))) &&
+		(lastopt[2] == string(contentHashStr(curfiledata))); skip {
+		return false
+	}
+	if App.Gui.Exiting {
+		return false
+	}
+
+	cmd := exec.Command("pngbattle", pngFilePath)
+	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+	if err := cmd.Start(); err != nil {
+		printLn(err)
+		return false
+	}
+	go cmd.Wait()
+	for ; cmd.ProcessState == nil; time.Sleep(time.Second) {
+		if App.Gui.Exiting {
+			_ = cmd.Process.Kill()
+		}
+	}
+	if !cmd.ProcessState.Success() {
+		printLn(cmd.ProcessState.String())
+		return false
+	}
+	if filedata, err := os.ReadFile(pngFilePath); err == nil {
+		App.Proj.data.PngOpt[pngFilePath] = []string{
+			itoa(len(curfiledata)),
+			itoa(len(filedata)),
+			string(contentHashStr(filedata)),
+		}
+		return true
+	}
+	return false
 }
 
 type FilePathsSortingByFileSize []string

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"image"
 	_ "image/png"
@@ -126,8 +127,9 @@ func (me *SheetVer) ensureBwSheetPngs(force bool) bool {
 		}
 		if file, err := os.Open(me.data.bwFilePath); err != nil {
 			panic(err)
-		} else if data := imgDownsized(file, file.Close, int(App.Proj.BwSmallWidth)); data != nil {
+		} else if data := imgDownsized(file, file.Close, int(App.Proj.BwSmallWidth), true); data != nil {
 			fileWrite(me.data.bwSmallFilePath, data)
+			pngOpt(me.data.bwSmallFilePath)
 		} else if err = os.Symlink(filepath.Base(me.data.bwFilePath), me.data.bwSmallFilePath); err != nil {
 			panic(err)
 		}
@@ -270,12 +272,11 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 			me.data.PanelsTree = &imgpanel
 		}
 	}
+
 	_ = os.Remove(bgtmplsvgfilepath)
 	if pw, ph := itoa(me.data.PanelsTree.Rect.Max.X), itoa(me.data.PanelsTree.Rect.Max.Y); did || nil == fileStat(bgtmplsvgfilepath) {
 		svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 		<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="` + pw + `" height="` + ph + `" viewBox="0 0 ` + pw + ` ` + ph + `">
-			<image x="0" width="` + pw + `" height="` + ph + `" xlink:href="` + filepath.Base(me.data.bwSmallFilePath) + `" y="0" />
-			<image x="0" width="` + pw + `" height="` + ph + `" xlink:href="` + filebasename + `" y="0" />
 		`
 		pidx := 0
 		me.data.PanelsTree.iter(func(p *ImgPanel) {
@@ -283,9 +284,9 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 			r, g, b := 32+rand.Intn(128+32), 16+rand.Intn(128+48), 64+rand.Intn(128+0)
 			x, y, w, h := p.Rect.Min.X, p.Rect.Min.Y, p.Rect.Max.X-p.Rect.Min.X, p.Rect.Max.Y-p.Rect.Min.Y
 			svg += `<svg x="` + itoa(x) + `" y="` + itoa(y) + `"  width="` + itoa(w) + `" height="` + itoa(h) + `" id="p` + itoa(pidx) + `">`
-			svg += `<rect x="0" y="0" style="opacity: 0.5"
-				fill="` + fmt.Sprintf("#%X%X%X", r, g, b) + `"  stroke="#ff0000"
-				stroke-width="44" width="` + itoa(w) + `" height="` + itoa(h) + `"></rect>
+			svg += `<rect x="0" y="0"
+				fill="` + fmt.Sprintf("#%X%X%X", r, g, b) + `"  stroke="#000000"
+				stroke-width="1" width="` + itoa(w) + `" height="` + itoa(h) + `"></rect>
 			`
 			if true {
 				svg += `<rect stroke-width="22" stroke="#ffcc00" x="` + itoa(w/2) + `" y="0" width="22" height="` + itoa(h) + `"></rect>`
@@ -294,6 +295,7 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 			svg += "</svg>\n"
 			pidx++
 		})
+		svg += `<image x="0" y="0" width="` + pw + `" height="` + ph + `" xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(fileRead(me.data.bwSmallFilePath)) + `" />`
 		fileWrite(bgtmplsvgfilepath, []byte(svg+"</svg>"))
 	}
 	return

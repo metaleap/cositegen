@@ -101,7 +101,7 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 	_ = dstImgFile.Close()
 }
 
-func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int) []byte {
+func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int, transparent bool) []byte {
 	imgsrc, _, err := image.Decode(srcImgData)
 	if err != nil {
 		panic(err)
@@ -111,12 +111,28 @@ func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int) [
 	}
 
 	origwidth, origheight := imgsrc.Bounds().Max.X, imgsrc.Bounds().Max.Y
-	if origwidth <= maxWidth {
+	if origwidth <= maxWidth && !transparent {
 		return nil
 	}
 
+	if transparent {
+		img := image.NewNRGBA(imgsrc.Bounds())
+		for x := 0; x < imgsrc.Bounds().Max.X; x++ {
+			for y := 0; y < imgsrc.Bounds().Max.Y; y++ {
+				gray := imgsrc.(*image.Gray).GrayAt(x, y)
+				img.SetNRGBA(x, y, color.NRGBA{0, 0, 0, 255 - gray.Y})
+			}
+		}
+		imgsrc = img
+	}
+
 	newheight := int(float64(origheight) / (float64(origwidth) / float64(maxWidth)))
-	imgdown := image.NewGray(image.Rect(0, 0, maxWidth, newheight))
+	var imgdown draw.Image
+	if transparent {
+		imgdown = image.NewNRGBA(image.Rect(0, 0, maxWidth, newheight))
+	} else {
+		imgdown = image.NewGray(image.Rect(0, 0, maxWidth, newheight))
+	}
 	ImgScaler.Scale(imgdown, imgdown.Bounds(), imgsrc, imgsrc.Bounds(), draw.Over, nil)
 	var buf bytes.Buffer
 	if err = PngEncoder.Encode(&buf, imgdown); err != nil {

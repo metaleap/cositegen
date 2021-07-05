@@ -84,7 +84,7 @@ func httpServeDynPng(httpResp http.ResponseWriter, httpReq *http.Request) {
 			}
 		}
 		if w != 0 {
-			pngdata = imgDownsized(bytes.NewReader(pngdata), nil, int(w))
+			pngdata = imgDownsized(bytes.NewReader(pngdata), nil, int(w), false)
 		}
 		_ = os.WriteFile(tmpfilename, pngdata, os.ModePerm)
 	}
