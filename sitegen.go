@@ -389,7 +389,9 @@ func (me *siteGen) prepHomePage() {
 		s += "<ul class='" + App.Proj.Gen.ClsSeries + "'>"
 		for _, chapter := range series.Chapters {
 			s += "<li class='" + App.Proj.Gen.ClsChapter + "'>"
-			if len(chapter.sheets) > 0 {
+			if len(chapter.sheets) == 0 {
+				s += "<b>" + hEsc(locStr(chapter.Title, me.lang)) + "</b>"
+			} else {
 				numpages := 1
 				if chapter.SheetsPerPage != 0 {
 					numpages = len(chapter.sheets) / chapter.SheetsPerPage
@@ -411,12 +413,10 @@ func (me *siteGen) prepHomePage() {
 				}
 				if me.lang != App.Proj.Langs[0] {
 					if perc := App.Proj.percentTranslated(me.lang, nil, chapter, nil, -1); perc >= 0.0 {
-						title = "(" + me.textStr("Transl") + ": " + itoa(int(perc)) + "%) " + title
+						title += " (" + me.textStr("Transl") + ": " + itoa(int(perc)) + "%)"
 					}
 				}
-				s += "<a title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0, me.bgCol) + ".html'>" + hEsc(locStr(chapter.Title, me.lang)) + "</a>"
-			} else {
-				s += "<b>" + hEsc(locStr(chapter.Title, me.lang)) + "</b>"
+				s += "<a title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0, chapter.HasBgCol()) + ".html'>" + hEsc(locStr(chapter.Title, me.lang)) + "</a>"
 			}
 			s += "</li>"
 		}
@@ -759,6 +759,9 @@ func (me *siteGen) genPageExecAndWrite(name string, chapter *Chapter) (numFilesW
 	me.page.LangsList = ""
 	for lidx, lang := range App.Proj.Langs {
 		title, imgsrcpath := lang, strings.Replace(App.Proj.Gen.ImgSrcLang, "%LANG%", lang, -1)
+		if langname := App.Proj.PageContentTexts[lang]["LangName"]; langname != "" {
+			title = langname
+		}
 		if lidx != 0 {
 			title += " (" + App.Proj.PageContentTexts[lang]["Transl"] + ": " + itoa(int(App.Proj.percentTranslated(lang, nil, nil, nil, -1))) + "%"
 			if chapter != nil {
