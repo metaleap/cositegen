@@ -48,6 +48,7 @@ type PageGen struct {
 	HrefDirAlt     string
 	HrefFeed       string
 	VersList       string
+	ColsList       string
 	ChapTitle      string
 }
 
@@ -55,6 +56,7 @@ type siteGen struct {
 	tmpl       *template.Template
 	page       PageGen
 	lang       string
+	bgCol      bool
 	dirRtl     bool
 	onPicSize  func(*Chapter, string, int, int64)
 	sheetPgNrs map[*SheetVer]int
@@ -138,22 +140,28 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 			panic(err)
 		}
 		for _, me.lang = range App.Proj.Langs {
-			for _, me.dirRtl = range []bool{true, false /*keep this order of bools*/} {
+			for _, me.dirRtl = range []bool{true, false /*KEEP this order of bools*/} {
+				me.bgCol = false
 				numfileswritten += me.genPages(nil, 0)
-				for _, series := range App.Proj.Series {
-					for _, chapter := range series.Chapters {
-						if chapter.SheetsPerPage > 0 {
-							for i := 1; i <= (len(chapter.sheets) / chapter.SheetsPerPage); i++ {
-								numfileswritten += me.genPages(chapter, i)
+				for _, me.bgCol = range []bool{false, true} {
+					for _, series := range App.Proj.Series {
+						for _, chapter := range series.Chapters {
+							if me.bgCol && !chapter.HasBgCol() {
+								continue
 							}
-						} else {
-							numfileswritten += me.genPages(chapter, 0)
+							if chapter.SheetsPerPage > 0 {
+								for i := 1; i <= (len(chapter.sheets) / chapter.SheetsPerPage); i++ {
+									numfileswritten += me.genPages(chapter, i)
+								}
+							} else {
+								numfileswritten += me.genPages(chapter, 0)
+							}
 						}
 					}
 				}
-			}
-			if App.Proj.AtomFile.Name != "" {
-				numfileswritten += me.genAtomXml()
+				if App.Proj.AtomFile.Name != "" {
+					numfileswritten += me.genAtomXml()
+				}
 			}
 		}
 		return "for " + strconv.Itoa(numfileswritten) + " files"
@@ -253,8 +261,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 					}
 				}
 			}
-			srcpath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".svg")
-			if fileinfo := fileStat(srcpath); fileinfo != nil {
+			if srcpath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".svg"); sv.data.hasBgCol && fileStat(srcpath) != nil {
 				dstpath := filepath.Join(".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + itoa(pidx) + "bg.svg")
 				fileLinkOrCopy(srcpath, dstpath)
 				atomic.AddUint32(&numSvgs, 1)
@@ -349,17 +356,17 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 						}
 					}
 					for i, q := range App.Proj.Qualis[:len(qsizes)] {
-						me.page.QualList += "<option value='" + me.namePage(chapter, q.SizeHint, pageNr, viewmode, "", me.lang, svdt) + "'"
+						me.page.QualList += "<option value='" + me.namePage(chapter, q.SizeHint, pageNr, viewmode, "", me.lang, svdt, me.bgCol) + "'"
 						if q.Name == qname {
 							me.page.QualList += " selected='selected'"
 						}
 						me.page.QualList += ">" + q.Name + " (" + strSize64(qsizes[i]) + ")</option>"
 					}
 					me.page.QualList = "<select disabled='disabled' title='" + hEsc(me.textStr("QualityHint")) + "' name='" + App.Proj.Gen.IdQualiList + "' id='" + App.Proj.Gen.IdQualiList + "'>" + me.page.QualList + "</select>"
-					me.page.HrefDirLtr = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Ltr.Name, me.lang, svdt) + ".html"
-					me.page.HrefDirRtl = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Rtl.Name, me.lang, svdt) + ".html"
+					me.page.HrefDirLtr = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Ltr.Name, me.lang, svdt, me.bgCol) + ".html"
+					me.page.HrefDirRtl = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Rtl.Name, me.lang, svdt, me.bgCol) + ".html"
 
-					numFilesWritten += me.genPageExecAndWrite(me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svdt), chapter)
+					numFilesWritten += me.genPageExecAndWrite(me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svdt, me.bgCol), chapter)
 				}
 			}
 		}
@@ -407,7 +414,7 @@ func (me *siteGen) prepHomePage() {
 						title = "(" + me.textStr("Transl") + ": " + itoa(int(perc)) + "%) " + title
 					}
 				}
-				s += "<a title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0) + ".html'>" + hEsc(locStr(chapter.Title, me.lang)) + "</a>"
+				s += "<a title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0, me.bgCol) + ".html'>" + hEsc(locStr(chapter.Title, me.lang)) + "</a>"
 			} else {
 				s += "<b>" + hEsc(locStr(chapter.Title, me.lang)) + "</b>"
 			}
@@ -421,7 +428,7 @@ func (me *siteGen) prepHomePage() {
 
 func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, svDt int64, pageNr int) map[string]int {
 	quali := App.Proj.Qualis[qIdx]
-	me.page.VersList, me.page.ChapTitle, svgTxtCounter = "", locStr(chapter.Title, me.lang), 0
+	me.page.VersList, me.page.ColsList, me.page.ChapTitle, svgTxtCounter = "", "", locStr(chapter.Title, me.lang), 0
 	for i, svdt := range chapter.versions {
 		var text string
 		if i == 0 {
@@ -443,11 +450,25 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				}
 			}
 		}
-		me.page.VersList += "<option value='" + me.namePage(chapter, quali.SizeHint, pageNr, viewMode, "", me.lang, svdt) + "'"
+		me.page.VersList += "<option value='" + me.namePage(chapter, quali.SizeHint, pageNr, viewMode, "", me.lang, svdt, me.bgCol) + "'"
 		if svdt == svDt {
 			me.page.VersList += " selected='selected'"
 		}
 		me.page.VersList += ">" + hEsc(text) + "</option>"
+	}
+	for _, bgcol := range []bool{false, true} {
+		if bgcol && !chapter.HasBgCol() {
+			continue
+		}
+		text := me.textStr("Bg" + strIf(bgcol, "Col", "Bw"))
+		if perc := chapter.PercentColorized(); bgcol && perc < 100.0 {
+			text += " (" + ftoa(perc, 0) + "%)"
+		}
+		me.page.ColsList += "<option value='" + me.namePage(chapter, quali.SizeHint, pageNr, viewMode, "", me.lang, svDt, bgcol) + "'"
+		if bgcol == me.bgCol {
+			me.page.ColsList += " selected='selected'"
+		}
+		me.page.ColsList += ">" + hEsc(text) + "</option>"
 	}
 
 	var sheets []*Sheet
@@ -478,7 +499,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			for i := range chapter.sheets {
 				if 0 == (i % chapter.SheetsPerPage) {
 					pgnr++
-					did, name := false, me.namePage(chapter, quali.SizeHint, pgnr, viewMode, "", me.lang, svDt)
+					did, name := false, me.namePage(chapter, quali.SizeHint, pgnr, viewMode, "", me.lang, svDt, me.bgCol)
 					if did = (pgnr == pageNr); did {
 						s += "<li><b><a href='./" + name + ".html'>" + itoa(pgnr) + "</a></b></li>"
 					} else if did = shownums[pgnr]; did {
@@ -502,7 +523,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		}
 		nextchap := chapter.NextAfter(true)
 		if pageNr == numpages && istoplist && nextchap != nil {
-			name := me.namePage(nextchap, quali.SizeHint, 1, viewMode, "", me.lang, svDt)
+			name := me.namePage(nextchap, quali.SizeHint, 1, viewMode, "", me.lang, svDt, me.bgCol)
 			s += "<li><a href='./" + name + ".html'>" + locStr(nextchap.Title, me.lang) + "</a></li>"
 		}
 		if s != "" {
@@ -510,18 +531,18 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			if pg = pageNr - 1; pg < 1 {
 				pg = 1
 			}
-			pvis, phref := "hidden", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svDt)
+			pvis, phref := "hidden", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svDt, me.bgCol)
 			if pg = pageNr + 1; pg > numpages {
 				pg = numpages
 			}
-			nvis, nhref := "none", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svDt)
+			nvis, nhref := "none", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svDt, me.bgCol)
 			if pageNr > 1 && istoplist {
 				pvis = "visible"
 			}
 			if pageNr < numpages {
 				nvis = "inline-block"
 			} else if !istoplist && nextchap != nil {
-				nvis, nhref = "inline-block", me.namePage(nextchap, quali.SizeHint, 1, viewMode, "", me.lang, svDt)
+				nvis, nhref = "inline-block", me.namePage(nextchap, quali.SizeHint, 1, viewMode, "", me.lang, svDt, me.bgCol)
 			}
 			ulid := App.Proj.Gen.APaging
 			if !istoplist {
@@ -548,7 +569,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			me.page.ViewerList += " vc"
 		}
 		me.page.ViewerList += "'>"
-		if n := me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svDt); viewmode == viewMode {
+		if n := me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svDt, me.bgCol); viewmode == viewMode {
 			me.page.HrefViewCur = "./" + n + ".html"
 			me.page.ViewerList += "<b>&nbsp;</b>"
 		} else {
@@ -620,8 +641,10 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			if hqsrc != "" {
 				s += " " + App.Proj.Gen.ClsImgHq + "='" + hqsrc + "'"
 			}
-			if bgsvg := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + itoa(pidx) + "bg.svg"); bgsvg != nil {
-				s += " style='background-image:url(\"./" + App.Proj.Gen.PicDirName + "/" + sv.id + itoa(pidx) + "bg.svg\");'"
+			if me.bgCol && sv.data.hasBgCol {
+				if bgsvg := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + itoa(pidx) + "bg.svg"); bgsvg != nil {
+					s += " style='background-image:url(\"./" + App.Proj.Gen.PicDirName + "/" + sv.id + itoa(pidx) + "bg.svg\");'"
+				}
 			}
 			s += "/>"
 			s += "</div>"
@@ -831,7 +854,7 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 				if pgnr >= 1 {
 					xml := `<entry><updated>` + pubdate + `T00:00:00Z</updated>`
 					xml += `<title>` + hEsc(locStr(chapter.parentSeries.Title, me.lang)) + `: ` + hEsc(locStr(chapter.Title, me.lang)) + `</title>`
-					xml += `<link href="` + strings.TrimRight(af.LinkHref, "/") + "/" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, pgnr, "s", "", me.lang, 0) + ".html" + `"/>`
+					xml += `<link href="` + strings.TrimRight(af.LinkHref, "/") + "/" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, pgnr, "s", "", me.lang, 0, me.bgCol) + ".html" + `"/>`
 					xml += `<author><name>` + af.Title + `</name></author>`
 					xml += `<content type="html">` + strings.NewReplacer(
 						"%NUMSVS%", itoa(numsheets),
@@ -873,7 +896,7 @@ func (siteGen) nameThumb(series *Series) string {
 	return "_" + App.Proj.DirModes.Ltr.Name + "-" + App.Proj.DirModes.Rtl.Name + "-" + strings.ToLower(series.UrlName)
 }
 
-func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, viewMode string, dirMode string, langId string, svDt int64) string {
+func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, viewMode string, dirMode string, langId string, svDt int64, bgCol bool) string {
 	if pageNr < 1 {
 		pageNr = 1
 	}
@@ -882,5 +905,5 @@ func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, vie
 			dirMode = App.Proj.DirModes.Rtl.Name
 		}
 	}
-	return strings.ToLower(chapter.parentSeries.UrlName + "-" + chapter.UrlName + "-" + itoa(pageNr) + strconv.FormatInt(svDt, 36) + viewMode + itoa(qualiSizeHint) + "-" + dirMode + "." + langId)
+	return strings.ToLower(chapter.parentSeries.UrlName + "-" + chapter.UrlName + "-" + itoa(pageNr) + strIf(bgCol, "col", "bw") + strconv.FormatInt(svDt, 36) + viewMode + itoa(qualiSizeHint) + "-" + dirMode + "." + langId)
 }

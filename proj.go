@@ -135,6 +135,32 @@ func (me *Chapter) IsSheetOnPage(pgNr int, sheetIdx int) (is bool) {
 	return
 }
 
+func (me *Chapter) HasBgCol() bool {
+	for _, sheet := range me.sheets {
+		for _, sv := range sheet.versions {
+			if sv.data.hasBgCol {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (me *Chapter) PercentColorized() float64 {
+	sum, num := 0, 0
+	for _, sheet := range me.sheets {
+		for _, sv := range sheet.versions {
+			if num++; sv.data.hasBgCol {
+				sum++
+			}
+		}
+	}
+	if num == 0 || sum == 0 {
+		return 0.0
+	}
+	return 100.0 / (float64(sum) / float64(num))
+}
+
 func (me *Chapter) DateRangeOfSheets() (time.Time, time.Time) {
 	var dt1, dt2 int64
 	for _, sheet := range me.sheets {
@@ -291,6 +317,15 @@ func (me *Project) load() (numSheetVers int) {
 		}
 	}
 	return
+}
+
+func (me *Project) hasSvgQuali() bool {
+	for _, q := range me.Qualis {
+		if q.SizeHint == 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sheetVer *SheetVer, pgNr int) float64 {

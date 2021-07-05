@@ -41,6 +41,7 @@ type SheetVerData struct {
 	dirPath         string
 	bwFilePath      string
 	bwSmallFilePath string
+	hasBgCol        bool
 
 	PxCm       float64
 	GrayDistr  []int     `json:",omitempty"`
@@ -83,6 +84,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	shouldsaveprojdata := forceFullRedo
 	if me.data == nil {
 		shouldsaveprojdata = true
+		printLn("\t\tPrep " + me.id + ": fully because no svData")
 		me.data = &SheetVerData{parentSheetVer: me, PxCm: 472.424242424} //1200dpi
 		{
 			pngdata := fileRead(me.fileName)
@@ -101,8 +103,17 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 
 	didgraydistr := me.ensureGrayDistr(forceFullRedo || shouldsaveprojdata)
 	didbwsheet := me.ensureBwSheetPngs(forceFullRedo)
+	if didgraydistr || didbwsheet {
+		printLn("\t\tPrep "+me.id+": did grayDistr / bwSheet:", didgraydistr, didbwsheet)
+	}
 	didpanels := me.ensurePanelsTree(forceFullRedo || didbwsheet || shouldsaveprojdata)
+	if didpanels {
+		printLn("\t\tPrep "+me.id+": did panelsTree:", didpanels)
+	}
 	didpnlpics := me.ensurePanelPics(forceFullRedo || didpanels)
+	if didpnlpics {
+		printLn("\t\tPrep "+me.id+": did panelPics:", didpnlpics)
+	}
 
 	if didWork = didgraydistr || didbwsheet || didpanels || didpnlpics; shouldsaveprojdata || didWork {
 		App.Proj.save()
@@ -152,6 +163,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 	}
 	if bgsrcfile != nil {
 		pidx, bgsvgsrc := 0, string(fileRead(bgsrcpath))
+		me.data.hasBgCol = true
 		me.data.PanelsTree.iter(func(p *ImgPanel) {
 			gid, dstfilepath := "pnl"+itoa(pidx), filepath.Join(me.data.dirPath, "bg"+itoa(pidx)+".svg")
 			if s, svg := "", bgsvgsrc; force || (nil == fileStat(dstfilepath)) {
@@ -189,7 +201,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 	}
 	for pidx, pngdir := 0, me.data.PicDirPath(App.Proj.Qualis[0].SizeHint); pidx < numpanels && !force; pidx++ {
 		force = (nil == fileStat(filepath.Join(pngdir, itoa(pidx)+".png"))) ||
-			(nil == fileStat(filepath.Join(me.data.PicDirPath(0), itoa(pidx)+".svg")))
+			(App.Proj.hasSvgQuali() && (nil == fileStat(filepath.Join(me.data.PicDirPath(0), itoa(pidx)+".svg"))))
 	}
 	for _, fileinfo := range diritems {
 		if rm, name := force, fileinfo.Name(); fileinfo.IsDir() && strings.HasPrefix(name, "__panels__") {
@@ -244,8 +256,10 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 					break
 				}
 			}
-			fileWrite(filepath.Join(me.data.PicDirPath(0), itoa(pidx)+".svg"),
-				imgSubRectSvg(imgsrc.(*image.Gray), panel.Rect, int(me.data.PxCm*App.Proj.PanelBorderCm)))
+			if App.Proj.hasSvgQuali() {
+				fileWrite(filepath.Join(me.data.PicDirPath(0), itoa(pidx)+".svg"),
+					imgSubRectSvg(imgsrc.(*image.Gray), panel.Rect, int(me.data.PxCm*App.Proj.PanelBorderCm)))
+			}
 			work.Done()
 		}(pidx)
 		pidx++

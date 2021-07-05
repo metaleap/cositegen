@@ -369,7 +369,9 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	for svid, panels := range App.Proj.data.Sv.textRects {
 		if svid != sv.id {
 			sheetfilename := App.Proj.data.Sv.IdsToFileNames[svid]
-			assert(sheetfilename != "")
+			if sheetfilename == "" {
+				panic("expired hash-ID in texts.json: " + svid)
+			}
 			var numareas int
 			for _, panelareas := range panels {
 				numareas += len(panelareas)

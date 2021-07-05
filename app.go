@@ -121,7 +121,7 @@ func appPrepWork(fromGui bool) {
 		App.Proj.allPrepsDone = true
 		return "for " + itoa(numwork) + "/" + itoa(numjobs) + " preprocessing jobs"
 	})
-	if fromGui {
+	if fromGui && false {
 		pngOptsLoop()
 	}
 }
@@ -200,6 +200,8 @@ func pngOpt(pngFilePath string) bool {
 	for ; cmd.ProcessState == nil; time.Sleep(time.Second) {
 		if App.Gui.Exiting {
 			_ = cmd.Process.Kill()
+			_ = exec.Command("killall", "zopflipng").Run()
+			_ = exec.Command("killall", "pngbattle").Run()
 		}
 	}
 	if !cmd.ProcessState.Success() {
