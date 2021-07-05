@@ -146,30 +146,29 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 			}
 		}
 	} else {
-		bgsvcsrc := string(fileRead(bgsrcpath))
-		for pidx := 0; pidx < numpanels; pidx++ {
+		pidx, bgsvgsrc := 0, string(fileRead(bgsrcpath))
+		me.data.PanelsTree.iter(func(p *ImgPanel) {
 			dstfilepath := filepath.Join(me.data.dirPath, "bg"+itoa(pidx)+".svg")
-			if force || (nil == fileStat(dstfilepath)) {
+			if svg := bgsvgsrc; force || (nil == fileStat(dstfilepath)) {
 				_ = os.Remove(dstfilepath)
-				if idx := strings.Index(bgsvcsrc, `id="p`+itoa(pidx)+`"`); idx > 0 {
-					bgsvcsrc = bgsvcsrc[idx:]
-					if idx = strings.Index(bgsvcsrc, "<"); idx > 0 {
-						bgsvcsrc = bgsvcsrc[idx:]
+				if idx := strings.Index(svg, `id="p`+itoa(pidx)+`"`); idx > 0 {
+					svg = svg[idx:]
+					if idx = strings.Index(svg, "<"); idx > 0 {
+						svg = svg[idx:]
+						if idx = strings.Index(svg, "</svg>"); idx > 0 {
+							svg = svg[:idx+len("</svg>")]
+							pw, ph := p.Rect.Max.X-p.Rect.Min.X, p.Rect.Max.Y-p.Rect.Min.Y
+							fileWrite(dstfilepath, []byte(`<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+								<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 `+itoa(pw)+` `+itoa(ph)+`"
+									width="`+itoa(pw)+`" height="`+itoa(ph)+`">`+
+								svg),
+							)
+						}
 					}
 				}
-				// if idx := strings.Index(bgsvgsrc, `<svg id="p`+itoa(pidx)+`" `); idx > 0 {
-				// 	svg := bgsvgsrc[idx:]
-				// 	if idx = strings.Index(svg, "</svg>"); idx > 0 {
-				// 		svg = svg[:idx+len("</svg>")]
-				// 		svg = strings.Replace(svg, `x="`+itoa(panel.Rect.Min.X)+`"`, `x="0"`, -1)
-				// 		svg = strings.Replace(svg, `y="`+itoa(panel.Rect.Min.Y)+`"`, `y="0"`, -1)
-
-				// 		bgdstpath := ".build/" + App.Proj.Gen.PicDirName + "/" + me.id + itoa(pidx) + "bg.svg"
-				// 		fileWrite(bgdstpath, []byte(svg))
-				// 	}
-				// }
 			}
-		}
+			pidx++
+		})
 	}
 
 	if err != nil {

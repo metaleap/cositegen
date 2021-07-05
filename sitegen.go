@@ -332,10 +332,10 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 					for i, q := range App.Proj.Qualis {
 						var totalimgsize int64
 						for contenthash, maxpidx := range allpanels {
-							if bgfile := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + contenthash + "bg.svg"); bgfile != nil {
-								totalimgsize += bgfile.Size()
-							}
 							for pidx := 0; pidx <= maxpidx; pidx++ {
+								if bgfile := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + contenthash + itoa(pidx) + "bg.svg"); bgfile != nil {
+									totalimgsize += bgfile.Size()
+								}
 								name := me.namePanelPic(contenthash, pidx, q.SizeHint)
 								if fileinfo := fileStat(strings.ToLower(".build/" + App.Proj.Gen.PicDirName + "/" + name + strIf(q.SizeHint == 0, ".svg", ".png"))); fileinfo != nil {
 									totalimgsize += fileinfo.Size()
@@ -620,8 +620,8 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			if hqsrc != "" {
 				s += " " + App.Proj.Gen.ClsImgHq + "='" + hqsrc + "'"
 			}
-			if bgsvg := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + "bg.svg"); bgsvg != nil {
-				s += " style='background-image:url(\"./" + App.Proj.Gen.PicDirName + "/" + sv.id + "bg.svg\");'"
+			if bgsvg := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + itoa(pidx) + "bg.svg"); bgsvg != nil {
+				s += " style='background-image:url(\"./" + App.Proj.Gen.PicDirName + "/" + sv.id + itoa(pidx) + "bg.svg\");'"
 			}
 			s += "/>"
 			s += "</div>"
