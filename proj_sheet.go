@@ -281,7 +281,7 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 		pidx := 0
 		me.data.PanelsTree.iter(func(p *ImgPanel) {
 			rand.Seed(time.Now().UnixNano())
-			r, g, b := 48+rand.Intn(160+(64-48)), 32+rand.Intn(160+(64-32)), 64+rand.Intn(160+(64-64))
+			r, g, b := 64+rand.Intn(160+(64-64)), 48+rand.Intn(160+(64-48)), 32+rand.Intn(160+(64-32))
 			x, y, w, h := p.Rect.Min.X, p.Rect.Min.Y, p.Rect.Max.X-p.Rect.Min.X, p.Rect.Max.Y-p.Rect.Min.Y
 			svg += `<svg x="` + itoa(x) + `" y="` + itoa(y) + `"  width="` + itoa(w) + `" height="` + itoa(h) + `" id="p` + itoa(pidx) + `">`
 			svg += `<rect x="0" y="0"
