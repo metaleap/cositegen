@@ -121,7 +121,7 @@ func appPrepWork(fromGui bool) {
 		App.Proj.allPrepsDone = true
 		return "for " + itoa(numwork) + "/" + itoa(numjobs) + " preprocessing jobs"
 	})
-	if fromGui && false {
+	if fromGui {
 		pngOptsLoop()
 	}
 }
