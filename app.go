@@ -257,15 +257,16 @@ func (me FilePathsSortingByFileSize) Swap(i int, j int) { me[i], me[j] = me[j], 
 func (me FilePathsSortingByFileSize) Less(i int, j int) bool {
 	// all scans pngs first, biggest first. all non-scan pngs next, smallest first.
 	// this is because when the former ones change, the latter ones get (re)generated.
-	if strings.HasPrefix(me[j], "scans/") && !strings.HasPrefix(me[i], "scans/") {
-		return false
-	}
-	if strings.HasPrefix(me[i], "scans/") && !strings.HasPrefix(me[j], "scans/") {
+	s1, s2 := strings.HasPrefix(me[i], "scans/"), strings.HasPrefix(me[j], "scans/")
+	if s1 && !s2 {
 		return true
 	}
+	if s2 && !s1 {
+		return false
+	}
 	fi1, fi2 := fileStat(me[i]), fileStat(me[j])
-	if strings.HasPrefix(me[i], "scans/") && strings.HasPrefix(me[j], "scans/") && fi1 != nil && fi2 != nil {
+	if s1 && s2 && fi1 != nil && fi2 != nil {
 		return fi1.Size() > fi2.Size()
 	}
-	return fi1 == nil || fi2 == nil || fi1.Size() < fi2.Size()
+	return fi1 == nil || (fi2 != nil && fi1.Size() < fi2.Size())
 }
