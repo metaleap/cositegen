@@ -186,15 +186,11 @@ func pngOpt(pngFilePath string) bool {
 		(lastopt[2] == curfilehash); skip {
 		return false
 	}
-	if App.Gui.Exiting {
-		return false
-	}
 
 	cmd := exec.Command("pngbattle", pngFilePath)
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	if err := cmd.Start(); err != nil {
-		printLn(err)
-		return false
+		panic(err)
 	}
 	go cmd.Wait()
 	for ; cmd.ProcessState == nil; time.Sleep(time.Second) {
@@ -202,6 +198,7 @@ func pngOpt(pngFilePath string) bool {
 			_ = cmd.Process.Kill()
 			_ = exec.Command("killall", "zopflipng").Run()
 			_ = exec.Command("killall", "pngbattle").Run()
+			return false
 		}
 	}
 	if !cmd.ProcessState.Success() {
@@ -210,34 +207,36 @@ func pngOpt(pngFilePath string) bool {
 	}
 	if filedata, err := os.ReadFile(pngFilePath); err == nil {
 		newfilehash := string(contentHashStr(filedata))
-		b1, b2 := App.Proj.data.Sv.ById[curfilehash] != nil, App.Proj.data.Sv.IdsToFileNames[curfilehash] != ""
-		if _, b3 := App.Proj.data.Sv.textRects[curfilehash]; b1 || b2 || b3 {
+		wasknown1, wasknown2 := App.Proj.data.Sv.ById[curfilehash] != nil, App.Proj.data.Sv.IdsToFileNames[curfilehash] != ""
+		_, wasknown3 := App.Proj.data.Sv.textRects[curfilehash]
+		if wasknown1 || wasknown2 || wasknown3 {
 			go exec.Command("beepintime", "1ns").Run()
-			if b1 {
+			if wasknown1 {
 				App.Proj.data.Sv.ById[newfilehash] = App.Proj.data.Sv.ById[curfilehash]
 				delete(App.Proj.data.Sv.ById, curfilehash)
 			}
-			if b2 {
+			if wasknown2 {
 				App.Proj.data.Sv.IdsToFileNames[newfilehash] = App.Proj.data.Sv.IdsToFileNames[curfilehash]
 				delete(App.Proj.data.Sv.IdsToFileNames, curfilehash)
 				App.Proj.data.Sv.fileNamesToIds[App.Proj.data.Sv.IdsToFileNames[newfilehash]] = newfilehash
 			}
-			if b3 {
+			if wasknown3 {
 				App.Proj.data.Sv.textRects[newfilehash] = App.Proj.data.Sv.textRects[curfilehash]
 				delete(App.Proj.data.Sv.textRects, curfilehash)
 			}
-			App.Proj.save()
 			if err := os.Rename(".cache/"+curfilehash, ".cache/"+newfilehash); err != nil {
-				panic(err)
+				printLn("MUST mv manually:", curfilehash, "to", newfilehash, "because:", err.Error())
 			}
-			panic("Post-PngOpt well-known ID changed: from " + curfilehash + " to " + newfilehash)
 		}
 		App.Proj.data.PngOpt[pngFilePath] = []string{
 			itoa(len(curfiledata)),
 			itoa(len(filedata)),
 			newfilehash,
 		}
-		if strings.HasSuffix(pngFilePath, "/bwsmall."+itoa(int(App.Proj.BwThreshold))+"."+itoa(int(App.Proj.BwSmallWidth))+".png") {
+		if wasknown1 || wasknown2 || wasknown3 {
+			App.Proj.save()
+			panic("Post-PngOpt well-known ID changed: from " + curfilehash + " to " + newfilehash)
+		} else if strings.HasSuffix(pngFilePath, "/bwsmall."+itoa(int(App.Proj.BwThreshold))+"."+itoa(int(App.Proj.BwSmallWidth))+".png") {
 			printLn("Post-PngOpt bg-svg removal for: ", pngFilePath)
 			if hashid := filepath.Base(filepath.Dir(pngFilePath)); App.Proj.data.Sv.ById != nil {
 				if svdata := App.Proj.data.Sv.ById[hashid]; svdata != nil && svdata.parentSheetVer != nil {
