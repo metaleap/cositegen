@@ -139,6 +139,39 @@ func (me *SheetVer) ensureBwSheetPngs(force bool) bool {
 func (me *SheetVer) ensurePanelPics(force bool) bool {
 	numpanels, _ := me.panelCount()
 	diritems, err := os.ReadDir(me.data.dirPath)
+	if bgsrcpath := strings.TrimSuffix(me.fileName, ".png") + ".svg"; nil == fileStat(bgsrcpath) {
+		for _, fileinfo := range diritems {
+			if (!fileinfo.IsDir()) && strings.HasPrefix(fileinfo.Name(), "bg") && strings.HasSuffix(fileinfo.Name(), ".svg") {
+				_ = os.Remove(filepath.Join(me.data.dirPath, fileinfo.Name()))
+			}
+		}
+	} else {
+		bgsvcsrc := string(fileRead(bgsrcpath))
+		for pidx := 0; pidx < numpanels; pidx++ {
+			dstfilepath := filepath.Join(me.data.dirPath, "bg"+itoa(pidx)+".svg")
+			if force || (nil == fileStat(dstfilepath)) {
+				_ = os.Remove(dstfilepath)
+				if idx := strings.Index(bgsvcsrc, `id="p`+itoa(pidx)+`"`); idx > 0 {
+					bgsvcsrc = bgsvcsrc[idx:]
+					if idx = strings.Index(bgsvcsrc, "<"); idx > 0 {
+						bgsvcsrc = bgsvcsrc[idx:]
+					}
+				}
+				// if idx := strings.Index(bgsvgsrc, `<svg id="p`+itoa(pidx)+`" `); idx > 0 {
+				// 	svg := bgsvgsrc[idx:]
+				// 	if idx = strings.Index(svg, "</svg>"); idx > 0 {
+				// 		svg = svg[:idx+len("</svg>")]
+				// 		svg = strings.Replace(svg, `x="`+itoa(panel.Rect.Min.X)+`"`, `x="0"`, -1)
+				// 		svg = strings.Replace(svg, `y="`+itoa(panel.Rect.Min.Y)+`"`, `y="0"`, -1)
+
+				// 		bgdstpath := ".build/" + App.Proj.Gen.PicDirName + "/" + me.id + itoa(pidx) + "bg.svg"
+				// 		fileWrite(bgdstpath, []byte(svg))
+				// 	}
+				// }
+			}
+		}
+	}
+
 	if err != nil {
 		panic(err)
 	}
@@ -245,18 +278,22 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 			<image x="0" width="` + pw + `" height="` + ph + `" xlink:href="` + filepath.Base(me.data.bwSmallFilePath) + `" y="0" />
 			<image x="0" width="` + pw + `" height="` + ph + `" xlink:href="` + filebasename + `" y="0" />
 		`
+		pidx := 0
 		me.data.PanelsTree.iter(func(p *ImgPanel) {
 			rand.Seed(time.Now().UnixNano())
 			r, g, b := 32+rand.Intn(128+32), 16+rand.Intn(128+48), 64+rand.Intn(128+0)
 			x, y, w, h := p.Rect.Min.X, p.Rect.Min.Y, p.Rect.Max.X-p.Rect.Min.X, p.Rect.Max.Y-p.Rect.Min.Y
-			svg += `<rect x="` + itoa(x) + `" y="` + itoa(y) + `" style="opacity: 0.5"
+			svg += `<svg x="` + itoa(x) + `" y="` + itoa(y) + `"  width="` + itoa(w) + `" height="` + itoa(h) + `" id="p` + itoa(pidx) + `">`
+			svg += `<rect x="0" y="0" style="opacity: 0.5"
 				fill="` + fmt.Sprintf("#%X%X%X", r, g, b) + `"  stroke="#ff0000"
 				stroke-width="44" width="` + itoa(w) + `" height="` + itoa(h) + `"></rect>
 			`
 			if true {
-				svg += `<rect stroke-width="22" stroke="#ffcc00" x="` + itoa(x+(w/2)) + `" y="` + itoa(y) + `" width="22" height="` + itoa(h) + `"></rect>`
-				svg += `<rect stroke-width="22" stroke="#ffcc00" x="` + itoa(x) + `" y="` + itoa(y+(h/2)) + `" width="` + itoa(w) + `" height="22"></rect>`
+				svg += `<rect stroke-width="22" stroke="#ffcc00" x="` + itoa(w/2) + `" y="0" width="22" height="` + itoa(h) + `"></rect>`
+				svg += `<rect stroke-width="22" stroke="#ffcc00" x="0" y="` + itoa(h/2) + `" width="` + itoa(w) + `" height="22"></rect>`
 			}
+			svg += "</svg>\n"
+			pidx++
 		})
 		fileWrite(bgtmplsvgfilepath, []byte(svg+"</svg>"))
 	}

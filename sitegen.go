@@ -238,10 +238,10 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 			for qidx, quali := range App.Proj.Qualis {
 				fext := strIf(quali.SizeHint == 0, ".svg", ".png")
 				srcpath := filepath.Join(sv.data.PicDirPath(quali.SizeHint), itoa(pidx)+fext)
-				dstpath := filepath.Join(".build/"+App.Proj.Gen.PicDirName+"/", me.namePanelPic(sv.id, pidx, quali.SizeHint)+fext)
 				if fileinfo := fileStat(srcpath); fileinfo == nil && quali.SizeHint != 0 {
 					break
 				} else {
+					dstpath := filepath.Join(".build/"+App.Proj.Gen.PicDirName+"/", me.namePanelPic(sv.id, pidx, quali.SizeHint)+fext)
 					fileLinkOrCopy(srcpath, dstpath)
 					if me.onPicSize != nil {
 						me.onPicSize(sv.parentSheet.parentChapter, sv.id+itoa(pidx), qidx, fileinfo.Size())
@@ -253,23 +253,16 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 					}
 				}
 			}
+			srcpath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".svg")
+			if fileinfo := fileStat(srcpath); fileinfo != nil {
+				dstpath := filepath.Join(".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + itoa(pidx) + "bg.svg")
+				fileLinkOrCopy(srcpath, dstpath)
+				atomic.AddUint32(&numSvgs, 1)
+			}
 			work.Done()
 		}(pidx)
 		pidx++
 	})
-
-	if bgsrcpath := strings.TrimSuffix(sv.fileName, ".png") + ".svg"; nil != fileStat(bgsrcpath) {
-		bgdstpath := ".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + "bg.svg"
-		svgsrc := string(fileRead(bgsrcpath))
-		for again, pref, suff := true, `<image x="0" width="`, `.png" y="0" />`; again; {
-			i1, i2 := strings.Index(svgsrc, pref), strings.Index(svgsrc, suff)
-			if again = i1 > 0 && i2 > i1; again {
-				svgsrc = svgsrc[:i1] + svgsrc[i2+len(suff):]
-			}
-		}
-		fileWrite(bgdstpath, []byte(svgsrc))
-		atomic.AddUint32(&numSvgs, 1)
-	}
 
 	work.Wait()
 	return
@@ -628,11 +621,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				s += " " + App.Proj.Gen.ClsImgHq + "='" + hqsrc + "'"
 			}
 			if bgsvg := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + "bg.svg"); bgsvg != nil {
-				pr := panel.Rect
-				pw, sw, sh := pr.Max.X-pr.Min.X, sv.data.PanelsTree.Rect.Max.X, sv.data.PanelsTree.Rect.Max.Y
-				pwp := float64(sw) / float64(pw)
-				pxp, pyp := 100.0/(float64(sw)/float64(pr.Min.X)), 100.0/(float64(sh)/float64(pr.Min.Y))
-				s += " style='background-size: " + ftoa((100.0*pwp)-1.0, 8) + "% auto; background-image:url(\"./" + App.Proj.Gen.PicDirName + "/" + sv.id + "bg.svg\"); background-position: " + ftoa(pxp, 8) + "% " + ftoa(pyp, 8) + "%;'"
+				s += " style='background-image:url(\"./" + App.Proj.Gen.PicDirName + "/" + sv.id + "bg.svg\");'"
 			}
 			s += "/>"
 			s += "</div>"
