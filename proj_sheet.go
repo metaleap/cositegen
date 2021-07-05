@@ -103,7 +103,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	didpanels := me.ensurePanelsTree(forceFullRedo || didbwsheet || shouldsaveprojdata)
 	didpnlpics := me.ensurePanelPics(forceFullRedo || didpanels)
 
-	if didWork = didgraydistr || didbwsheet || didpanels || didpnlpics; shouldsaveprojdata {
+	if didWork = didgraydistr || didbwsheet || didpanels || didpnlpics; shouldsaveprojdata || didWork {
 		App.Proj.save()
 	}
 	return
