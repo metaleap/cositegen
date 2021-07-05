@@ -311,7 +311,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 			me.page.HrefDirRtl = "./index." + App.Proj.DirModes.Rtl.Name + "." + me.lang + ".html"
 		}
 		me.prepHomePage()
-		numFilesWritten += me.genPageExecAndWrite(homename)
+		numFilesWritten += me.genPageExecAndWrite(homename, nil)
 
 	} else {
 		series := chapter.parentSeries
@@ -359,7 +359,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 					me.page.HrefDirLtr = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Ltr.Name, me.lang, svdt) + ".html"
 					me.page.HrefDirRtl = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Rtl.Name, me.lang, svdt) + ".html"
 
-					numFilesWritten += me.genPageExecAndWrite(me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svdt))
+					numFilesWritten += me.genPageExecAndWrite(me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svdt), chapter)
 				}
 			}
 		}
@@ -732,16 +732,20 @@ func (me *siteGen) genSvgForPanel(sV *SheetVer, panelIdx int, panel *ImgPanel) s
 	return s
 }
 
-func (me *siteGen) genPageExecAndWrite(name string) (numFilesWritten int) {
+func (me *siteGen) genPageExecAndWrite(name string, chapter *Chapter) (numFilesWritten int) {
 	me.page.LangsList = ""
 	for lidx, lang := range App.Proj.Langs {
 		title, imgsrcpath := lang, strings.Replace(App.Proj.Gen.ImgSrcLang, "%LANG%", lang, -1)
 		if lidx != 0 {
-			title += " (" + App.Proj.PageContentTexts[lang]["Transl"] + ": " + itoa(int(App.Proj.percentTranslated(lang, nil, nil, nil, -1))) + "%)"
+			title += " (" + App.Proj.PageContentTexts[lang]["Transl"] + ": " + itoa(int(App.Proj.percentTranslated(lang, nil, nil, nil, -1))) + "%"
+			if chapter != nil {
+				title += ", \"" + locStr(chapter.Title, lang) + "\": " + itoa(int(App.Proj.percentTranslated(lang, nil, chapter, nil, -1))) + "%"
+			}
+			title += ")"
 		}
 		if lang == me.lang {
 			me.page.LangsList += "<span><div>"
-			me.page.LangsList += "<b><img title='" + title + "' alt='" + title + "' src='" + imgsrcpath + "'/></b>"
+			me.page.LangsList += "<b><img title='" + hEsc(title) + "' alt='" + hEsc(title) + "' src='" + imgsrcpath + "'/></b>"
 			me.page.LangsList += "</div></span>"
 		} else {
 			me.page.LangsList += "<div>"
@@ -757,7 +761,7 @@ func (me *siteGen) genPageExecAndWrite(name string) (numFilesWritten int) {
 					href = "index" + dirmode
 				}
 			}
-			me.page.LangsList += "<a class='" + App.Proj.Gen.ClsPanel + "l' href='./" + href + ".html'><img alt='" + title + "' title='" + title + "' src='" + imgsrcpath + "'/></a>"
+			me.page.LangsList += "<a class='" + App.Proj.Gen.ClsPanel + "l' href='./" + href + ".html'><img alt='" + hEsc(title) + "' title='" + hEsc(title) + "' src='" + imgsrcpath + "'/></a>"
 			me.page.LangsList += "</div>"
 		}
 	}

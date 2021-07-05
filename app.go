@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -151,7 +152,8 @@ func pngOptsLoop() {
 			}
 			if fileinfo, err := os.Lstat(fspath); err == nil &&
 				(!fileinfo.IsDir()) && (fileinfo.Mode()&os.ModeSymlink) == 0 &&
-				strings.HasSuffix(fspath, ".png") && !strings.Contains(fspath, ".build/") {
+				strings.HasSuffix(fspath, ".png") && !(strings.HasPrefix(fspath, ".build/") ||
+				strings.HasPrefix(fspath, ".chromium/")) {
 				matches, totalsize = append(matches, fspath), totalsize+uint64(fileinfo.Size())
 			}
 			return nil
@@ -178,9 +180,10 @@ func pngOptsLoop() {
 
 func pngOpt(pngFilePath string) bool {
 	curfiledata := fileRead(pngFilePath)
+	curfilehash := string(contentHashStr(curfiledata))
 	lastopt, skip := App.Proj.data.PngOpt[pngFilePath]
 	if skip = skip && (lastopt[1] == itoa(len(curfiledata))) &&
-		(lastopt[2] == string(contentHashStr(curfiledata))); skip {
+		(lastopt[2] == curfilehash); skip {
 		return false
 	}
 	if App.Gui.Exiting {
@@ -204,10 +207,42 @@ func pngOpt(pngFilePath string) bool {
 		return false
 	}
 	if filedata, err := os.ReadFile(pngFilePath); err == nil {
+		newfilehash := string(contentHashStr(filedata))
+		b1, b2 := App.Proj.data.Sv.ById[curfilehash] != nil, App.Proj.data.Sv.IdsToFileNames[curfilehash] != ""
+		if _, b3 := App.Proj.data.Sv.textRects[curfilehash]; b1 || b2 || b3 {
+			go exec.Command("beepintime", "1ns").Run()
+			if b1 {
+				App.Proj.data.Sv.ById[newfilehash] = App.Proj.data.Sv.ById[curfilehash]
+				delete(App.Proj.data.Sv.ById, curfilehash)
+			}
+			if b2 {
+				App.Proj.data.Sv.IdsToFileNames[newfilehash] = App.Proj.data.Sv.IdsToFileNames[curfilehash]
+				delete(App.Proj.data.Sv.IdsToFileNames, curfilehash)
+				App.Proj.data.Sv.fileNamesToIds[App.Proj.data.Sv.IdsToFileNames[newfilehash]] = newfilehash
+			}
+			if b3 {
+				App.Proj.data.Sv.textRects[newfilehash] = App.Proj.data.Sv.textRects[curfilehash]
+				delete(App.Proj.data.Sv.textRects, curfilehash)
+			}
+			App.Proj.save()
+			if err := os.Rename(".cache/"+curfilehash, ".cache/"+newfilehash); err != nil {
+				panic(err)
+			}
+			panic("Post-PngOpt well-known ID changed: from " + curfilehash + " to " + newfilehash)
+		}
 		App.Proj.data.PngOpt[pngFilePath] = []string{
 			itoa(len(curfiledata)),
 			itoa(len(filedata)),
-			string(contentHashStr(filedata)),
+			newfilehash,
+		}
+		if strings.HasSuffix(pngFilePath, "/bwsmall."+itoa(int(App.Proj.BwThreshold))+"."+itoa(int(App.Proj.BwSmallWidth))+".png") {
+			printLn("Post-PngOpt bg-svg removal for: ", pngFilePath)
+			if hashid := filepath.Base(filepath.Dir(pngFilePath)); App.Proj.data.Sv.ById != nil {
+				if svdata := App.Proj.data.Sv.ById[hashid]; svdata != nil && svdata.parentSheetVer != nil {
+					_ = os.Remove(filepath.Join(svdata.dirPath, strings.TrimSuffix(
+						filepath.Base(svdata.parentSheetVer.fileName), ".png")+".svg"))
+				}
+			}
 		}
 		return true
 	}
@@ -219,6 +254,17 @@ type FilePathsSortingByFileSize []string
 func (me FilePathsSortingByFileSize) Len() int          { return len(me) }
 func (me FilePathsSortingByFileSize) Swap(i int, j int) { me[i], me[j] = me[j], me[i] }
 func (me FilePathsSortingByFileSize) Less(i int, j int) bool {
+	// all scans pngs first, biggest first. all non-scan pngs next, smallest first.
+	// this is because when the former ones change, the latter ones get (re)generated.
+	if strings.HasPrefix(me[j], "scans/") && !strings.HasPrefix(me[i], "scans/") {
+		return false
+	}
+	if strings.HasPrefix(me[i], "scans/") && !strings.HasPrefix(me[j], "scans/") {
+		return true
+	}
 	fi1, fi2 := fileStat(me[i]), fileStat(me[j])
+	if strings.HasPrefix(me[i], "scans/") && strings.HasPrefix(me[j], "scans/") && fi1 != nil && fi2 != nil {
+		return fi1.Size() > fi2.Size()
+	}
 	return fi1 == nil || fi2 == nil || fi1.Size() < fi2.Size()
 }

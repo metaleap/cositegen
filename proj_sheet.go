@@ -37,6 +37,7 @@ func (me *Sheet) versionNoOlderThanOrLatest(dt int64) *SheetVer {
 }
 
 type SheetVerData struct {
+	parentSheetVer  *SheetVer
 	dirPath         string
 	bwFilePath      string
 	bwSmallFilePath string
@@ -82,7 +83,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	shouldsaveprojdata := forceFullRedo
 	if me.data == nil {
 		shouldsaveprojdata = true
-		me.data = &SheetVerData{PxCm: 472.424242424} //1200dpi
+		me.data = &SheetVerData{parentSheetVer: me, PxCm: 472.424242424} //1200dpi
 		{
 			pngdata := fileRead(me.fileName)
 			if img, _, err := image.Decode(bytes.NewReader(pngdata)); err != nil {
@@ -129,7 +130,6 @@ func (me *SheetVer) ensureBwSheetPngs(force bool) bool {
 			panic(err)
 		} else if data := imgDownsized(file, file.Close, int(App.Proj.BwSmallWidth), true); data != nil {
 			fileWrite(me.data.bwSmallFilePath, data)
-			pngOpt(me.data.bwSmallFilePath)
 		} else if err = os.Symlink(filepath.Base(me.data.bwFilePath), me.data.bwSmallFilePath); err != nil {
 			panic(err)
 		}
@@ -141,33 +141,41 @@ func (me *SheetVer) ensureBwSheetPngs(force bool) bool {
 func (me *SheetVer) ensurePanelPics(force bool) bool {
 	numpanels, _ := me.panelCount()
 	diritems, err := os.ReadDir(me.data.dirPath)
-	if bgsrcpath := strings.TrimSuffix(me.fileName, ".png") + ".svg"; nil == fileStat(bgsrcpath) {
-		for _, fileinfo := range diritems {
-			if (!fileinfo.IsDir()) && strings.HasPrefix(fileinfo.Name(), "bg") && strings.HasSuffix(fileinfo.Name(), ".svg") {
-				_ = os.Remove(filepath.Join(me.data.dirPath, fileinfo.Name()))
-			}
+	bgsrcpath := strings.TrimSuffix(me.fileName, ".png") + ".svg"
+	bgsrcfile := fileStat(bgsrcpath)
+	for _, direntry := range diritems {
+		if fileinfo, _ := direntry.Info(); (!direntry.IsDir()) &&
+			strings.HasPrefix(direntry.Name(), "bg") && strings.HasSuffix(direntry.Name(), ".svg") &&
+			(bgsrcfile == nil || fileinfo == nil || bgsrcfile.ModTime().UnixNano() > fileinfo.ModTime().UnixNano()) {
+			_ = os.Remove(filepath.Join(me.data.dirPath, direntry.Name()))
 		}
-	} else {
+	}
+	if bgsrcfile != nil {
 		pidx, bgsvgsrc := 0, string(fileRead(bgsrcpath))
 		me.data.PanelsTree.iter(func(p *ImgPanel) {
-			dstfilepath := filepath.Join(me.data.dirPath, "bg"+itoa(pidx)+".svg")
-			if svg := bgsvgsrc; force || (nil == fileStat(dstfilepath)) {
+			gid, dstfilepath := "pnl"+itoa(pidx), filepath.Join(me.data.dirPath, "bg"+itoa(pidx)+".svg")
+			if s, svg := "", bgsvgsrc; force || (nil == fileStat(dstfilepath)) {
 				_ = os.Remove(dstfilepath)
-				if idx := strings.Index(svg, `id="p`+itoa(pidx)+`"`); idx > 0 {
-					svg = svg[idx:]
-					if idx = strings.Index(svg, "<"); idx > 0 {
-						svg = svg[idx:]
-						if idx = strings.Index(svg, "</svg>"); idx > 0 {
-							svg = svg[:idx+len("</svg>")]
-							pw, ph := p.Rect.Max.X-p.Rect.Min.X, p.Rect.Max.Y-p.Rect.Min.Y
-							fileWrite(dstfilepath, []byte(`<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-								<svg xmlns="http://www.w3.org/2000/svg" viewbox="0 0 `+itoa(pw)+` `+itoa(ph)+`"
-									width="`+itoa(pw)+`" height="`+itoa(ph)+`">`+
-								svg),
-							)
+				if idx := strings.Index(svg, `id="`+gid+`"`); idx > 0 {
+					svg = svg[idx+len(`id="`+gid+`"`):]
+					if idx = strings.Index(svg, `id="pnl`); idx > 0 {
+						svg = svg[:idx]
+						if idx = strings.Index(svg, ">"); idx > 0 {
+							svg = svg[idx+1:]
+							if idx = strings.LastIndex(svg, "</g>"); idx > 0 {
+								s = svg[:idx]
+							}
 						}
 					}
 				}
+				if s == "" {
+					panic(svg)
+				}
+				pw, ph := p.Rect.Max.X-p.Rect.Min.X, p.Rect.Max.Y-p.Rect.Min.Y
+				s = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+						<svg width="` + itoa(pw) + `" height="` + itoa(ph) + `" viewbox="0 0 ` + itoa(pw) + ` ` + itoa(ph) + `" xmlns="http://www.w3.org/2000/svg">
+						` + s
+				fileWrite(dstfilepath, []byte(s+"</svg>"))
 			}
 			pidx++
 		})
@@ -271,31 +279,37 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 			imgpanel := imgPanels(file, file.Close)
 			me.data.PanelsTree = &imgpanel
 		}
+	} else if os.Getenv("REDO_BGS") != "" {
+		_ = os.Remove(bgtmplsvgfilepath)
 	}
 
-	_ = os.Remove(bgtmplsvgfilepath)
 	if pw, ph := itoa(me.data.PanelsTree.Rect.Max.X), itoa(me.data.PanelsTree.Rect.Max.Y); did || nil == fileStat(bgtmplsvgfilepath) {
-		svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-		<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="` + pw + `" height="` + ph + `" viewBox="0 0 ` + pw + ` ` + ph + `">
+		svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+		<svg inkscape:version="1.1 (c68e22c387, 2021-05-23)"
+			sodipodi:docname="drawing.svg"
+			xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+			xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+			xmlns="http://www.w3.org/2000/svg"
+			xmlns:svg="http://www.w3.org/2000/svg"
+			xmlns:xlink="http://www.w3.org/1999/xlink"
+			width="` + pw + `" height="` + ph + `" viewBox="0 0 ` + pw + ` ` + ph + `">
 		`
 		pidx := 0
 		me.data.PanelsTree.iter(func(p *ImgPanel) {
 			rand.Seed(time.Now().UnixNano())
-			r, g, b := 64+rand.Intn(160+(64-64)), 48+rand.Intn(160+(64-48)), 32+rand.Intn(160+(64-32))
+			r, g, b := 64+rand.Intn(160+(80-64)), 56+rand.Intn(160+(80-56)), 48+rand.Intn(160+(80-48))
 			x, y, w, h := p.Rect.Min.X, p.Rect.Min.Y, p.Rect.Max.X-p.Rect.Min.X, p.Rect.Max.Y-p.Rect.Min.Y
-			svg += `<svg x="` + itoa(x) + `" y="` + itoa(y) + `"  width="` + itoa(w) + `" height="` + itoa(h) + `" id="p` + itoa(pidx) + `">`
-			svg += `<rect x="0" y="0"
-				fill="` + fmt.Sprintf("#%X%X%X", r, g, b) + `"  stroke="#000000"
-				stroke-width="1" width="` + itoa(w) + `" height="` + itoa(h) + `"></rect>
+			gid := "pnl" + itoa(pidx)
+			svg += `<g id="` + gid + `" inkscape:label="` + gid + `" inkscape:groupmode="layer" transform="translate(` + itoa(x) + ` ` + itoa(y) + `)">`
+			svg += `<rect x="0" y="0"  stroke="#000000" stroke-width="1"
+				fill="` + fmt.Sprintf("#%X%X%X", r, g, b) + `"
+				width="` + itoa(w) + `" height="` + itoa(h) + `"></rect>
 			`
-			if false {
-				svg += `<rect stroke-width="22" stroke="#ffcc00" x="` + itoa(w/2) + `" y="0" width="22" height="` + itoa(h) + `"></rect>`
-				svg += `<rect stroke-width="22" stroke="#ffcc00" x="0" y="` + itoa(h/2) + `" width="` + itoa(w) + `" height="22"></rect>`
-			}
-			svg += "</svg>\n"
+			svg += "</g>\n"
 			pidx++
 		})
-		svg += `<image x="0" y="0" width="` + pw + `" height="` + ph + `" xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(fileRead(me.data.bwSmallFilePath)) + `" />`
+		gid := "pnls_" + strings.Replace(filebasename, ".", "_", -1)
+		svg += `<g id="` + gid + `" inkscape:label="` + gid + `" inkscape:groupmode="layer"><image x="0" y="0" width="` + pw + `" height="` + ph + `" xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(fileRead(me.data.bwSmallFilePath)) + `" /></g>`
 		fileWrite(bgtmplsvgfilepath, []byte(svg+"</svg>"))
 	}
 	return

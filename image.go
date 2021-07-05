@@ -371,7 +371,13 @@ func imgStitchHorizontally(fileNames []string, height int, gapWidth int, gapColo
 	}
 	nextx := gapWidth / 2
 	for img, width := range srcimgs {
-		ImgScaler.Scale(dst, image.Rect(nextx, 0, nextx+width, height), img, img.Bounds(), draw.Over, nil)
+		dr := image.Rect(nextx, 0, nextx+width, height)
+		for x := dr.Min.X; x < dr.Max.X; x++ {
+			for y := dr.Min.Y; y < dr.Max.Y; y++ {
+				dst.Set(x, y, color.NRGBA{255, 255, 255, 255})
+			}
+		}
+		ImgScaler.Scale(dst, dr, img, img.Bounds(), draw.Over, nil)
 		nextx += width + gapWidth
 	}
 
