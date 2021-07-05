@@ -288,7 +288,7 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 				fill="` + fmt.Sprintf("#%X%X%X", r, g, b) + `"  stroke="#000000"
 				stroke-width="1" width="` + itoa(w) + `" height="` + itoa(h) + `"></rect>
 			`
-			if true {
+			if false {
 				svg += `<rect stroke-width="22" stroke="#ffcc00" x="` + itoa(w/2) + `" y="0" width="22" height="` + itoa(h) + `"></rect>`
 				svg += `<rect stroke-width="22" stroke="#ffcc00" x="0" y="` + itoa(h/2) + `" width="` + itoa(w) + `" height="22"></rect>`
 			}
