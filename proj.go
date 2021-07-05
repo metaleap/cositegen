@@ -147,18 +147,18 @@ func (me *Chapter) HasBgCol() bool {
 }
 
 func (me *Chapter) PercentColorized() float64 {
-	sum, num := 0, 0
+	numsv, numbg := 0, 0
 	for _, sheet := range me.sheets {
 		for _, sv := range sheet.versions {
-			if num++; sv.data.hasBgCol {
-				sum++
+			if numsv++; sv.data.hasBgCol {
+				numbg++
 			}
 		}
 	}
-	if num == 0 || sum == 0 {
+	if numsv == 0 || numbg == 0 {
 		return 0.0
 	}
-	return 100.0 / (float64(sum) / float64(num))
+	return 100.0 / (float64(numsv) / float64(numbg))
 }
 
 func (me *Chapter) DateRangeOfSheets() (time.Time, time.Time) {
