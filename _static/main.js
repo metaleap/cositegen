@@ -207,3 +207,17 @@ function addBwtPreviewLinks(sheetVerSrcFilePath) {
     $.previewbwtlinks.innerHTML = html;
     $.previewbwtlink0.focus()
 }
+
+function txtPrev(idx) {
+    const prevs = document.getElementsByClassName("txtprev"),
+        id = idx ? ('txtprev' + idx) : '';
+    for (let i = 0; i < prevs.length; i++)
+        prevs[i].style.display = (prevs[i].id == id) ? 'block' : 'none';
+}
+
+function txtImp() {
+    const idx = window.txtimpsel.value;
+    if (idx && confirm("Sure?")) {
+        doPostBack('txtimpsel')
+    }
+}

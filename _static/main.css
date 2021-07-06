@@ -15,8 +15,29 @@ td {
     text-align: left;
 }
 
-div.fullsheet img {
-    width: 90%;
+div#fullsheet {
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+}
+
+div#fullsheet img {
+    width: 99%;
+}
+
+div#fullsheet div.txtprev {
+    position: absolute;
+    top: 0;left: 0;width: 99%;height: 100%;
+    display: none;
+    overflow: hidden;
+}
+
+div.txtprevbox {
+    position: absolute;
+    color: #000000;
+    font-size: 0.77em;
+    background-color: #ffffff;
+    border: 0.1em solid black;
 }
 
 div#uipane {

@@ -209,7 +209,7 @@ func pngOpt(pngFilePath string) bool {
 		newfilehash := string(contentHashStr(filedata))
 		wasknown1, wasknown2 := App.Proj.data.Sv.ById[curfilehash] != nil, App.Proj.data.Sv.IdsToFileNames[curfilehash] != ""
 		_, wasknown3 := App.Proj.data.Sv.textRects[curfilehash]
-		if wasknown1 || wasknown2 || wasknown3 {
+		if newfilehash != curfilehash && (wasknown1 || wasknown2 || wasknown3) {
 			go exec.Command("beepintime", "1ns").Run()
 			if wasknown1 {
 				App.Proj.data.Sv.ById[newfilehash] = App.Proj.data.Sv.ById[curfilehash]

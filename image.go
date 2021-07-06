@@ -277,7 +277,7 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 }
 
 func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int, transparent bool, gotSameSizeAsOrig *bool) image.Image {
-	origwidth, origheight := srcImgRect.Max.X-srcImgRect.Min.X, srcImgRect.Max.Y-srcImgRect.Min.Y
+	origwidth, origheight := srcImgRect.Dx(), srcImgRect.Dy()
 	assert(((*width < origwidth) == (*height < origheight)) &&
 		((*width > origwidth) == (*height > origheight)))
 
@@ -314,7 +314,7 @@ func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, heig
 var svgTxtCounter int
 
 func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bool, lineX int) (s string) {
-	aw, ah := pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
+	aw, ah := pta.Rect.Dx(), pta.Rect.Dy()
 	pxfont, pxline := int(px1cm*App.Proj.Gen.PanelSvgText.FontSizeCmA4), int(px1cm*App.Proj.Gen.PanelSvgText.PerLineDyCmA4)
 	svgTxtCounter++
 	s += "<text id='w" + itoa(svgTxtCounter) + "' style='visibility: hidden; font-size: " + itoa(pxfont) + "px'><tspan><tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>&#9881;...</tspan></tspan><title><tspan>Loading... / Wird geladen...</tspan></title></text>"
@@ -443,7 +443,7 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 		for _, sep := range seps {
 			assert(sep[1] > sep[0])
 			rect := image.Rect(area.Min.X, prev, area.Max.X, sep[0])
-			if assert(rect.In(area)); (rect.Max.Y - rect.Min.Y) > panelmin {
+			if assert(rect.In(area)); rect.Dy() > panelmin {
 				ret = append(ret, rect)
 			}
 			prev = sep[1]
@@ -478,7 +478,7 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 		for _, sep := range seps {
 			assert(sep[1] > sep[0])
 			rect := image.Rect(prev, area.Min.Y, sep[0], area.Max.Y)
-			if assert(rect.In(area)); (rect.Max.X - rect.Min.X) > panelmin {
+			if assert(rect.In(area)); rect.Dx() > panelmin {
 				ret = append(ret, rect)
 			}
 			prev = sep[1]

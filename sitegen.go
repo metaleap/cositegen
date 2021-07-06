@@ -609,7 +609,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			for i := range panel.SubCols {
 				sc := &panel.SubCols[i]
 				s += "<div class='" + App.Proj.Gen.ClsPanelCol + "'"
-				pw, sw := sc.Rect.Max.X-sc.Rect.Min.X, panel.Rect.Max.X-panel.Rect.Min.X
+				pw, sw := sc.Rect.Dx(), panel.Rect.Dx()
 				pp := 100.0 / (float64(sw) / float64(pw))
 				s += " style='width: " + ftoa(pp, 8) + "%'"
 				s += ">" + iter(sv, sc, false) + "</div>"
@@ -698,10 +698,10 @@ func (me *siteGen) genSvgForPanel(sV *SheetVer, panelIdx int, panel *ImgPanel) s
 		return ""
 	}
 
-	pw, ph := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y
+	pw, ph := panel.Rect.Dx(), panel.Rect.Dy()
 	s := "<svg viewbox='0 0 " + itoa(pw) + " " + itoa(ph) + "'>"
 	for _, pta := range panelareas {
-		rx, ry, rw, rh := pta.Rect.Min.X-panel.Rect.Min.X, pta.Rect.Min.Y-panel.Rect.Min.Y, pta.Rect.Max.X-pta.Rect.Min.X, pta.Rect.Max.Y-pta.Rect.Min.Y
+		rx, ry, rw, rh := pta.Rect.Min.X-panel.Rect.Min.X, pta.Rect.Min.Y-panel.Rect.Min.Y, pta.Rect.Dx(), pta.Rect.Dy()
 		borderandfill := pta.PointTo != nil
 		if borderandfill {
 			rpx, rpy := pta.PointTo.X-panel.Rect.Min.X, pta.PointTo.Y-panel.Rect.Min.Y

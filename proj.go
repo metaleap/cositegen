@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -178,10 +179,11 @@ func (me *Chapter) DateRangeOfSheets() (time.Time, time.Time) {
 }
 
 type Chapter struct {
-	Name          string
-	UrlName       string
-	Title         map[string]string
-	SheetsPerPage int
+	Name           string
+	UrlName        string
+	Title          map[string]string
+	SheetsPerPage  int
+	StoryboardFile string
 
 	defaultQuali int
 	dirPath      string
@@ -192,6 +194,17 @@ type Chapter struct {
 		from  int64
 		until int64
 	}
+	storyBoardPages []ChapterStoryboardPage
+}
+
+type ChapterStoryboardPage struct {
+	name      string
+	textBoxes []ChapterStoryboardPageTextBox
+}
+
+type ChapterStoryboardPageTextBox struct {
+	xywhCm    []float64
+	textSpans []string
 }
 
 func (me *Chapter) At(i int) fmt.Stringer { return me.sheets[i] }
@@ -228,12 +241,12 @@ func (me *Project) load() (numSheetVers int) {
 		if series.UrlName == "" {
 			series.UrlName = series.Name
 		}
-		for _, chapter := range series.Chapters {
-			chapter.parentSeries, chapter.dirPath = series, filepath.Join(series.dirPath, chapter.Name)
-			if chapter.UrlName == "" {
-				chapter.UrlName = chapter.Name
+		for _, chap := range series.Chapters {
+			chap.parentSeries, chap.dirPath = series, filepath.Join(series.dirPath, chap.Name)
+			if chap.UrlName == "" {
+				chap.UrlName = chap.Name
 			}
-			files, err := os.ReadDir(chapter.dirPath)
+			files, err := os.ReadDir(chap.dirPath)
 			if err != nil {
 				panic(err)
 			}
@@ -243,7 +256,7 @@ func (me *Project) load() (numSheetVers int) {
 			}{}
 			for _, f := range files {
 				if fnamebase := f.Name(); strings.HasSuffix(fnamebase, ".png") && !f.IsDir() {
-					fname := filepath.Join(chapter.dirPath, fnamebase)
+					fname := filepath.Join(chap.dirPath, fnamebase)
 					fnamebase = fnamebase[:len(fnamebase)-len(".png")]
 					versionname := fnamebase[1+strings.LastIndexByte(fnamebase, '.'):]
 					t, _ := time.Parse("20060102", versionname)
@@ -258,15 +271,15 @@ func (me *Project) load() (numSheetVers int) {
 					}
 
 					var sheet *Sheet
-					for _, s := range chapter.sheets {
+					for _, s := range chap.sheets {
 						if s.name == sheetname {
 							sheet = s
 							break
 						}
 					}
 					if sheet == nil {
-						sheet = &Sheet{name: sheetname, parentChapter: chapter}
-						chapter.sheets = append(chapter.sheets, sheet)
+						sheet = &Sheet{name: sheetname, parentChapter: chap}
+						chap.sheets = append(chap.sheets, sheet)
 					}
 					sheetver := &SheetVer{dateTimeUnixNano: dt, parentSheet: sheet, fileName: fname}
 					sheet.versions = append([]*SheetVer{sheetver}, sheet.versions...)
@@ -287,25 +300,30 @@ func (me *Project) load() (numSheetVers int) {
 			}
 			work.Wait()
 
-			if len(chapter.sheets) > 0 {
-				chapter.versions = []int64{0}
-				for _, sheet := range chapter.sheets {
+			if len(chap.sheets) > 0 {
+				chap.versions = []int64{0}
+				for _, sheet := range chap.sheets {
 					for i, sheetver := range sheet.versions {
 						if i > 0 {
-							if len(chapter.versions) <= i {
-								chapter.versions = append(chapter.versions, sheetver.dateTimeUnixNano)
-							} else if sheetver.dateTimeUnixNano < chapter.versions[i] {
-								chapter.versions[i] = sheetver.dateTimeUnixNano
+							if len(chap.versions) <= i {
+								chap.versions = append(chap.versions, sheetver.dateTimeUnixNano)
+							} else if sheetver.dateTimeUnixNano < chap.versions[i] {
+								chap.versions[i] = sheetver.dateTimeUnixNano
 							}
 						} else {
-							if sheetver.dateTimeUnixNano > chapter.verDtLatest.until {
-								chapter.verDtLatest.until = sheetver.dateTimeUnixNano
+							if sheetver.dateTimeUnixNano > chap.verDtLatest.until {
+								chap.verDtLatest.until = sheetver.dateTimeUnixNano
 							}
-							if sheetver.dateTimeUnixNano < chapter.verDtLatest.from || chapter.verDtLatest.from == 0 {
-								chapter.verDtLatest.from = sheetver.dateTimeUnixNano
+							if sheetver.dateTimeUnixNano < chap.verDtLatest.from || chap.verDtLatest.from == 0 {
+								chap.verDtLatest.from = sheetver.dateTimeUnixNano
 							}
 						}
 					}
+				}
+				if fileStat(chap.StoryboardFile) != nil {
+					chap.loadStoryboard()
+				} else if chap.StoryboardFile != "" {
+					panic(chap.StoryboardFile)
 				}
 			}
 		}
@@ -363,4 +381,46 @@ func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sh
 		return -1.0
 	}
 	return float64(numtrans) * (100.0 / float64(numtotal))
+}
+
+func (me *Chapter) loadStoryboard() {
+	s := string(fileRead(me.StoryboardFile))
+
+	for _, sp := range xmlInners(s, `<draw:page>`, `</draw:page>`) {
+		csp := ChapterStoryboardPage{name: xmlAttr(sp, "draw:name")}
+		for _, sf := range xmlInners(sp, `<draw:frame>`, `</draw:frame>`) {
+			csptb := ChapterStoryboardPageTextBox{}
+			for _, attr := range xmlAttrs(sf, "svg:x", "svg:y", "svg:width", "svg:height") {
+				if f, err := strconv.ParseFloat(strings.TrimSuffix(attr, "cm"), 64); err != nil || !strings.HasSuffix(attr, "cm") {
+					panic(attr)
+				} else {
+					csptb.xywhCm = append(csptb.xywhCm, f)
+				}
+			}
+			assert(len(csptb.xywhCm) == 4)
+			for itb, stb := range xmlInners(sf, "<draw:text-box>", "</draw:text-box>") {
+				if itb > 0 {
+					panic(sf)
+				}
+				for itp, stp := range xmlInners(stb, "<text:p>", "</text:p>") {
+					if itp > 0 {
+						panic(stb)
+					}
+					for _, sts := range xmlInners(stp, "<text:span>", "</text:span>") {
+						sts = sts[:strings.LastIndexByte(sts, '<')]
+						sts = sts[strings.LastIndexByte(sts, '>')+1:]
+						if sts = trim(xmlUnesc(sts)); sts != "" {
+							csptb.textSpans = append(csptb.textSpans, sts)
+						}
+					}
+				}
+			}
+			if len(csptb.textSpans) > 0 {
+				csp.textBoxes = append(csp.textBoxes, csptb)
+			}
+		}
+		if len(csp.textBoxes) > 0 {
+			me.storyBoardPages = append(me.storyBoardPages, csp)
+		}
+	}
 }

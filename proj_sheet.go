@@ -84,7 +84,6 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	shouldsaveprojdata := forceFullRedo
 	if me.data == nil {
 		shouldsaveprojdata = true
-		printLn("\t\tPrep " + me.id + ": fully because no svData")
 		me.data = &SheetVerData{parentSheetVer: me, PxCm: 472.424242424} //1200dpi
 		{
 			pngdata := fileRead(me.fileName)
@@ -103,17 +102,8 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 
 	didgraydistr := me.ensureGrayDistr(forceFullRedo || shouldsaveprojdata)
 	didbwsheet := me.ensureBwSheetPngs(forceFullRedo)
-	if didgraydistr || didbwsheet {
-		printLn("\t\tPrep "+me.id+": did grayDistr / bwSheet:", didgraydistr, didbwsheet)
-	}
 	didpanels := me.ensurePanelsTree(forceFullRedo || didbwsheet || shouldsaveprojdata)
-	if didpanels {
-		printLn("\t\tPrep "+me.id+": did panelsTree:", didpanels)
-	}
 	didpnlpics := me.ensurePanelPics(forceFullRedo || didpanels)
-	if didpnlpics {
-		printLn("\t\tPrep "+me.id+": did panelPics:", didpnlpics)
-	}
 
 	if didWork = didgraydistr || didbwsheet || didpanels || didpnlpics; shouldsaveprojdata || didWork {
 		App.Proj.save()
@@ -183,7 +173,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 				if s == "" {
 					panic(svg)
 				}
-				pw, ph := p.Rect.Max.X-p.Rect.Min.X, p.Rect.Max.Y-p.Rect.Min.Y
+				pw, ph := p.Rect.Dx(), p.Rect.Dy()
 				s = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 						<svg width="` + itoa(pw) + `" height="` + itoa(ph) + `" viewbox="0 0 ` + itoa(pw) + ` ` + itoa(ph) + `" xmlns="http://www.w3.org/2000/svg">
 						` + s
@@ -240,7 +230,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 	me.data.PanelsTree.iter(func(panel *ImgPanel) {
 		work.Add(1)
 		go func(pidx int) {
-			pw, ph, sw := panel.Rect.Max.X-panel.Rect.Min.X, panel.Rect.Max.Y-panel.Rect.Min.Y, me.data.PanelsTree.Rect.Max.X-me.data.PanelsTree.Rect.Min.X
+			pw, ph, sw := panel.Rect.Dx(), panel.Rect.Dy(), me.data.PanelsTree.Rect.Dx()
 			for _, quali := range App.Proj.Qualis {
 				if quali.SizeHint == 0 {
 					continue
@@ -281,6 +271,47 @@ func (me *SheetVer) ensureGrayDistr(force bool) bool {
 	return false
 }
 
+func (me *SheetVer) sizeCm() (float64, float64) {
+	return float64(me.data.PanelsTree.Rect.Max.X) / me.data.PxCm, float64(me.data.PanelsTree.Rect.Max.Y) / me.data.PxCm
+}
+
+func (me *SheetVer) cmToPx(fs ...float64) (ret []int) {
+	for _, f := range fs {
+		ret = append(ret, int(f*me.data.PxCm))
+	}
+	return
+}
+
+func (me *SheetVer) panelAt(x int, y int) (pnl *ImgPanel, idx int) {
+	pidx := 0
+	me.data.PanelsTree.iter(func(p *ImgPanel) {
+		if pnl == nil && p.Rect.Min.X <= x && p.Rect.Max.X >= x &&
+			p.Rect.Min.Y <= y && p.Rect.Max.Y >= y {
+			pnl, idx = p, pidx
+		}
+		pidx++
+	})
+	return
+}
+
+func (me *SheetVer) panelMostCoveredBy(r image.Rectangle) (pnl *ImgPanel, idx int) {
+	pidx, lastperc := 0, 0.0
+	idx = -1
+	me.data.PanelsTree.iter(func(p *ImgPanel) {
+		if r.In(p.Rect) {
+			pnl, idx, lastperc = p, pidx, 100.0
+		} else if r.Overlaps(p.Rect) {
+			overlap := r.Intersect(p.Rect)
+			pw, ph := 100.0/(float64(p.Rect.Dx())/float64(overlap.Dx())), 100.0/(float64(p.Rect.Dy())/float64(overlap.Dy()))
+			if perc := 0.5 * (pw + ph); lastperc < 100.0 && perc > lastperc {
+				pnl, idx, lastperc = p, pidx, perc
+			}
+		}
+		pidx++
+	})
+	return
+}
+
 func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 	filebasename := filepath.Base(me.fileName)
 	bgtmplsvgfilename := strings.TrimSuffix(filebasename, ".png") + ".svg"
@@ -312,7 +343,7 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 		me.data.PanelsTree.iter(func(p *ImgPanel) {
 			rand.Seed(time.Now().UnixNano())
 			r, g, b := 64+rand.Intn(160+(80-64)), 56+rand.Intn(160+(80-56)), 48+rand.Intn(160+(80-48))
-			x, y, w, h := p.Rect.Min.X, p.Rect.Min.Y, p.Rect.Max.X-p.Rect.Min.X, p.Rect.Max.Y-p.Rect.Min.Y
+			x, y, w, h := p.Rect.Min.X, p.Rect.Min.Y, p.Rect.Dx(), p.Rect.Dy()
 			gid := "pnl" + itoa(pidx)
 			svg += `<g id="` + gid + `" inkscape:label="` + gid + `" inkscape:groupmode="layer" transform="translate(` + itoa(x) + ` ` + itoa(y) + `)">`
 			svg += `<rect x="0" y="0"  stroke="#000000" stroke-width="1"
@@ -337,12 +368,10 @@ func (me *SheetVer) panelAreas(panelIdx int) []ImgPanelArea {
 }
 
 func (me *SheetVer) panelCount() (numPanels int, numPanelAreas int) {
-	all := App.Proj.data.Sv.textRects[me.id]
-	numPanels = len(all)
-	for _, areas := range all {
-		numPanelAreas += len(areas)
+	for _, areas := range App.Proj.data.Sv.textRects[me.id] {
+		numPanels, numPanelAreas = numPanels+1, numPanelAreas+len(areas)
 	}
-	if numPanels == 0 && numPanelAreas == 0 && me.data != nil && me.data.PanelsTree != nil {
+	if numPanels == 0 && me.data != nil && me.data.PanelsTree != nil {
 		me.data.PanelsTree.iter(func(p *ImgPanel) {
 			numPanels++
 		})

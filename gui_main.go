@@ -309,7 +309,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	numpanels, maxpanelwidth, bwsrc := 0, 0, fv("srcpx")
 	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
 		numpanels++
-		if w := panel.Rect.Max.X - panel.Rect.Min.X; w > maxpanelwidth {
+		if w := panel.Rect.Dx(); w > maxpanelwidth {
 			maxpanelwidth = w
 		}
 	})
@@ -333,8 +333,48 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	graydistrs := sv.grayDistrs()
 	s += guiHtmlGrayDistrs(graydistrs)
 	s += "<div>B&amp;W version at black-threshold of <b>&lt;" + itoa(int(App.Proj.BwThreshold)) + "</b>:</div>"
-	s += "<div class='fullsheet'>" + guiHtmlImg("/"+bwsrc, nil) + "</div>"
-	s += "<div>View other B&amp;W thresholds: <input type='text' id='previewbwt' onchange='addBwtPreviewLinks(\"" + sv.fileName + "\");'/><div id='previewbwtlinks'></div></div>"
+	s += "<div id='fullsheet'>" + guiHtmlImg("/"+bwsrc, nil)
+	if len(sv.parentSheet.parentChapter.storyBoardPages) > 0 {
+		sw, sh := sv.sizeCm()
+		for i, pg := range sv.parentSheet.parentChapter.storyBoardPages {
+			doimport := (fv("txtimpsel") == itoa(i)) && (fv("main_focus_id") == "txtimpsel")
+			pareas := App.Proj.data.Sv.textRects[sv.id]
+			if doimport {
+				for np, _ := sv.panelCount(); len(pareas) < np; {
+					pareas = append(pareas, []ImgPanelArea{})
+				}
+			}
+			s += "<div id='txtprev" + itoa(i) + "' class='txtprev'>"
+			for _, tb := range pg.textBoxes {
+				xywh := sv.cmToPx(tb.xywhCm...)
+				rect := image.Rect(xywh[0], xywh[1], xywh[0]+xywh[2], xywh[1]+xywh[3])
+				_, pidx := sv.panelMostCoveredBy(rect)
+				px, py, pw, ph := 100.0/(sw/tb.xywhCm[0]), 100.0/(sh/tb.xywhCm[1]), 100.0/(sw/tb.xywhCm[2]), 100.0/(sh/tb.xywhCm[3])
+				fulltext := strings.Join(tb.textSpans, " ")
+				s += "<div style='left: " + ftoa(px, 1) + "%; top: " + ftoa(py, 1) + "%; width: " + ftoa(pw, 1) + "%; xheight: " + ftoa(ph, 1) + "%;' class='txtprevbox' title='" + hEsc(fulltext) + "'>"
+				s += "<b><i>(P" + itoa(pidx) + ") </i></b> " + fulltext + "</div>"
+				if doimport && pidx >= 0 && pidx < len(pareas) {
+					pareas[pidx] = append(pareas[pidx], ImgPanelArea{
+						Data: map[string]string{App.Proj.Langs[0]: fulltext},
+						Rect: rect,
+					})
+				}
+			}
+			if doimport {
+				*shouldSaveMeta, App.Proj.data.Sv.textRects[sv.id] = true, pareas
+			}
+			s += "</div>"
+		}
+	}
+	s += "</div><div>Preview other B&amp;W thresholds: <input type='text' id='previewbwt' onchange='addBwtPreviewLinks(\"" + sv.fileName + "\");'/><div id='previewbwtlinks'></div></div><div>"
+	if len(sv.parentSheet.parentChapter.storyBoardPages) > 0 {
+		s += "<select name='txtimpsel' id='txtimpsel' onchange='txtPrev(this.value);'><option value=''>(Preview story-board text import...)</option>"
+		for i, pg := range sv.parentSheet.parentChapter.storyBoardPages {
+			s += "<option value='" + itoa(i) + "'>" + hEsc(pg.name) + "</option>"
+		}
+		s += "</select>&nbsp;&nbsp;<button onclick='txtImp()'>Import Now!</button>&nbsp;&nbsp;&nbsp;&nbsp;"
+	}
+	s += "</div>"
 
 	var panelstree func(*ImgPanel) string
 	pidx := 0
@@ -400,18 +440,16 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		zoom = int(100.0 * zoomdiv)
 		zoomdiv = 1.0 / zoomdiv
 	}
+	savebtnpressed := false
 	if rfv := fv("main_focus_id"); rfv != "" && rfv[0] == 'p' && strings.HasSuffix(rfv, "save") {
-		*shouldSaveMeta = true
-	}
-	if *shouldSaveMeta {
-		App.Proj.data.Sv.textRects[sv.id] = nil
+		*shouldSaveMeta, savebtnpressed, App.Proj.data.Sv.textRects[sv.id] = true, true, nil
 	}
 	pidx = 0
 	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
 		rect, pid := panel.Rect, "p"+itoa(pidx)
-		w, h := rect.Max.X-rect.Min.X, rect.Max.Y-rect.Min.Y
+		w, h := rect.Dx(), rect.Dy()
 		cfgdisplay := "none"
-		if *shouldSaveMeta {
+		if savebtnpressed {
 			App.Proj.data.Sv.textRects[sv.id] = append(App.Proj.data.Sv.textRects[sv.id], []ImgPanelArea{})
 			if fv("main_focus_id") == pid+"save" {
 				cfgdisplay = "block"
@@ -464,7 +502,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		for _, lang := range App.Proj.Langs {
 			langs = append(langs, lang)
 		}
-		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Max.X-panel.Rect.Min.X) + ", " + itoa(panel.Rect.Max.Y-panel.Rect.Min.Y) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + ftoa(sv.data.PxCm, 8) + ", '" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "', " + ftoa(App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm, 8) + ");"
+		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Dx()) + ", " + itoa(panel.Rect.Dy()) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + ftoa(sv.data.PxCm, 8) + ", '" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "', " + ftoa(App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm, 8) + ");"
 		btnhtml := guiHtmlButton(pid+"save", "Save changes (all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 
 		s += "<hr/><h4 id='pa" + sv.id + itoa(pidx) + "'><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(len(sv.panelAreas(pidx))) + " text rect/s"
@@ -478,7 +516,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		style := `width: ` + itoa(w) + `px; height: ` + itoa(h) + `px;`
 		s += "<div style='position:relative; " + style + "' onauxclick='onPanelAuxClick(event, " + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + ftoa(zoomdiv, 8) + ")' onmousemove='this.title=parseInt(" + itoa(panel.Rect.Min.X) + "+event.offsetX*" + ftoa(zoomdiv, 8) + ")+\",\"+parseInt(" + itoa(panel.Rect.Min.Y) + "+event.offsetY*" + ftoa(zoomdiv, 8) + ")'>"
 		style += `background-image: url("/` + bwsrc + `");`
-		style += `background-size: ` + itoa(sv.data.PanelsTree.Rect.Max.X-sv.data.PanelsTree.Rect.Min.X) + `px ` + itoa(sv.data.PanelsTree.Rect.Max.Y-sv.data.PanelsTree.Rect.Min.Y) + `px;`
+		style += `background-size: ` + itoa(sv.data.PanelsTree.Rect.Dx()) + `px ` + itoa(sv.data.PanelsTree.Rect.Dy()) + `px;`
 		style += `background-position: -` + itoa(rect.Min.X) + `px -` + itoa(rect.Min.Y) + `px;`
 		s += "<div class='panelpic' style='" + style + "'></div><span id='" + pid + "rects'></span>"
 		s += "</div></div></td><td>"
@@ -509,8 +547,8 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx", itoa(area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.X), "max": itoa(panel.Rect.Max.X)})
 			s += guiHtmlInput("number", pid+"t"+itoa(i)+"ry", itoa(area.Rect.Min.Y), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.Y), "max": itoa(panel.Rect.Max.Y)})
 			s += "wh"
-			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rw", itoa(area.Rect.Max.X-area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": "1", "max": itoa(panel.Rect.Max.X - panel.Rect.Min.X)})
-			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rh", itoa(area.Rect.Max.Y-area.Rect.Min.Y), A{"onchange": jsrefr, "class": "panelcfgrect", "min": "1", "max": itoa(panel.Rect.Max.Y - panel.Rect.Min.Y)})
+			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rw", itoa(area.Rect.Dx()), A{"onchange": jsrefr, "class": "panelcfgrect", "min": "1", "max": itoa(panel.Rect.Dx())})
+			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rh", itoa(area.Rect.Dy()), A{"onchange": jsrefr, "class": "panelcfgrect", "min": "1", "max": itoa(panel.Rect.Dy())})
 			s += "p"
 			px, py := "", ""
 			if area.PointTo != nil {

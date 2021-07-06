@@ -20,6 +20,9 @@ var hEscs = map[rune]string{
 	'Ü':  "&Uuml;",
 	'ß':  "&szlig",
 	'\n': "&#xA;",
+	'’':  "&apos;",
+	'…':  "&hellip;",
+	'—':  "&mdash;",
 }
 var hEscRepl *strings.Replacer
 

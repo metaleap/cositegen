@@ -198,3 +198,52 @@ func timedLogged(logMsg string, do func() string) {
 		printLn("\t...took", time.Now().Sub(tstart).String(), summary)
 	}
 }
+
+func xmlInners(s string, start string, end string) (ret []string) {
+	for more := true; more; {
+		idx0, idx1, idx2 := strings.LastIndex(s, start[:len(start)-1]+" "), strings.LastIndex(s, start), strings.LastIndex(s, end)
+		if idx1 < 0 || idx0 > idx1 {
+			idx1 = idx0
+		}
+		if more = (idx2 > idx1 && idx1 > 0); more {
+			ret = append([]string{s[:idx2+len(end)][idx1:]}, ret...)
+			s = s[:idx1]
+		}
+	}
+	return
+}
+
+func xmlAttrs(s string, names ...string) (ret []string) {
+	for _, name := range names {
+		ret = append(ret, xmlAttr(s, name))
+	}
+	return
+}
+
+func xmlAttr(s string, name string) string {
+	needle := ` ` + name + `="`
+	if idx := strings.Index(s, needle); idx > 0 {
+		s = s[idx+len(needle):]
+		if idx = strings.Index(s, `"`); idx > 0 {
+			return s[:idx]
+		}
+	}
+	return ""
+}
+
+var xmlUnescRepl = strings.NewReplacer(
+	"&#34;", "\"",
+	"&#39;", "'",
+	"&lt;", "<",
+	"&gt;", ">",
+	"&#x9;", "\t",
+	"&#xA;", "\n",
+	"&#xD;", "\r",
+)
+
+func xmlUnesc(s string) string {
+	for k, v := range hEscs {
+		s = strings.Replace(s, v, string(k), -1)
+	}
+	return strings.Replace(xmlUnescRepl.Replace(s), "&amp;", "&", -1)
+}
