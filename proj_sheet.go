@@ -328,7 +328,8 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 		_ = os.Remove(bgtmplsvgfilepath)
 	}
 
-	if pw, ph := itoa(me.data.PanelsTree.Rect.Max.X), itoa(me.data.PanelsTree.Rect.Max.Y); did || nil == fileStat(bgtmplsvgfilepath) {
+	const scalediv = 1
+	if pw, ph := itoa(me.data.PanelsTree.Rect.Max.X/scalediv), itoa(me.data.PanelsTree.Rect.Max.Y/scalediv); did || nil == fileStat(bgtmplsvgfilepath) {
 		svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 		<svg inkscape:version="1.1 (c68e22c387, 2021-05-23)"
 			sodipodi:docname="drawing.svg"
@@ -343,11 +344,10 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 		me.data.PanelsTree.iter(func(p *ImgPanel) {
 			rand.Seed(time.Now().UnixNano())
 			r, g, b := 64+rand.Intn(160+(80-64)), 56+rand.Intn(160+(80-56)), 48+rand.Intn(160+(80-48))
-			x, y, w, h := p.Rect.Min.X, p.Rect.Min.Y, p.Rect.Dx(), p.Rect.Dy()
+			x, y, w, h := p.Rect.Min.X/scalediv, p.Rect.Min.Y/scalediv, p.Rect.Dx()/scalediv, p.Rect.Dy()/scalediv
 			gid := "pnl" + itoa(pidx)
 			svg += `<g id="` + gid + `" inkscape:label="` + gid + `" inkscape:groupmode="layer" transform="translate(` + itoa(x) + ` ` + itoa(y) + `)">`
-			svg += `<rect x="0" y="0"  stroke="#000000" stroke-width="1"
-				fill="` + fmt.Sprintf("#%X%X%X", r, g, b) + `"
+			svg += `<rect x="0" y="0"  fill="` + fmt.Sprintf("#%X%X%X", r, g, b) + `"
 				width="` + itoa(w) + `" height="` + itoa(h) + `"></rect>
 			`
 			svg += "</g>\n"

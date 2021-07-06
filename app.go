@@ -209,7 +209,8 @@ func pngOpt(pngFilePath string) bool {
 		newfilehash := string(contentHashStr(filedata))
 		wasknown1, wasknown2 := App.Proj.data.Sv.ById[curfilehash] != nil, App.Proj.data.Sv.IdsToFileNames[curfilehash] != ""
 		_, wasknown3 := App.Proj.data.Sv.textRects[curfilehash]
-		if newfilehash != curfilehash && (wasknown1 || wasknown2 || wasknown3) {
+		crashit := newfilehash != curfilehash && (wasknown1 || wasknown2 || wasknown3)
+		if crashit {
 			go exec.Command("beepintime", "1ns").Run()
 			if wasknown1 {
 				App.Proj.data.Sv.ById[newfilehash] = App.Proj.data.Sv.ById[curfilehash]
@@ -233,7 +234,7 @@ func pngOpt(pngFilePath string) bool {
 			itoa(len(filedata)),
 			newfilehash,
 		}
-		if wasknown1 || wasknown2 || wasknown3 {
+		if crashit {
 			App.Proj.save()
 			panic("Post-PngOpt well-known ID changed: from " + curfilehash + " to " + newfilehash)
 		} else if strings.HasSuffix(pngFilePath, "/bwsmall."+itoa(int(App.Proj.BwThreshold))+"."+itoa(int(App.Proj.BwSmallWidth))+".png") {
