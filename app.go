@@ -239,8 +239,6 @@ func pngOpt(pngFilePath string) bool {
 		} else if strings.HasSuffix(pngFilePath, "/bwsmall."+itoa(int(App.Proj.BwThreshold))+"."+itoa(int(App.Proj.BwSmallWidth))+".png") {
 			if hashid := filepath.Base(filepath.Dir(pngFilePath)); App.Proj.data.Sv.ById != nil {
 				if svdata := App.Proj.data.Sv.ById[hashid]; svdata != nil && svdata.parentSheetVer != nil {
-					printLn(filepath.Join(svdata.dirPath, strings.TrimSuffix(
-						filepath.Base(svdata.parentSheetVer.fileName), ".png")+".svg"))
 					_ = os.Remove(filepath.Join(svdata.dirPath, strings.TrimSuffix(
 						filepath.Base(svdata.parentSheetVer.fileName), ".png")+".svg"))
 				}
