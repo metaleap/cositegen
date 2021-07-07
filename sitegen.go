@@ -261,8 +261,8 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 					}
 				}
 			}
-			if srcpath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".svg"); sv.data.hasBgCol && fileStat(srcpath) != nil {
-				dstpath := filepath.Join(".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + itoa(pidx) + "bg.svg")
+			if srcpath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+App.Proj.PanelBgFileExt); sv.data.hasBgCol && fileStat(srcpath) != nil {
+				dstpath := filepath.Join(".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + itoa(pidx) + "bg" + App.Proj.PanelBgFileExt)
 				fileLinkOrCopy(srcpath, dstpath)
 				atomic.AddUint32(&numSvgs, 1)
 			}
@@ -340,7 +340,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 						var totalimgsize int64
 						for contenthash, maxpidx := range allpanels {
 							for pidx := 0; pidx <= maxpidx; pidx++ {
-								if bgfile := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + contenthash + itoa(pidx) + "bg.svg"); bgfile != nil {
+								if bgfile := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + contenthash + itoa(pidx) + "bg" + App.Proj.PanelBgFileExt); bgfile != nil {
 									totalimgsize += bgfile.Size()
 								}
 								name := me.namePanelPic(contenthash, pidx, q.SizeHint)
@@ -642,8 +642,8 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				s += " " + App.Proj.Gen.ClsImgHq + "='" + hqsrc + "'"
 			}
 			if me.bgCol && sv.data.hasBgCol {
-				if bgsvg := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + itoa(pidx) + "bg.svg"); bgsvg != nil {
-					s += " style='background-image:url(\"./" + App.Proj.Gen.PicDirName + "/" + sv.id + itoa(pidx) + "bg.svg\");'"
+				if bgsvg := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + itoa(pidx) + "bg" + App.Proj.PanelBgFileExt); bgsvg != nil {
+					s += " style='background-image:url(\"./" + App.Proj.Gen.PicDirName + "/" + sv.id + itoa(pidx) + "bg" + App.Proj.PanelBgFileExt + "\");'"
 				}
 			}
 			s += "/>"

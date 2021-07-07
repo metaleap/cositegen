@@ -182,6 +182,26 @@ func intLim(i int, min int, max int) int {
 	return i
 }
 
+func intMin(is []int) (r int) {
+	r = is[0]
+	for _, i := range is[1:] {
+		if i < r {
+			r = i
+		}
+	}
+	return
+}
+
+func intMax(is []int) (r int) {
+	r = is[0]
+	for _, i := range is[1:] {
+		if i > r {
+			r = i
+		}
+	}
+	return
+}
+
 func atoi(s string, min int, max int) int {
 	v, _ := strconv.Atoi(s)
 	return intLim(v, min, max)
@@ -199,7 +219,7 @@ func timedLogged(logMsg string, do func() string) {
 	}
 }
 
-func xmlInners(s string, start string, end string) (ret []string) {
+func xmlOuters(s string, start string, end string) (ret []string) {
 	for more := true; more; {
 		idx0, idx1, idx2 := strings.LastIndex(s, start[:len(start)-1]+" "), strings.LastIndex(s, start), strings.LastIndex(s, end)
 		if idx1 < 0 || idx0 > idx1 {

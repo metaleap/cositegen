@@ -30,6 +30,7 @@ type Project struct {
 	BwThreshold            uint8
 	BwSmallWidth           uint16
 	PanelBorderCm          float64
+	PanelBgFileExt         string
 	PageContentTexts       map[string]map[string]string
 	NumSheetsInHomeBgs     int
 	NumColorDistrClusters  int
@@ -294,6 +295,11 @@ func (me *Project) load() (numSheetVers int) {
 						App.Proj.data.Sv.IdsToFileNames[sv.id] = sv.fileName
 						work.Unlock()
 						sv.data = App.Proj.data.Sv.ById[sv.id]
+						cachedirsymlinkpath := sv.fileName[:len(sv.fileName)-len(".png")]
+						_ = os.Remove(cachedirsymlinkpath)
+						if err := os.Symlink("../../../.cache/"+sv.id, cachedirsymlinkpath); err != nil {
+							panic(err)
+						}
 						work.Done()
 					}(sheetver)
 				}
@@ -386,9 +392,9 @@ func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sh
 func (me *Chapter) loadStoryboard() {
 	s := string(fileRead(me.StoryboardFile))
 
-	for _, sp := range xmlInners(s, `<draw:page>`, `</draw:page>`) {
+	for _, sp := range xmlOuters(s, `<draw:page>`, `</draw:page>`) {
 		csp := ChapterStoryboardPage{name: xmlAttr(sp, "draw:name")}
-		for _, sf := range xmlInners(sp, `<draw:frame>`, `</draw:frame>`) {
+		for _, sf := range xmlOuters(sp, `<draw:frame>`, `</draw:frame>`) {
 			csptb := ChapterStoryboardPageTextBox{}
 			for _, attr := range xmlAttrs(sf, "svg:x", "svg:y", "svg:width", "svg:height") {
 				if f, err := strconv.ParseFloat(strings.TrimSuffix(attr, "cm"), 64); err != nil || !strings.HasSuffix(attr, "cm") {
@@ -398,15 +404,15 @@ func (me *Chapter) loadStoryboard() {
 				}
 			}
 			assert(len(csptb.xywhCm) == 4)
-			for itb, stb := range xmlInners(sf, "<draw:text-box>", "</draw:text-box>") {
+			for itb, stb := range xmlOuters(sf, "<draw:text-box>", "</draw:text-box>") {
 				if itb > 0 {
 					panic(sf)
 				}
-				for itp, stp := range xmlInners(stb, "<text:p>", "</text:p>") {
+				for itp, stp := range xmlOuters(stb, "<text:p>", "</text:p>") {
 					if itp > 0 {
 						panic(stb)
 					}
-					for _, sts := range xmlInners(stp, "<text:span>", "</text:span>") {
+					for _, sts := range xmlOuters(stp, "<text:span>", "</text:span>") {
 						sts = sts[:strings.LastIndexByte(sts, '<')]
 						sts = sts[strings.LastIndexByte(sts, '>')+1:]
 						if sts = trim(xmlUnesc(sts)); sts != "" {
