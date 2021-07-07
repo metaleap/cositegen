@@ -295,6 +295,7 @@ func (me *Project) load() (numSheetVers int) {
 						App.Proj.data.Sv.IdsToFileNames[sv.id] = sv.fileName
 						work.Unlock()
 						sv.data = App.Proj.data.Sv.ById[sv.id]
+						sv.data.parentSheetVer = sv
 						cachedirsymlinkpath := sv.fileName[:len(sv.fileName)-len(".png")]
 						_ = os.Remove(cachedirsymlinkpath)
 						if err := os.Symlink("../../../.cache/"+sv.id, cachedirsymlinkpath); err != nil {
