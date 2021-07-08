@@ -340,7 +340,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 						var totalimgsize int64
 						for contenthash, maxpidx := range allpanels {
 							for pidx := 0; pidx <= maxpidx; pidx++ {
-								if bgfile := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + contenthash + itoa(pidx) + "bg" + App.Proj.PanelBgFileExt); bgfile != nil {
+								if bgfile := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + contenthash + itoa(pidx) + "bg" + App.Proj.PanelBgFileExt); bgfile != nil && me.bgCol {
 									totalimgsize += bgfile.Size()
 								}
 								name := me.namePanelPic(contenthash, pidx, q.SizeHint)
@@ -438,7 +438,6 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			} else if from != until {
 				text += " - " + until
 			}
-			text += me.textStr("VerNewest")
 		} else {
 			text = time.Unix(0, svdt).Format("January 2006")
 			text += me.textStr("VerOlder")
@@ -717,21 +716,31 @@ func (me *siteGen) genSvgForPanel(sV *SheetVer, panelIdx int, panel *ImgPanel) s
 				dx, dy := intAbs(rpx-(rx+(rw/2))), intAbs(rpy-(ry+(rh/2)))
 				isr, isb := rpx > (rx+(rw/2)), rpy > (ry+(rh/2))
 				isl, ist, dst := !isr, !isb, [2]int{rpx, rpy}
-				if isbl := (isb && isl && dy >= dx); isbl {
+
+				isbr := isb && isr && dy > dx
+				isbl := isb && isl && dy > dx
+				istr := ist && isr && dy > dx
+				istl := ist && isl && dy > dx
+				isrb := isr && isb && dx > dy && !isbr
+				islb := isl && isb && dx > dy
+				isrt := isr && ist && dx > dy
+				islt := isl && ist && dx > dy
+
+				if isbl || islb {
 					ins(3, [2]int{pl + cmh, pb}, dst)
-				} else if isbr := (isb && isr && dy >= dx); isbr {
+				} else if isbr || isrb {
 					ins(3, dst, [2]int{pr - cmh, pb})
-				} else if istr := (ist && isr && dy >= dx); istr {
+				} else if istr {
 					ins(1, [2]int{pr - cmh, pt}, dst)
-				} else if istl := (ist && isl && dy >= dx); istl {
+				} else if istl {
 					ins(1, dst, [2]int{pl + cmh, pt})
-				} else if isrb := (isr && isb && dx >= dy); isrb {
-					ins(2, [2]int{pr, pb - cmh}, dst)
-				} else if isrt := (isr && ist && dx >= dy); isrt {
+				} else if isrt {
 					ins(2, dst, [2]int{pr, pt + cmh})
-				} else if islt := (isl && ist && dx >= dy); islt {
+				} else if isrb {
+					ins(2, [2]int{pr, pb - cmh}, dst)
+				} else if islt {
 					ins(4, [2]int{pl, pt + cmh}, dst)
-				} else if islb := (isl && isb && dx >= dy); islb {
+				} else if islb {
 					ins(4, dst, [2]int{pl, pb - cmh})
 				}
 			}

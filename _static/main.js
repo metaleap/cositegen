@@ -53,25 +53,23 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm
                     const dx = Math.abs(rpx - (rx + (rw * 0.5))), dy = Math.abs(rpy - (ry + (rh * 0.5)));
                     const isr = rpx > (rx + (rw * 0.5)), isl = !isr,
                         isb = rpy > (ry + (rh * 0.5)), ist = !isb,
-                        isbr = isb && isr && dy >= dx,
-                        isbl = isb && isl && dy >= dx,
-                        istr = ist && isr && dy >= dx,
-                        istl = ist && isl && dy >= dx,
-                        isrb = isr && isb && dx >= dy,
-                        islb = isl && isb && dx >= dy,
-                        isrt = isr && ist && dx >= dy,
-                        islt = isl && ist && dx >= dy,
+                        isbr = isb && isr && dy > dx,
+                        isbl = isb && isl && dy > dx,
+                        istr = ist && isr && dy > dx,
+                        istl = ist && isl && dy > dx,
+                        isrb = isr && isb && dx > dy && !isbr,
+                        islb = isl && isb && dx > dy,
+                        isrt = isr && ist && dx > dy,
+                        islt = isl && ist && dx > dy,
                         dst = rpx + ',' + rpy; // coords to point towards
-                    if (isbl)
+                    if (isbl || islb)
                         poly = arrIns(poly, 3, [(pl + cmh) + ',' + pb, dst]);
-                    else if (isbr)
+                    else if (isbr || isrb)
                         poly = arrIns(poly, 3, [dst, (pr - cmh) + ',' + pb]);
                     else if (istr)
                         poly = arrIns(poly, 1, [(pr - cmh) + ',' + pt, dst]);
                     else if (istl)
                         poly = arrIns(poly, 1, [dst, (pl + cmh) + ',' + pt]);
-                    else if (isrb)
-                        poly = arrIns(poly, 2, [pr + ',' + (pb - cmh), dst]);
                     else if (isrt)
                         poly = arrIns(poly, 2, [dst, pr + ',' + (pt + cmh)]);
                     else if (islt)

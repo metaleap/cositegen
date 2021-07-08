@@ -130,7 +130,7 @@ func pngOptsLoop() {
 	App.pngOptBusy = true
 	defer func() { App.pngOptBusy = false }()
 
-	for dirfs := os.DirFS("."); !App.Gui.Exiting; time.Sleep(time.Minute) {
+	for dirfs := os.DirFS("."); !App.Gui.Exiting; time.Sleep(15 * time.Minute) {
 		dels := false
 		for k := range App.Proj.data.PngOpt {
 			if fileStat(k) == nil {
@@ -164,7 +164,7 @@ func pngOptsLoop() {
 		}
 		sort.Sort(matches)
 
-		printLn("PNGOPT: found", len(matches), "files (~"+itoa(int(totalsize/(1024*1024)))+"MB) to scrutinize...")
+		printLn("PNGOPT: found", len(matches), "PNGs (~"+itoa(int(totalsize/(1024*1024)))+"MB) to scrutinize...")
 		for _, pngfilename := range matches {
 			if App.Gui.Exiting {
 				return
@@ -174,7 +174,7 @@ func pngOptsLoop() {
 				App.Proj.save()
 			}
 		}
-		printLn("PNGOPT:", len(matches), "scrutinized &", numdone, "processed, sleeping a minute...")
+		printLn("PNGOPT:", len(matches), "scrutinized &", numdone, "processed, taking a quarter-hour nap...")
 	}
 }
 
@@ -254,18 +254,6 @@ type FilePathsSortingByFileSize []string
 func (me FilePathsSortingByFileSize) Len() int          { return len(me) }
 func (me FilePathsSortingByFileSize) Swap(i int, j int) { me[i], me[j] = me[j], me[i] }
 func (me FilePathsSortingByFileSize) Less(i int, j int) bool {
-	// all scans pngs first, biggest first. all non-scan pngs next, smallest first.
-	// this is because when the former ones change, the latter ones get (re)generated.
-	s1, s2 := strings.HasPrefix(me[i], "scans/"), strings.HasPrefix(me[j], "scans/")
-	if s1 && !s2 {
-		return true
-	}
-	if s2 && !s1 {
-		return false
-	}
 	fi1, fi2 := fileStat(me[i]), fileStat(me[j])
-	if s1 && s2 && fi1 != nil && fi2 != nil {
-		return fi1.Size() > fi2.Size()
-	}
 	return fi1 == nil || (fi2 != nil && fi1.Size() < fi2.Size())
 }

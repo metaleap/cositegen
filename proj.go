@@ -31,6 +31,8 @@ type Project struct {
 	BwSmallWidth           uint16
 	PanelBorderCm          float64
 	PanelBgFileExt         string
+	PanelBgScaleIfPng      float64
+	PanelBgBlur            int
 	PageContentTexts       map[string]map[string]string
 	NumSheetsInHomeBgs     int
 	NumColorDistrClusters  int
@@ -409,10 +411,7 @@ func (me *Chapter) loadStoryboard() {
 				if itb > 0 {
 					panic(sf)
 				}
-				for itp, stp := range xmlOuters(stb, "<text:p>", "</text:p>") {
-					if itp > 0 {
-						panic(stb)
-					}
+				for _, stp := range xmlOuters(stb, "<text:p>", "</text:p>") {
 					for _, sts := range xmlOuters(stp, "<text:span>", "</text:span>") {
 						sts = sts[:strings.LastIndexByte(sts, '<')]
 						sts = sts[strings.LastIndexByte(sts, '>')+1:]

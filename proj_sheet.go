@@ -172,13 +172,14 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 					}
 				}
 				if s != "" {
-					scale := (1.0 * float64(App.Proj.BwSmallWidth)) / float64(me.data.PanelsTree.Rect.Max.X)
+					scale := float64(App.Proj.BwSmallWidth) / float64(me.data.PanelsTree.Rect.Max.X)
 					pw, ph := int(float64(p.Rect.Dx())*scale), int(float64(p.Rect.Dy())*scale)
 					s = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-						<svg width="` + itoa(pw) + `" height="` + itoa(ph) + `" viewbox="0 0 ` + itoa(pw) + ` ` + itoa(ph) + `" xmlns="http://www.w3.org/2000/svg">
-						<filter id="leblur"><feGaussianBlur in="SourceGraphic" stdDeviation="3" /></filter>
-						<style type="text/css">path { filter: url(#leblur); }</style>
-						` + s + "</svg>"
+						<svg width="` + itoa(pw) + `" height="` + itoa(ph) + `" viewbox="0 0 ` + itoa(pw) + ` ` + itoa(ph) + `" xmlns="http://www.w3.org/2000/svg">` +
+						strIf(App.Proj.PanelBgBlur == 0, "",
+							`<filter id="leblur"><feGaussianBlur in="SourceGraphic" stdDeviation="`+itoa(App.Proj.PanelBgBlur)+`" /></filter>
+							<style type="text/css">path { filter: url(#leblur); }</style>`) +
+						s + "</svg>"
 
 					switch App.Proj.PanelBgFileExt {
 					case ".svg":
@@ -186,7 +187,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 					case ".png":
 						tmpfilepath := "/dev/shm/" + me.id + "_bg" + itoa(pidx) + ".svg"
 						fileWrite(tmpfilepath, []byte(s))
-						out, err := exec.Command("convert", tmpfilepath, dstfilepath).CombinedOutput()
+						out, err := exec.Command("convert", tmpfilepath, "-resize", itoa(int(100.0*App.Proj.PanelBgScaleIfPng))+"%", dstfilepath).CombinedOutput()
 						_ = os.Remove(tmpfilepath)
 						if err != nil {
 							_ = os.Remove(dstfilepath)
@@ -349,7 +350,7 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 		_ = os.Remove(bgtmplsvgfilepath)
 	}
 
-	scale := (1.0 * float64(App.Proj.BwSmallWidth)) / float64(me.data.PanelsTree.Rect.Max.X)
+	scale := float64(App.Proj.BwSmallWidth) / float64(me.data.PanelsTree.Rect.Max.X)
 	if pw, ph := int(scale*float64(me.data.PanelsTree.Rect.Max.X)), int(scale*float64(me.data.PanelsTree.Rect.Max.Y)); did || nil == fileStat(bgtmplsvgfilepath) {
 		svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 		<svg inkscape:version="1.1 (c68e22c387, 2021-05-23)"
@@ -373,7 +374,13 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 			pidx++
 		})
 		gid := "pnls_" + strings.Replace(filebasename, ".", "_", -1)
-		svg += `<g id="` + gid + `" inkscape:label="` + gid + `" inkscape:groupmode="layer"><image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `" xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(fileRead(me.data.bwSmallFilePath)) + `" /></g>`
+		svg += `<g id="` + gid + `" inkscape:label="` + gid + `" inkscape:groupmode="layer">`
+		if pngembed := false; pngembed {
+			svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `" xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(fileRead(me.data.bwSmallFilePath)) + `" />`
+		} else {
+			svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `" xlink:href="../../../` + me.data.bwSmallFilePath + `" />`
+		}
+		svg += `</g>`
 		fileWrite(bgtmplsvgfilepath, []byte(svg+"</svg>"))
 	}
 	return
