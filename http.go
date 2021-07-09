@@ -47,7 +47,6 @@ func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
 }
 
 func httpServeDynPng(httpResp http.ResponseWriter, httpReq *http.Request) {
-	panic("YAY")
 	var pngdata []byte
 	tmpfilename := "/dev/shm/" + strings.Replace(httpReq.URL.Path, "/", "_", -1)
 	pngdata, _ = os.ReadFile(tmpfilename)
