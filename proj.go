@@ -27,7 +27,7 @@ type Project struct {
 		ContentHtml map[string]string
 	}
 	MaxImagePanelTextAreas int
-	BwThreshold            uint8
+	BwThresholds           []uint8
 	BwSmallWidth           uint16
 	PanelBorderCm          float64
 	PanelBgFileExt         string

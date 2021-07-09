@@ -48,7 +48,7 @@ type SheetVerData struct {
 }
 
 func (me *SheetVerData) PicDirPath(quali int) string {
-	return filepath.Join(me.dirPath, "__panels__"+itoa(int(App.Proj.BwThreshold))+"_"+ftoa(App.Proj.PanelBorderCm, -1)+"_"+itoa(quali))
+	return filepath.Join(me.dirPath, "__panels__"+itoa(int(App.Proj.BwThresholds[0]))+"_"+ftoa(App.Proj.PanelBorderCm, -1)+"_"+itoa(quali))
 }
 
 type SheetVer struct {
@@ -95,8 +95,8 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 		App.Proj.data.Sv.ById[me.id] = me.data
 	}
 	me.data.dirPath = ".cache/" + me.id
-	me.data.bwFilePath = filepath.Join(me.data.dirPath, "bw."+itoa(int(App.Proj.BwThreshold))+".png")
-	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(App.Proj.BwThreshold))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
+	me.data.bwFilePath = filepath.Join(me.data.dirPath, "bw."+itoa(int(App.Proj.BwThresholds[0]))+".png")
+	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(App.Proj.BwThresholds[0]))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
 	mkDir(me.data.dirPath)
 
 	didgraydistr := me.ensureGrayDistr(forceFullRedo || shouldsaveprojdata)
@@ -121,7 +121,7 @@ func (me *SheetVer) ensureBwSheetPngs(force bool) bool {
 		mkDir(me.data.dirPath) // ..changed and thus the file names: so rm stale ones.
 		if file, err := os.Open(me.fileName); err != nil {
 			panic(err)
-		} else if data := imgToMonochrome(file, file.Close, uint8(App.Proj.BwThreshold)); data != nil {
+		} else if data := imgToMonochrome(file, file.Close, uint8(App.Proj.BwThresholds[0])); data != nil {
 			fileWrite(me.data.bwFilePath, data)
 		} else if err = os.Symlink("../../../"+me.fileName, me.data.bwFilePath); err != nil {
 			panic(err)

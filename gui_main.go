@@ -332,8 +332,22 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	s += "</h3>"
 	graydistrs := sv.grayDistrs()
 	s += guiHtmlGrayDistrs(graydistrs)
-	s += "<div>B&amp;W version at black-threshold of <b>&lt;" + itoa(int(App.Proj.BwThreshold)) + "</b>:</div>"
-	s += "<div id='fullsheet'>" + guiHtmlImg("/"+bwsrc, A{"style": "background-image: url('/" + sv.fileName[:len(sv.fileName)-len(".png")] + ".svg')"})
+	s += "<div><select onchange='$.fsimg.style.backgroundImage=this.value;'><option value='none'>Black&amp;White</option>"
+	if bgfilename := sv.fileName[:len(sv.fileName)-len(".png")] + ".svg"; fileStat(bgfilename) != nil && fv("srcpx") != sv.data.bwFilePath {
+		s += "<option value='url(\"/" + bgfilename + "\")'>Colorized</option>"
+	}
+	s += "</select> version at black-threshold of <select onchange='$.fsimg.src=this.value;'>"
+	for i, bwt := range App.Proj.BwThresholds {
+		href := "/" + sv.fileName + "/" + itoa(int(bwt))
+		if i == 0 {
+			href = "/" + bwsrc
+		} else if fv("srcpx") != sv.data.bwFilePath {
+			break
+		}
+		s += "<option value='" + href + "' style='background-image: url(\"" + href + "\");'>&lt; " + itoa(int(bwt)) + ":</option>"
+	}
+	s += "</select></div>"
+	s += "<div id='fullsheet'>" + guiHtmlImg("/"+bwsrc, A{"id": "fsimg", "style": "background-image: none"})
 	if len(sv.parentSheet.parentChapter.storyBoardPages) > 0 {
 		sw, sh := sv.sizeCm()
 		for i, pg := range sv.parentSheet.parentChapter.storyBoardPages {

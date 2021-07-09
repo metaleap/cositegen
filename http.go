@@ -47,6 +47,7 @@ func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
 }
 
 func httpServeDynPng(httpResp http.ResponseWriter, httpReq *http.Request) {
+	panic("YAY")
 	var pngdata []byte
 	tmpfilename := "/dev/shm/" + strings.Replace(httpReq.URL.Path, "/", "_", -1)
 	pngdata, _ = os.ReadFile(tmpfilename)
@@ -61,7 +62,7 @@ func httpServeDynPng(httpResp http.ResponseWriter, httpReq *http.Request) {
 		}
 
 		args := strings.Split(urlargstr, "/")
-		t := App.Proj.BwThreshold
+		t := App.Proj.BwThresholds[0]
 		if qt := args[0]; qt != "" {
 			if ui8, err := strconv.ParseUint(qt, 0, 8); err != nil {
 				panic(err)
