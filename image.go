@@ -19,15 +19,7 @@ import (
 var PngEncoder = png.Encoder{CompressionLevel: png.BestCompression}
 var ImgScaler draw.Interpolator = draw.CatmullRom
 var DeNewLineRepl = strings.NewReplacer("\n", " ")
-var svgRepl = strings.NewReplacer(
-	" ", "&nbsp;",
-	"<b>", "<tspan class='b'>",
-	"<u>", "<tspan class='u'>",
-	"<i>", "<tspan class='i'>",
-	"</b>", "</tspan>",
-	"</u>", "</tspan>",
-	"</i>", "</tspan>",
-)
+var svgRepl *strings.Replacer
 
 type ImgPanel struct {
 	Rect    image.Rectangle
@@ -314,13 +306,24 @@ func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, heig
 var svgTxtCounter int
 
 func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bool, lineX int) (s string) {
+	if svgRepl == nil {
+		repls := []string{" ", "&nbsp;"}
+		for _, tagclassname := range append(App.Proj.Gen.PanelSvgText.TspanTagClasses, "b", "i", "u") {
+			repls = append(repls,
+				"&lt;"+tagclassname+"&gt;", "<tspan class='"+tagclassname+"'>",
+				"&lt;/"+tagclassname+"&gt;", "</tspan>",
+			)
+		}
+		svgRepl = strings.NewReplacer(repls...)
+	}
+
 	aw, ah := pta.Rect.Dx(), pta.Rect.Dy()
 	pxfont, pxline := int(px1cm*App.Proj.Gen.PanelSvgText.FontSizeCmA4), int(px1cm*App.Proj.Gen.PanelSvgText.PerLineDyCmA4)
 	svgTxtCounter++
 	s += "<text id='w" + itoa(svgTxtCounter) + "' style='visibility: hidden; font-size: " + itoa(pxfont) + "px'><tspan><tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>&#9881;...</tspan></tspan><title><tspan>Loading... / Wird geladen...</tspan></title></text>"
 	s += "<text id='t" + itoa(svgTxtCounter) + "' style='font-size: " + itoa(pxfont) + "px' transform='" + trim(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
 	s += "<tspan style='" + trim(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'>"
-	for _, ln := range strings.Split(svgRepl.Replace(locStr(pta.Data, langId)), "\n") {
+	for _, ln := range strings.Split(svgRepl.Replace(hEsc(locStr(pta.Data, langId))), hEscs['\n']) {
 		if ln == "" {
 			ln = "&nbsp;"
 		}

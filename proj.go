@@ -68,6 +68,7 @@ type Project struct {
 			FontSizeCmA4         float64
 			Css                  map[string][]string
 			AppendToFiles        map[string]bool
+			TspanTagClasses      []string
 		}
 	}
 

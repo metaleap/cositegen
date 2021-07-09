@@ -11,6 +11,39 @@ function refreshAllPanelRects(numPanels, langIdx, langName) {
         document.getElementById('p' + i + 't0' + langName).dispatchEvent(new Event("change"));
 }
 
+function onDualIntTextInputKeyDown(evt) {
+    if (!(evt && evt.target && evt.code && evt.code.startsWith('Arrow') && !evt.altKey))
+        return;
+    evt.preventDefault();
+    evt.cancelBubble = true;
+    let txt = evt.target.value.split(',');
+    let tx = (txt && txt.length) ? txt[0] : '', ty = (txt && txt.length > 1) ? txt[1] : '';
+    if (tx == '' && ty == '')
+        [tx, ty] = ['0', '0'];
+    let x = parseInt(tx), y = parseInt(ty);
+    if ((!isNaN(x)) && !isNaN(y)) {
+        let delta = (evt.ctrlKey && evt.shiftKey) ? 1000 : (evt.ctrlKey ? 1 : (evt.shiftKey ? 100 : 10));
+        switch (evt.code) {
+            case "ArrowUp":
+                y -= delta;
+                break;
+            case "ArrowLeft":
+                x -= delta;
+                break;
+            case "ArrowRight":
+                x += delta;
+                break;
+            case "ArrowDown":
+                y += delta;
+                break;
+        }
+        if ((txt = x + ',' + y) != evt.target.value) {
+            evt.target.value = txt;
+            evt.target.dispatchEvent(new Event("change"));
+        }
+    }
+}
+
 function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm, panelSvgTextClsBoxPoly, panelSvgTextBoxPolyStrokeWidthCm) {
     if (px1cm < 472) // special-casing the 2 lodpi frog sheets
         px1cm *= 1.33;
@@ -24,12 +57,15 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm
     innerhtml += "<div class='panelrect panelrectbordered'>";
     innerhtml += "<svg viewbox='0 0 " + pWidth + " " + pHeight + "'>";
     for (let i = 0; i < numImagePanelTextAreas; i++) {
-        const trX = parseInt(document.getElementById(pid + "t" + i + "rx").value);
-        const trY = parseInt(document.getElementById(pid + "t" + i + "ry").value);
-        const trW = parseInt(document.getElementById(pid + "t" + i + "rw").value);
-        const trH = parseInt(document.getElementById(pid + "t" + i + "rh").value);
-        const trPx = parseInt(document.getElementById(pid + "t" + i + "rpx").value);
-        const trPy = parseInt(document.getElementById(pid + "t" + i + "rpy").value);
+        const trXy = document.getElementById(pid + "t" + i + "rxy").value.split(',');
+        const trX = parseInt((trXy && trXy.length >= 2) ? trXy[0] : "");
+        const trY = parseInt((trXy && trXy.length >= 2) ? trXy[1] : "");
+        const trWh = document.getElementById(pid + "t" + i + "rwh").value.split(',');
+        const trW = parseInt((trWh && trWh.length >= 2) ? trWh[0] : "");
+        const trH = parseInt((trWh && trWh.length >= 2) ? trWh[1] : "");
+        const trPxy = document.getElementById(pid + "t" + i + "rpxy").value.split(',');
+        const trPx = parseInt((trPxy && trPxy.length >= 2) ? trPxy[0] : "");
+        const trPy = parseInt((trPxy && trPxy.length >= 2) ? trPxy[1] : "");
         if ((!(isNaN(trW) || isNaN(trH) || isNaN(trX) || isNaN(trY))) && (trW > 0) && (trH > 0)) {
             const borderandfill = !(isNaN(trPx) || isNaN(trPy));
             let ptext = document.getElementById(pid + "t" + i + langs[pLangIdx]).value.trimEnd();
@@ -127,12 +163,14 @@ function onPanelAuxClick(evt, panelIdx, pOffX, pOffY, langs, zoomDiv) {
     const ex = parseInt(parseFloat(evt.offsetX) * zoomDiv), ey = parseInt(parseFloat(evt.offsetY) * zoomDiv);
     const cfgbox = document.getElementById(pid + "cfg");
     cfgbox.style.display = 'block';
-    let ridx = undefined, trX, trY, trW, trH;
+    let ridx = undefined, trXy, trX, trY, trWh, trW, trH;
     for (ridx = 0; ridx < numImagePanelTextAreas; ridx++) {
-        trX = parseInt(document.getElementById(pid + "t" + ridx + "rx").value);
-        trY = parseInt(document.getElementById(pid + "t" + ridx + "ry").value);
-        trW = parseInt(document.getElementById(pid + "t" + ridx + "rw").value);
-        trH = parseInt(document.getElementById(pid + "t" + ridx + "rh").value);
+        trXy = document.getElementById(pid + "t" + ridx + "rxy").value.split(',');
+        trX = parseInt((trXy && trXy.length >= 2) ? trXy[0] : "");
+        trY = parseInt((trXy && trXy.length >= 2) ? trXy[1] : "");
+        trWh = document.getElementById(pid + "t" + ridx + "rwh").value.split(',');
+        trW = parseInt((trWh && trWh.length >= 2) ? trWh[0] : "");
+        trH = parseInt((trWh && trWh.length >= 2) ? trWh[1] : "");
         if (((isNaN(trX) || (trX == 0)) && (isNaN(trY) || (trY == 0))) || ((isNaN(trW) || (trW == 0)) && (isNaN(trH) || (trH == 0))))
             break;
         else if (ridx == (numImagePanelTextAreas - 1)) {
@@ -142,20 +180,18 @@ function onPanelAuxClick(evt, panelIdx, pOffX, pOffY, langs, zoomDiv) {
     }
     if (ridx != undefined) {
         if ((isNaN(trX) || (trX == 0)) && (isNaN(trY) || (trY == 0))) {
-            document.getElementById(pid + "t" + ridx + "rx").value = (pOffX + ex).toString();
-            document.getElementById(pid + "t" + ridx + "ry").value = (pOffY + ey).toString();
+            document.getElementById(pid + "t" + ridx + "rxy").value = (pOffX + ex) + "," + (pOffY + ey);
         } else if ((isNaN(trW) || (trW == 0)) && (isNaN(trH) || (trH == 0))) {
             let rw = (pOffX + ex) - trX, rh = (pOffY + ey) - trY;
             if (rw < 0) {
                 rw = -rw;
-                document.getElementById(pid + "t" + ridx + "rx").value = (pOffX + ex).toString();
+                document.getElementById(pid + "t" + ridx + "rxy").value = (pOffX + ex) + "," + trY;
             }
             if (rh < 0) {
                 rh = -rh;
-                document.getElementById(pid + "t" + ridx + "ry").value = (pOffY + ey).toString();
+                document.getElementById(pid + "t" + ridx + "rxy").value = trX + "," + (pOffY + ey);
             }
-            document.getElementById(pid + "t" + ridx + "rw").value = rw.toString();
-            document.getElementById(pid + "t" + ridx + "rh").value = rh.toString();
+            document.getElementById(pid + "t" + ridx + "rwh").value = rw + "," + rh;
         }
         document.getElementById(pid + "t" + ridx + langs[pLangIdx]).dispatchEvent(new Event("change"));
     }

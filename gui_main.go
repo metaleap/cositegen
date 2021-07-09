@@ -333,7 +333,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	graydistrs := sv.grayDistrs()
 	s += guiHtmlGrayDistrs(graydistrs)
 	s += "<div>B&amp;W version at black-threshold of <b>&lt;" + itoa(int(App.Proj.BwThreshold)) + "</b>:</div>"
-	s += "<div id='fullsheet'>" + guiHtmlImg("/"+bwsrc, nil)
+	s += "<div id='fullsheet'>" + guiHtmlImg("/"+bwsrc, A{"style": "background-image: url('/" + sv.fileName[:len(sv.fileName)-len(".png")] + ".svg')"})
 	if len(sv.parentSheet.parentChapter.storyBoardPages) > 0 {
 		sw, sh := sv.sizeCm()
 		for i, pg := range sv.parentSheet.parentChapter.storyBoardPages {
@@ -465,18 +465,26 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 
 				area.SvgTextTransformAttr = trim(fv(pid + "t" + itoa(i) + "_transform"))
 				area.SvgTextTspanStyleAttr = trim(fv(pid + "t" + itoa(i) + "_style"))
-				trx, trw := trim(fv(pid+"t"+itoa(i)+"rx")), trim(fv(pid+"t"+itoa(i)+"rw"))
-				try, trh := trim(fv(pid+"t"+itoa(i)+"ry")), trim(fv(pid+"t"+itoa(i)+"rh"))
-				rpx, rpy := trim(fv(pid+"t"+itoa(i)+"rpx")), trim(fv(pid+"t"+itoa(i)+"rpy"))
-				if rx0, err := strconv.ParseUint(trx, 0, 64); err == nil {
-					if ry0, err := strconv.ParseUint(try, 0, 64); err == nil {
-						if rw, err := strconv.ParseUint(trw, 0, 64); err == nil {
+				trxy := strings.Split(trim(fv(pid+"t"+itoa(i)+"rxy")), ",")
+				if len(trxy) < 2 {
+					trxy = []string{"", ""}
+				}
+				trwh := strings.Split(trim(fv(pid+"t"+itoa(i)+"rwh")), ",")
+				if len(trwh) < 2 {
+					trwh = []string{"", ""}
+				}
+				if rx0, err := strconv.ParseUint(trxy[0], 0, 64); err == nil {
+					if ry0, err := strconv.ParseUint(trxy[1], 0, 64); err == nil {
+						if rw, err := strconv.ParseUint(trwh[0], 0, 64); err == nil {
 							rx1 := rw + rx0
-							if rh, err := strconv.ParseUint(trh, 0, 64); err == nil {
+							if rh, err := strconv.ParseUint(trwh[1], 0, 64); err == nil {
 								ry1 := rh + ry0
 								area.Rect = image.Rect(int(rx0), int(ry0), int(rx1), int(ry1))
-								if !area.Rect.Empty() {
-									if rpx != "" && rpy != "" {
+								if rpxy := strings.Split(trim(fv(pid+"t"+itoa(i)+"rpxy")), ","); !area.Rect.Empty() {
+									if len(rpxy) < 2 {
+										rpxy = []string{"", ""}
+									}
+									if rpx, rpy := rpxy[0], rpxy[1]; rpx != "" && rpy != "" {
 										if rpx, err := strconv.ParseInt(rpx, 0, 64); err == nil {
 											if rpy, err := strconv.ParseInt(rpy, 0, 64); err == nil {
 												area.PointTo = &image.Point{int(rpx), int(rpy)}
@@ -544,18 +552,15 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 			}
 
 			s += "<div style='text-align: center; white-space: nowrap;'>xy"
-			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rx", itoa(area.Rect.Min.X), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.X), "max": itoa(panel.Rect.Max.X)})
-			s += guiHtmlInput("number", pid+"t"+itoa(i)+"ry", itoa(area.Rect.Min.Y), A{"onchange": jsrefr, "class": "panelcfgrect", "min": itoa(panel.Rect.Min.Y), "max": itoa(panel.Rect.Max.Y)})
+			s += guiHtmlInput("text", pid+"t"+itoa(i)+"rxy", itoa(area.Rect.Min.X)+","+itoa(area.Rect.Min.Y), A{"onkeydown": "onDualIntTextInputKeyDown(event)", "onchange": jsrefr, "class": "panelcfgrect"})
 			s += "wh"
-			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rw", itoa(area.Rect.Dx()), A{"onchange": jsrefr, "class": "panelcfgrect", "min": "1", "max": itoa(panel.Rect.Dx())})
-			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rh", itoa(area.Rect.Dy()), A{"onchange": jsrefr, "class": "panelcfgrect", "min": "1", "max": itoa(panel.Rect.Dy())})
+			s += guiHtmlInput("text", pid+"t"+itoa(i)+"rwh", itoa(area.Rect.Dx())+","+itoa(area.Rect.Dy()), A{"onkeydown": "onDualIntTextInputKeyDown(event)", "onchange": jsrefr, "class": "panelcfgrect"})
 			s += "p"
 			px, py := "", ""
 			if area.PointTo != nil {
 				px, py = itoa(area.PointTo.X), itoa(area.PointTo.Y)
 			}
-			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rpx", px, A{"onchange": jsrefr, "class": "panelcfgrect", "min": "0", "max": itoa(panel.Rect.Max.X)})
-			s += guiHtmlInput("number", pid+"t"+itoa(i)+"rpy", py, A{"onchange": jsrefr, "class": "panelcfgrect", "min": "0", "max": itoa(panel.Rect.Max.Y)})
+			s += guiHtmlInput("text", pid+"t"+itoa(i)+"rpxy", px+","+py, A{"onkeydown": "onDualIntTextInputKeyDown(event)", "onchange": jsrefr, "class": "panelcfgrect"})
 
 			s += "</div><div style='text-align: center;'>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+"_transform", area.SvgTextTransformAttr, A{
 				"class": "panelcfgtextattr", "title": "translate(x [,y])\tscale(x [,y])\trotate(a [,oX] [,oY])\tmatrix(a,b,c,d,e,f)\tskewX(x)\tskewY(y)",

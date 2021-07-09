@@ -28,7 +28,7 @@ func httpHandle(httpResp http.ResponseWriter, httpReq *http.Request) {
 
 	if ext := path.Ext(httpReq.URL.Path); ext == ".css" || ext == ".js" {
 		http.ServeFile(httpResp, httpReq, filepath.Join(App.StaticFilesDirPath, httpReq.URL.Path))
-	} else if ext == ".png" {
+	} else if ext == ".png" || ext == ".svg" {
 		http.ServeFile(httpResp, httpReq, filepath.Join("." /*looks redudant but isnt!*/, httpReq.URL.Path))
 	} else if ext != "" {
 		http.ServeFile(httpResp, httpReq, filepath.Join(siteTmplDirName, httpReq.URL.Path))

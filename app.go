@@ -82,7 +82,7 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 
 func appPrepWork(fromGui bool) {
 	App.Proj.allPrepsDone = false
-	timedLogged("Preprocessing...", func() string {
+	timedLogged("Reprocessing...", func() string {
 		var numjobs, numwork int
 		for _, series := range App.Proj.Series {
 			var thumbsrcfilenames []string
@@ -119,7 +119,7 @@ func appPrepWork(fromGui bool) {
 			}
 		}
 		App.Proj.allPrepsDone = true
-		return "for " + itoa(numwork) + "/" + itoa(numjobs) + " preprocessing jobs"
+		return "for " + itoa(numwork) + "/" + itoa(numjobs) + " reprocessing jobs"
 	})
 	if fromGui {
 		pngOptsLoop()
