@@ -344,7 +344,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		} else if fv("srcpx") != sv.data.bwFilePath {
 			break
 		}
-		s += "<option value='" + href + "' style='background-image: url(\"" + href + "\");'>&lt; " + itoa(int(bwt)) + ":</option>"
+		s += "<option value='" + href + "' style='background-image: url(\"" + href + "\");'>&lt; " + itoa(int(bwt)) + " (" + strIf(i == 0, "current", "preview") + ")" + "</option>"
 	}
 	s += "</select></div>"
 	s += "<div id='fullsheet'>" + guiHtmlImg("/"+bwsrc, A{"id": "fsimg", "style": "background-image: none"})
