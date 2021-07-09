@@ -11,7 +11,6 @@ import (
 )
 
 type Project struct {
-	Title  string
 	Desc   map[string]string
 	Series []*Series
 	Langs  []string
@@ -22,8 +21,6 @@ type Project struct {
 	AtomFile struct {
 		PubDates    []string
 		Name        string
-		Title       string
-		LinkHref    string
 		ContentHtml map[string]string
 	}
 	MaxImagePanelTextAreas int

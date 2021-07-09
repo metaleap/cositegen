@@ -13,43 +13,49 @@ import (
 	"time"
 )
 
-var viewModes = []string{"s", "r"}
+var (
+	SiteTitleOrig = os.Getenv("CSG")
+	SiteTitleEsc  = strings.NewReplacer("<span>", "", "</span>", "", "&bull;", ".").Replace(SiteTitleOrig)
+	viewModes     = []string{"s", "r"}
+)
 
 type PageGen struct {
-	SiteTitle      string
-	SiteDesc       string
-	PageTitle      string
-	PageTitleTxt   string
-	PageDesc       string
-	PageLang       string
-	PageCssClasses string
-	PageDirCur     string
-	PageDirAlt     string
-	DirCurTitle    string
-	DirAltTitle    string
-	DirCurDesc     string
-	DirAltDesc     string
-	LangsList      string
-	ViewerList     string
-	HrefViewAlt    string
-	HrefViewCur    string
-	QualList       string
-	PagesList      string
-	PageContent    string
-	HintHtmlR      string
-	HintHtmlS      string
-	HintDir        string
-	VerHint        string
-	LegalHtml      string
-	HrefHome       string
-	HrefDirLtr     string
-	HrefDirRtl     string
-	HrefDirCur     string
-	HrefDirAlt     string
-	HrefFeed       string
-	VersList       string
-	ColsList       string
-	ChapTitle      string
+	SiteTitleOrig    string
+	SiteTitleOrigSub string
+	SiteTitleEsc     string
+	SiteDesc         string
+	PageTitle        string
+	PageTitleTxt     string
+	PageDesc         string
+	PageLang         string
+	PageCssClasses   string
+	PageDirCur       string
+	PageDirAlt       string
+	DirCurTitle      string
+	DirAltTitle      string
+	DirCurDesc       string
+	DirAltDesc       string
+	LangsList        string
+	ViewerList       string
+	HrefViewAlt      string
+	HrefViewCur      string
+	QualList         string
+	PagesList        string
+	PageContent      string
+	HintHtmlR        string
+	HintHtmlS        string
+	HintDir          string
+	VerHint          string
+	LegalHtml        string
+	HrefHome         string
+	HrefDirLtr       string
+	HrefDirRtl       string
+	HrefDirCur       string
+	HrefDirAlt       string
+	HrefFeed         string
+	VersList         string
+	ColsList         string
+	ChapTitle        string
 }
 
 type siteGen struct {
@@ -285,17 +291,19 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		"%LANG"+me.lang+"%", itoa(int(App.Proj.percentTranslated(me.lang, nil, nil, nil, -1))),
 	)
 	me.page = PageGen{
-		SiteTitle:  hEsc(App.Proj.Title),
-		SiteDesc:   repl.Replace(hEsc(locStr(App.Proj.Desc, me.lang))),
-		PageLang:   me.lang,
-		HintHtmlR:  me.textStr("HintHtmlR"),
-		HintHtmlS:  me.textStr("HintHtmlS"),
-		HintDir:    me.textStr("HintDir"),
-		VerHint:    me.textStr("VerHint"),
-		LegalHtml:  me.textStr("LegalHtml"),
-		HrefFeed:   "./" + App.Proj.AtomFile.Name + "." + me.lang + ".atom",
-		PageDirCur: "ltr",
-		PageDirAlt: "rtl",
+		SiteTitleEsc:     SiteTitleEsc,
+		SiteTitleOrig:    SiteTitleOrig,
+		SiteTitleOrigSub: strings.TrimPrefix(strings.TrimSuffix(SiteTitleOrig[5:], "</span>"), "<span>"),
+		SiteDesc:         repl.Replace(hEsc(locStr(App.Proj.Desc, me.lang))),
+		PageLang:         me.lang,
+		HintHtmlR:        me.textStr("HintHtmlR"),
+		HintHtmlS:        me.textStr("HintHtmlS"),
+		HintDir:          me.textStr("HintDir"),
+		VerHint:          me.textStr("VerHint"),
+		LegalHtml:        me.textStr("LegalHtml"),
+		HrefFeed:         "./" + App.Proj.AtomFile.Name + "." + me.lang + ".atom",
+		PageDirCur:       "ltr",
+		PageDirAlt:       "rtl",
 	}
 	if me.dirRtl {
 		me.page.PageDirCur, me.page.PageDirAlt = "rtl", "ltr"
@@ -866,8 +874,8 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 				if pgnr >= 1 {
 					xml := `<entry><updated>` + pubdate + `T00:00:00Z</updated>`
 					xml += `<title>` + hEsc(locStr(chapter.parentSeries.Title, me.lang)) + `: ` + hEsc(locStr(chapter.Title, me.lang)) + `</title>`
-					xml += `<link href="` + strings.TrimRight(af.LinkHref, "/") + "/" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, pgnr, "s", "", me.lang, 0, true) + ".html" + `"/>`
-					xml += `<author><name>` + af.Title + `</name></author>`
+					xml += `<link href="` + strings.TrimRight(strings.ToLower(SiteTitleEsc), "/") + "/" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, pgnr, "s", "", me.lang, 0, true) + ".html" + `"/>`
+					xml += `<author><name>` + SiteTitleEsc + `</name></author>`
 					xml += `<content type="html">` + strings.NewReplacer(
 						"%NUMSVS%", itoa(numsheets),
 						"%NUMPNL%", itoa(numpanels),
@@ -881,7 +889,7 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 
 	s := `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="` + me.lang + `">`
 	if len(xmls) > 0 {
-		s += `<updated>` + af.PubDates[0] + `T00:00:00Z</updated><title>` + af.Title + `</title><link href="` + af.LinkHref + `"/><id>` + af.LinkHref + "</id>"
+		s += `<updated>` + af.PubDates[0] + `T00:00:00Z</updated><title>` + SiteTitleEsc + `</title><link href="` + strings.ToLower(SiteTitleEsc) + `"/><id>` + strings.ToLower(SiteTitleEsc) + "</id>"
 		s += "\n" + strings.Join(xmls, "\n")
 	}
 	fileWrite(".build/"+af.Name+"."+me.lang+".atom", []byte(s+"\n</feed>"))
