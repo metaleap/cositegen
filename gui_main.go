@@ -487,11 +487,11 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 				if len(trwh) < 2 {
 					trwh = []string{"", ""}
 				}
-				if rx0, err := strconv.ParseUint(trxy[0], 0, 64); err == nil {
-					if ry0, err := strconv.ParseUint(trxy[1], 0, 64); err == nil {
-						if rw, err := strconv.ParseUint(trwh[0], 0, 64); err == nil {
+				if rx0, err := strconv.ParseInt(trxy[0], 0, 64); err == nil {
+					if ry0, err := strconv.ParseInt(trxy[1], 0, 64); err == nil {
+						if rw, err := strconv.ParseInt(trwh[0], 0, 64); err == nil {
 							rx1 := rw + rx0
-							if rh, err := strconv.ParseUint(trwh[1], 0, 64); err == nil {
+							if rh, err := strconv.ParseInt(trwh[1], 0, 64); err == nil {
 								ry1 := rh + ry0
 								area.Rect = image.Rect(int(rx0), int(ry0), int(rx1), int(ry1))
 								if rpxy := strings.Split(trim(fv(pid+"t"+itoa(i)+"rpxy")), ","); !area.Rect.Empty() {

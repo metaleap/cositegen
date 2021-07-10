@@ -479,7 +479,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		if bgcol && !chapter.HasBgCol() {
 			continue
 		}
-		text := me.textStr("Bg" + strIf(bgcol, "Col", "Bw"))
+		text := me.textStr("Bg" + strIf(!bgcol, "Bw", strIf(chapter.PercentColorized() < 100.0, "ColP", "Col")))
 		if perc := chapter.PercentColorized(); bgcol && perc < 100.0 {
 			text += " (" + ftoa(perc, 0) + "%)"
 		}
