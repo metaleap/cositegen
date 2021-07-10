@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -18,7 +17,6 @@ type Project struct {
 		Name     string
 		SizeHint int
 	}
-	Customs  map[string][]string
 	AtomFile struct {
 		PubDates    []string
 		Name        string
@@ -68,10 +66,12 @@ type Project struct {
 			AppendToFiles        map[string]bool
 			TspanTagClasses      []string
 		}
+
+		book *Book
 	}
+	Books map[string]*Book
 
 	allPrepsDone bool
-	customs      map[string]*Chapter
 	data         struct {
 		Sv struct {
 			fileNamesToIds map[string]string
@@ -87,134 +87,51 @@ type Project struct {
 func (me *Project) At(i int) fmt.Stringer { return me.Series[i] }
 func (me *Project) Len() int              { return len(me.Series) }
 
-type Series struct {
-	Name     string
-	UrlName  string
-	Title    map[string]string
-	Desc     map[string]string
-	Author   string
-	Chapters []*Chapter
-	Unlisted bool
-
-	dirPath    string
-	parentProj *Project
-}
-
-func (me *Series) At(i int) fmt.Stringer { return me.Chapters[i] }
-func (me *Series) Len() int              { return len(me.Chapters) }
-func (me *Series) String() string        { return me.Name }
-
-func (me *Chapter) NextAfter(withSheetsOnly bool) *Chapter {
-	series := me.parentSeries
-	for now, i := false, 0; i < len(series.Chapters); i++ {
-		if now && (len(series.Chapters[i].sheets) > 0 || !withSheetsOnly) {
-			return series.Chapters[i]
-		}
-		now = (series.Chapters[i] == me)
-	}
-	if series.Chapters[0] == me || (withSheetsOnly && 0 == len(series.Chapters[0].sheets)) {
-		return nil
-	}
-	return series.Chapters[0]
-}
-
-func (me *Chapter) NumPanels() (ret int) {
-	for _, sheet := range me.sheets {
-		n, _ := sheet.versions[0].panelCount()
-		ret += n
-	}
-	return
-}
-
-func (me *Chapter) NumScans() (ret int) {
-	for _, sheet := range me.sheets {
-		ret += len(sheet.versions)
-	}
-	return
-}
-
-func (me *Chapter) IsSheetOnPage(pgNr int, sheetIdx int) (is bool) {
-	if is = len(me.sheets) > sheetIdx; is && me.SheetsPerPage > 0 {
-		is = (pgNr == (1 + (sheetIdx / me.SheetsPerPage)))
-	}
-	return
-}
-
-func (me *Chapter) HasBgCol() bool {
-	for _, sheet := range me.sheets {
-		for _, sv := range sheet.versions {
-			if sv.data.hasBgCol {
-				return true
-			}
+func (me *Project) hasSvgQuali() bool {
+	for _, q := range me.Qualis {
+		if q.SizeHint == 0 {
+			return true
 		}
 	}
 	return false
 }
 
-func (me *Chapter) PercentColorized() float64 {
-	numsv, numbg := 0, 0
-	for _, sheet := range me.sheets {
-		for _, sv := range sheet.versions {
-			if numsv++; sv.data.hasBgCol {
-				numbg++
+func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sheetVer *SheetVer, pgNr int) float64 {
+	numtotal, numtrans := 0, 0
+	for _, series := range me.Series {
+		if ser != nil && ser != series {
+			continue
+		}
+		for _, chapter := range series.Chapters {
+			if chap != nil && chap != chapter {
+				continue
+			}
+			for i, sheet := range chapter.sheets {
+				if pgNr > 0 && !chapter.IsSheetOnPage(pgNr, i) {
+					continue
+				}
+				for _, sv := range sheet.versions {
+					if sheetVer != nil && sheetVer != sv {
+						continue
+					}
+					for _, areas := range App.Proj.data.Sv.textRects[sv.id] {
+						for _, area := range areas {
+							if def := trim(area.Data[App.Proj.Langs[0]]); def != "" {
+								if numtotal++; trim(area.Data[lang]) != "" {
+									numtrans++
+								}
+							}
+						}
+					}
+				}
 			}
 		}
 	}
-	if numsv == 0 || numbg == 0 {
-		return 0.0
+	if numtotal == 0 {
+		return -1.0
 	}
-	return 100.0 / (float64(numsv) / float64(numbg))
+	return float64(numtrans) * (100.0 / float64(numtotal))
 }
-
-func (me *Chapter) DateRangeOfSheets() (time.Time, time.Time) {
-	var dt1, dt2 int64
-	for _, sheet := range me.sheets {
-		for _, sv := range sheet.versions {
-			dt := sv.dateTimeUnixNano
-			if dt < dt1 || dt1 == 0 {
-				dt1 = dt
-			}
-			if dt > dt2 || dt2 == 0 {
-				dt2 = dt
-			}
-		}
-	}
-	return time.Unix(0, dt1), time.Unix(0, dt2)
-}
-
-type Chapter struct {
-	Name           string
-	UrlName        string
-	Title          map[string]string
-	SheetsPerPage  int
-	StoryboardFile string
-	IsCustom       bool
-
-	defaultQuali int
-	dirPath      string
-	sheets       []*Sheet
-	parentSeries *Series
-	versions     []int64
-	verDtLatest  struct {
-		from  int64
-		until int64
-	}
-	storyBoardPages []ChapterStoryboardPage
-}
-
-type ChapterStoryboardPage struct {
-	name      string
-	textBoxes []ChapterStoryboardPageTextBox
-}
-
-type ChapterStoryboardPageTextBox struct {
-	xywhCm    []float64
-	textSpans []string
-}
-
-func (me *Chapter) At(i int) fmt.Stringer { return me.sheets[i] }
-func (me *Chapter) Len() int              { return len(me.sheets) }
-func (me *Chapter) String() string        { return me.Name }
 
 func (me *Project) save() {
 	jsonSave(".cache/data.json", &me.data)
@@ -232,7 +149,7 @@ func (me *Project) load() (numSheetVers int) {
 	} else {
 		me.data.Sv.textRects = map[string][][]ImgPanelArea{}
 	}
-	me.data.Sv.fileNamesToIds, me.data.Sv.IdsToFileNames, me.customs = map[string]string{}, map[string]string{}, map[string]*Chapter{}
+	me.data.Sv.fileNamesToIds, me.data.Sv.IdsToFileNames = map[string]string{}, map[string]string{}
 	if me.data.Sv.ById == nil {
 		me.data.Sv.ById = map[string]*SheetVerData{}
 	}
@@ -240,9 +157,6 @@ func (me *Project) load() (numSheetVers int) {
 		me.data.PngOpt = map[string][]string{}
 	}
 
-	// for name, pngfilenames := range me.Customs {
-
-	// }
 	for _, series := range me.Series {
 		series.parentProj, series.dirPath = me, "scans/"+series.Name
 		if series.UrlName == "" {
@@ -347,90 +261,26 @@ func (me *Project) load() (numSheetVers int) {
 			rmDir(".cache/" + svid)
 		}
 	}
+
+	if len(os.Args) > 2 && os.Args[2] != "" && me.Books != nil {
+		if me.Gen.book = me.Books[os.Args[2]]; me.Gen.book != nil {
+			qidx := -1
+			for i, quali := range me.Qualis {
+				if quali.SizeHint >= 15000 {
+					qidx = i
+					break
+				}
+			}
+			if qidx < 0 {
+				qidx, me.Qualis = len(me.Qualis), append(me.Qualis, struct {
+					Name     string
+					SizeHint int
+				}{SizeHint: 15000})
+			}
+			me.Gen.book.chap = &Chapter{
+				defaultQuali: qidx, Name: os.Args[2], parentBook: me.Gen.book, UrlName: os.Args[2], Title: map[string]string{App.Proj.Langs[0]: os.Args[2]}}
+		}
+	}
+
 	return
-}
-
-func (me *Project) hasSvgQuali() bool {
-	for _, q := range me.Qualis {
-		if q.SizeHint == 0 {
-			return true
-		}
-	}
-	return false
-}
-
-func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sheetVer *SheetVer, pgNr int) float64 {
-	numtotal, numtrans := 0, 0
-	for _, series := range me.Series {
-		if ser != nil && ser != series {
-			continue
-		}
-		for _, chapter := range series.Chapters {
-			if chap != nil && chap != chapter {
-				continue
-			}
-			for i, sheet := range chapter.sheets {
-				if pgNr > 0 && !chapter.IsSheetOnPage(pgNr, i) {
-					continue
-				}
-				for _, sv := range sheet.versions {
-					if sheetVer != nil && sheetVer != sv {
-						continue
-					}
-					for _, areas := range App.Proj.data.Sv.textRects[sv.id] {
-						for _, area := range areas {
-							if def := trim(area.Data[App.Proj.Langs[0]]); def != "" {
-								if numtotal++; trim(area.Data[lang]) != "" {
-									numtrans++
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	if numtotal == 0 {
-		return -1.0
-	}
-	return float64(numtrans) * (100.0 / float64(numtotal))
-}
-
-func (me *Chapter) loadStoryboard() {
-	s := string(fileRead(me.StoryboardFile))
-
-	for _, sp := range xmlOuters(s, `<draw:page>`, `</draw:page>`) {
-		csp := ChapterStoryboardPage{name: xmlAttr(sp, "draw:name")}
-		for _, sf := range xmlOuters(sp, `<draw:frame>`, `</draw:frame>`) {
-			csptb := ChapterStoryboardPageTextBox{}
-			for _, attr := range xmlAttrs(sf, "svg:x", "svg:y", "svg:width", "svg:height") {
-				if f, err := strconv.ParseFloat(strings.TrimSuffix(attr, "cm"), 64); err != nil || !strings.HasSuffix(attr, "cm") {
-					panic(attr)
-				} else {
-					csptb.xywhCm = append(csptb.xywhCm, f)
-				}
-			}
-			assert(len(csptb.xywhCm) == 4)
-			for itb, stb := range xmlOuters(sf, "<draw:text-box>", "</draw:text-box>") {
-				if itb > 0 {
-					panic(sf)
-				}
-				for _, stp := range xmlOuters(stb, "<text:p>", "</text:p>") {
-					for _, sts := range xmlOuters(stp, "<text:span>", "</text:span>") {
-						sts = sts[:strings.LastIndexByte(sts, '<')]
-						sts = sts[strings.LastIndexByte(sts, '>')+1:]
-						if sts = trim(xmlUnesc(sts)); sts != "" {
-							csptb.textSpans = append(csptb.textSpans, sts)
-						}
-					}
-				}
-			}
-			if len(csptb.textSpans) > 0 {
-				csp.textBoxes = append(csp.textBoxes, csptb)
-			}
-		}
-		if len(csp.textBoxes) > 0 {
-			me.storyBoardPages = append(me.storyBoardPages, csp)
-		}
-	}
 }
