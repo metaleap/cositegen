@@ -915,7 +915,7 @@ func (me *siteGen) copyHomeThumbsPngs() (numPngs uint32) {
 }
 
 func (siteGen) namePanelPic(sheetId string, pIdx int, qualiSizeHint int) string {
-	return sheetId + itoa(pIdx) + itoa(qualiSizeHint)
+	return sheetId + itoa(pIdx) + "." + itoa(qualiSizeHint)
 }
 
 func (siteGen) nameThumb(series *Series) string {

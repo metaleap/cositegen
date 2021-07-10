@@ -263,31 +263,15 @@ func (me *Project) load() (numSheetVers int) {
 	}
 
 	if len(os.Args) > 2 && os.Args[2] != "" && me.Books != nil {
-		me.Gen.book = me.Books[os.Args[2]]
-	}
-	hqidx := -1
-	if true || me.Gen.book != nil {
-		for i, quali := range me.Qualis {
-			if quali.SizeHint >= 15000 {
-				hqidx = i
-				break
-			}
-		}
-		if hqidx < 0 {
-			hqidx, me.Qualis = len(me.Qualis), append(me.Qualis, struct {
-				Name     string
-				SizeHint int
-			}{SizeHint: 15000})
-		}
-	}
-	if me.Gen.book != nil {
-		me.Gen.book.chap = &Chapter{
-			defaultQuali: hqidx, Name: os.Args[2], parentBook: me.Gen.book, UrlName: os.Args[2], Title: map[string]string{App.Proj.Langs[0]: os.Args[2]}}
-		for _, pngfilename := range me.Gen.book.Sheets {
-			if svid := me.data.Sv.fileNamesToIds[pngfilename]; svid == "" {
-				me.Gen.book.chap.sheets = append(me.Gen.book.chap.sheets, nil)
-			} else {
-				me.Gen.book.chap.sheets = append(me.Gen.book.chap.sheets, sheet, me.data.Sv.ById[svid].parentSheetVer.parentSheet)
+		if me.Gen.book = me.Books[os.Args[2]]; me.Gen.book != nil {
+			me.Gen.book.chap = &Chapter{
+				defaultQuali: len(App.Proj.Qualis) - 1, Name: os.Args[2], parentBook: me.Gen.book, UrlName: os.Args[2], Title: map[string]string{App.Proj.Langs[0]: os.Args[2]}}
+			for _, pngfilename := range me.Gen.book.Sheets {
+				if svid := me.data.Sv.fileNamesToIds[pngfilename]; svid == "" {
+					me.Gen.book.chap.sheets = append(me.Gen.book.chap.sheets, nil)
+				} else {
+					me.Gen.book.chap.sheets = append(me.Gen.book.chap.sheets, me.data.Sv.ById[svid].parentSheetVer.parentSheet)
+				}
 			}
 		}
 	}
