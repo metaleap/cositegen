@@ -386,6 +386,9 @@ func (me *siteGen) prepHomePage() {
 	s := "<div class='" + App.Proj.Gen.ClsNonViewerPage + "'>"
 	cssanimdirs := []string{"alternate", "alternate-reverse"}
 	for i, series := range App.Proj.Series {
+		if series.Unlisted {
+			continue
+		}
 		authorinfo := series.Author
 		if authorinfo == "" {
 			authorinfo = me.textStr("Unknown")

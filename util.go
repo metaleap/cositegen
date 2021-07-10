@@ -94,6 +94,13 @@ func fileRead(fileName string) []byte {
 	return data
 }
 
+func fileIsSymlink(fileInfo os.FileInfo) bool {
+	if fileInfo != nil {
+		return (fileInfo.Mode() & os.ModeSymlink) != 0
+	}
+	return false
+}
+
 func fileWrite(fileName string, data []byte) {
 	tmpfilename := fileName + "." + strconv.FormatInt(time.Now().UnixNano(), 36)
 	if err := os.WriteFile(tmpfilename, data, os.ModePerm); err != nil {

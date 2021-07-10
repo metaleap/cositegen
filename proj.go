@@ -18,6 +18,7 @@ type Project struct {
 		Name     string
 		SizeHint int
 	}
+	Customs  map[string][]string
 	AtomFile struct {
 		PubDates    []string
 		Name        string
@@ -70,6 +71,7 @@ type Project struct {
 	}
 
 	allPrepsDone bool
+	customs      map[string]*Chapter
 	data         struct {
 		Sv struct {
 			fileNamesToIds map[string]string
@@ -92,6 +94,7 @@ type Series struct {
 	Desc     map[string]string
 	Author   string
 	Chapters []*Chapter
+	Unlisted bool
 
 	dirPath    string
 	parentProj *Project
@@ -185,6 +188,7 @@ type Chapter struct {
 	Title          map[string]string
 	SheetsPerPage  int
 	StoryboardFile string
+	IsCustom       bool
 
 	defaultQuali int
 	dirPath      string
@@ -228,8 +232,7 @@ func (me *Project) load() (numSheetVers int) {
 	} else {
 		me.data.Sv.textRects = map[string][][]ImgPanelArea{}
 	}
-	me.data.Sv.fileNamesToIds = map[string]string{}
-	me.data.Sv.IdsToFileNames = map[string]string{}
+	me.data.Sv.fileNamesToIds, me.data.Sv.IdsToFileNames, me.customs = map[string]string{}, map[string]string{}, map[string]*Chapter{}
 	if me.data.Sv.ById == nil {
 		me.data.Sv.ById = map[string]*SheetVerData{}
 	}
@@ -237,6 +240,9 @@ func (me *Project) load() (numSheetVers int) {
 		me.data.PngOpt = map[string][]string{}
 	}
 
+	// for name, pngfilenames := range me.Customs {
+
+	// }
 	for _, series := range me.Series {
 		series.parentProj, series.dirPath = me, "scans/"+series.Name
 		if series.UrlName == "" {
