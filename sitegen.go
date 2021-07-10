@@ -364,6 +364,9 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 						}
 					}
 					for i, q := range App.Proj.Qualis[:len(qsizes)] {
+						if q.Name == "" {
+							continue
+						}
 						me.page.QualList += "<option value='" + me.namePage(chapter, q.SizeHint, pageNr, viewmode, "", me.lang, svdt, me.bgCol) + "'"
 						if q.Name == qname {
 							me.page.QualList += " selected='selected'"
