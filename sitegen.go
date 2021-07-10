@@ -250,6 +250,9 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 		numPanels++
 		go func(pidx int) {
 			for qidx, quali := range App.Proj.Qualis {
+				if quali.Name == "" {
+					continue
+				}
 				fext := strIf(quali.SizeHint == 0, ".svg", ".png")
 				srcpath := filepath.Join(sv.data.PicDirPath(quali.SizeHint), itoa(pidx)+fext)
 				if fileinfo := fileStat(srcpath); fileinfo == nil && quali.SizeHint != 0 {
@@ -339,6 +342,9 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		}
 		me.page.PageDesc = hEsc(locStr(series.Desc, me.lang)) + author
 		for qidx, quali := range App.Proj.Qualis {
+			if quali.Name == "" {
+				continue
+			}
 			for _, viewmode := range viewModes {
 				me.page.PageCssClasses = App.Proj.Gen.ClsChapter + viewmode
 				for _, svdt := range chapter.versions {

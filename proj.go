@@ -66,10 +66,7 @@ type Project struct {
 			AppendToFiles        map[string]bool
 			TspanTagClasses      []string
 		}
-
-		book *Book
 	}
-	Books map[string]*Book
 
 	allPrepsDone bool
 	data         struct {
@@ -114,9 +111,9 @@ func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sh
 					if sheetVer != nil && sheetVer != sv {
 						continue
 					}
-					for _, areas := range App.Proj.data.Sv.textRects[sv.id] {
+					for _, areas := range me.data.Sv.textRects[sv.id] {
 						for _, area := range areas {
-							if def := trim(area.Data[App.Proj.Langs[0]]); def != "" {
+							if def := trim(area.Data[me.Langs[0]]); def != "" {
 								if numtotal++; trim(area.Data[lang]) != "" {
 									numtrans++
 								}
@@ -162,10 +159,16 @@ func (me *Project) load() (numSheetVers int) {
 		if series.UrlName == "" {
 			series.UrlName = series.Name
 		}
+		if len(series.Title) == 0 {
+			series.Title = map[string]string{me.Langs[0]: series.Name}
+		}
 		for _, chap := range series.Chapters {
 			chap.parentSeries, chap.dirPath = series, filepath.Join(series.dirPath, chap.Name)
 			if chap.UrlName == "" {
 				chap.UrlName = chap.Name
+			}
+			if len(chap.Title) == 0 {
+				chap.Title = map[string]string{me.Langs[0]: chap.Name}
 			}
 			files, err := os.ReadDir(chap.dirPath)
 			if err != nil {
@@ -211,10 +214,10 @@ func (me *Project) load() (numSheetVers int) {
 						data := fileRead(sv.fileName)
 						sv.id = contentHashStr(data)
 						work.Lock()
-						App.Proj.data.Sv.fileNamesToIds[sv.fileName] = sv.id
-						App.Proj.data.Sv.IdsToFileNames[sv.id] = sv.fileName
+						me.data.Sv.fileNamesToIds[sv.fileName] = sv.id
+						me.data.Sv.IdsToFileNames[sv.id] = sv.fileName
 						work.Unlock()
-						sv.data = App.Proj.data.Sv.ById[sv.id]
+						sv.data = me.data.Sv.ById[sv.id]
 						sv.data.parentSheetVer = sv
 						cachedirsymlinkpath := sv.fileName[:len(sv.fileName)-len(".png")]
 						_ = os.Remove(cachedirsymlinkpath)
@@ -259,20 +262,6 @@ func (me *Project) load() (numSheetVers int) {
 		if me.data.Sv.IdsToFileNames[svid] == "" {
 			delete(me.data.Sv.ById, svid)
 			rmDir(".cache/" + svid)
-		}
-	}
-
-	if len(os.Args) > 2 && os.Args[2] != "" && me.Books != nil {
-		if me.Gen.book = me.Books[os.Args[2]]; me.Gen.book != nil {
-			me.Gen.book.chap = &Chapter{
-				defaultQuali: len(App.Proj.Qualis) - 1, Name: os.Args[2], parentBook: me.Gen.book, UrlName: os.Args[2], Title: map[string]string{App.Proj.Langs[0]: os.Args[2]}}
-			for _, pngfilename := range me.Gen.book.Sheets {
-				if svid := me.data.Sv.fileNamesToIds[pngfilename]; svid == "" {
-					me.Gen.book.chap.sheets = append(me.Gen.book.chap.sheets, nil)
-				} else {
-					me.Gen.book.chap.sheets = append(me.Gen.book.chap.sheets, me.data.Sv.ById[svid].parentSheetVer.parentSheet)
-				}
-			}
 		}
 	}
 	return

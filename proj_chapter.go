@@ -30,7 +30,6 @@ type Chapter struct {
 	defaultQuali int
 	dirPath      string
 	sheets       []*Sheet
-	parentBook   *Book
 	parentSeries *Series
 	versions     []int64
 	verDtLatest  struct {
@@ -48,13 +47,6 @@ type ChapterStoryboardPage struct {
 type ChapterStoryboardPageTextBox struct {
 	xywhCm    []float64
 	textSpans []string
-}
-
-type Book struct {
-	CssCls string
-	Sheets []string
-
-	chap *Chapter
 }
 
 func (me *Series) At(i int) fmt.Stringer { return me.Chapters[i] }
