@@ -17,6 +17,24 @@ import (
 type Any = interface{}
 type A = map[string]string
 
+type FilePathsSortingByFileSize []string
+
+func (me FilePathsSortingByFileSize) Len() int          { return len(me) }
+func (me FilePathsSortingByFileSize) Swap(i int, j int) { me[i], me[j] = me[j], me[i] }
+func (me FilePathsSortingByFileSize) Less(i int, j int) bool {
+	fi1, fi2 := fileStat(me[i]), fileStat(me[j])
+	return fi1 == nil || (fi2 != nil && fi1.Size() < fi2.Size())
+}
+
+type FilePathsSortingByModTime []string
+
+func (me FilePathsSortingByModTime) Len() int          { return len(me) }
+func (me FilePathsSortingByModTime) Swap(i int, j int) { me[i], me[j] = me[j], me[i] }
+func (me FilePathsSortingByModTime) Less(i int, j int) bool {
+	fi1, fi2 := fileStat(me[i]), fileStat(me[j])
+	return fi1 == nil || (fi2 != nil && fi1.ModTime().UnixNano() < fi2.ModTime().UnixNano())
+}
+
 var itoa = strconv.Itoa
 var trim = strings.TrimSpace
 var stdio sync.Mutex

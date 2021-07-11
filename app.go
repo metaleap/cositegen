@@ -85,7 +85,7 @@ func appPrepWork(fromGui bool) {
 	timedLogged("Reprocessing...", func() string {
 		var numjobs, numwork int
 		for _, series := range App.Proj.Series {
-			var thumbsrcfilenames []string
+			var thumbsrcfilenames FilePathsSortingByModTime
 			var didanywork bool
 			for _, chapter := range series.Chapters {
 				for _, sheet := range chapter.sheets {
@@ -123,6 +123,7 @@ func appPrepWork(fromGui bool) {
 			if len(thumbsrcfilenames) > 0 && App.Proj.NumSheetsInHomeBgs > 0 &&
 				(didanywork || nil == fileStat(thumbfilepath)) {
 				if len(thumbsrcfilenames) > App.Proj.NumSheetsInHomeBgs {
+					sort.Sort(thumbsrcfilenames)
 					thumbsrcfilenames = thumbsrcfilenames[len(thumbsrcfilenames)-App.Proj.NumSheetsInHomeBgs:]
 				}
 				fileWrite(thumbfilepath, imgStitchHorizontally(thumbsrcfilenames, 320, 44, color.NRGBA{0, 0, 0, 0}))
@@ -257,13 +258,4 @@ func pngOpt(pngFilePath string) bool {
 		return true
 	}
 	return false
-}
-
-type FilePathsSortingByFileSize []string
-
-func (me FilePathsSortingByFileSize) Len() int          { return len(me) }
-func (me FilePathsSortingByFileSize) Swap(i int, j int) { me[i], me[j] = me[j], me[i] }
-func (me FilePathsSortingByFileSize) Less(i int, j int) bool {
-	fi1, fi2 := fileStat(me[i]), fileStat(me[j])
-	return fi1 == nil || (fi2 != nil && fi1.Size() < fi2.Size())
 }
