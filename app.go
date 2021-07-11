@@ -106,7 +106,17 @@ func appPrepWork(fromGui bool) {
 					}
 				}
 			}
-			thumbfilepath := ".cache/" + siteGen{}.nameThumb(series) + ".png"
+			const maxthumbs = 22
+			if App.Proj.NumSheetsInHomeBgs > maxthumbs {
+				App.Proj.NumSheetsInHomeBgs = maxthumbs
+			}
+			thumbname := siteGen{}.nameThumb(series)
+			thumbfilepath, idxdot := ".cache/"+thumbname+".png", 1+strings.LastIndexByte(thumbname, '.')
+			for i := 0; i < maxthumbs; i++ {
+				if i != App.Proj.NumSheetsInHomeBgs {
+					_ = os.Remove(".cache/" + thumbname[:idxdot] + itoa(i) + ".png")
+				}
+			}
 			if didanywork || len(thumbsrcfilenames) == 0 || App.Proj.NumSheetsInHomeBgs == 0 {
 				_ = os.Remove(thumbfilepath)
 			}

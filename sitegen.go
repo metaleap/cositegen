@@ -925,7 +925,7 @@ func (siteGen) namePanelPic(sheetId string, pIdx int, qualiSizeHint int) string 
 }
 
 func (siteGen) nameThumb(series *Series) string {
-	return "_" + App.Proj.DirModes.Ltr.Name + "-" + App.Proj.DirModes.Rtl.Name + "-" + strings.ToLower(series.UrlName)
+	return "_" + App.Proj.DirModes.Ltr.Name + "-" + App.Proj.DirModes.Rtl.Name + "-" + strings.ToLower(series.UrlName) + "." + itoa(App.Proj.NumSheetsInHomeBgs)
 }
 
 func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, viewMode string, dirMode string, langId string, svDt int64, bgCol bool) string {
