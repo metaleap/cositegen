@@ -273,7 +273,11 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 			if srcpath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+App.Proj.PanelBgFileExt); sv.data.hasBgCol && fileStat(srcpath) != nil {
 				dstpath := filepath.Join(".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + itoa(pidx) + "bg" + App.Proj.PanelBgFileExt)
 				fileLinkOrCopy(srcpath, dstpath)
-				atomic.AddUint32(&numSvgs, 1)
+				if App.Proj.PanelBgFileExt == ".png" {
+					atomic.AddUint32(&numPngs, 1)
+				} else {
+					atomic.AddUint32(&numSvgs, 1)
+				}
 			}
 			work.Done()
 		}(pidx)
