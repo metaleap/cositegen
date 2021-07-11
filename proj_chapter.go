@@ -24,6 +24,8 @@ type Chapter struct {
 	Name           string
 	UrlName        string
 	Title          map[string]string
+	Desc           map[string]string
+	Author         string
 	SheetsPerPage  int
 	StoryboardFile string
 

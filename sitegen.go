@@ -347,11 +347,12 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		me.page.HrefHome += "#" + strings.ToLower(series.Name)
 		me.page.PageTitle = "<span>" + hEsc(locStr(series.Title, me.lang)) + " &bull;</span> " + hEsc(locStr(chapter.Title, me.lang))
 		me.page.PageTitleTxt = hEsc(locStr(series.Title, me.lang)) + ": " + hEsc(locStr(chapter.Title, me.lang))
-		author := series.Author
-		if author != "" {
-			author = strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", author, 1)
+		author := strIf(chapter.Author == "", series.Author, chapter.Author)
+		if author = strIf(author == "?", "", author); author != "" {
+			author = strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", strIf(author == "?", me.textStr("Unknown"), author), 1)
 		}
-		me.page.PageDesc = hEsc(locStr(series.Desc, me.lang)) + author
+		desc := locStr(chapter.Desc, me.lang)
+		me.page.PageDesc = hEsc(strIf(desc == "", locStr(series.Desc, me.lang), desc)) + author
 		for qidx, quali := range App.Proj.Qualis {
 			if quali.Name == "" {
 				continue
@@ -409,14 +410,11 @@ func (me *siteGen) prepHomePage() {
 		if series.Unlisted {
 			continue
 		}
-		authorinfo := series.Author
-		if authorinfo == "" {
-			authorinfo = me.textStr("Unknown")
+		author := series.Author
+		if author != "" {
+			author = strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", strIf(author == "?", me.textStr("Unknown"), author), 1)
 		}
-		if authorinfo != "" {
-			authorinfo = strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", authorinfo, 1)
-		}
-		s += "<span class='" + App.Proj.Gen.ClsSeries + "' style='animation-direction: " + cssanimdirs[i%2] + "; background-image: url(\"./" + App.Proj.Gen.PicDirName + "/" + me.nameThumb(series) + ".png\");'><span><h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + "</h5><div class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Desc, me.lang)) + authorinfo + "</div>"
+		s += "<span class='" + App.Proj.Gen.ClsSeries + "' style='animation-direction: " + cssanimdirs[i%2] + "; background-image: url(\"./" + App.Proj.Gen.PicDirName + "/" + me.nameThumb(series) + ".png\");'><span><h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + "</h5><div class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Desc, me.lang)) + author + "</div>"
 		s += "<ul class='" + App.Proj.Gen.ClsSeries + "'>"
 		for _, chapter := range series.Chapters {
 			s += "<li class='" + App.Proj.Gen.ClsChapter + "'>"
@@ -448,6 +446,10 @@ func (me *siteGen) prepHomePage() {
 					}
 				}
 				s += "<a title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0, true) + ".html'>" + hEsc(locStr(chapter.Title, me.lang)) + "</a>"
+			}
+			author := chapter.Author
+			if author != "" {
+				s += strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", strIf(author == "?", me.textStr("Unknown"), author), 1)
 			}
 			s += "</li>"
 		}
