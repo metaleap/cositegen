@@ -111,7 +111,7 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 			m[id] = sl
 			mu.Unlock()
 		}
-		numsvgs, numpngs, numsheets, numpanels := me.genOrCopyPanelPics()
+		numsvgs, numpngs, numsheets, numpanels, totalsize := me.genOrCopyPanelPics()
 		numpngs += me.copyHomeThumbsPngs()
 		qstats := make(map[*Chapter][]int64, len(chapterqstats))
 		for chapter, namesandsizes := range chapterqstats {
@@ -136,7 +136,7 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 				printLn("\t\t" + pref + "\t\t" + App.Proj.Qualis[qidx].Name + "(" + itoa(App.Proj.Qualis[qidx].SizeHint) + ") => " + strSize64(totalsize))
 			}
 		}
-		return "for " + itoa(int(numpngs)) + " PNGs & " + itoa(int(numsvgs)) + " SVGs from " + itoa(int(numpanels)) + " panels in " + itoa(int(numsheets)) + " sheets"
+		return "for " + itoa(int(numpngs)) + " PNGs & " + itoa(int(numsvgs)) + " SVGs (" + strSize(int(totalsize)) + ") from " + itoa(int(numpanels)) + " panels in " + itoa(int(numsheets)) + " sheets"
 	})
 
 	timedLogged("SiteGen: generating markup files...", func() string {
@@ -212,23 +212,25 @@ func (me *siteGen) copyStaticFiles(relDirPath string) (numFilesWritten int) {
 	return
 }
 
-func (me *siteGen) genOrCopyPanelPics() (numSvgs uint32, numPngs uint32, numSheets uint32, numPanels uint32) {
+func (me *siteGen) genOrCopyPanelPics() (numSvgs uint32, numPngs uint32, numSheets uint32, numPanels uint32, totalSize uint64) {
 	var work sync.WaitGroup
 	atomic.StoreUint32(&numSheets, 0)
 	atomic.StoreUint32(&numPngs, 0)
 	atomic.StoreUint32(&numSvgs, 0)
 	atomic.StoreUint32(&numPanels, 0)
+	atomic.StoreUint64(&totalSize, 0)
 	for _, series := range App.Proj.Series {
 		for _, chapter := range series.Chapters {
 			for _, sheet := range chapter.sheets {
 				work.Add(1)
 				go func(chapter *Chapter, sheet *Sheet) {
 					for _, sv := range sheet.versions {
-						nsvgs, npngs, npnls := me.genOrCopyPanelPicsOf(sv)
+						nsvgs, npngs, npnls, totalsize := me.genOrCopyPanelPicsOf(sv)
 						atomic.AddUint32(&numSheets, 1)
 						atomic.AddUint32(&numPngs, npngs)
 						atomic.AddUint32(&numPanels, npnls)
 						atomic.AddUint32(&numSvgs, nsvgs)
+						atomic.AddUint64(&totalSize, totalsize)
 					}
 					work.Done()
 				}(chapter, sheet)
@@ -239,10 +241,11 @@ func (me *siteGen) genOrCopyPanelPics() (numSvgs uint32, numPngs uint32, numShee
 	return
 }
 
-func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs uint32, numPanels uint32) {
+func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs uint32, numPanels uint32, totalSize uint64) {
 	sv.ensurePrep(false, false)
 	atomic.StoreUint32(&numPngs, 0)
 	atomic.StoreUint32(&numSvgs, 0)
+	atomic.StoreUint64(&totalSize, 0)
 	var pidx int
 	var work sync.WaitGroup
 	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
@@ -258,6 +261,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 				if fileinfo := fileStat(srcpath); fileinfo == nil && quali.SizeHint != 0 {
 					break
 				} else {
+					atomic.AddUint64(&totalSize, uint64(fileinfo.Size()))
 					dstpath := filepath.Join(".build/"+App.Proj.Gen.PicDirName+"/", me.namePanelPic(sv.id, pidx, quali.SizeHint)+fext)
 					fileLinkOrCopy(srcpath, dstpath)
 					if me.onPicSize != nil {
@@ -270,13 +274,16 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 					}
 				}
 			}
-			if srcpath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+App.Proj.PanelBgFileExt); sv.data.hasBgCol && fileStat(srcpath) != nil {
-				dstpath := filepath.Join(".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + itoa(pidx) + "bg" + App.Proj.PanelBgFileExt)
-				fileLinkOrCopy(srcpath, dstpath)
-				if App.Proj.PanelBgFileExt == ".png" {
-					atomic.AddUint32(&numPngs, 1)
-				} else {
-					atomic.AddUint32(&numSvgs, 1)
+			if srcpath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+App.Proj.PanelBgFileExt); sv.data.hasBgCol {
+				if fileinfo := fileStat(srcpath); fileinfo != nil {
+					atomic.AddUint64(&totalSize, uint64(fileinfo.Size()))
+					dstpath := filepath.Join(".build/" + App.Proj.Gen.PicDirName + "/" + sv.id + itoa(pidx) + "bg" + App.Proj.PanelBgFileExt)
+					fileLinkOrCopy(srcpath, dstpath)
+					if App.Proj.PanelBgFileExt == ".png" {
+						atomic.AddUint32(&numPngs, 1)
+					} else {
+						atomic.AddUint32(&numSvgs, 1)
+					}
 				}
 			}
 			work.Done()
