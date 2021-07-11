@@ -122,8 +122,7 @@ func appPrepWork(fromGui bool) {
 			}
 			if len(thumbsrcfilenames) > 0 && App.Proj.NumSheetsInHomeBgs > 0 &&
 				(didanywork || nil == fileStat(thumbfilepath)) {
-				if len(thumbsrcfilenames) > App.Proj.NumSheetsInHomeBgs {
-					sort.Sort(thumbsrcfilenames)
+				if sort.Sort(thumbsrcfilenames); len(thumbsrcfilenames) > App.Proj.NumSheetsInHomeBgs {
 					thumbsrcfilenames = thumbsrcfilenames[len(thumbsrcfilenames)-App.Proj.NumSheetsInHomeBgs:]
 				}
 				fileWrite(thumbfilepath, imgStitchHorizontally(thumbsrcfilenames, 320, 44, color.NRGBA{0, 0, 0, 0}))
