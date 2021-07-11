@@ -53,6 +53,13 @@ func (me *Series) At(i int) fmt.Stringer { return me.Chapters[i] }
 func (me *Series) Len() int              { return len(me.Chapters) }
 func (me *Series) String() string        { return me.Name }
 
+func (me *Series) numSheets() (ret int) {
+	for _, chap := range me.Chapters {
+		ret += len(chap.sheets)
+	}
+	return
+}
+
 func (me *Chapter) NextAfter(withSheetsOnly bool) *Chapter {
 	series := me.parentSeries
 	for now, i := false, 0; i < len(series.Chapters); i++ {

@@ -393,7 +393,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 
 func (me *siteGen) prepHomePage() {
 	s := "<div class='" + App.Proj.Gen.ClsNonViewerPage + "'>"
-	cssanimdirs := []string{"alternate", "alternate-reverse"}
+	cssanimdirs := []string{"alternate-reverse", "alternate"}
 	for i, series := range App.Proj.Series {
 		if series.Unlisted {
 			continue
