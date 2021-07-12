@@ -27,6 +27,7 @@ type PageGen struct {
 	PageTitle        string
 	PageTitleTxt     string
 	PageDesc         string
+	PageDescTxt      string
 	PageLang         string
 	PageCssClasses   string
 	PageDirCur       string
@@ -319,6 +320,9 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		PageDirCur:       "ltr",
 		PageDirAlt:       "rtl",
 	}
+	if idx := strings.IndexByte(me.page.SiteDesc, '.'); idx > 0 {
+		me.page.SiteDesc = "<nobr>" + me.page.SiteDesc[:idx+1] + "</nobr>" + me.page.SiteDesc[idx+1:]
+	}
 	if me.dirRtl {
 		me.page.PageDirCur, me.page.PageDirAlt = "rtl", "ltr"
 		homename += "." + App.Proj.DirModes.Rtl.Name
@@ -331,6 +335,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 	if chapter == nil {
 		me.page.PageTitle = hEsc(me.textStr("HomeTitle"))
 		me.page.PageDesc = repl.Replace(hEsc(me.textStr("HomeDesc")))
+		me.page.PageDescTxt = "Index"
 		me.page.PageCssClasses = App.Proj.Gen.ClsChapter + "n"
 		if me.lang == App.Proj.Langs[0] {
 			me.page.HrefDirLtr = "./index.html"
@@ -345,7 +350,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 	} else {
 		series := chapter.parentSeries
 		me.page.HrefHome += "#" + strings.ToLower(series.Name)
-		me.page.PageTitle = "<span>" + hEsc(locStr(series.Title, me.lang)) + " &bull;</span> " + hEsc(locStr(chapter.Title, me.lang))
+		me.page.PageTitle = "<span>" + hEsc(locStr(series.Title, me.lang)) + ":</span> " + hEsc(locStr(chapter.Title, me.lang))
 		me.page.PageTitleTxt = hEsc(locStr(series.Title, me.lang)) + ": " + hEsc(locStr(chapter.Title, me.lang))
 		author := strIf(chapter.Author == "", series.Author, chapter.Author)
 		if author = strIf(author == "?", "", author); author != "" {
@@ -353,6 +358,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		}
 		desc := locStr(chapter.Desc, me.lang)
 		me.page.PageDesc = hEsc(strIf(desc == "", locStr(series.Desc, me.lang), desc)) + author
+		me.page.PageDescTxt = hEsc(strIf(desc == "", locStr(series.Desc, me.lang), desc))
 		for qidx, quali := range App.Proj.Qualis {
 			if quali.Name == "" {
 				continue
@@ -865,13 +871,13 @@ func (me *siteGen) textStr(key string) (s string) {
 }
 
 func (me *siteGen) genAtomXml() (numFilesWritten int) {
-	af := App.Proj.AtomFile
+	af, tlatest := App.Proj.AtomFile, ""
 	if len(af.PubDates) == 0 {
 		return
 	}
 	var xmls []string
 	for i, pubdate := range af.PubDates {
-		nextolderdate := "0000-00-00"
+		entryidx, nextolderdate := 0, "0000-00-00"
 		if i < len(af.PubDates)-1 {
 			nextolderdate = af.PubDates[i+1]
 		}
@@ -896,10 +902,14 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 						}
 					}
 				}
-				if pgnr >= 1 {
-					xml := `<entry><updated>` + pubdate + `T00:00:00Z</updated>`
+				if tpub := pubdate + `T00:00:0` + itoa(entryidx); pgnr >= 1 {
+					if entryidx++; tlatest == "" || tpub > tlatest {
+						tlatest = tpub
+					}
+					href := "http://" + strings.TrimRight(strings.ToLower(SiteTitleEsc), "/") + "/" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, pgnr, "s", "", me.lang, 0, true) + ".html"
+					xml := `<entry><updated>` + tpub + `Z</updated>`
 					xml += `<title>` + hEsc(locStr(chapter.parentSeries.Title, me.lang)) + `: ` + hEsc(locStr(chapter.Title, me.lang)) + `</title>`
-					xml += `<link href="` + strings.TrimRight(strings.ToLower(SiteTitleEsc), "/") + "/" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, pgnr, "s", "", me.lang, 0, true) + ".html" + `"/>`
+					xml += `<id>` + href + `</id><link href="` + href + `"/>`
 					xml += `<author><name>` + SiteTitleEsc + `</name></author>`
 					xml += `<content type="html">` + strings.NewReplacer(
 						"%NUMSVS%", itoa(numsheets),
@@ -912,9 +922,10 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 		}
 	}
 
+	filename := af.Name + "." + me.lang + ".atom"
 	s := `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="` + me.lang + `">`
-	if len(xmls) > 0 {
-		s += `<updated>` + af.PubDates[0] + `T00:00:00Z</updated><title>` + SiteTitleEsc + `</title><link href="` + strings.ToLower(SiteTitleEsc) + `"/><id>` + strings.ToLower(SiteTitleEsc) + "</id>"
+	if len(xmls) > 0 && tlatest != "" {
+		s += `<updated>` + tlatest + `Z</updated><title>` + SiteTitleEsc + `</title><link href="http://` + strings.ToLower(SiteTitleEsc) + `"/><link rel="self" href="http://` + strings.ToLower(SiteTitleEsc) + `/` + filename + `"/><id>http://` + strings.ToLower(SiteTitleEsc) + "</id>"
 		s += "\n" + strings.Join(xmls, "\n")
 	}
 	fileWrite(".build/"+af.Name+"."+me.lang+".atom", []byte(s+"\n</feed>"))

@@ -329,7 +329,7 @@ func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bo
 		}
 		s += "<tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>" + ln + "</tspan>"
 	}
-	s += "</tspan></text><script>vhide($.t" + itoa(svgTxtCounter) + ");vshow($.w" + itoa(svgTxtCounter) + ");</script>"
+	s += "</tspan></text><script>vHide('t" + itoa(svgTxtCounter) + "');vShow('w" + itoa(svgTxtCounter) + "');</script>"
 	if wrapInSvgTag {
 		s = "<svg viewbox='0 0 " + itoa(aw) + " " + itoa(ah) + "'>" + s + "</svg>"
 	}
