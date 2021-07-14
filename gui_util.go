@@ -19,10 +19,12 @@ var hEscs = map[rune]string{
 	'Ö':  "&Ouml;",
 	'Ü':  "&Uuml;",
 	'ß':  "&szlig",
+	'€':  "&euro;",
 	'\n': "&#xA;",
 	'’':  "&apos;",
 	'…':  "&hellip;",
 	'—':  "&mdash;",
+	'–':  "&mdash;",
 	'”':  "&quot;",
 	'“':  "&quot;",
 }

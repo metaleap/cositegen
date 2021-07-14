@@ -145,7 +145,7 @@ func (me *Chapter) Len() int              { return len(me.sheets) }
 func (me *Chapter) String() string        { return me.Name }
 
 func (me *Chapter) loadStoryboard() {
-	s := string(fileRead(me.StoryboardFile))
+	s := strings.Replace(string(fileRead(me.StoryboardFile)), "<text:s/>", "", -1)
 
 	for _, sp := range xmlOuters(s, `<draw:page>`, `</draw:page>`) {
 		csp := ChapterStoryboardPage{name: xmlAttr(sp, "draw:name")}

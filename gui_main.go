@@ -562,7 +562,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang, area.Data[lang], A{
 					"placeholder": lang,
 					"onfocus":     jsrefr, "onblur": jsrefr, "onchange": jsrefr, "onkeydown": jsrefr, "onkeyup": jsrefr, "onkeypress": jsrefr,
-					"style": strings.Join(App.Proj.Gen.PanelSvgText.Css[""], ";"),
+					"style": strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css[""], ";"), "letter-spacing:", "xfoo:", -1),
 					"class": "panelcfgtext col" + itoa(i%8)}) + "</div>"
 			}
 

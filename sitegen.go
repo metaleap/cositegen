@@ -197,12 +197,15 @@ func (me *siteGen) copyStaticFiles(relDirPath string) (numFilesWritten int) {
 				data := fileRead(filepath.Join(srcdirpath, fn))
 				if App.Proj.Gen.PanelSvgText.AppendToFiles[relpath] {
 					for csssel, csslines := range App.Proj.Gen.PanelSvgText.Css {
-						if csssel != "" {
+						if csssel != "" && csssel != "@font-face" {
 							if csslines == nil {
 								csslines = App.Proj.Gen.PanelSvgText.Css[""]
 							}
 							data = append([]byte(csssel+"{"+strings.Join(csslines, ";")+"}\n"), data...)
 						}
+					}
+					if cssff := App.Proj.Gen.PanelSvgText.Css["@font-face"]; len(cssff) != 0 {
+						data = append([]byte("@font-face{"+strings.Join(cssff, ";")+"}\n"), data...)
 					}
 				}
 				fileWrite(dstpath, data)

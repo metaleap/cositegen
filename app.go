@@ -81,6 +81,7 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 }
 
 func appPrepWork(fromGui bool) {
+	var didsomework []string
 	App.Proj.allPrepsDone = false
 	timedLogged("Reprocessing...", func() string {
 		var numjobs, numwork int
@@ -95,7 +96,7 @@ func appPrepWork(fromGui bool) {
 							if !sv.prep.done {
 								didwork := sv.ensurePrep(true, false)
 								if sv.prep.done, numjobs = true, numjobs+1; didwork {
-									numwork, didanywork = numwork+1, true
+									numwork, didanywork, didsomework = numwork+1, true, append(didsomework, sv.fileName)
 								}
 							}
 							sv.prep.Unlock()
@@ -129,7 +130,7 @@ func appPrepWork(fromGui bool) {
 			}
 		}
 		App.Proj.allPrepsDone = true
-		return "for " + itoa(numwork) + "/" + itoa(numjobs) + " reprocessing jobs"
+		return "for " + itoa(numwork) + "/" + itoa(numjobs) + " reprocessing jobs: \n\t\t" + strings.Join(didsomework, "\n\t\t") + "\n"
 	})
 	if fromGui {
 		pngOptsLoop()
