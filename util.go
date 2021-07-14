@@ -67,10 +67,10 @@ func strSize(size int) string {
 }
 
 func strSize64(size int64) string {
-	if mb := int64(1024 * 1024); size >= mb {
-		return ftoa(float64(size)*(1.0/float64(mb)), 1) + "MB"
-	} else if kb := int64(1024); size >= kb {
-		return itoa(1+int(float64(size)*(1.0/float64(kb)))) + "KB"
+	if size >= 999999 {
+		return ftoa(float64(size)*(1.0/1048576.0), 1) + "MB"
+	} else if size > 999 {
+		return itoa(1+int(float64(size)*(1.0/1024.0))) + "KB"
 	}
 	return fmt.Sprintf("%vB", size)
 }
