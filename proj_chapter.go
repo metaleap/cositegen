@@ -21,13 +21,17 @@ type Series struct {
 }
 
 type Chapter struct {
-	Name           string
-	UrlName        string
-	Title          map[string]string
-	Desc           map[string]string
-	Author         string
-	SheetsPerPage  int
-	StoryboardFile string
+	Name            string
+	UrlName         string
+	Title           map[string]string
+	Desc            map[string]string
+	Author          string
+	SheetsPerPage   int
+	StoryboardFile  string
+	GenPanelSvgText struct {
+		PerLineDyCmA4 float64
+		FontSizeCmA4  float64
+	}
 
 	defaultQuali int
 	dirPath      string

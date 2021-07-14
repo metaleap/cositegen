@@ -537,6 +537,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				}
 			}
 			pglast := -1
+			percc := App.Proj.percentTranslated(me.lang, nil, chapter, nil, -1)
 			for i := range chapter.sheets {
 				if 0 == (i % chapter.SheetsPerPage) {
 					pgnr++
@@ -544,7 +545,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 					if did = (pgnr == pageNr); did {
 						s += "<li><b><a href='./" + name + ".html'>" + itoa(pgnr) + "</a></b></li>"
 					} else if did = shownums[pgnr]; did {
-						if perc := App.Proj.percentTranslated(me.lang, nil, chapter, nil, pgnr); perc < 0.0 || perc >= 99.9 {
+						if perc := App.Proj.percentTranslated(me.lang, nil, chapter, nil, pgnr); perc < 0.0 || perc >= 99.9 || percc <= 0.0 {
 							s += "<li>"
 						} else {
 							s += "<li class='nolang' title='" + me.lang + ": " + ftoa(perc, 1) + "%'>"
@@ -798,7 +799,14 @@ func (me *siteGen) genSvgForPanel(sV *SheetVer, panelIdx int, panel *ImgPanel) s
 		if borderandfill {
 			linex = pxcm * App.Proj.Gen.PanelSvgText.BoxPolyDxCmA4
 		}
-		s += imgSvgText(&pta, me.lang, pxcm, false, int(linex))
+		fontSizeCmA4, perLineDyCmA4 := App.Proj.Gen.PanelSvgText.FontSizeCmA4, App.Proj.Gen.PanelSvgText.PerLineDyCmA4
+		if sV.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4 > 0.1 { // !=0 in float
+			fontSizeCmA4 = sV.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4
+		}
+		if sV.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4 > 0.1 { // !=0 in float
+			perLineDyCmA4 = sV.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4
+		}
+		s += imgSvgText(&pta, me.lang, pxcm, false, int(linex), fontSizeCmA4, perLineDyCmA4)
 		s += "</svg>"
 	}
 

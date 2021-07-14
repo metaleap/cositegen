@@ -305,7 +305,7 @@ func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, heig
 
 var svgTxtCounter int
 
-func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bool, lineX int) (s string) {
+func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bool, lineX int, fontSizeCmA4 float64, perLineDyCmA4 float64) (s string) {
 	if svgRepl == nil {
 		repls := []string{" ", "&nbsp;"}
 		for _, tagclassname := range append(App.Proj.Gen.PanelSvgText.TspanTagClasses, "b", "i", "u") {
@@ -318,7 +318,7 @@ func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bo
 	}
 
 	aw, ah := pta.Rect.Dx(), pta.Rect.Dy()
-	pxfont, pxline := int(px1cm*App.Proj.Gen.PanelSvgText.FontSizeCmA4), int(px1cm*App.Proj.Gen.PanelSvgText.PerLineDyCmA4)
+	pxfont, pxline := int(px1cm*fontSizeCmA4), int(px1cm*perLineDyCmA4)
 	svgTxtCounter++
 	s += "<text id='w" + itoa(svgTxtCounter) + "' style='visibility: hidden; font-size: " + itoa(pxfont) + "px'><tspan><tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>&#9881;...</tspan></tspan><title><tspan>Loading... / Wird geladen...</tspan></title></text>"
 	s += "<text id='t" + itoa(svgTxtCounter) + "' style='font-size: " + itoa(pxfont) + "px' transform='" + trim(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
