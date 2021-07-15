@@ -367,7 +367,7 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 			x, y, w, h := float64(p.Rect.Min.X)*scale, float64(p.Rect.Min.Y)*scale, float64(p.Rect.Dx())*scale, float64(p.Rect.Dy())*scale
 			gid := "pnl" + itoa(pidx)
 			svg += `<g id="` + gid + `" inkscape:label="` + gid + `" inkscape:groupmode="layer" transform="translate(` + itoa(int(x)) + ` ` + itoa(int(y)) + `)">`
-			svg += `<rect x="0" y="0" stroke="#000000" stroke-width="0" fill="#ffdd00"
+			svg += `<rect x="0" y="0" stroke="#000000" stroke-width="0" fill="#f7f2f0"
 				width="` + itoa(int(w)) + `" height="` + itoa(int(h)) + `"></rect>
 			`
 			svg += "</g>\n"

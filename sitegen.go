@@ -66,6 +66,7 @@ type siteGen struct {
 	bgCol      bool
 	dirRtl     bool
 	onPicSize  func(*Chapter, string, int, int64)
+	maxPicSize uint32
 	sheetPgNrs map[*SheetVer]int
 }
 
@@ -137,7 +138,7 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 				printLn("\t\t" + pref + "\t\t" + App.Proj.Qualis[qidx].Name + "(" + itoa(App.Proj.Qualis[qidx].SizeHint) + ") => " + strSize64(totalsize))
 			}
 		}
-		return "for " + itoa(int(numpngs)) + " PNGs & " + itoa(int(numsvgs)) + " SVGs (" + strSize(int(totalsize)) + ") from " + itoa(int(numpanels)) + " panels in " + itoa(int(numsheets)) + " sheets"
+		return "for " + itoa(int(numpngs)) + " PNGs & " + itoa(int(numsvgs)) + " SVGs (" + strSize(int(totalsize)) + ") from " + itoa(int(numpanels)) + " panels in " + itoa(int(numsheets)) + " sheets, max panel pic size: " + strSize(int(me.maxPicSize))
 	})
 
 	timedLogged("SiteGen: generating markup files...", func() string {
@@ -265,6 +266,10 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 				if fileinfo := fileStat(srcpath); fileinfo == nil && quali.SizeHint != 0 {
 					break
 				} else {
+					for fs, swap := uint32(fileinfo.Size()), true; swap; {
+						max := atomic.LoadUint32(&me.maxPicSize)
+						swap = fs > max && !atomic.CompareAndSwapUint32(&me.maxPicSize, max, fs)
+					}
 					atomic.AddUint64(&totalSize, uint64(fileinfo.Size()))
 					dstpath := filepath.Join(".build/"+App.Proj.Gen.PicDirName+"/", me.namePanelPic(sv.id, pidx, quali.SizeHint)+fext)
 					fileLinkOrCopy(srcpath, dstpath)
@@ -545,7 +550,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 					if did = (pgnr == pageNr); did {
 						s += "<li><b><a href='./" + name + ".html'>" + itoa(pgnr) + "</a></b></li>"
 					} else if did = shownums[pgnr]; did {
-						if perc := App.Proj.percentTranslated(me.lang, nil, chapter, nil, pgnr); perc < 0.0 || perc >= 99.9 || percc <= 0.0 {
+						if perc := App.Proj.percentTranslated(me.lang, nil, chapter, nil, pgnr); perc < 0.0 || perc >= 50 || percc <= 0.0 {
 							s += "<li>"
 						} else {
 							s += "<li class='nolang' title='" + me.lang + ": " + ftoa(perc, 1) + "%'>"
