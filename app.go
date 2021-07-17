@@ -246,6 +246,12 @@ func pngOpt(pngFilePath string) bool {
 			newfilehash,
 		}
 		if crashit {
+			for k, v := range App.Proj.data.PngOpt {
+				if pref := ".cache/" + curfilehash + "/"; strings.HasPrefix(k, pref) {
+					App.Proj.data.PngOpt[".cache/"+newfilehash+"/"+k[len(pref):]] = v
+					delete(App.Proj.data.PngOpt, k)
+				}
+			}
 			App.Proj.save()
 			panic("relinked hashes: intentional crash, restart manually")
 		} else if strings.HasSuffix(pngFilePath, "/bwsmall."+itoa(int(App.Proj.BwThresholds[0]))+"."+itoa(int(App.Proj.BwSmallWidth))+".png") {
