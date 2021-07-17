@@ -247,6 +247,7 @@ func pngOpt(pngFilePath string) bool {
 		}
 		if crashit {
 			App.Proj.save()
+			panic("relinked hashes: intentional crash, restart manually")
 		} else if strings.HasSuffix(pngFilePath, "/bwsmall."+itoa(int(App.Proj.BwThresholds[0]))+"."+itoa(int(App.Proj.BwSmallWidth))+".png") {
 			if hashid := filepath.Base(filepath.Dir(pngFilePath)); App.Proj.data.Sv.ById != nil {
 				if svdata := App.Proj.data.Sv.ById[hashid]; svdata != nil && svdata.parentSheetVer != nil {
