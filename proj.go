@@ -131,15 +131,15 @@ func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sh
 }
 
 func (me *Project) save() {
-	jsonSave(".cache/data.json", &me.data)
+	jsonSave(".ccache/data.json", &me.data)
 	jsonSave("texts.json", me.data.Sv.textRects)
 }
 
 func (me *Project) load() (numSheetVers int) {
 	jsonLoad("comicsite.json", nil, me) // exits early if no such file, before creating work dirs:
-	mkDir(".cache")
-	if fileStat(".cache/data.json") != nil {
-		jsonLoad(".cache/data.json", nil, &me.data)
+	mkDir(".ccache")
+	if fileStat(".ccache/data.json") != nil {
+		jsonLoad(".ccache/data.json", nil, &me.data)
 	}
 	if fileStat("texts.json") != nil {
 		jsonLoad("texts.json", nil, &me.data.Sv.textRects)
@@ -222,7 +222,7 @@ func (me *Project) load() (numSheetVers int) {
 						}
 						cachedirsymlinkpath := sv.fileName[:len(sv.fileName)-len(".png")]
 						_ = os.Remove(cachedirsymlinkpath)
-						if err := os.Symlink("../../../.cache/"+sv.id, cachedirsymlinkpath); err != nil {
+						if err := os.Symlink("../../../.ccache/"+sv.id, cachedirsymlinkpath); err != nil {
 							panic(err)
 						}
 						work.Done()
@@ -262,7 +262,7 @@ func (me *Project) load() (numSheetVers int) {
 	for svid := range me.data.Sv.ById {
 		if me.data.Sv.IdsToFileNames[svid] == "" {
 			delete(me.data.Sv.ById, svid)
-			rmDir(".cache/" + svid)
+			rmDir(".ccache/" + svid)
 		}
 	}
 	return

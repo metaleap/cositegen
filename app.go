@@ -112,10 +112,10 @@ func appPrepWork(fromGui bool) {
 				App.Proj.NumSheetsInHomeBgs = maxthumbs
 			}
 			thumbname := siteGen{}.nameThumb(series)
-			thumbfilepath, idxdot := ".cache/"+thumbname+".png", 1+strings.LastIndexByte(thumbname, '.')
+			thumbfilepath, idxdot := ".ccache/"+thumbname+".png", 1+strings.LastIndexByte(thumbname, '.')
 			for i := 0; i < maxthumbs; i++ {
 				if i != App.Proj.NumSheetsInHomeBgs {
-					_ = os.Remove(".cache/" + thumbname[:idxdot] + itoa(i) + ".png")
+					_ = os.Remove(".ccache/" + thumbname[:idxdot] + itoa(i) + ".png")
 				}
 			}
 			if didanywork || len(thumbsrcfilenames) == 0 || App.Proj.NumSheetsInHomeBgs == 0 {
@@ -236,7 +236,7 @@ func pngOpt(pngFilePath string) bool {
 				App.Proj.data.Sv.textRects[newfilehash] = App.Proj.data.Sv.textRects[curfilehash]
 				delete(App.Proj.data.Sv.textRects, curfilehash)
 			}
-			if err := os.Rename(".cache/"+curfilehash, ".cache/"+newfilehash); err != nil {
+			if err := os.Rename(".ccache/"+curfilehash, ".ccache/"+newfilehash); err != nil {
 				printLn("MUST mv manually:", curfilehash, "to", newfilehash, "because:", err.Error())
 			}
 		}
@@ -247,8 +247,8 @@ func pngOpt(pngFilePath string) bool {
 		}
 		if crashit {
 			for k, v := range App.Proj.data.PngOpt {
-				if pref := ".cache/" + curfilehash + "/"; strings.HasPrefix(k, pref) {
-					App.Proj.data.PngOpt[".cache/"+newfilehash+"/"+k[len(pref):]] = v
+				if pref := ".ccache/" + curfilehash + "/"; strings.HasPrefix(k, pref) {
+					App.Proj.data.PngOpt[".ccache/"+newfilehash+"/"+k[len(pref):]] = v
 					delete(App.Proj.data.PngOpt, k)
 				}
 			}
