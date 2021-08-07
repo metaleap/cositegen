@@ -199,6 +199,9 @@ func pngOpt(pngFilePath string) bool {
 	}
 
 	cmd := exec.Command("pngbattle", pngFilePath)
+	if strings.Contains(pngFilePath, "/bg") {
+		cmd.Env = append(os.Environ(), "NO_RGBA_CHECK=1")
+	}
 	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 	if err := cmd.Start(); err != nil {
 		panic(err)

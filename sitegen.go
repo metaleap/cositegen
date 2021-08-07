@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	SiteTitleOrig = os.Getenv("CSG")
+	SiteTitleOrig = os.Getenv(strIf(os.Getenv("NOLINKS") == "", "CSG", "CSG_"))
 	SiteTitleEsc  = strings.NewReplacer("<span>", "", "</span>", "", "&bull;", ".").Replace(SiteTitleOrig)
 	viewModes     = []string{"s", "r"}
 )

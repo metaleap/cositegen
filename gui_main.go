@@ -213,9 +213,9 @@ func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 	}
 
 	s += "<h3>New Sheet Version Scan</h3>"
-	s += guiHtmlInput("text", "sheetname", "", A{"placeholder": "Sheet Name"}) +
+	s += guiHtmlInput("text", "sheetname", "", A{"placeholder": "Unlock! Unlock! Unlock!"}) +
 		"." + guiHtmlInput("text", "sheetvername", time.Now().Format("20060102"), A{"disabled": "disabled"}) + ".png"
-	s += "<h3>Scanner To Use:</h3>"
+	s += "<h3>Scanner to use, remember to <u><i>unlock</i></u>:</h3>"
 
 	s += "<div><select name='scandev' id='scandev' onchange='toggleScanOptsPane(this.options[this.selectedIndex].value)'>"
 	for i, sd := range scanDevices {

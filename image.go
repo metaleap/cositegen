@@ -55,8 +55,8 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 		srcimg = dstimg
 	}
 	if threshold, img := 96, srcimg.(*image.Gray); snipLeftAndBottomEdges {
-		var minwidth, minheight int
-		for y := img.Rect.Max.Y - 1; y >= 0 && minheight == 0; y-- {
+		minwidth, minheight := img.Rect.Max.X, img.Rect.Max.Y
+		for y := img.Rect.Max.Y - 1; y >= 0 && minheight == img.Rect.Max.Y; y-- {
 			rowbrightsum := 0
 			for x := 0; x < img.Rect.Max.X; x++ {
 				rowbrightsum += int(img.GrayAt(x, y).Y)
@@ -65,7 +65,7 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 				minheight = y
 			}
 		}
-		for x := 0; x < img.Rect.Max.X && minwidth == 0; x++ {
+		for x := 0; x < img.Rect.Max.X && minwidth == img.Rect.Max.X; x++ {
 			colbrightsum := 0
 			for y := 0; y < minheight; y++ {
 				colbrightsum += int(img.GrayAt(x, y).Y)
