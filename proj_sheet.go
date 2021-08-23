@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type Sheet struct {
@@ -65,6 +66,10 @@ type SheetVer struct {
 
 func (me *SheetVer) DtName() string {
 	return strconv.FormatInt(me.dateTimeUnixNano, 10)
+}
+
+func (me *SheetVer) DtStr() string {
+	return time.Unix(0, me.dateTimeUnixNano).Format("20060102")
 }
 
 func (me *SheetVer) String() string { return me.fileName }
