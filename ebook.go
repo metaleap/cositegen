@@ -1,12 +1,20 @@
 package main
 
 import (
+	"archive/zip"
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"time"
 )
 
+type BookConfig struct {
+	KeepUntranslated bool
+}
+
 type Book struct {
+	Config   string
 	Name     string
 	Title    map[string]string
 	Chapters []struct {
@@ -14,9 +22,9 @@ type Book struct {
 		ExcludeBySeriesAndChapterNames map[string][]string
 		ExcludeBySheetName             []string
 		RewriteToMonths                bool
-		KeepUntranslated               bool
 	}
 
+	config     *BookConfig
 	parentProj *Project
 }
 
@@ -148,4 +156,71 @@ func (me *Book) rewriteToMonths(chaps []*Chapter) []*Chapter {
 		chap.sheets = append(chap.sheets, sheet)
 	}
 	return monthchaps
+}
+
+func (me *Series) genBook(sg *siteGen, outDirPath string, qIdx int, lang string, bgCol bool, dirRtl bool, onDone func()) {
+	defer onDone()
+	proj, quali, book := me.parentProj, me.parentProj.Qualis[qIdx], me.Book
+
+	bookid := me.UrlName + "_" + lang + strIf(bgCol, "_col_", "_bw_") + strIf(dirRtl, proj.DirModes.Rtl.Name, proj.DirModes.Ltr.Name) + "_" + strconv.Itoa(quali.SizeHint)
+	outfilepath := filepath.Join(outDirPath, bookid+".epub")
+	_ = os.Remove(outfilepath)
+	outfile, err := os.Create(outfilepath)
+	if err != nil {
+		panic(err)
+	}
+	defer outfile.Close()
+	zw := zip.NewWriter(outfile)
+
+	files := []struct {
+		Path string
+		Data string
+	}{
+		{"mimetype", "application/epub+zip"},
+		{"META-INF/container.xml", `<?xml version="1.0" encoding="UTF-8" ?>
+			<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+			<rootfiles>
+				<rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+			</rootfiles>
+			</container>`},
+		{"OEBPS/nav.xhtml", `<?xml version="1.0" encoding="UTF-8" ?>
+			<nav epub:type="toc" id="toc">
+				<h2>MuhTOC</h2>
+				<ol>
+				<li>
+					<a href="chapter1.html">LeChap1</a>
+				</li>
+				</ol>
+			</nav>`},
+		{"OEBPS/content.opf", `<?xml version="1.0" encoding="UTF-8" ?>
+			<package version="3.0" dir="` + strIf(dirRtl, "rtl", "ltr") + `" xml:lang="` + lang + `" xmlns="http://www.idpf.org/2007/opf" unique-identifier="` + bookid + `">
+				<metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/">
+					<dc:title>` + locStr(book.Title, lang) + `</dc:title>
+					<dc:language>` + lang + `</dc:language>
+					<dc:identifier>` + bookid + `</dc:identifier>
+					<meta property="dcterms:modified">` + time.Now().Format("2006-01-02T15:04:05Z") + `</meta>
+				</metadata>
+				<manifest>
+					<item href="chapter1.html" id="chap1" media-type="text/html"></item>
+				</manifest>
+				<spine>
+					<itemref idref="chap1"></itemref>
+				</spine>
+			</package>`},
+		{"OEBPS/chapter1.html", "<!DOCTYPE html><html><head><title>foobar</title></head><body>Hello World<hr/>" + bookid + "</body></html>"},
+	}
+	for _, file := range files {
+		f, err := zw.Create(file.Path)
+		if err != nil {
+			panic(err)
+		}
+		if _, err = f.Write([]byte(file.Data)); err != nil {
+			panic(err)
+		}
+	}
+	if err := zw.Close(); err != nil {
+		panic(err)
+	}
+	_ = outfile.Sync()
+	printLn(outfilepath)
 }

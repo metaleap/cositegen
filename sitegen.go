@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-const siteGenBookSeries = true
+const siteGenBookSeries = false
 
 var (
 	SiteTitleOrig = os.Getenv(strIf(os.Getenv("NOLINKS") == "", "CSG", "CSG_"))
@@ -24,6 +24,7 @@ var (
 type siteGen struct {
 	tmpl       *template.Template
 	series     []*Series
+	books      []*Series
 	page       PageGen
 	lang       string
 	bgCol      bool
@@ -73,13 +74,19 @@ type PageGen struct {
 	ChapTitle        string
 }
 
-func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
+func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 	var err error
 	tstart := time.Now()
 	me.series = App.Proj.Series
-	if siteGenBookSeries {
+	if len(flags) != 0 || siteGenBookSeries {
 		for _, book := range App.Proj.Books {
-			me.series = append(me.series, book.ToSeries())
+			bookseries := book.ToSeries()
+			if flags != nil && flags[book.Name] {
+				me.books = append(me.books, bookseries)
+			}
+			if siteGenBookSeries {
+				me.series = append(me.series, bookseries)
+			}
 		}
 	}
 	me.sheetPgNrs = map[*SheetVer]int{}
@@ -94,6 +101,9 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 	rmDir(".build")
 	mkDir(".build")
 	mkDir(".build/" + App.Proj.Gen.PicDirName)
+	if me.books != nil {
+		mkDir(".epub")
+	}
 
 	timedLogged("SiteGen: copying static files to .build...", func() string {
 		if App.Proj.Gen.PanelSvgText.AppendToFiles == nil {
@@ -150,39 +160,66 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 		return "for " + itoa(int(numpngs)) + " PNGs & " + itoa(int(numsvgs)) + " SVGs (" + strSize(int(totalsize)) + ") from " + itoa(int(numpanels)) + " panels in " + itoa(int(numsheets)) + " sheets, max panel pic size: " + strSize(int(me.maxPicSize))
 	})
 
-	timedLogged("SiteGen: generating markup files...", func() string {
-		numfileswritten := 0
-		me.tmpl, err = template.New("foo").ParseFiles(siteTmplDirName + "/site.html")
-		if err != nil {
-			panic(err)
-		}
-		for _, me.lang = range App.Proj.Langs {
-			for _, me.dirRtl = range []bool{true, false /*KEEP this order of bools*/} {
-				me.bgCol = false
-				numfileswritten += me.genPages(nil, 0)
-				for _, me.bgCol = range []bool{false, true} {
-					for _, series := range me.series {
-						for _, chapter := range series.Chapters {
-							if me.bgCol && !chapter.HasBgCol() {
+	if me.books == nil {
+		timedLogged("SiteGen: generating markup files...", func() string {
+			numfileswritten := 0
+			me.tmpl, err = template.New("foo").ParseFiles(siteTmplDirName + "/site.html")
+			if err != nil {
+				panic(err)
+			}
+			for _, me.lang = range App.Proj.Langs {
+				for _, me.dirRtl = range []bool{true, false /*KEEP this order of bools*/} {
+					me.bgCol = false
+					numfileswritten += me.genPages(nil, 0)
+					for _, me.bgCol = range []bool{false, true} {
+						for _, series := range me.series {
+							for _, chapter := range series.Chapters {
+								if me.bgCol && !chapter.HasBgCol() {
+									continue
+								}
+								if chapter.SheetsPerPage > 0 {
+									for i := 1; i <= (len(chapter.sheets) / chapter.SheetsPerPage); i++ {
+										numfileswritten += me.genPages(chapter, i)
+									}
+								} else {
+									numfileswritten += me.genPages(chapter, 0)
+								}
+							}
+						}
+					}
+					if App.Proj.AtomFile.Name != "" {
+						numfileswritten += me.genAtomXml()
+					}
+				}
+			}
+			return "for " + strconv.Itoa(numfileswritten) + " files"
+		})
+	}
+
+	if me.books != nil {
+		timedLogged("SiteGen: generating epub files...", func() string {
+			numfileswritten := 0
+			var work sync.WaitGroup
+			for _, me.lang = range App.Proj.Langs {
+				for _, me.dirRtl = range []bool{true, false /*KEEP this order of bools*/} {
+					for _, me.bgCol = range []bool{false, true} {
+						for qidx, quali := range App.Proj.Qualis {
+							if !quali.UseForBooks {
 								continue
 							}
-							if chapter.SheetsPerPage > 0 {
-								for i := 1; i <= (len(chapter.sheets) / chapter.SheetsPerPage); i++ {
-									numfileswritten += me.genPages(chapter, i)
-								}
-							} else {
-								numfileswritten += me.genPages(chapter, 0)
+							for _, bookseries := range me.books {
+								numfileswritten++
+								work.Add(1)
+								go bookseries.genBook(&me, ".epub", qidx, me.lang, me.bgCol, me.dirRtl, work.Done)
 							}
 						}
 					}
 				}
-				if App.Proj.AtomFile.Name != "" {
-					numfileswritten += me.genAtomXml()
-				}
 			}
-		}
-		return "for " + strconv.Itoa(numfileswritten) + " files"
-	})
+			work.Wait()
+			return "for " + strconv.Itoa(numfileswritten) + " files"
+		})
+	}
 
 	printLn("SiteGen: DONE after " + time.Now().Sub(tstart).String())
 	cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=file://"+os.Getenv("PWD")+"/.build/index.html")...)

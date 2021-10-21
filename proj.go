@@ -10,13 +10,15 @@ import (
 )
 
 type Project struct {
-	Desc   map[string]string
-	Series []*Series
-	Books  []*Book
-	Langs  []string
-	Qualis []struct {
-		Name     string
-		SizeHint int
+	Desc        map[string]string
+	Series      []*Series
+	Books       []*Book
+	BookConfigs map[string]*BookConfig
+	Langs       []string
+	Qualis      []struct {
+		Name        string
+		SizeHint    int
+		UseForBooks bool
 	}
 	AtomFile struct {
 		PubDates    []string
@@ -168,6 +170,12 @@ func (me *Project) load() (numSheetVers int) {
 		book.parentProj = me
 		if len(book.Title) == 0 {
 			book.Title = map[string]string{me.Langs[0]: book.Name}
+		}
+		if me.BookConfigs != nil {
+			book.config = me.BookConfigs[book.Config]
+		}
+		if book.config == nil {
+			panic("Unknown book config: '" + book.Config + "'")
 		}
 	}
 	for _, series := range me.Series {
