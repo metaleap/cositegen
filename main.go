@@ -11,7 +11,12 @@ import (
 const siteTmplDirName = "site"
 const siteTmplFileName = "site.html"
 
-var browserCmd = []string{"", "--new-window", "--single-process", "--user-data-dir=./.ccache/.chromium", "--disable-extensions", "--disk-cache-size=128"}
+var browserCmd = []string{"",
+	"--new-window",
+	// "--single-process",
+	"--user-data-dir=./.ccache/.chromium",
+	"--disable-extensions",
+	"--disk-cache-size=128"}
 
 func main() {
 	App.StaticFilesDirPath = filepath.Join(os.Getenv("HOME"), "c/go/src/github.com/metaleap/cositegen/_static")

@@ -12,6 +12,7 @@ import (
 type Project struct {
 	Desc   map[string]string
 	Series []*Series
+	Books  []*Book
 	Langs  []string
 	Qualis []struct {
 		Name     string
@@ -93,6 +94,15 @@ func (me *Project) hasSvgQuali() bool {
 	return false
 }
 
+func (me *Project) seriesByName(name string) *Series {
+	for _, series := range me.Series {
+		if series.Name == name {
+			return series
+		}
+	}
+	return nil
+}
+
 func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sheetVer *SheetVer, pgNr int) float64 {
 	numtotal, numtrans := 0, 0
 	for _, series := range me.Series {
@@ -154,8 +164,15 @@ func (me *Project) load() (numSheetVers int) {
 		me.data.PngOpt = map[string][]string{}
 	}
 
+	for _, book := range me.Books {
+		book.parentProj = me
+		if len(book.Title) == 0 {
+			book.Title = map[string]string{me.Langs[0]: book.Name}
+		}
+	}
 	for _, series := range me.Series {
-		series.parentProj, series.dirPath = me, "scans/"+series.Name
+		series.parentProj = me
+		seriesdirpath := "scans/" + series.Name
 		if series.UrlName == "" {
 			series.UrlName = series.Name
 		}
@@ -163,14 +180,15 @@ func (me *Project) load() (numSheetVers int) {
 			series.Title = map[string]string{me.Langs[0]: series.Name}
 		}
 		for _, chap := range series.Chapters {
-			chap.parentSeries, chap.dirPath = series, filepath.Join(series.dirPath, chap.Name)
+			chap.parentSeries = series
+			chapdirpath := filepath.Join(seriesdirpath, chap.Name)
 			if chap.UrlName == "" {
 				chap.UrlName = chap.Name
 			}
 			if len(chap.Title) == 0 {
 				chap.Title = map[string]string{me.Langs[0]: chap.Name}
 			}
-			files, err := os.ReadDir(chap.dirPath)
+			files, err := os.ReadDir(chapdirpath)
 			if err != nil {
 				panic(err)
 			}
@@ -180,7 +198,7 @@ func (me *Project) load() (numSheetVers int) {
 			}{}
 			for _, f := range files {
 				if fnamebase := f.Name(); strings.HasSuffix(fnamebase, ".png") && !f.IsDir() {
-					fname := filepath.Join(chap.dirPath, fnamebase)
+					fname := filepath.Join(chapdirpath, fnamebase)
 					fnamebase = fnamebase[:len(fnamebase)-len(".png")]
 					versionname := fnamebase[1+strings.LastIndexByte(fnamebase, '.'):]
 					t, _ := time.Parse("20060102", versionname)

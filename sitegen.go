@@ -13,11 +13,25 @@ import (
 	"time"
 )
 
+const siteGenBookSeries = true
+
 var (
 	SiteTitleOrig = os.Getenv(strIf(os.Getenv("NOLINKS") == "", "CSG", "CSG_"))
 	SiteTitleEsc  = strings.NewReplacer("<span>", "", "</span>", "", "&bull;", ".").Replace(SiteTitleOrig)
 	viewModes     = []string{"s", "r"}
 )
+
+type siteGen struct {
+	tmpl       *template.Template
+	series     []*Series
+	page       PageGen
+	lang       string
+	bgCol      bool
+	dirRtl     bool
+	onPicSize  func(*Chapter, string, int, int64)
+	maxPicSize uint32
+	sheetPgNrs map[*SheetVer]int
+}
 
 type PageGen struct {
 	SiteTitleOrig    string
@@ -59,20 +73,15 @@ type PageGen struct {
 	ChapTitle        string
 }
 
-type siteGen struct {
-	tmpl       *template.Template
-	page       PageGen
-	lang       string
-	bgCol      bool
-	dirRtl     bool
-	onPicSize  func(*Chapter, string, int, int64)
-	maxPicSize uint32
-	sheetPgNrs map[*SheetVer]int
-}
-
 func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 	var err error
 	tstart := time.Now()
+	me.series = App.Proj.Series
+	if siteGenBookSeries {
+		for _, book := range App.Proj.Books {
+			me.series = append(me.series, book.ToSeries())
+		}
+	}
 	me.sheetPgNrs = map[*SheetVer]int{}
 	printLn("SiteGen started. When done, result will open in new window.")
 	if fromGui {
@@ -152,7 +161,7 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 				me.bgCol = false
 				numfileswritten += me.genPages(nil, 0)
 				for _, me.bgCol = range []bool{false, true} {
-					for _, series := range App.Proj.Series {
+					for _, series := range me.series {
 						for _, chapter := range series.Chapters {
 							if me.bgCol && !chapter.HasBgCol() {
 								continue
@@ -177,8 +186,15 @@ func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 
 	printLn("SiteGen: DONE after " + time.Now().Sub(tstart).String())
 	cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=file://"+os.Getenv("PWD")+"/.build/index.html")...)
-	if cmd.Start() == nil {
-		go cmd.Wait()
+
+	if err := cmd.Start(); err != nil {
+		printLn("[ERR]\tcmd.Start of " + cmd.String() + ":\t" + err.Error())
+	} else {
+		go func() {
+			if err := cmd.Wait(); err != nil {
+				printLn("[ERR]\tcmd.Wait of " + cmd.String() + ":\t" + err.Error())
+			}
+		}()
 	}
 }
 
@@ -361,7 +377,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		me.page.PageTitle = "<span>" + hEsc(locStr(series.Title, me.lang)) + ":</span> " + hEsc(locStr(chapter.Title, me.lang))
 		me.page.PageTitleTxt = hEsc(locStr(series.Title, me.lang)) + ": " + hEsc(locStr(chapter.Title, me.lang))
 		author := strIf(chapter.Author == "", series.Author, chapter.Author)
-		if author = strIf(author == "?", "", author); author != "" {
+		if author != "" {
 			author = strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", strIf(author == "?", me.textStr("Unknown"), author), 1)
 		}
 		desc := locStr(chapter.Desc, me.lang)
@@ -420,10 +436,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 func (me *siteGen) prepHomePage() {
 	s := "<div class='" + App.Proj.Gen.ClsNonViewerPage + "'>"
 	cssanimdirs := []string{"alternate-reverse", "alternate"}
-	for i, series := range App.Proj.Series {
-		if series.Unlisted {
-			continue
-		}
+	for i, series := range me.series {
 		author := series.Author
 		if author != "" {
 			author = strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", strIf(author == "?", me.textStr("Unknown"), author), 1)

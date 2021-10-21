@@ -14,9 +14,8 @@ type Series struct {
 	Desc     map[string]string
 	Author   string
 	Chapters []*Chapter
-	Unlisted bool
+	Book     *Book
 
-	dirPath    string
 	parentProj *Project
 }
 
@@ -34,7 +33,6 @@ type Chapter struct {
 	}
 
 	defaultQuali int
-	dirPath      string
 	sheets       []*Sheet
 	parentSeries *Series
 	versions     []int64
