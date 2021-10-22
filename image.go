@@ -329,6 +329,11 @@ func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, lineX int, font
 			ln = "&nbsp;"
 		}
 		s += "<tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>" + ln + "</tspan>"
+		if !forHtml {
+			const diff = 2
+			s += "<tspan dy='" + itoa(-diff) + "' x='" + itoa(lineX-diff) + "'>" + ln + "</tspan>"
+			s += "<tspan dy='" + itoa(diff+diff) + "' x='" + itoa(lineX+diff) + "'>" + ln + "</tspan>"
+		}
 	}
 	s += "</tspan></text>"
 	if forHtml {

@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -31,6 +32,8 @@ type Book struct {
 	genPrep struct {
 		files      map[string]map[string]string
 		imgDirPath string
+		svgs       map[*SheetVer]string
+		pngs       map[int]map[*SheetVer]string
 	}
 }
 
@@ -205,6 +208,13 @@ func (me *Series) genBookPrep(sg *siteGen) {
 		book.genPrep.files[lang]["OEBPS/chapter1.xhtml"] = `<?xml version="1.0" encoding="UTF-8" ?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>foobar</title></head><body>Hello World</body></html>`
 	}
 
+	book.genPrep.svgs = map[*SheetVer]string{}
+	book.genPrep.pngs = map[int]map[*SheetVer]string{}
+	for i, q := range App.Proj.Qualis {
+		if q.UseForBooks {
+			book.genPrep.pngs[i] = map[*SheetVer]string{}
+		}
+	}
 	book.genPrep.imgDirPath = "/dev/shm/" + strconv.FormatInt(time.Now().UnixNano(), 36)
 	var work sync.WaitGroup
 	var lock sync.Mutex
@@ -216,7 +226,7 @@ func (me *Series) genBookPrep(sg *siteGen) {
 					for _, sheet := range chap.sheets {
 						work.Add(1)
 						sv := sheet.versions[0]
-						go me.genBookSheetSvg(sv, filepath.Join(book.genPrep.imgDirPath, sheet.name+strIf(dirRtl, "_rtl_", "_ltr_")+lang+strIf(bgCol, "_col", "_bw")+".svg"), dirRtl, lang, bgCol, work.Done, &lock)
+						go me.genBookSheetSvgAndPngs(sv, filepath.Join(book.genPrep.imgDirPath, sheet.name+strIf(dirRtl, "_rtl_", "_ltr_")+lang+strIf(bgCol, "_col", "_bw")+".svg"), dirRtl, lang, bgCol, work.Done, &lock)
 					}
 				}
 			}
@@ -225,7 +235,7 @@ func (me *Series) genBookPrep(sg *siteGen) {
 	work.Wait()
 }
 
-func (me *Series) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string, bgCol bool, onDone func(), lock *sync.Mutex) {
+func (me *Series) genBookSheetSvgAndPngs(sv *SheetVer, outFilePath string, dirRtl bool, lang string, bgCol bool, onDone func(), lock *sync.Mutex) {
 	defer onDone()
 	if bgCol && !sv.data.hasBgCol {
 		return
@@ -272,6 +282,35 @@ func (me *Series) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool,
 	})
 	svg += `</svg>`
 	fileWrite(outFilePath, []byte(svg))
+	lock.Lock()
+	me.Book.genPrep.svgs[sv] = outFilePath
+	lock.Unlock()
+
+	var work sync.WaitGroup
+	for qidx := range App.Proj.Qualis {
+		if App.Proj.Qualis[qidx].UseForBooks {
+			work.Add(1)
+			go func(qidx int) {
+				defer work.Done()
+				pngfilepath := outFilePath + "." + itoa(App.Proj.Qualis[qidx].SizeHint) + ".png"
+				cmdargs := []string{outFilePath, "-quality", "90"}
+				if qidx != App.Proj.maxQualiIdx() {
+					cmdargs = append(cmdargs, "-resize", itoa(App.Proj.Qualis[qidx].SizeHint))
+				}
+				cmd := exec.Command("convert", append(cmdargs, pngfilepath)...)
+				if output, err := cmd.CombinedOutput(); err != nil {
+					panic(err)
+				} else if s := strings.TrimSpace(string(output)); s != "" {
+					panic(s)
+				} else {
+					lock.Lock()
+					me.Book.genPrep.pngs[qidx][sv] = pngfilepath
+					lock.Unlock()
+				}
+			}(qidx)
+		}
+	}
+	work.Wait()
 }
 
 func (me *Series) genBookBuild(sg *siteGen, outDirPath string, qIdx int, lang string, bgCol bool, dirRtl bool, onDone func()) {
