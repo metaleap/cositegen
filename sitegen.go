@@ -102,7 +102,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 	mkDir(".build")
 	mkDir(".build/" + App.Proj.Gen.PicDirName)
 	if me.books != nil {
-		mkDir(".epub")
+		mkDir(".books")
 	}
 
 	timedLogged("SiteGen: copying static files to .build...", func() string {
@@ -210,7 +210,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 							for _, bookseries := range me.books {
 								numfileswritten++
 								work.Add(1)
-								go bookseries.genBook(&me, ".epub", qidx, me.lang, me.bgCol, me.dirRtl, work.Done)
+								go bookseries.genBook(&me, ".books", qidx, me.lang, me.bgCol, me.dirRtl, work.Done)
 							}
 						}
 					}

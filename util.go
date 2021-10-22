@@ -75,6 +75,15 @@ func strSize64(size int64) string {
 	return fmt.Sprintf("%vB", size)
 }
 
+func strToUuidLike(s string) string {
+	str := make([]byte, 0, 2*len(s))
+	for _, b := range []byte(s) {
+		str = append(str, strconv.FormatInt(int64(b), 16)...)
+	}
+	str[8], str[13], str[18], str[23] = '-', '-', '-', '-' // // 8-4-4-4-12
+	return strings.ToUpper(string(str[:36]))
+}
+
 func mkDir(dirPath string) {
 	if err := os.Mkdir(dirPath, os.ModePerm); err != nil && !os.IsExist(err) {
 		panic(err)
