@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -167,18 +168,13 @@ func (me *Book) rewriteToMonths(chaps []*Chapter) []*Chapter {
 	return monthchaps
 }
 
-func (me *Series) genBookPrep(sg *siteGen, onDone func()) {
-	defer onDone()
+func (me *Series) genBookPrep(sg *siteGen, outDirPath string) {
 	book := me.Book
-	rmDir("/dev/shm/csgbook/" + book.Name)
-	mkDir("/dev/shm/csgbook/" + book.Name)
-	mkDir("/dev/shm/csgbook/" + book.Name + "/svg")
+
 	book.genPrep.files = map[string]map[string]string{}
 	for _, lang := range App.Proj.Langs {
 		book.genPrep.files[lang] = map[string]string{}
-	}
 
-	for _, lang := range App.Proj.Langs {
 		book.genPrep.files[lang]["OEBPS/nav.xhtml"] = `<?xml version="1.0" encoding="UTF-8" ?>
 			<html xmlns="http://www.w3.org/1999/xhtml"><head></head><body><nav xmlns:epub="http://www.idpf.org/2007/ops" epub:type="toc" id="toc">
 				<ol>
@@ -207,16 +203,40 @@ func (me *Series) genBookPrep(sg *siteGen, onDone func()) {
 
 		book.genPrep.files[lang]["OEBPS/chapter1.xhtml"] = `<?xml version="1.0" encoding="UTF-8" ?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>foobar</title></head><body>Hello World</body></html>`
 	}
+
+	var work sync.WaitGroup
+	mkDir(filepath.Join(outDirPath, "svg"))
+	for _, dirRtl := range []bool{false, true} {
+		for _, bgCol := range []bool{false, true} {
+			for _, lang := range App.Proj.Langs {
+				for _, chap := range me.Chapters {
+					for _, sheet := range chap.sheets {
+						work.Add(1)
+						sv := sheet.versions[0]
+						go me.genBookSheetSvg(sv, filepath.Join(outDirPath, "svg/"+sheet.name+strIf(dirRtl, "_rtl_", "_ltr_")+lang+strIf(bgCol, "_col", "_bw")+".svg"), dirRtl, lang, bgCol, work.Done)
+					}
+				}
+			}
+		}
+	}
+	work.Wait()
+}
+
+func (me *Series) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string, bgCol bool, onDone func()) {
+	defer onDone()
+	w, h := sv.data.PanelsTree.Rect.Max.X, sv.data.PanelsTree.Rect.Max.Y
+	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
+		xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+		width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">`
+
+	svg += `</svg>`
+	fileWrite(outFilePath, []byte(svg))
 }
 
 func (me *Series) genBookBuild(sg *siteGen, outDirPath string, qIdx int, lang string, bgCol bool, dirRtl bool, onDone func()) {
 	defer onDone()
 	bookid := me.Book.id(lang, bgCol, dirRtl, qIdx)
 	me.genBookBuildEpub(bookid, filepath.Join(outDirPath, bookid+".epub"), qIdx, lang, bgCol, dirRtl)
-}
-
-func (me *Series) genBookMakeSvgs(bookId string) {
-
 }
 
 func (me *Series) genBookBuildEpub(bookId string, outFilePath string, qIdx int, lang string, bgCol bool, dirRtl bool) {

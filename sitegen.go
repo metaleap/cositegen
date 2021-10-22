@@ -24,7 +24,7 @@ var (
 type siteGen struct {
 	tmpl       *template.Template
 	series     []*Series
-	books      []*Series
+	book       *Series
 	page       PageGen
 	lang       string
 	bgCol      bool
@@ -80,12 +80,16 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 	me.series = App.Proj.Series
 	if len(flags) != 0 || siteGenBookSeries {
 		for _, book := range App.Proj.Books {
-			bookseries := book.toSeries()
-			if flags != nil && flags[book.Name] {
-				me.books = append(me.books, bookseries)
-			}
+			var bookseries *Series
 			if siteGenBookSeries {
+				bookseries = book.toSeries()
 				me.series = append(me.series, bookseries)
+			}
+			if flags != nil && flags[book.Name] && me.book == nil {
+				if bookseries == nil {
+					bookseries = book.toSeries()
+				}
+				me.book = bookseries
 			}
 		}
 	}
@@ -101,9 +105,6 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 	rmDir(".build")
 	mkDir(".build")
 	mkDir(".build/" + App.Proj.Gen.PicDirName)
-	if me.books != nil {
-		mkDir(".books")
-	}
 
 	timedLogged("SiteGen: copying static files to .build...", func() string {
 		if App.Proj.Gen.PanelSvgText.AppendToFiles == nil {
@@ -160,7 +161,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 		return "for " + itoa(int(numpngs)) + " PNGs & " + itoa(int(numsvgs)) + " SVGs (" + strSize(int(totalsize)) + ") from " + itoa(int(numpanels)) + " panels in " + itoa(int(numsheets)) + " sheets, max panel pic size: " + strSize(int(me.maxPicSize))
 	})
 
-	if me.books == nil {
+	if me.book == nil {
 		timedLogged("SiteGen: generating markup files...", func() string {
 			numfileswritten := 0
 			me.tmpl, err = template.New("foo").ParseFiles(siteTmplDirName + "/site.html")
@@ -196,39 +197,31 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 		})
 	}
 
-	if me.books != nil {
+	if me.book != nil {
 		timedLogged("SiteGen: generating epub files...", func() string {
 			numfileswritten := 0
-			rmDir("/dev/shm/csgbook")
-			mkDir("/dev/shm/csgbook")
-			for _, bookseries := range me.books {
-				rmDir(".books/" + bookseries.UrlName)
-				mkDir(".books/" + bookseries.UrlName)
-			}
+			mkDir(".books")
+			rmDir(".books/" + me.book.Book.Name)
+			mkDir(".books/" + me.book.Book.Name)
+			me.book.genBookPrep(&me, ".books/"+me.book.Book.Name)
 			var work sync.WaitGroup
-			work.Add(len(me.books))
-			for _, bookseries := range me.books {
-				go bookseries.genBookPrep(&me, work.Done)
-			}
-			work.Wait()
 			for _, me.lang = range App.Proj.Langs {
-				for _, me.dirRtl = range []bool{true, false /*KEEP this order of bools*/} {
+				for _, me.dirRtl = range []bool{true, false} {
 					for _, me.bgCol = range []bool{false, true} {
 						for qidx, quali := range App.Proj.Qualis {
 							if !quali.UseForBooks {
 								continue
 							}
-							work.Add(len(me.books))
-							for _, bookseries := range me.books {
-								numfileswritten++
-								go bookseries.genBookBuild(&me, ".books/"+bookseries.UrlName, qidx, me.lang, me.bgCol, me.dirRtl, work.Done)
-							}
+							work.Add(1)
+							numfileswritten++
+							go me.book.genBookBuild(&me, ".books/"+me.book.Book.Name, qidx, me.lang, me.bgCol, me.dirRtl, work.Done)
 						}
 					}
 				}
 			}
 			work.Wait()
-			return "for " + strconv.Itoa(numfileswritten) + " files"
+
+			return "for " + strconv.Itoa(numfileswritten) + " files written to .books/*/"
 		})
 	}
 
