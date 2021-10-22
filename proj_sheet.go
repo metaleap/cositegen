@@ -385,8 +385,8 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 		} else {
 			svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `" xlink:href="../../../` + me.data.bwSmallFilePath + `" />`
 		}
-		svg += `</g>`
-		fileWrite(bgtmplsvgfilepath, []byte(svg+"</svg>"))
+		svg += `</g></svg>`
+		fileWrite(bgtmplsvgfilepath, []byte(svg))
 	}
 	return
 }

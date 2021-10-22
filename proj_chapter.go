@@ -15,8 +15,6 @@ type Series struct {
 	Author   string
 	Chapters []*Chapter
 	Book     *Book
-
-	parentProj *Project
 }
 
 type Chapter struct {

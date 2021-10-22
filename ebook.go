@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -25,28 +26,35 @@ type Book struct {
 		RewriteToMonths                bool
 	}
 
-	config     *BookConfig
-	parentProj *Project
+	config  *BookConfig
+	genPrep struct {
+		files map[string]map[string]string
+	}
 }
 
-func (me *Book) ToSeries() *Series {
+func (me *Book) id(lang string, bgCol bool, dirRtl bool, qIdx int) string {
+	return me.Name + "_" + lang + strIf(bgCol, "_col_", "_bw_") +
+		strIf(dirRtl, App.Proj.DirModes.Rtl.Name, App.Proj.DirModes.Ltr.Name) +
+		"_" + strconv.Itoa(App.Proj.Qualis[qIdx].SizeHint)
+}
+
+func (me *Book) toSeries() *Series {
 	var series = &Series{
-		Book:       me,
-		Name:       me.Name,
-		UrlName:    me.Name,
-		Title:      me.Title,
-		parentProj: me.parentProj,
+		Book:    me,
+		Name:    me.Name,
+		UrlName: me.Name,
+		Title:   me.Title,
 	}
 
 	for _, chapspec := range me.Chapters {
 		var srcchaps []*Chapter
 		if len(chapspec.FromSeries) == 0 {
-			for _, series := range me.parentProj.Series {
+			for _, series := range App.Proj.Series {
 				chapspec.FromSeries = append(chapspec.FromSeries, series.Name)
 			}
 		}
 		for _, seriesname := range chapspec.FromSeries {
-			series := me.parentProj.seriesByName(seriesname)
+			series := App.Proj.seriesByName(seriesname)
 			if series == nil {
 				panic("No such series: " + seriesname)
 			}
@@ -99,7 +107,7 @@ func (me *Book) ToSeries() *Series {
 			newchap.parentSeries = series
 			newchap.versions = []int64{0}
 			if len(newchap.Title) == 0 {
-				newchap.Title = map[string]string{me.parentProj.Langs[0]: newchap.Name}
+				newchap.Title = map[string]string{App.Proj.Langs[0]: newchap.Name}
 			}
 			for _, sheet := range newchap.sheets {
 				sv := sheet.versions[0]
@@ -146,9 +154,9 @@ func (me *Book) rewriteToMonths(chaps []*Chapter) []*Chapter {
 		if chap == nil {
 			monthname, yearname := dt.Month().String(), strconv.Itoa(dt.Year())
 			chap = &Chapter{Name: chapname,
-				Title: map[string]string{me.parentProj.Langs[0]: monthname + " " + yearname}}
-			for _, lang := range me.parentProj.Langs[1:] {
-				if s := me.parentProj.PageContentTexts[lang]["Month_"+monthname]; s != "" {
+				Title: map[string]string{App.Proj.Langs[0]: monthname + " " + yearname}}
+			for _, lang := range App.Proj.Langs[1:] {
+				if s := App.Proj.PageContentTexts[lang]["Month_"+monthname]; s != "" {
 					chap.Title[lang] = s + " " + yearname
 				}
 			}
@@ -159,15 +167,62 @@ func (me *Book) rewriteToMonths(chaps []*Chapter) []*Chapter {
 	return monthchaps
 }
 
-func (me *Series) genBook(sg *siteGen, outDirPath string, qIdx int, lang string, bgCol bool, dirRtl bool, onDone func()) {
+func (me *Series) genBookPrep(sg *siteGen, onDone func()) {
 	defer onDone()
-	proj, quali, book := me.parentProj, me.parentProj.Qualis[qIdx], me.Book
+	book := me.Book
+	rmDir("/dev/shm/csgbook/" + book.Name)
+	mkDir("/dev/shm/csgbook/" + book.Name)
+	mkDir("/dev/shm/csgbook/" + book.Name + "/svg")
+	book.genPrep.files = map[string]map[string]string{}
+	for _, lang := range App.Proj.Langs {
+		book.genPrep.files[lang] = map[string]string{}
+	}
 
-	bookid := me.UrlName + "_" + lang + strIf(bgCol, "_col_", "_bw_") + strIf(dirRtl, proj.DirModes.Rtl.Name, proj.DirModes.Ltr.Name) + "_" + strconv.Itoa(quali.SizeHint)
-	outfilepath := filepath.Join(outDirPath, bookid+".epub")
-	bookid = strToUuidLike(bookid) // not so uu really
-	_ = os.Remove(outfilepath)
-	outfile, err := os.Create(outfilepath)
+	for _, lang := range App.Proj.Langs {
+		book.genPrep.files[lang]["OEBPS/nav.xhtml"] = `<?xml version="1.0" encoding="UTF-8" ?>
+			<html xmlns="http://www.w3.org/1999/xhtml"><head></head><body><nav xmlns:epub="http://www.idpf.org/2007/ops" epub:type="toc" id="toc">
+				<ol>
+				<li>
+					<a href="chapter1.xhtml">LeChap1</a>
+				</li>
+				</ol>
+			</nav></body></html>`
+
+		book.genPrep.files[lang]["OEBPS/content.opf"] = `<?xml version="1.0" encoding="UTF-8" ?>
+			<package version="3.0" dir="$DIR" xml:lang="` + lang + `" xmlns="http://www.idpf.org/2007/opf" unique-identifier="bid">
+				<metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/">
+					<dc:identifier id="bid">urn:uuid:$BOOKID</dc:identifier>
+					<dc:title>` + locStr(book.Title, lang) + `</dc:title>
+					<dc:language>` + lang + `</dc:language>
+					<meta property="dcterms:modified">` + time.Now().Format("2006-01-02T15:04:05Z") + `</meta>
+				</metadata>
+				<manifest>
+					<item href="nav.xhtml" id="nav" properties="nav" media-type="application/xhtml+xml"></item>
+					<item href="chapter1.xhtml" id="chap1" media-type="application/xhtml+xml"></item>
+				</manifest>
+				<spine>
+					<itemref idref="chap1"></itemref>
+				</spine>
+			</package>`
+
+		book.genPrep.files[lang]["OEBPS/chapter1.xhtml"] = `<?xml version="1.0" encoding="UTF-8" ?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>foobar</title></head><body>Hello World</body></html>`
+	}
+}
+
+func (me *Series) genBookBuild(sg *siteGen, outDirPath string, qIdx int, lang string, bgCol bool, dirRtl bool, onDone func()) {
+	defer onDone()
+	bookid := me.Book.id(lang, bgCol, dirRtl, qIdx)
+	me.genBookBuildEpub(bookid, filepath.Join(outDirPath, bookid+".epub"), qIdx, lang, bgCol, dirRtl)
+}
+
+func (me *Series) genBookMakeSvgs(bookId string) {
+
+}
+
+func (me *Series) genBookBuildEpub(bookId string, outFilePath string, qIdx int, lang string, bgCol bool, dirRtl bool) {
+	bookId = strToUuidLike(bookId) // not so uu really
+	_ = os.Remove(outFilePath)
+	outfile, err := os.Create(outFilePath)
 	if err != nil {
 		panic(err)
 	}
@@ -185,31 +240,13 @@ func (me *Series) genBook(sg *siteGen, outDirPath string, qIdx int, lang string,
 				<rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
 			</rootfiles>
 			</container>`},
-		{"OEBPS/nav.xhtml", `<?xml version="1.0" encoding="UTF-8" ?>
-			<html xmlns="http://www.w3.org/1999/xhtml"><head></head><body><nav xmlns:epub="http://www.idpf.org/2007/ops" epub:type="toc" id="toc">
-				<ol>
-				<li>
-					<a href="chapter1.xhtml">LeChap1</a>
-				</li>
-				</ol>
-			</nav></body></html>`},
-		{"OEBPS/content.opf", `<?xml version="1.0" encoding="UTF-8" ?>
-			<package version="3.0" dir="` + strIf(dirRtl, "rtl", "ltr") + `" xml:lang="` + lang + `" xmlns="http://www.idpf.org/2007/opf" unique-identifier="bid">
-				<metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/">
-					<dc:identifier id="bid">urn:uuid:` + bookid + `</dc:identifier>
-					<dc:title>` + locStr(book.Title, lang) + `</dc:title>
-					<dc:language>` + lang + `</dc:language>
-					<meta property="dcterms:modified">` + time.Now().Format("2006-01-02T15:04:05Z") + `</meta>
-				</metadata>
-				<manifest>
-					<item href="nav.xhtml" id="nav" properties="nav" media-type="application/xhtml+xml"></item>
-					<item href="chapter1.xhtml" id="chap1" media-type="application/xhtml+xml"></item>
-				</manifest>
-				<spine>
-					<itemref idref="chap1"></itemref>
-				</spine>
-			</package>`},
-		{"OEBPS/chapter1.xhtml", `<?xml version="1.0" encoding="UTF-8" ?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>foobar</title></head><body>Hello World<hr/>" + bookid + "</body></html>`},
+	}
+	repl := strings.NewReplacer("$DIR", strIf(dirRtl, "rtl", "ltr"), "$BOOKID", bookId)
+	for prepFilePath, prepFileData := range me.Book.genPrep.files[lang] {
+		files = append(files, struct {
+			Path string
+			Data string
+		}{prepFilePath, repl.Replace(prepFileData)})
 	}
 	for i, file := range files {
 		var f io.Writer
@@ -229,5 +266,4 @@ func (me *Series) genBook(sg *siteGen, outDirPath string, qIdx int, lang string,
 		panic(err)
 	}
 	_ = outfile.Sync()
-	printLn(outfilepath)
 }

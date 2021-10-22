@@ -167,7 +167,6 @@ func (me *Project) load() (numSheetVers int) {
 	}
 
 	for _, book := range me.Books {
-		book.parentProj = me
 		if len(book.Title) == 0 {
 			book.Title = map[string]string{me.Langs[0]: book.Name}
 		}
@@ -179,7 +178,6 @@ func (me *Project) load() (numSheetVers int) {
 		}
 	}
 	for _, series := range me.Series {
-		series.parentProj = me
 		seriesdirpath := "scans/" + series.Name
 		if series.UrlName == "" {
 			series.UrlName = series.Name

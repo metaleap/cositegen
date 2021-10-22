@@ -80,7 +80,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 	me.series = App.Proj.Series
 	if len(flags) != 0 || siteGenBookSeries {
 		for _, book := range App.Proj.Books {
-			bookseries := book.ToSeries()
+			bookseries := book.toSeries()
 			if flags != nil && flags[book.Name] {
 				me.books = append(me.books, bookseries)
 			}
@@ -199,7 +199,18 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 	if me.books != nil {
 		timedLogged("SiteGen: generating epub files...", func() string {
 			numfileswritten := 0
+			rmDir("/dev/shm/csgbook")
+			mkDir("/dev/shm/csgbook")
+			for _, bookseries := range me.books {
+				rmDir(".books/" + bookseries.UrlName)
+				mkDir(".books/" + bookseries.UrlName)
+			}
 			var work sync.WaitGroup
+			work.Add(len(me.books))
+			for _, bookseries := range me.books {
+				go bookseries.genBookPrep(&me, work.Done)
+			}
+			work.Wait()
 			for _, me.lang = range App.Proj.Langs {
 				for _, me.dirRtl = range []bool{true, false /*KEEP this order of bools*/} {
 					for _, me.bgCol = range []bool{false, true} {
@@ -207,10 +218,10 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 							if !quali.UseForBooks {
 								continue
 							}
+							work.Add(len(me.books))
 							for _, bookseries := range me.books {
 								numfileswritten++
-								work.Add(1)
-								go bookseries.genBook(&me, ".books", qidx, me.lang, me.bgCol, me.dirRtl, work.Done)
+								go bookseries.genBookBuild(&me, ".books/"+bookseries.UrlName, qidx, me.lang, me.bgCol, me.dirRtl, work.Done)
 							}
 						}
 					}
