@@ -203,7 +203,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 			mkDir(".books")
 			rmDir(".books/" + me.book.Book.Name)
 			mkDir(".books/" + me.book.Book.Name)
-			me.book.genBookPrep(&me, ".books/"+me.book.Book.Name)
+			me.book.genBookPrep(&me)
 			var work sync.WaitGroup
 			for _, me.lang = range App.Proj.Langs {
 				for _, me.dirRtl = range []bool{true, false} {
@@ -865,7 +865,7 @@ func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang strin
 		if me.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4 > 0.1 { // !=0 in float
 			perLineDyCmA4 = me.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4
 		}
-		s += imgSvgText(&pta, lang, pxcm, false, int(linex), fontSizeCmA4, perLineDyCmA4, forHtml)
+		s += imgSvgText(&pta, lang, pxcm, int(linex), fontSizeCmA4, perLineDyCmA4, forHtml)
 		s += "</svg>"
 	}
 

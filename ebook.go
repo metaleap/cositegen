@@ -29,7 +29,8 @@ type Book struct {
 
 	config  *BookConfig
 	genPrep struct {
-		files map[string]map[string]string
+		files      map[string]map[string]string
+		imgDirPath string
 	}
 }
 
@@ -168,7 +169,7 @@ func (me *Book) rewriteToMonths(chaps []*Chapter) []*Chapter {
 	return monthchaps
 }
 
-func (me *Series) genBookPrep(sg *siteGen, outDirPath string) {
+func (me *Series) genBookPrep(sg *siteGen) {
 	book := me.Book
 
 	book.genPrep.files = map[string]map[string]string{}
@@ -204,9 +205,10 @@ func (me *Series) genBookPrep(sg *siteGen, outDirPath string) {
 		book.genPrep.files[lang]["OEBPS/chapter1.xhtml"] = `<?xml version="1.0" encoding="UTF-8" ?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>foobar</title></head><body>Hello World</body></html>`
 	}
 
+	book.genPrep.imgDirPath = "/dev/shm/" + strconv.FormatInt(time.Now().UnixNano(), 36)
 	var work sync.WaitGroup
 	var lock sync.Mutex
-	mkDir(filepath.Join(outDirPath, "svg"))
+	mkDir(book.genPrep.imgDirPath)
 	for _, dirRtl := range []bool{false, true} {
 		for _, bgCol := range []bool{false, true} {
 			for _, lang := range App.Proj.Langs {
@@ -214,7 +216,7 @@ func (me *Series) genBookPrep(sg *siteGen, outDirPath string) {
 					for _, sheet := range chap.sheets {
 						work.Add(1)
 						sv := sheet.versions[0]
-						go me.genBookSheetSvg(sv, filepath.Join(outDirPath, "svg/"+sheet.name+strIf(dirRtl, "_rtl_", "_ltr_")+lang+strIf(bgCol, "_col", "_bw")+".svg"), dirRtl, lang, bgCol, work.Done, &lock)
+						go me.genBookSheetSvg(sv, filepath.Join(book.genPrep.imgDirPath, sheet.name+strIf(dirRtl, "_rtl_", "_ltr_")+lang+strIf(bgCol, "_col", "_bw")+".svg"), dirRtl, lang, bgCol, work.Done, &lock)
 					}
 				}
 			}
@@ -231,7 +233,14 @@ func (me *Series) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool,
 	w, h := sv.data.PanelsTree.Rect.Max.X, sv.data.PanelsTree.Rect.Max.Y
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 		xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-		width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">`
+		width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
+			<style type="text/css">
+				polygon { stroke: black; fill: white; }
+				@font-face { ` +
+		strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) + ` }
+				g > svg > svg > text, g > svg > svg > text > tspan { ` +
+		strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + ` }
+			</style>`
 
 	pidx := 0
 

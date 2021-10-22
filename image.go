@@ -305,7 +305,7 @@ func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, heig
 
 var svgTxtCounter int
 
-func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bool, lineX int, fontSizeCmA4 float64, perLineDyCmA4 float64, forHtml bool) (s string) {
+func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, lineX int, fontSizeCmA4 float64, perLineDyCmA4 float64, forHtml bool) (s string) {
 	if svgRepl == nil {
 		repls := []string{" ", "&nbsp;"}
 		for _, tagclassname := range append(App.Proj.Gen.PanelSvgText.TspanTagClasses, "b", "i", "u") {
@@ -317,7 +317,6 @@ func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bo
 		svgRepl = strings.NewReplacer(repls...)
 	}
 
-	aw, ah := pta.Rect.Dx(), pta.Rect.Dy()
 	pxfont, pxline := int(px1cm*fontSizeCmA4), int(px1cm*perLineDyCmA4)
 	svgTxtCounter++
 	if forHtml {
@@ -334,17 +333,17 @@ func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bo
 	s += "</tspan></text>"
 	if forHtml {
 		s += "<script>vHide('t" + itoa(svgTxtCounter) + "');vShow('w" + itoa(svgTxtCounter) + "');</script>"
-	}
-	if wrapInSvgTag {
-		s = "<svg viewbox='0 0 " + itoa(aw) + " " + itoa(ah) + "'>" + s + "</svg>"
-	}
-	if !forHtml {
+	} else {
 		s = strings.Replace(s, "&quot;", "&#x"+strconv.FormatInt('"', 16)+";", -1)
 		s = strings.Replace(s, "&apos;", "&#x"+strconv.FormatInt('\'', 16)+";", -1)
 		for k, v := range hEscs {
 			s = strings.Replace(s, v, "&#x"+strconv.FormatInt(int64(k), 16)+";", -1)
 		}
 	}
+	// if wrapInSvgTag {
+	// aw, ah := pta.Rect.Dx(), pta.Rect.Dy()
+	// s = "<svg viewbox='0 0 " + itoa(aw) + " " + itoa(ah) + "'>" + s + "</svg>"
+	// }
 	return
 }
 
