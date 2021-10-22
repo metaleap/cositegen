@@ -96,6 +96,15 @@ func (me *Project) hasSvgQuali() bool {
 	return false
 }
 
+func (me *Project) maxQualiIdx() (r int) {
+	for i, quali := range me.Qualis[1:] {
+		if quali.SizeHint > me.Qualis[r].SizeHint {
+			r = i
+		}
+	}
+	return
+}
+
 func (me *Project) seriesByName(name string) *Series {
 	for _, series := range me.Series {
 		if series.Name == name {

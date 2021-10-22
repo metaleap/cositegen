@@ -28,6 +28,7 @@ var hEscs = map[rune]string{
 	'”':  "&quot;",
 	'“':  "&quot;",
 	'·':  "&bull;",
+	0xa0: "&nbsp;",
 }
 var hEscRepl *strings.Replacer
 

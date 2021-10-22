@@ -305,7 +305,7 @@ func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, heig
 
 var svgTxtCounter int
 
-func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bool, lineX int, fontSizeCmA4 float64, perLineDyCmA4 float64) (s string) {
+func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bool, lineX int, fontSizeCmA4 float64, perLineDyCmA4 float64, forHtml bool) (s string) {
 	if svgRepl == nil {
 		repls := []string{" ", "&nbsp;"}
 		for _, tagclassname := range append(App.Proj.Gen.PanelSvgText.TspanTagClasses, "b", "i", "u") {
@@ -320,7 +320,9 @@ func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bo
 	aw, ah := pta.Rect.Dx(), pta.Rect.Dy()
 	pxfont, pxline := int(px1cm*fontSizeCmA4), int(px1cm*perLineDyCmA4)
 	svgTxtCounter++
-	s += "<text id='w" + itoa(svgTxtCounter) + "' style='visibility: hidden; font-size: " + itoa(pxfont) + "px'><tspan><tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>&#9881;...</tspan></tspan><title><tspan>Loading... / Wird geladen...</tspan></title></text>"
+	if forHtml {
+		s += "<text id='w" + itoa(svgTxtCounter) + "' style='visibility: hidden; font-size: " + itoa(pxfont) + "px'><tspan><tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>&#9881;...</tspan></tspan><title><tspan>Loading... / Wird geladen...</tspan></title></text>"
+	}
 	s += "<text id='t" + itoa(svgTxtCounter) + "' style='font-size: " + itoa(pxfont) + "px' transform='" + trim(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
 	s += "<tspan style='" + trim(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'>"
 	for _, ln := range strings.Split(svgRepl.Replace(hEsc(locStr(pta.Data, langId))), hEscs['\n']) {
@@ -329,9 +331,19 @@ func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, wrapInSvgTag bo
 		}
 		s += "<tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>" + ln + "</tspan>"
 	}
-	s += "</tspan></text><script>vHide('t" + itoa(svgTxtCounter) + "');vShow('w" + itoa(svgTxtCounter) + "');</script>"
+	s += "</tspan></text>"
+	if forHtml {
+		s += "<script>vHide('t" + itoa(svgTxtCounter) + "');vShow('w" + itoa(svgTxtCounter) + "');</script>"
+	}
 	if wrapInSvgTag {
 		s = "<svg viewbox='0 0 " + itoa(aw) + " " + itoa(ah) + "'>" + s + "</svg>"
+	}
+	if !forHtml {
+		s = strings.Replace(s, "&quot;", "&#x"+strconv.FormatInt('"', 16)+";", -1)
+		s = strings.Replace(s, "&apos;", "&#x"+strconv.FormatInt('\'', 16)+";", -1)
+		for k, v := range hEscs {
+			s = strings.Replace(s, v, "&#x"+strconv.FormatInt(int64(k), 16)+";", -1)
+		}
 	}
 	return
 }

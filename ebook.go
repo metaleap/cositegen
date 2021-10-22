@@ -205,6 +205,7 @@ func (me *Series) genBookPrep(sg *siteGen, outDirPath string) {
 	}
 
 	var work sync.WaitGroup
+	var lock sync.Mutex
 	mkDir(filepath.Join(outDirPath, "svg"))
 	for _, dirRtl := range []bool{false, true} {
 		for _, bgCol := range []bool{false, true} {
@@ -213,7 +214,7 @@ func (me *Series) genBookPrep(sg *siteGen, outDirPath string) {
 					for _, sheet := range chap.sheets {
 						work.Add(1)
 						sv := sheet.versions[0]
-						go me.genBookSheetSvg(sv, filepath.Join(outDirPath, "svg/"+sheet.name+strIf(dirRtl, "_rtl_", "_ltr_")+lang+strIf(bgCol, "_col", "_bw")+".svg"), dirRtl, lang, bgCol, work.Done)
+						go me.genBookSheetSvg(sv, filepath.Join(outDirPath, "svg/"+sheet.name+strIf(dirRtl, "_rtl_", "_ltr_")+lang+strIf(bgCol, "_col", "_bw")+".svg"), dirRtl, lang, bgCol, work.Done, &lock)
 					}
 				}
 			}
@@ -222,13 +223,44 @@ func (me *Series) genBookPrep(sg *siteGen, outDirPath string) {
 	work.Wait()
 }
 
-func (me *Series) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string, bgCol bool, onDone func()) {
+func (me *Series) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string, bgCol bool, onDone func(), lock *sync.Mutex) {
 	defer onDone()
+	if bgCol && !sv.data.hasBgCol {
+		return
+	}
 	w, h := sv.data.PanelsTree.Rect.Max.X, sv.data.PanelsTree.Rect.Max.Y
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 		xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
 		width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">`
 
+	pidx := 0
+
+	sv.data.PanelsTree.iter(func(p *ImgPanel) {
+		panelpngsrcfilepath, err := filepath.Abs(filepath.Join(sv.data.PicDirPath(App.Proj.Qualis[App.Proj.maxQualiIdx()].SizeHint), itoa(pidx)+".png"))
+		if err != nil {
+			panic(err)
+		}
+
+		x, y, w, h := p.Rect.Min.X, p.Rect.Min.Y, p.Rect.Dx(), p.Rect.Dy()
+		gid := "pnl" + itoa(pidx)
+		svg += `<g id="` + gid + `" transform="translate(` + itoa(x) + ` ` + itoa(y) + `)">`
+		if bgCol {
+			panelbgpngsrcfilepath, err := filepath.Abs(filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png"))
+			if err != nil {
+				panic(err)
+			}
+			svg += `<image x="0" y="0" width="` + itoa(w) + `" height="` + itoa(h) + `"
+			xlink:href="` + panelbgpngsrcfilepath + `" />`
+		} else {
+			svg += `<rect x="0" y="0" stroke="#000000" stroke-width="0" fill="#ffffff"
+				width="` + itoa(w) + `" height="` + itoa(h) + `"></rect>`
+		}
+		svg += `<image x="0" y="0" width="` + itoa(w) + `" height="` + itoa(h) + `"
+				xlink:href="` + panelpngsrcfilepath + `" />`
+		svg += sv.genTextSvgForPanel(pidx, p, lang, false)
+		svg += "\n</g>\n\n"
+		pidx++
+	})
 	svg += `</svg>`
 	fileWrite(outFilePath, []byte(svg))
 }

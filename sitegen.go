@@ -736,7 +736,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			if firstpanel = ""; viewMode == "r" {
 				s += " tabindex='0' onfocus='" + App.Proj.Gen.ClsPanel + "f(this)'"
 			}
-			s += ">" + me.genSvgForPanel(sv, pidx, panel)
+			s += ">" + sv.genTextSvgForPanel(pidx, panel, me.lang, true)
 			me.sheetPgNrs[sv] = pageNr
 			s += "<img src='./" + App.Proj.Gen.PicDirName + "/" + name + ".png' class='" + App.Proj.Gen.ClsImgHq + "'"
 			if hqsrc != "" {
@@ -790,10 +790,10 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 	return allpanels
 }
 
-func (me *siteGen) genSvgForPanel(sV *SheetVer, panelIdx int, panel *ImgPanel) string {
-	panelareas, pxcm := sV.panelAreas(panelIdx), sV.data.PxCm
+func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang string, forHtml bool) string {
+	panelareas, pxcm := me.panelAreas(panelIdx), me.data.PxCm
 	if pxcm < 472 { // low-dpi special-casing just for the 2 	frog sheets...
-		pxcm *= (float64(sV.data.PanelsTree.Rect.Max.X) / 7016.0)
+		pxcm *= (float64(me.data.PanelsTree.Rect.Max.X) / 7016.0)
 	}
 	if len(panelareas) == 0 {
 		return ""
@@ -859,13 +859,13 @@ func (me *siteGen) genSvgForPanel(sV *SheetVer, panelIdx int, panel *ImgPanel) s
 			linex = pxcm * App.Proj.Gen.PanelSvgText.BoxPolyDxCmA4
 		}
 		fontSizeCmA4, perLineDyCmA4 := App.Proj.Gen.PanelSvgText.FontSizeCmA4, App.Proj.Gen.PanelSvgText.PerLineDyCmA4
-		if sV.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4 > 0.1 { // !=0 in float
-			fontSizeCmA4 = sV.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4
+		if me.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4 > 0.1 { // !=0 in float
+			fontSizeCmA4 = me.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4
 		}
-		if sV.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4 > 0.1 { // !=0 in float
-			perLineDyCmA4 = sV.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4
+		if me.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4 > 0.1 { // !=0 in float
+			perLineDyCmA4 = me.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4
 		}
-		s += imgSvgText(&pta, me.lang, pxcm, false, int(linex), fontSizeCmA4, perLineDyCmA4)
+		s += imgSvgText(&pta, lang, pxcm, false, int(linex), fontSizeCmA4, perLineDyCmA4, forHtml)
 		s += "</svg>"
 	}
 
