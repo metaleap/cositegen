@@ -546,7 +546,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		if me.lang != App.Proj.Langs[0] {
 			for k, v := range App.Proj.PageContentTexts[me.lang] {
 				if strings.HasPrefix(k, "Month_") {
-					text = strings.Replace(text, k[6:], v, -1)
+					text = strings.Replace(text, k[len("Month_"):], v, -1)
 				}
 			}
 		}
@@ -877,11 +877,11 @@ func (me *siteGen) genPageExecAndWrite(name string, chapter *Chapter) (numFilesW
 	me.page.LangsList = ""
 	for lidx, lang := range App.Proj.Langs {
 		title, imgsrcpath := lang, strings.Replace(App.Proj.Gen.ImgSrcLang, "%LANG%", lang, -1)
-		if langname := App.Proj.PageContentTexts[lang]["LangName"]; langname != "" {
+		if langname := App.Proj.textStr(lang, "LangName"); langname != "" {
 			title = langname
 		}
 		if lidx != 0 {
-			title += " (" + App.Proj.PageContentTexts[lang]["Transl"] + ": " + itoa(int(App.Proj.percentTranslated(lang, nil, nil, nil, -1))) + "%"
+			title += " (" + App.Proj.textStr(lang, "Transl") + ": " + itoa(int(App.Proj.percentTranslated(lang, nil, nil, nil, -1))) + "%"
 			if chapter != nil {
 				title += ", \"" + locStr(chapter.Title, lang) + "\": " + itoa(int(App.Proj.percentTranslated(lang, nil, chapter, nil, -1))) + "%"
 			}
@@ -931,13 +931,8 @@ func (me *siteGen) genPageExecAndWrite(name string, chapter *Chapter) (numFilesW
 	return
 }
 
-func (me *siteGen) textStr(key string) (s string) {
-	if s = App.Proj.PageContentTexts[me.lang][key]; s == "" {
-		if s = App.Proj.PageContentTexts[App.Proj.Langs[0]][key]; s == "" {
-			s = key
-		}
-	}
-	return s
+func (me *siteGen) textStr(key string) string {
+	return App.Proj.textStr(me.lang, key)
 }
 
 func (me *siteGen) genAtomXml() (numFilesWritten int) {

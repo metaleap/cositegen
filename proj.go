@@ -114,6 +114,15 @@ func (me *Project) seriesByName(name string) *Series {
 	return nil
 }
 
+func (me *Project) textStr(lang string, key string) (s string) {
+	if s = me.PageContentTexts[lang][key]; s == "" {
+		if s = me.PageContentTexts[me.Langs[0]][key]; s == "" {
+			s = key
+		}
+	}
+	return s
+}
+
 func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sheetVer *SheetVer, pgNr int) float64 {
 	numtotal, numtrans := 0, 0
 	for _, series := range me.Series {

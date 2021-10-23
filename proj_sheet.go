@@ -398,6 +398,23 @@ func (me *SheetVer) panelAreas(panelIdx int) []ImgPanelArea {
 	return nil
 }
 
+func (me *SheetVer) panelFaceAreas(panelIdx int) (ret []ImgPanelArea) {
+	for _, area := range me.panelAreas(panelIdx) {
+		if area.Rect.Dx() > 0 && area.Rect.Dy() > 0 {
+			var hastext bool
+			for _, v := range area.Data {
+				if hastext = (v != ""); hastext {
+					break
+				}
+			}
+			if !hastext {
+				ret = append(ret, area)
+			}
+		}
+	}
+	return
+}
+
 func (me *SheetVer) panelCount() (numPanels int, numPanelAreas int) {
 	for _, areas := range App.Proj.data.Sv.textRects[me.id] {
 		numPanels, numPanelAreas = numPanels+1, numPanelAreas+len(areas)
