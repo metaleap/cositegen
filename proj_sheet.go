@@ -398,6 +398,15 @@ func (me *SheetVer) panelAreas(panelIdx int) []ImgPanelArea {
 	return nil
 }
 
+func (me *SheetVer) hasFaceAreas() (ret bool) {
+	var pidx int
+	me.data.PanelsTree.iter(func(p *ImgPanel) {
+		ret = ret || len(me.panelFaceAreas(pidx)) > 0
+		pidx++
+	})
+	return
+}
+
 func (me *SheetVer) panelFaceAreas(panelIdx int) (ret []ImgPanelArea) {
 	for _, area := range me.panelAreas(panelIdx) {
 		if area.Rect.Dx() > 0 && area.Rect.Dy() > 0 {

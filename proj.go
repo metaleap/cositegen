@@ -16,9 +16,8 @@ type Project struct {
 	BookConfigs map[string]*BookConfig
 	Langs       []string
 	Qualis      []struct {
-		Name        string
-		SizeHint    int
-		UseForBooks bool
+		Name     string
+		SizeHint int
 	}
 	AtomFile struct {
 		PubDates    []string
@@ -97,7 +96,7 @@ func (me *Project) hasSvgQuali() bool {
 }
 
 func (me *Project) maxQualiIdx() (r int) {
-	for i, quali := range me.Qualis[1:] {
+	for i, quali := range me.Qualis {
 		if quali.SizeHint > me.Qualis[r].SizeHint {
 			r = i
 		}

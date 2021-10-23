@@ -208,14 +208,9 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 			for _, me.lang = range App.Proj.Langs {
 				for _, me.dirRtl = range []bool{true, false} {
 					for _, me.bgCol = range []bool{false, true} {
-						for qidx, quali := range App.Proj.Qualis {
-							if !quali.UseForBooks {
-								continue
-							}
-							work.Add(1)
-							numfileswritten++
-							go me.book.genBookBuild(&me, ".books/"+me.book.Book.Name, qidx, me.lang, me.bgCol, me.dirRtl, work.Done)
-						}
+						work.Add(1)
+						numfileswritten++
+						go me.book.genBookBuild(&me, ".books/"+me.book.Book.Name, me.lang, me.bgCol, me.dirRtl, work.Done)
 					}
 				}
 			}
