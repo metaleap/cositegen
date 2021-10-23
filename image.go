@@ -339,11 +339,7 @@ func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, lineX int, font
 	if forHtml {
 		s += "<script>vHide('t" + itoa(svgTxtCounter) + "');vShow('w" + itoa(svgTxtCounter) + "');</script>"
 	} else {
-		s = strings.Replace(s, "&quot;", "&#x"+strconv.FormatInt('"', 16)+";", -1)
-		s = strings.Replace(s, "&apos;", "&#x"+strconv.FormatInt('\'', 16)+";", -1)
-		for k, v := range hEscs {
-			s = strings.Replace(s, v, "&#x"+strconv.FormatInt(int64(k), 16)+";", -1)
-		}
+		s = htmlEscdToXmlEsc(s)
 	}
 	// if wrapInSvgTag {
 	// aw, ah := pta.Rect.Dx(), pta.Rect.Dy()

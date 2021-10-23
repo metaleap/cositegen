@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"html"
+	"strconv"
 	"strings"
 )
 
@@ -53,6 +54,15 @@ func hEsc(s string) string {
 		}
 	}
 	return hEscRepl.Replace(s)
+}
+
+func htmlEscdToXmlEsc(s string) string {
+	s = strings.Replace(s, "&quot;", "&#x"+strconv.FormatInt('"', 16)+";", -1)
+	s = strings.Replace(s, "&apos;", "&#x"+strconv.FormatInt('\'', 16)+";", -1)
+	for k, v := range hEscs {
+		s = strings.Replace(s, v, "&#x"+strconv.FormatInt(int64(k), 16)+";", -1)
+	}
+	return s
 }
 
 func guiHtmlGrayDistrs(grayDistrs [][3]float64) string {

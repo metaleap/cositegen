@@ -29,6 +29,7 @@ type Book struct {
 		ExcludeBySheetName             []string
 		RewriteToMonths                bool
 	}
+	CssTitle string
 
 	config  *BookConfig
 	genPrep struct {
@@ -213,25 +214,31 @@ func (me *Series) genBookPrep(sg *siteGen) {
 	var lock sync.Mutex
 	mkDir(book.genPrep.imgDirPath)
 	var svgfilepaths []string
-	for _, dirRtl := range []bool{false, true} {
-		for _, bgCol := range []bool{false, true} {
-			for _, lang := range App.Proj.Langs {
+	for _, lang := range App.Proj.Langs {
+		for _, dirRtl := range []bool{false, true} {
+			for _, bgCol := range []bool{false, true} {
 				for _, chap := range me.Chapters {
 					for _, sheet := range chap.sheets {
 						if sv := sheet.versions[0]; sv.data.hasBgCol || !bgCol {
-							work.Add(1)
-							svgfilepath := filepath.Join(book.genPrep.imgDirPath, sheet.name+strIf(dirRtl, "_rtl_", "_ltr_")+lang+strIf(bgCol, "_col", "_bw")+".svg")
+							work.Add(1) //
+							svgfilename := sheet.name + strIf(dirRtl, "_rtl_", "_ltr_") + lang + strIf(bgCol, "_col", "_bw") + ".svg"
+							svgfilepath := filepath.Join(book.genPrep.imgDirPath, svgfilename)
 							svgfilepaths = append(svgfilepaths, svgfilepath)
-							go me.genBookSheetSvg(sv, svgfilepath, dirRtl, lang, bgCol, work.Done, &lock)
+							if fp := filepath.Join("/home/_/c/w/d/gotit", svgfilename); fileStat(fp) != nil {
+								fileLinkOrCopy(fp, svgfilepath)
+								work.Done()
+							} else {
+								go me.genBookSheetSvg(sv, svgfilepath, dirRtl, lang, bgCol, work.Done, &lock)
+							}
 						}
 					}
 				}
-				work.Add(1)
-				svgfilepath := filepath.Join(book.genPrep.imgDirPath, "titletoc"+lang+".svg")
-				svgfilepaths = append(svgfilepaths, svgfilepath)
-				go me.genBookTitleTocSvg(svgfilepath, work.Done)
 			}
 		}
+		work.Add(1)
+		svgfilepath := filepath.Join(book.genPrep.imgDirPath, "titletoc_"+lang+".svg")
+		svgfilepaths = append(svgfilepaths, svgfilepath)
+		go me.genBookTitleTocSvg(svgfilepath, lang, work.Done)
 	}
 	work.Wait()
 
@@ -240,19 +247,21 @@ func (me *Series) genBookPrep(sg *siteGen) {
 	}
 }
 
-func (me *Series) genBookTitleTocSvg(outFilePath string, onDone func()) {
+func (me *Series) genBookTitleTocSvg(outFilePath string, lang string, onDone func()) {
 	defer onDone()
-
 	w, h := me.Book.config.PxWidth, me.Book.config.PxHeight
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 	xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
 	width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
-		/*<style type="text/css">
-			@font-face { ` +
+		<style type="text/css">
+		@font-face { ` +
 		strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) + ` }
-			g > svg > svg > text, g > svg > svg > text > tspan { ` +
+		.title, g > svg > svg > text, g > svg > svg > text > tspan { ` +
 		strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + ` }
-		</style>*/`
+		.title { ` + me.Book.CssTitle + ` }
+		</style>`
+
+	svg += `<text class="title" x="11%" y="33%" dy="0">` + htmlEscdToXmlEsc(hEsc(locStr(me.Book.Title, lang))) + `</text>`
 
 	svg += `</svg>`
 	fileWrite(outFilePath, []byte(svg))
@@ -308,18 +317,22 @@ func (me *Series) genBookSheetPngs(svgFilePath string) {
 	for qidx, quali := range App.Proj.Qualis {
 		if quali.UseForBooks {
 			pngfilepath := svgFilePath + "." + itoa(quali.SizeHint) + ".png"
-			cmdargs := []string{svgFilePath, "-quality", "90"}
-			if qidx != App.Proj.maxQualiIdx() {
-				cmdargs = append(cmdargs, "-resize", itoa(quali.SizeHint))
-			}
-			cmd := exec.Command("convert", append(cmdargs, pngfilepath)...)
-			output, err := cmd.CombinedOutput()
-			s := strings.TrimSpace(string(output))
-			if err != nil {
-				s = err.Error() + ">>>>>\n" + s + "<<<<<<\n"
-			}
-			if s != "" {
-				panic(s)
+			if fp := filepath.Join("/home/_/c/w/d/gotit", filepath.Base(pngfilepath)); fileStat(fp) != nil {
+				fileLinkOrCopy(fp, pngfilepath)
+			} else {
+				cmdargs := []string{svgFilePath, "-quality", "90"}
+				if qidx != App.Proj.maxQualiIdx() {
+					cmdargs = append(cmdargs, "-resize", itoa(quali.SizeHint))
+				}
+				cmd := exec.Command("convert", append(cmdargs, pngfilepath)...)
+				output, err := cmd.CombinedOutput()
+				s := strings.TrimSpace(string(output))
+				if err != nil {
+					s = err.Error() + ">>>>>\n" + s + "<<<<<<\n"
+				}
+				if s != "" {
+					panic(s)
+				}
 			}
 		}
 	}
