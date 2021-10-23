@@ -15,6 +15,8 @@ import (
 
 type BookConfig struct {
 	KeepUntranslated bool
+	PxWidth          int
+	PxHeight         int
 }
 
 type Book struct {
@@ -32,8 +34,6 @@ type Book struct {
 	genPrep struct {
 		files      map[string]map[string]string
 		imgDirPath string
-		svgs       map[*SheetVer]string
-		pngs       map[int]map[*SheetVer]string
 	}
 }
 
@@ -208,42 +208,58 @@ func (me *Series) genBookPrep(sg *siteGen) {
 		book.genPrep.files[lang]["OEBPS/chapter1.xhtml"] = `<?xml version="1.0" encoding="UTF-8" ?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>foobar</title></head><body>Hello World</body></html>`
 	}
 
-	book.genPrep.svgs = map[*SheetVer]string{}
-	book.genPrep.pngs = map[int]map[*SheetVer]string{}
-	for i, q := range App.Proj.Qualis {
-		if q.UseForBooks {
-			book.genPrep.pngs[i] = map[*SheetVer]string{}
-		}
-	}
 	book.genPrep.imgDirPath = "/dev/shm/" + strconv.FormatInt(time.Now().UnixNano(), 36)
 	var work sync.WaitGroup
 	var lock sync.Mutex
 	mkDir(book.genPrep.imgDirPath)
+	var svgfilepaths []string
 	for _, dirRtl := range []bool{false, true} {
 		for _, bgCol := range []bool{false, true} {
 			for _, lang := range App.Proj.Langs {
 				for _, chap := range me.Chapters {
 					for _, sheet := range chap.sheets {
-						work.Add(1)
-						sv := sheet.versions[0]
-						go me.genBookSheetSvg(sv, filepath.Join(book.genPrep.imgDirPath, sheet.name+strIf(dirRtl, "_rtl_", "_ltr_")+lang+strIf(bgCol, "_col", "_bw")+".svg"), dirRtl, lang, bgCol, work.Done, &lock)
+						if sv := sheet.versions[0]; sv.data.hasBgCol || !bgCol {
+							work.Add(1)
+							svgfilepath := filepath.Join(book.genPrep.imgDirPath, sheet.name+strIf(dirRtl, "_rtl_", "_ltr_")+lang+strIf(bgCol, "_col", "_bw")+".svg")
+							svgfilepaths = append(svgfilepaths, svgfilepath)
+							go me.genBookSheetSvg(sv, svgfilepath, dirRtl, lang, bgCol, work.Done, &lock)
+						}
 					}
 				}
+				work.Add(1)
+				svgfilepath := filepath.Join(book.genPrep.imgDirPath, "titletoc"+lang+".svg")
+				svgfilepaths = append(svgfilepaths, svgfilepath)
+				go me.genBookTitleTocSvg(svgfilepath, work.Done)
 			}
 		}
 	}
 	work.Wait()
 
-	for sv, svgfilepath := range me.Book.genPrep.svgs {
-		me.genBookSheetPngs(sv, svgfilepath)
+	for _, svgfilepath := range svgfilepaths {
+		me.genBookSheetPngs(svgfilepath)
 	}
+}
+
+func (me *Series) genBookTitleTocSvg(outFilePath string, onDone func()) {
+	defer onDone()
+
+	w, h := me.Book.config.PxWidth, me.Book.config.PxHeight
+	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
+	xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+	width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
+		/*<style type="text/css">
+			@font-face { ` +
+		strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) + ` }
+			g > svg > svg > text, g > svg > svg > text > tspan { ` +
+		strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + ` }
+		</style>*/`
+
+	svg += `</svg>`
+	fileWrite(outFilePath, []byte(svg))
 }
 
 func (me *Series) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string, bgCol bool, onDone func(), lock *sync.Mutex) {
 	defer onDone()
-	if bgCol && !sv.data.hasBgCol {
-		return
-	}
 	w, h := sv.data.PanelsTree.Rect.Max.X, sv.data.PanelsTree.Rect.Max.Y
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 		xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -286,12 +302,9 @@ func (me *Series) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool,
 	})
 	svg += `</svg>`
 	fileWrite(outFilePath, []byte(svg))
-	lock.Lock()
-	me.Book.genPrep.svgs[sv] = outFilePath
-	lock.Unlock()
 }
 
-func (me *Series) genBookSheetPngs(sv *SheetVer, svgFilePath string) {
+func (me *Series) genBookSheetPngs(svgFilePath string) {
 	for qidx, quali := range App.Proj.Qualis {
 		if quali.UseForBooks {
 			pngfilepath := svgFilePath + "." + itoa(quali.SizeHint) + ".png"
@@ -300,13 +313,13 @@ func (me *Series) genBookSheetPngs(sv *SheetVer, svgFilePath string) {
 				cmdargs = append(cmdargs, "-resize", itoa(quali.SizeHint))
 			}
 			cmd := exec.Command("convert", append(cmdargs, pngfilepath)...)
-			if output, err := cmd.CombinedOutput(); err != nil {
-				panic(err)
-			} else if s := strings.TrimSpace(string(output)); s != "" {
+			output, err := cmd.CombinedOutput()
+			s := strings.TrimSpace(string(output))
+			if err != nil {
+				s = err.Error() + ">>>>>\n" + s + "<<<<<<\n"
+			}
+			if s != "" {
 				panic(s)
-			} else {
-				me.Book.genPrep.pngs[qidx][sv] = pngfilepath
-				printLn(pngfilepath)
 			}
 		}
 	}
