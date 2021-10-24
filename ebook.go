@@ -248,13 +248,7 @@ func (me *Series) genBookPrep(sg *siteGen) {
 		me.genBookTiTocPageSvg(svgfilepath, lang)
 	}
 	me.genBookTitleTocFacesPng(filepath.Join(book.genPrep.imgDirPath, "faces.png"))
-	{
-		imgwhite := image.NewGray(image.Rect(0, 0, book.config.PxWidth, book.config.PxHeight))
-		imgFill(imgwhite, imgwhite.Bounds(), color.Gray{255})
-		var buf bytes.Buffer
-		PngEncoder.Encode(&buf, imgwhite)
-		fileWrite(filepath.Join(book.genPrep.imgDirPath, "p000.png"), buf.Bytes())
-	}
+	fileWrite(filepath.Join(book.genPrep.imgDirPath, "p000.svg"), []byte(`<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="`+itoa(book.config.PxWidth)+`" height="`+itoa(book.config.PxHeight)+`" viewBox="0 0 `+itoa(book.config.PxWidth)+` `+itoa(book.config.PxHeight)+`"><rect x="0" y="0" width="`+itoa(book.config.PxWidth)+`" height="`+itoa(book.config.PxHeight)+`" fill="#ffffff"></rect></svg>`))
 	for _, svgfilepath := range sheetsvgfilepaths {
 		imgSvgToPng(svgfilepath, svgfilepath+".png")
 	}
@@ -275,7 +269,7 @@ func (me *Series) genBookSheetPageSvg(outFilePath string, sheetImgFilePath strin
 
 	mmleft, mmwidth, pgleft := 5, me.Book.config.MmWidth-20, 6
 	if (pgNr % 2) != 0 {
-		mmleft, pgleft = 15, me.Book.config.MmWidth-16
+		mmleft, pgleft = 15, me.Book.config.MmWidth-14
 	}
 	mmheight := int(float64(mmwidth) / (float64(sheetImgSize[0]) / float64(sheetImgSize[1])))
 	if mmheight > me.Book.config.MmHeight {
@@ -482,6 +476,34 @@ func (me *Series) genBookBuild(outDirPath string, lang string, bgCol bool, dirRt
 
 func (me *Series) genBookBuildCbz(outFilePath string, lang string, bgCol bool, dirRtl bool, onDone func()) {
 	defer onDone()
+	outfile, err := os.Create(outFilePath)
+	if err != nil {
+		panic(err)
+	}
+	defer outfile.Close()
+	zw := zip.NewWriter(outfile)
+
+	srcfilepaths := make([]string, 0, me.numSheets())
+	for i, book := 1, me.Book; i <= 5; i++ {
+		srcfilepath := filepath.Join(book.genPrep.imgDirPath, "p000.svg")
+		if i == 3 {
+			srcfilepath = filepath.Join(book.genPrep.imgDirPath, "p"+itoa0(3, 3)+"_"+lang+".svg.png")
+		}
+		srcfilepaths = append(srcfilepaths, srcfilepath)
+	}
+	for _, srcfilepath := range srcfilepaths {
+		var data = fileRead(srcfilepath)
+		if fw, err := zw.Create(filepath.Base(srcfilepath)); err != nil {
+			panic(err)
+		} else {
+			io.Copy(fw, bytes.NewReader(data))
+		}
+	}
+
+	if err := zw.Close(); err != nil {
+		panic(err)
+	}
+	_ = outfile.Sync()
 }
 
 func (me *Series) genBookBuildEpub(bookId string, outFilePath string, lang string, bgCol bool, dirRtl bool, onDone func()) {
