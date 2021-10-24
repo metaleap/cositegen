@@ -198,7 +198,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 	}
 
 	if me.book != nil {
-		timedLogged("SiteGen: generating epub/cbz/pdf files...", func() string {
+		timedLogged("SiteGen: generating cbz/pdf files...", func() string {
 			numfileswritten := 0
 			mkDir(".books")
 			rmDir(".books/" + me.book.Book.Name)
