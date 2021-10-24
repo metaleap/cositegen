@@ -108,10 +108,12 @@ func imgSvgToPng(svgFilePath string, pngFilePath string, repl *strings.Replacer,
 			"-quality", "90", /*png max lossless compression*/
 			"-background", "white",
 			"-alpha", "remove",
-			"-alpha", "off",
-		}
+			"-alpha", "off"}
 		if dpi != 0 {
-			cmdargs = append(cmdargs, "-units", "PixelsPerInch", "-density", itoa(dpi))
+			cmdargs = append(cmdargs,
+				"-units", "PixelsPerInch",
+				"-set", "units", "PixelsPerInch",
+				"-density", itoa(dpi))
 		}
 		if reSize != 0 {
 			cmdargs = append(cmdargs, "-resize", itoa(reSize))

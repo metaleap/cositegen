@@ -206,18 +206,21 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 			me.book.genBookPrep(&me)
 			var work sync.WaitGroup
 			for lidx, lang := range App.Proj.Langs {
-				if lidx > 0 && os.Getenv("BOOKNOLANGS") != "" {
+				if lidx > 0 && os.Getenv("BOOKMIN") != "" {
 					break
 				}
 				for _, dirrtl := range []bool{false, true} {
-					if dirrtl && os.Getenv("BOOKNORTL") != "" {
+					if dirrtl && os.Getenv("BOOKMIN") != "" {
 						break
 					}
 					for _, bgcol := range []bool{false, true} {
-						if bgcol && os.Getenv("BOOKNOCOL") != "" {
+						if bgcol && os.Getenv("BOOKMIN") != "" {
 							break
 						}
 						for _, lores := range []bool{false, true} {
+							if lores && me.book.Book.config.PxLoResWidth == 0 {
+								break
+							}
 							work.Add(1)
 							numfileswritten++
 							go me.book.genBookBuild(".books/"+me.book.Book.Name, lang, bgcol, dirrtl, lores, work.Done)

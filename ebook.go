@@ -231,16 +231,16 @@ func (me *Series) genBookPrep(sg *siteGen) {
 	mkDir(book.genPrep.imgDirPath)
 	var sheetsvgfilepaths, pagesvgfilepaths []string
 	for lidx, lang := range App.Proj.Langs {
-		if lidx > 0 && os.Getenv("BOOKNOLANGS") != "" {
+		if lidx > 0 && os.Getenv("BOOKMIN") != "" {
 			break
 		}
 		pgnrs := map[*Chapter]int{}
 		for _, dirrtl := range []bool{false, true} {
-			if dirrtl && os.Getenv("BOOKNORTL") != "" {
+			if dirrtl && os.Getenv("BOOKMIN") != "" {
 				break
 			}
 			for _, bgcol := range []bool{false, true} {
-				if bgcol && os.Getenv("BOOKNOCOL") != "" {
+				if bgcol && os.Getenv("BOOKMIN") != "" {
 					break
 				}
 				pgnr := 6
@@ -290,16 +290,17 @@ func (me *Series) genBookPrep(sg *siteGen) {
 	}
 	for _, svgfilepath := range sheetsvgfilepaths {
 		imgSvgToPng(svgfilepath, svgfilepath+".png", nil, 0, 1200, nil)
-		if lrw := book.config.PxLoResWidth; lrw > 0 {
-			imgSvgToPng(svgfilepath, svgfilepath+"."+itoa(lrw)+".png", nil, lrw, 0, nil)
-		}
 	}
 	repl := strings.NewReplacer("./", strings.TrimSuffix(book.genPrep.imgDirPath, "/")+"/")
 	for _, svgfilepath := range pagesvgfilepaths {
-		imgSvgToPng(svgfilepath, svgfilepath+".png", repl, 0, 1200, nil)
+		var work sync.WaitGroup
+		work.Add(1)
+		go imgSvgToPng(svgfilepath, svgfilepath+".png", repl, 0, 1200, work.Done)
 		if lrw := book.config.PxLoResWidth; lrw > 0 {
-			imgSvgToPng(svgfilepath, svgfilepath+"."+itoa(lrw)+".png", repl, lrw, 0, nil)
+			work.Add(1)
+			go imgSvgToPng(svgfilepath, svgfilepath+"."+itoa(lrw)+".png", repl, lrw, 0, work.Done)
 		}
+		work.Wait()
 	}
 }
 
