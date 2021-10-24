@@ -93,15 +93,27 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 	_ = dstImgFile.Close()
 }
 
-func imgSvgToPng(svgFilePath string, pngFilePath string, repl *strings.Replacer) {
+func imgSvgToPng(svgFilePath string, pngFilePath string, repl *strings.Replacer, reSize int, onDone func()) {
+	if onDone != nil {
+		defer onDone()
+	}
 	svgdata := fileRead(svgFilePath)
 	chash := contentHashStr(svgdata)
-	tmpfilepath := "/tmp/svgpng" + chash + ".png"
+	tmpfilepath := ".ccache/.svgpng/" + chash + itoa(reSize) + ".png"
 	if fileStat(tmpfilepath) == nil {
 		if repl != nil {
+			svgFilePath += ".fix.svg"
 			fileWrite(svgFilePath, []byte(repl.Replace(string(svgdata))))
 		}
-		cmdargs := []string{svgFilePath, "-quality", "90" /*png max compression*/}
+		cmdargs := []string{svgFilePath,
+			"-quality", "90", /*png max lossless compression*/
+			"-background", "white",
+			"-alpha", "remove",
+			"-alpha", "off",
+		}
+		if reSize != 0 {
+			cmdargs = append(cmdargs, "-resize", itoa(reSize))
+		}
 		cmd := exec.Command("convert", append(cmdargs, tmpfilepath)...)
 		output, err := cmd.CombinedOutput()
 		s := strings.TrimSpace(string(output))

@@ -19,10 +19,11 @@ import (
 )
 
 type BookConfig struct {
-	PxWidth  int
-	PxHeight int
-	MmWidth  int
-	MmHeight int
+	MmWidth      int
+	MmHeight     int
+	PxWidth      int
+	PxHeight     int
+	PxLoResWidth int
 }
 
 type Book struct {
@@ -253,13 +254,20 @@ func (me *Series) genBookPrep(sg *siteGen) {
 		me.genBookTiTocPageSvg(svgfilepath, lang, pgnrs)
 	}
 	me.genBookTitleTocFacesPng(filepath.Join(book.genPrep.imgDirPath, "faces.png"))
+	mkDir(".ccache/.svgpng")
 	fileWrite(filepath.Join(book.genPrep.imgDirPath, "p000.svg"), []byte(`<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="`+itoa(book.config.PxWidth)+`" height="`+itoa(book.config.PxHeight)+`" viewBox="0 0 `+itoa(book.config.PxWidth)+` `+itoa(book.config.PxHeight)+`"><rect x="0" y="0" width="`+itoa(book.config.PxWidth)+`" height="`+itoa(book.config.PxHeight)+`" fill="#ffffff"></rect></svg>`))
 	for _, svgfilepath := range sheetsvgfilepaths {
-		imgSvgToPng(svgfilepath, svgfilepath+".png", nil)
+		imgSvgToPng(svgfilepath, svgfilepath+".png", nil, 0, nil)
+		if lrw := book.config.PxLoResWidth; lrw > 0 {
+			imgSvgToPng(svgfilepath, svgfilepath+"."+itoa(lrw)+".png", nil, lrw, nil)
+		}
 	}
 	repl := strings.NewReplacer("./", strings.TrimSuffix(book.genPrep.imgDirPath, "/")+"/")
 	for _, svgfilepath := range pagesvgfilepaths {
-		imgSvgToPng(svgfilepath, svgfilepath+".png", repl)
+		imgSvgToPng(svgfilepath, svgfilepath+".png", repl, 0, nil)
+		if lrw := book.config.PxLoResWidth; lrw > 0 {
+			imgSvgToPng(svgfilepath, svgfilepath+"."+itoa(lrw)+".png", repl, lrw, nil)
+		}
 	}
 }
 
@@ -471,13 +479,18 @@ func (me *Series) genBookBuild(outDirPath string, lang string, bgCol bool, dirRt
 	defer onDone()
 	bookid := me.Book.id(lang, bgCol, dirRtl)
 	var work sync.WaitGroup
-	work.Add(2)
-	go me.genBookBuildCbz(filepath.Join(outDirPath, bookid+".cbz"), lang, bgCol, dirRtl, work.Done)
-	go me.genBookBuildEpub(bookid, filepath.Join(outDirPath, bookid+".epub"), lang, bgCol, dirRtl, work.Done)
+	work.Add(1)
+	go me.genBookBuildCbz(filepath.Join(outDirPath, bookid+".cbz"), lang, bgCol, dirRtl, false, work.Done)
+	if lrw := me.Book.config.PxLoResWidth; lrw > 0 {
+		work.Add(1)
+		go me.genBookBuildCbz(filepath.Join(outDirPath, bookid+"."+itoa(lrw)+".cbz"), lang, bgCol, dirRtl, true, work.Done)
+	}
+	// work.Add(1)
+	// go me.genBookBuildEpub(bookid, filepath.Join(outDirPath, bookid+".epub"), lang, bgCol, dirRtl, work.Done)
 	work.Wait()
 }
 
-func (me *Series) genBookBuildCbz(outFilePath string, lang string, bgCol bool, dirRtl bool, onDone func()) {
+func (me *Series) genBookBuildCbz(outFilePath string, lang string, bgCol bool, dirRtl bool, loRes bool, onDone func()) {
 	defer onDone()
 	outfile, err := os.Create(outFilePath)
 	if err != nil {
@@ -501,17 +514,27 @@ func (me *Series) genBookBuildCbz(outFilePath string, lang string, bgCol bool, d
 				continue
 			}
 			srcfilepaths = append(srcfilepaths, filepath.Join(book.genPrep.imgDirPath,
-				"p"+itoa0(pgnr, 3)+strIf(dirRtl, "_rtl_", "_ltr_")+lang+strIf(bgCol && sv.data.hasBgCol, "_col", "_bw")+".svg.png"))
+				"p"+itoa0(pgnr, 3)+strIf(dirRtl, "_rtl_", "_ltr_")+lang+strIf(bgCol && sv.data.hasBgCol, "_col", "_bw")+".svg"+strIf(loRes, "."+itoa(book.config.PxLoResWidth), "")+".png"))
 			pgnr++
 		}
 	}
+	for numtrailingempties := 0; !(numtrailingempties >= 4 && (len(srcfilepaths)%4) == 0); numtrailingempties++ {
+		srcfilepaths = append(srcfilepaths, filepath.Join(book.genPrep.imgDirPath, "p000.svg"))
+	}
 
+	loheight := int(float64(book.config.PxLoResWidth) / (float64(book.config.PxWidth) / float64(book.config.PxHeight)))
 	for i, srcfilepath := range srcfilepaths {
 		filename := filepath.Base(srcfilepath)
-		if filename == "p000.svg" {
-			filename = "p" + itoa0(i+1, 3) + ".svg"
-		}
 		var data = fileRead(srcfilepath)
+		if filename == "p000.svg" {
+			if filename = "p" + itoa0(i+1, 3) + ".svg"; loRes {
+				data = []byte(
+					strings.NewReplacer(
+						itoa(book.config.PxWidth), itoa(book.config.PxLoResWidth),
+						itoa(book.config.PxHeight), itoa(loheight),
+					).Replace(string(data)))
+			}
+		}
 		if fw, err := zw.Create(filename); err != nil {
 			panic(err)
 		} else {
