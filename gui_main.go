@@ -156,7 +156,7 @@ func guiStartView() (s string) {
 							}
 							s += ">p" + itoa(pgnr) + "</span>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;" + a + hEsc(sheet.name) + "</a>"
 							if numpanels > 0 {
-								s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(numpanelareas) + " </b> text" + strIf(numpanelareas == 1, "", "s") + " in " + itoa(numpanels) + " panel/s"
+								s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(numpanelareas) + " </b> data-rect" + strIf(numpanelareas == 1, "", "s") + " in " + itoa(numpanels) + " panel/s"
 								if numpanelareas > 0 {
 									for _, langid := range App.Proj.Langs[1:] {
 										s += "&nbsp;(<b>" + langid + "</b>: " + ftoa(App.Proj.percentTranslated(langid, nil, nil, sv, -1), 1) + "%)"

@@ -55,6 +55,14 @@ func ftoa(f float64, prec int) string {
 	return strconv.FormatFloat(f, 'f', prec, 64)
 }
 
+func itoa0(i int, digits int) string {
+	s := itoa(i)
+	if len(s) >= digits {
+		return s
+	}
+	return strings.Repeat("0", digits-len(s)) + s
+}
+
 func strIf(b bool, sThen string, sElse string) string {
 	if b {
 		return sThen
@@ -72,7 +80,7 @@ func strSize64(size int64) string {
 	} else if size > 999 {
 		return itoa(1+int(float64(size)*(1.0/1024.0))) + "KB"
 	}
-	return fmt.Sprintf("%vB", size)
+	return fmt.Sprintf("%dB", size)
 }
 
 func strToUuidLike(s string) string {

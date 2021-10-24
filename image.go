@@ -93,6 +93,24 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 	_ = dstImgFile.Close()
 }
 
+func imgSvgToPng(svgFilePath string, pngFilePath string) {
+	chash := contentHashStr(fileRead(svgFilePath))
+	tmpfilepath := "/tmp/svgpng" + chash + ".png"
+	if fileStat(tmpfilepath) == nil {
+		cmdargs := []string{svgFilePath, "-quality", "90" /*png max compression*/}
+		cmd := exec.Command("convert", append(cmdargs, tmpfilepath)...)
+		output, err := cmd.CombinedOutput()
+		s := strings.TrimSpace(string(output))
+		if err != nil {
+			s = err.Error() + ">>>>>\n" + s + "<<<<<<\n"
+		}
+		if s != "" {
+			panic(s)
+		}
+	}
+	fileLinkOrCopy(tmpfilepath, pngFilePath)
+}
+
 func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int, transparent bool) []byte {
 	imgsrc, _, err := image.Decode(srcImgData)
 	if err != nil {
@@ -131,6 +149,14 @@ func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int, t
 		panic(err)
 	}
 	return buf.Bytes()
+}
+
+func imgFill(img draw.Image, r image.Rectangle, c color.Color) {
+	for x := r.Min.X; x < r.Max.X; x++ {
+		for y := r.Min.Y; y < r.Max.Y; y++ {
+			img.Set(x, y, c)
+		}
+	}
 }
 
 func imgGrayDistrs(srcImgData io.Reader, onFileDone func() error, numClusters int) (r []int) {
@@ -378,20 +404,12 @@ func imgStitchHorizontally(fileNames []string, height int, gapWidth int, gapColo
 		dst = image.NewNRGBA(image.Rect(0, 0, totalwidth, height))
 	}
 	if gapWidth > 0 {
-		for x := 0; x < totalwidth; x++ {
-			for y := 0; y < height; y++ {
-				dst.Set(x, y, gapColor)
-			}
-		}
+		imgFill(dst, image.Rect(0, 0, totalwidth, height), gapColor)
 	}
 	nextx := gapWidth / 2
 	for img, width := range srcimgs {
 		dr := image.Rect(nextx, 0, nextx+width, height)
-		for x := dr.Min.X; x < dr.Max.X; x++ {
-			for y := dr.Min.Y; y < dr.Max.Y; y++ {
-				dst.Set(x, y, color.NRGBA{255, 255, 255, 255})
-			}
-		}
+		imgFill(dst, dr, color.NRGBA{255, 255, 255, 255})
 		ImgScaler.Scale(dst, dr, img, img.Bounds(), draw.Over, nil)
 		nextx += width + gapWidth
 	}

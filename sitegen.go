@@ -205,12 +205,12 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 			mkDir(".books/" + me.book.Book.Name)
 			me.book.genBookPrep(&me)
 			var work sync.WaitGroup
-			for _, me.lang = range App.Proj.Langs {
-				for _, me.dirRtl = range []bool{true, false} {
-					for _, me.bgCol = range []bool{false, true} {
+			for _, lang := range App.Proj.Langs {
+				for _, dirRtl := range []bool{true, false} {
+					for _, bgCol := range []bool{false, true} {
 						work.Add(1)
 						numfileswritten++
-						go me.book.genBookBuild(&me, ".books/"+me.book.Book.Name, me.lang, me.bgCol, me.dirRtl, work.Done)
+						go me.book.genBookBuild(".books/"+me.book.Book.Name, lang, bgCol, dirRtl, work.Done)
 					}
 				}
 			}
