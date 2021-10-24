@@ -280,12 +280,12 @@ func (me *Series) genBookPrep(sg *siteGen) {
 
 	mkDir(".ccache/.svgpng")
 	for i, svgfilepath := range sheetsvgfilepaths {
-		printLn("shsvg", i, "/", len(sheetsvgfilepaths))
+		printLn(time.Now().Format("15:04"), "shsvg", i, "/", len(sheetsvgfilepaths))
 		imgSvgToPng(svgfilepath, svgfilepath+".png", nil, 0, 1200, nil)
 	}
 	repl := strings.NewReplacer("./", strings.TrimSuffix(book.genPrep.imgDirPath, "/")+"/")
 	for i, svgfilepath := range pagesvgfilepaths {
-		printLn("pgsvg", i, "/", len(pagesvgfilepaths))
+		printLn(time.Now().Format("15:04"), "pgsvg", i, "/", len(pagesvgfilepaths))
 		var work sync.WaitGroup
 		work.Add(1)
 		go imgSvgToPng(svgfilepath, svgfilepath+".png", repl, 0, 1200, work.Done)
