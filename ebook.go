@@ -270,16 +270,16 @@ func (me *Series) genBookPrep(sg *siteGen) {
 		}
 	}
 	for _, svgfilepath := range sheetsvgfilepaths {
-		imgSvgToPng(svgfilepath, svgfilepath+".png", nil, 0, nil)
+		imgSvgToPng(svgfilepath, svgfilepath+".png", nil, 0, 1200, nil)
 		if lrw := book.config.PxLoResWidth; lrw > 0 {
-			imgSvgToPng(svgfilepath, svgfilepath+"."+itoa(lrw)+".png", nil, lrw, nil)
+			imgSvgToPng(svgfilepath, svgfilepath+"."+itoa(lrw)+".png", nil, lrw, 0, nil)
 		}
 	}
 	repl := strings.NewReplacer("./", strings.TrimSuffix(book.genPrep.imgDirPath, "/")+"/")
 	for _, svgfilepath := range pagesvgfilepaths {
-		imgSvgToPng(svgfilepath, svgfilepath+".png", repl, 0, nil)
+		imgSvgToPng(svgfilepath, svgfilepath+".png", repl, 0, 1200, nil)
 		if lrw := book.config.PxLoResWidth; lrw > 0 {
-			imgSvgToPng(svgfilepath, svgfilepath+"."+itoa(lrw)+".png", repl, lrw, nil)
+			imgSvgToPng(svgfilepath, svgfilepath+"."+itoa(lrw)+".png", repl, lrw, 0, nil)
 		}
 	}
 }
@@ -333,13 +333,18 @@ func (me *Series) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs map
 
 	textx := itoa(h / 9)
 	htoc := 62.0 / float64(len(me.Chapters))
-	svg += `<text class="title" x="` + textx + `px" y="33%" dx="0" dy="0">` +
+	svg += `<text class="title" x="` + textx + `px" y="30%" dx="0" dy="0">` +
 		htmlEscdToXmlEsc(hEsc(locStr(me.Book.Title, lang))) + `</text>`
 
+	pgnrlast := 0
 	for i, chap := range me.Chapters {
 		pgnr, texty := pgNrs[chap], int(33.0+(float64(i)+1.0)*htoc)-5
+		if pgnr == pgnrlast {
+			continue
+		}
 		svg += `<text class="toc" x="` + textx + `px" y="` + itoa(texty) + `%" dx="0" dy="0">` +
 			htmlEscdToXmlEsc(hEsc(locStr(chap.Title, lang)+"············"+App.Proj.textStr(lang, "BookTocPagePrefix")+strIf(pgnr < 10, "0", "")+itoa(pgnr))) + `</text>`
+		pgnrlast = pgnr
 	}
 
 	svg += `</svg>`
@@ -531,7 +536,8 @@ func (me *Series) genBookBuild(outDirPath string, lang string, bgCol bool, dirRt
 
 func (me *Series) genBookBuildPdf(outFilePath string, srcFilePaths []string, lang string, bgCol bool, dirRtl bool, loRes bool, onDone func()) {
 	defer onDone()
-	cmdArgs := append(make([]string, 0, 3+len(srcFilePaths)), "--pillow-limit-break")
+	cmdArgs := append(make([]string, 0, 3+len(srcFilePaths)),
+		"--pillow-limit-break", "--nodate")
 	cmdArgs = append(cmdArgs, srcFilePaths...)
 	for i, srcfilepath := range cmdArgs {
 		if strings.HasSuffix(srcfilepath, ".svg") {

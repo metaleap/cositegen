@@ -92,7 +92,7 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 	_ = dstImgFile.Close()
 }
 
-func imgSvgToPng(svgFilePath string, pngFilePath string, repl *strings.Replacer, reSize int, onDone func()) {
+func imgSvgToPng(svgFilePath string, pngFilePath string, repl *strings.Replacer, reSize int, dpi int, onDone func()) {
 	if onDone != nil {
 		defer onDone()
 	}
@@ -109,6 +109,9 @@ func imgSvgToPng(svgFilePath string, pngFilePath string, repl *strings.Replacer,
 			"-background", "white",
 			"-alpha", "remove",
 			"-alpha", "off",
+		}
+		if dpi != 0 {
+			cmdargs = append(cmdargs, "-units", "PixelsPerInch", "-density", itoa(dpi))
 		}
 		if reSize != 0 {
 			cmdargs = append(cmdargs, "-resize", itoa(reSize))
