@@ -317,7 +317,7 @@ func (me *Series) genBookSheetPageSvg(outFilePath string, sheetImgFilePath strin
 
 	mmleft, mmwidth, pgleft := 5, me.Book.config.MmWidth-20, 6
 	if (pgNr % 2) != 0 {
-		mmleft, pgleft = 15, me.Book.config.MmWidth-14
+		mmleft, pgleft = 15, me.Book.config.MmWidth-12
 	}
 	mmheight := int(float64(mmwidth) / (float64(sheetImgSize[0]) / float64(sheetImgSize[1])))
 	if mmheight > me.Book.config.MmHeight {
