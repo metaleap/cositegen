@@ -214,7 +214,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 						break
 					}
 					for _, dirrtl := range []bool{false, true} {
-						if dirrtl && (os.Getenv("BOOKMIN") != "" || os.Getenv("NORTL") != "") {
+						if dirrtl && (os.Getenv("BOOKMIN") != "" || !me.book.Book.config.BuildRtlVersions) {
 							break
 						}
 						for _, lores := range []bool{false, true} {

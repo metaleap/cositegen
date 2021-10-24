@@ -19,12 +19,13 @@ import (
 )
 
 type BookConfig struct {
-	MmWidth      int
-	MmHeight     int
-	PxWidth      int
-	PxHeight     int
-	PxLoResWidth int
-	MinPageCount int
+	MmWidth          int
+	MmHeight         int
+	PxWidth          int
+	PxHeight         int
+	PxLoResWidth     int
+	MinPageCount     int
+	BuildRtlVersions bool
 }
 
 type Book struct {
@@ -241,7 +242,7 @@ func (me *Series) genBookPrep(sg *siteGen) {
 				break
 			}
 			for _, dirrtl := range []bool{false, true} {
-				if dirrtl && (os.Getenv("BOOKMIN") != "" || os.Getenv("NORTL") != "") {
+				if dirrtl && (os.Getenv("BOOKMIN") != "" || !book.config.BuildRtlVersions) {
 					break
 				}
 				pgnr := 6
@@ -536,8 +537,10 @@ func (me *Series) genBookBuild(outDirPath string, lang string, bgCol bool, dirRt
 			pgnr++
 		}
 	}
-	for numtrailingempties := 0; !(numtrailingempties >= 4 && (len(srcfilepaths)%4) == 0 && len(srcfilepaths) >= book.config.MinPageCount); numtrailingempties++ {
-		srcfilepaths = append(srcfilepaths, filepath.Join(book.genPrep.imgDirPath, "p001"+strIf(loRes, ".lo", ".hi")+".svg"))
+	if !loRes {
+		for numtrailingempties := 0; !(numtrailingempties >= 4 && (len(srcfilepaths)%4) == 0 && len(srcfilepaths) >= book.config.MinPageCount); numtrailingempties++ {
+			srcfilepaths = append(srcfilepaths, filepath.Join(book.genPrep.imgDirPath, "p001"+strIf(loRes, ".lo", ".hi")+".svg"))
+		}
 	}
 
 	var work sync.WaitGroup
