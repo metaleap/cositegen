@@ -123,8 +123,11 @@ func (me *Project) textStr(lang string, key string) (s string) {
 }
 
 func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sheetVer *SheetVer, pgNr int) float64 {
-	numtotal, numtrans := 0, 0
-	for _, series := range me.Series {
+	numtotal, numtrans, allseries := 0, 0, me.Series
+	if ser != nil && ser.Book != nil {
+		allseries = []*Series{ser}
+	}
+	for _, series := range allseries {
 		if ser != nil && ser != series {
 			continue
 		}

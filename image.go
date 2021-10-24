@@ -93,10 +93,14 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 	_ = dstImgFile.Close()
 }
 
-func imgSvgToPng(svgFilePath string, pngFilePath string) {
-	chash := contentHashStr(fileRead(svgFilePath))
+func imgSvgToPng(svgFilePath string, pngFilePath string, repl *strings.Replacer) {
+	svgdata := fileRead(svgFilePath)
+	chash := contentHashStr(svgdata)
 	tmpfilepath := "/tmp/svgpng" + chash + ".png"
 	if fileStat(tmpfilepath) == nil {
+		if repl != nil {
+			fileWrite(svgFilePath, []byte(repl.Replace(string(svgdata))))
+		}
 		cmdargs := []string{svgFilePath, "-quality", "90" /*png max compression*/}
 		cmd := exec.Command("convert", append(cmdargs, tmpfilepath)...)
 		output, err := cmd.CombinedOutput()

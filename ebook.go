@@ -19,11 +19,10 @@ import (
 )
 
 type BookConfig struct {
-	KeepUntranslated bool
-	PxWidth          int
-	PxHeight         int
-	MmWidth          int
-	MmHeight         int
+	PxWidth  int
+	PxHeight int
+	MmWidth  int
+	MmHeight int
 }
 
 type Book struct {
@@ -221,13 +220,19 @@ func (me *Series) genBookPrep(sg *siteGen) {
 	mkDir(book.genPrep.imgDirPath)
 	var sheetsvgfilepaths, pagesvgfilepaths []string
 	for _, lang := range App.Proj.Langs {
+		pgnrs := map[*Chapter]int{}
 		for _, dirRtl := range []bool{false, true} {
 			for _, bgCol := range []bool{false, true} { // keep `false` first, `true` second
 				pgnr := 6
 				for _, chap := range me.Chapters {
+					pgnrs[chap] = pgnr
 					for _, sheet := range chap.sheets {
 						sv := sheet.versions[0]
-						if bgCol && !sv.data.hasBgCol {
+						if skip := (lang != App.Proj.Langs[0] && App.Proj.percentTranslated(lang, me, chap, sv, -1) < 50); skip ||
+							(bgCol && !sv.data.hasBgCol) {
+							if !skip {
+								pgnr++
+							}
 							continue
 						}
 						svgfilename := sheet.name + strIf(dirRtl, "_rtl_", "_ltr_") + lang + strIf(bgCol, "_col", "_bw") + ".svg"
@@ -245,15 +250,16 @@ func (me *Series) genBookPrep(sg *siteGen) {
 		}
 		svgfilepath := filepath.Join(book.genPrep.imgDirPath, "p"+itoa0(3, 3)+"_"+lang+".svg")
 		pagesvgfilepaths = append(pagesvgfilepaths, svgfilepath)
-		me.genBookTiTocPageSvg(svgfilepath, lang)
+		me.genBookTiTocPageSvg(svgfilepath, lang, pgnrs)
 	}
 	me.genBookTitleTocFacesPng(filepath.Join(book.genPrep.imgDirPath, "faces.png"))
 	fileWrite(filepath.Join(book.genPrep.imgDirPath, "p000.svg"), []byte(`<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="`+itoa(book.config.PxWidth)+`" height="`+itoa(book.config.PxHeight)+`" viewBox="0 0 `+itoa(book.config.PxWidth)+` `+itoa(book.config.PxHeight)+`"><rect x="0" y="0" width="`+itoa(book.config.PxWidth)+`" height="`+itoa(book.config.PxHeight)+`" fill="#ffffff"></rect></svg>`))
 	for _, svgfilepath := range sheetsvgfilepaths {
-		imgSvgToPng(svgfilepath, svgfilepath+".png")
+		imgSvgToPng(svgfilepath, svgfilepath+".png", nil)
 	}
+	repl := strings.NewReplacer("./", strings.TrimSuffix(book.genPrep.imgDirPath, "/")+"/")
 	for _, svgfilepath := range pagesvgfilepaths {
-		imgSvgToPng(svgfilepath, svgfilepath+".png")
+		imgSvgToPng(svgfilepath, svgfilepath+".png", repl)
 	}
 }
 
@@ -279,7 +285,7 @@ func (me *Series) genBookSheetPageSvg(outFilePath string, sheetImgFilePath strin
 
 	svg += `<image dx="0" dy="0" x="` + itoa(mm1*mmleft) + `" y="` + itoa(mm1*mmtop) + `"
 		width="` + itoa(mm1*mmwidth) + `" height="` + itoa(mm1*mmheight) + `"
-		xlink:href="` + sheetImgFilePath + `" />`
+		xlink:href="./` + filepath.Base(sheetImgFilePath) + `" />`
 
 	svg += `<text dx="0" dy="0" x="` + itoa(pgleft*mm1) + `" y="` + itoa(me.Book.config.PxHeight-mm1) + `">` + itoa0(pgNr, 3) + `</text>`
 
@@ -287,7 +293,7 @@ func (me *Series) genBookSheetPageSvg(outFilePath string, sheetImgFilePath strin
 	fileWrite(outFilePath, []byte(svg))
 }
 
-func (me *Series) genBookTiTocPageSvg(outFilePath string, lang string) {
+func (me *Series) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs map[*Chapter]int) {
 	w, h := me.Book.config.PxWidth, me.Book.config.PxHeight
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 	xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -302,20 +308,17 @@ func (me *Series) genBookTiTocPageSvg(outFilePath string, lang string) {
 			.title { ` + me.Book.CssTitle + ` }
 			.toc { ` + me.Book.CssToc + ` }
 			</style>
-			<image x="0" y="0" width="100%" height="100%"
-			xlink:href="` + filepath.Join(me.Book.genPrep.imgDirPath, "faces.png") + `" />`
+			<image x="0" y="0" width="100%" height="100%" xlink:href="./faces.png" />`
 
 	textx := itoa(h / 9)
 	htoc := 62.0 / float64(len(me.Chapters))
 	svg += `<text class="title" x="` + textx + `px" y="33%" dx="0" dy="0">` +
 		htmlEscdToXmlEsc(hEsc(locStr(me.Book.Title, lang))) + `</text>`
 
-	pgnr := 6
 	for i, chap := range me.Chapters {
-		texty := int(33.0+(float64(i)+1.0)*htoc) - 5
+		pgnr, texty := pgNrs[chap], int(33.0+(float64(i)+1.0)*htoc)-5
 		svg += `<text class="toc" x="` + textx + `px" y="` + itoa(texty) + `%" dx="0" dy="0">` +
 			htmlEscdToXmlEsc(hEsc(locStr(chap.Title, lang)+"············"+App.Proj.textStr(lang, "BookTocPagePrefix")+strIf(pgnr < 10, "0", "")+itoa(pgnr))) + `</text>`
-		pgnr += len(chap.sheets)
 	}
 
 	svg += `</svg>`
@@ -481,16 +484,28 @@ func (me *Series) genBookBuildCbz(outFilePath string, lang string, bgCol bool, d
 		panic(err)
 	}
 	defer outfile.Close()
-	zw := zip.NewWriter(outfile)
+	zw, book := zip.NewWriter(outfile), me.Book
 
-	srcfilepaths := make([]string, 0, me.numSheets())
-	for i, book := 1, me.Book; i <= 5; i++ {
+	pgnr, srcfilepaths := 1, make([]string, 0, me.numSheets())
+	for ; pgnr <= 5; pgnr++ {
 		srcfilepath := filepath.Join(book.genPrep.imgDirPath, "p000.svg")
-		if i == 3 {
+		if pgnr == 3 {
 			srcfilepath = filepath.Join(book.genPrep.imgDirPath, "p"+itoa0(3, 3)+"_"+lang+".svg.png")
 		}
 		srcfilepaths = append(srcfilepaths, srcfilepath)
 	}
+	for _, chap := range me.Chapters {
+		for _, sheet := range chap.sheets {
+			sv := sheet.versions[0]
+			if lang != App.Proj.Langs[0] && App.Proj.percentTranslated(lang, me, chap, sv, -1) < 50 {
+				continue
+			}
+			srcfilepaths = append(srcfilepaths, filepath.Join(book.genPrep.imgDirPath,
+				"p"+itoa0(pgnr, 3)+strIf(dirRtl, "_rtl_", "_ltr_")+lang+strIf(bgCol && sv.data.hasBgCol, "_col", "_bw")+".svg.png"))
+			pgnr++
+		}
+	}
+
 	for _, srcfilepath := range srcfilepaths {
 		var data = fileRead(srcfilepath)
 		if fw, err := zw.Create(filepath.Base(srcfilepath)); err != nil {
