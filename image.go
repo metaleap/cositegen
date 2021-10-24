@@ -374,10 +374,6 @@ func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, lineX int, font
 	} else {
 		s = htmlEscdToXmlEsc(s)
 	}
-	// if wrapInSvgTag {
-	// aw, ah := pta.Rect.Dx(), pta.Rect.Dy()
-	// s = "<svg viewbox='0 0 " + itoa(aw) + " " + itoa(ah) + "'>" + s + "</svg>"
-	// }
 	return
 }
 

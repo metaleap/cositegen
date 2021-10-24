@@ -395,7 +395,7 @@ func (me *Series) genBookTitleTocFacesPng(outFilePath string) {
 								for y := fimg.Bounds().Min.Y; y < fimg.Bounds().Max.Y; y++ {
 									gray := subimg.GrayAt(x, y)
 									if gray.Y == 0 {
-										gray.Y = 177
+										gray.Y = 160
 									} else if gray.Y != 255 {
 										panic(gray.Y)
 									}
