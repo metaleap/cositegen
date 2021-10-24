@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -102,6 +103,19 @@ func rmDir(dirPath string) {
 	if err := os.RemoveAll(dirPath); err != nil && !os.IsNotExist(err) {
 		panic(err)
 	}
+}
+
+func osExec(outputMeansFailure bool, cmdPath string, cmdArgs ...string) string {
+	cmd := exec.Command(cmdPath, cmdArgs...)
+	output, err := cmd.CombinedOutput()
+	s := strings.TrimSpace(string(output))
+	if err != nil {
+		panic(err.Error() + ">>>>>\n" + s + "<<<<<<\n")
+	}
+	if s != "" && outputMeansFailure {
+		panic(s)
+	}
+	return s
 }
 
 func percent(hundred int, val int) int {

@@ -7,7 +7,6 @@ import (
 	"image/png"
 	"io"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -114,15 +113,7 @@ func imgSvgToPng(svgFilePath string, pngFilePath string, repl *strings.Replacer,
 		if reSize != 0 {
 			cmdargs = append(cmdargs, "-resize", itoa(reSize))
 		}
-		cmd := exec.Command("convert", append(cmdargs, tmpfilepath)...)
-		output, err := cmd.CombinedOutput()
-		s := strings.TrimSpace(string(output))
-		if err != nil {
-			s = err.Error() + ">>>>>\n" + s + "<<<<<<\n"
-		}
-		if s != "" {
-			panic(s)
-		}
+		_ = osExec(true, "convert", append(cmdargs, tmpfilepath)...)
 	}
 	fileLinkOrCopy(tmpfilepath, pngFilePath)
 }
@@ -290,12 +281,7 @@ func imgSubRectSvg(srcImg *image.Gray, srcImgRect image.Rectangle, blackBorderSi
 		panic(err)
 	}
 	fileWrite(pnmpath, buf.Bytes())
-	output, err := exec.Command("potrace", "-s", pnmpath, "-o", svgpath).CombinedOutput()
-	if err != nil {
-		panic(err)
-	} else if s := trim(string(output)); s != "" {
-		panic(s)
-	}
+	osExec(true, "potrace", "-s", pnmpath, "-o", svgpath)
 	ret = fileRead(svgpath)
 	_, _ = os.Remove(pnmpath), os.Remove(svgpath)
 	return

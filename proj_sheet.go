@@ -194,10 +194,10 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 						fileWrite(tmpfilepath, []byte(s))
 						out, err := exec.Command("convert", tmpfilepath, "-resize", itoa(int(100.0*App.Proj.PanelBgScaleIfPng))+"%", dstfilepath).CombinedOutput()
 						_ = os.Remove(tmpfilepath)
-						if err != nil {
+						if s := trim(string(out)); err != nil {
 							_ = os.Remove(dstfilepath)
-							panic(err)
-						} else if s := trim(string(out)); len(s) != 0 {
+							panic(err.Error() + ">>>>" + s + "<<<<")
+						} else if len(s) != 0 {
 							_ = os.Remove(dstfilepath)
 							panic(s)
 						}
