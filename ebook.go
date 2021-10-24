@@ -506,9 +506,13 @@ func (me *Series) genBookBuildCbz(outFilePath string, lang string, bgCol bool, d
 		}
 	}
 
-	for _, srcfilepath := range srcfilepaths {
+	for i, srcfilepath := range srcfilepaths {
+		filename := filepath.Base(srcfilepath)
+		if filename == "p000.svg" {
+			filename = "p" + itoa0(i+1, 3) + ".svg"
+		}
 		var data = fileRead(srcfilepath)
-		if fw, err := zw.Create(filepath.Base(srcfilepath)); err != nil {
+		if fw, err := zw.Create(filename); err != nil {
 			panic(err)
 		} else {
 			io.Copy(fw, bytes.NewReader(data))
