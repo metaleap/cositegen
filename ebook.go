@@ -24,6 +24,7 @@ type BookConfig struct {
 	PxWidth      int
 	PxHeight     int
 	PxLoResWidth int
+	MinPageCount int
 }
 
 type Book struct {
@@ -535,7 +536,7 @@ func (me *Series) genBookBuild(outDirPath string, lang string, bgCol bool, dirRt
 			pgnr++
 		}
 	}
-	for numtrailingempties := 0; !(numtrailingempties >= 4 && (len(srcfilepaths)%4) == 0); numtrailingempties++ {
+	for numtrailingempties := 0; !(numtrailingempties >= 4 && (len(srcfilepaths)%4) == 0 && len(srcfilepaths) >= book.config.MinPageCount); numtrailingempties++ {
 		srcfilepaths = append(srcfilepaths, filepath.Join(book.genPrep.imgDirPath, "p001"+strIf(loRes, ".lo", ".hi")+".svg"))
 	}
 
