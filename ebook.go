@@ -236,12 +236,12 @@ func (me *Series) genBookPrep(sg *siteGen) {
 			break
 		}
 		pgnrs := map[*Chapter]int{}
-		for _, dirrtl := range []bool{false, true} {
-			if dirrtl && os.Getenv("BOOKMIN") != "" {
+		for _, bgcol := range []bool{false, true} {
+			if bgcol && os.Getenv("BOOKMIN") != "" {
 				break
 			}
-			for _, bgcol := range []bool{false, true} {
-				if bgcol && os.Getenv("BOOKMIN") != "" {
+			for _, dirrtl := range []bool{false, true} {
+				if dirrtl && (os.Getenv("BOOKMIN") != "" || os.Getenv("NORTL") != "") {
 					break
 				}
 				pgnr := 6

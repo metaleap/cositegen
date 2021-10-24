@@ -209,12 +209,12 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 				if lidx > 0 && os.Getenv("BOOKMIN") != "" {
 					break
 				}
-				for _, dirrtl := range []bool{false, true} {
-					if dirrtl && os.Getenv("BOOKMIN") != "" {
+				for _, bgcol := range []bool{false, true} {
+					if bgcol && os.Getenv("BOOKMIN") != "" {
 						break
 					}
-					for _, bgcol := range []bool{false, true} {
-						if bgcol && os.Getenv("BOOKMIN") != "" {
+					for _, dirrtl := range []bool{false, true} {
+						if dirrtl && (os.Getenv("BOOKMIN") != "" || os.Getenv("NORTL") != "") {
 							break
 						}
 						for _, lores := range []bool{false, true} {
