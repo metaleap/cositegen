@@ -170,7 +170,9 @@ func (me *Project) save() {
 func (me *Project) load() (numSheetVers int) {
 	jsonLoad("comicsite.json", nil, me) // exits early if no such file, before creating work dirs:
 	mkDir(".ccache")
-	if fileStat(".ccache/data.json") != nil {
+	var dtdatajson time.Time
+	if fileinfo := fileStat(".ccache/data.json"); fileinfo != nil {
+		dtdatajson = fileinfo.ModTime()
 		jsonLoad(".ccache/data.json", nil, &me.data)
 	}
 	if fileStat("texts.json") != nil {
@@ -178,7 +180,10 @@ func (me *Project) load() (numSheetVers int) {
 	} else {
 		me.data.Sv.textRects = map[string][][]ImgPanelArea{}
 	}
-	me.data.Sv.fileNamesToIds, me.data.Sv.IdsToFileNames = map[string]string{}, map[string]string{}
+	me.data.Sv.fileNamesToIds = map[string]string{}
+	if me.data.Sv.IdsToFileNames == nil {
+		me.data.Sv.IdsToFileNames = map[string]string{}
+	}
 	if me.data.Sv.ById == nil {
 		me.data.Sv.ById = map[string]*SheetVerData{}
 	}
@@ -218,6 +223,7 @@ func (me *Project) load() (numSheetVers int) {
 			if err != nil {
 				panic(err)
 			}
+
 			var work = struct {
 				sync.WaitGroup
 				sync.Mutex
@@ -254,9 +260,25 @@ func (me *Project) load() (numSheetVers int) {
 					numSheetVers++
 
 					work.Add(1)
-					go func(sv *SheetVer) {
-						data := fileRead(sv.fileName)
-						sv.id = contentHashStr(data)
+					fileinfo, err := f.Info()
+					if err != nil {
+						panic(err)
+					}
+					go func(sv *SheetVer, fileinfo os.FileInfo) {
+						if fileinfo.ModTime().UnixNano() < dtdatajson.UnixNano() {
+							work.Lock()
+							for id, filename := range me.data.Sv.IdsToFileNames {
+								if filename == sv.fileName {
+									sv.id = id
+									break
+								}
+							}
+							work.Unlock()
+						}
+						if sv.id == "" {
+							data := fileRead(sv.fileName)
+							sv.id = contentHashStr(data)
+						}
 						work.Lock()
 						me.data.Sv.fileNamesToIds[sv.fileName] = sv.id
 						me.data.Sv.IdsToFileNames[sv.id] = sv.fileName
@@ -270,7 +292,7 @@ func (me *Project) load() (numSheetVers int) {
 							panic(err)
 						}
 						work.Done()
-					}(sheetver)
+					}(sheetver, fileinfo)
 				}
 			}
 			work.Wait()

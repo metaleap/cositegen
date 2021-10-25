@@ -249,12 +249,12 @@ func (me *Series) genBookPrep(sg *siteGen) {
 
 	mkDir(".ccache/.svgpng")
 	for i, svgfilepath := range sheetsvgfilepaths {
-		printLn(time.Now().Format("15:04"), "shsvg", i, "/", len(sheetsvgfilepaths))
+		printLn(time.Now().Format("15:04:05"), "shsvg", i, "/", len(sheetsvgfilepaths))
 		imgSvgToPng(svgfilepath, svgfilepath+".png", nil, 0, 1200, nil)
 	}
 	repl := strings.NewReplacer("./", strings.TrimSuffix(book.genPrepDirPath, "/")+"/")
 	for i, svgfilepath := range pagesvgfilepaths {
-		printLn(time.Now().Format("15:04"), "pgsvg", i, "/", len(pagesvgfilepaths))
+		printLn(time.Now().Format("15:04:05"), "pgsvg", i, "/", len(pagesvgfilepaths))
 		var work sync.WaitGroup
 		work.Add(1)
 		go imgSvgToPng(svgfilepath, svgfilepath+".png", repl, 0, 1200, work.Done)
@@ -611,7 +611,7 @@ func (*Series) genBookBuildCbz(outFilePath string, srcFilePaths []string, lang s
 
 	for i, srcfilepath := range srcFilePaths {
 		filename := filepath.Base(srcfilepath)
-		if strings.HasPrefix(filename, "dp") && strings.HasSuffix(filename, ".svg.png") {
+		if strings.HasPrefix(filename, "dp") && strings.Contains(filename, ".svg.") && strings.HasSuffix(filename, ".png") {
 			filename = "p" + itoa0(i+1, 3) + ".png"
 		}
 		var data = fileRead(srcfilepath)
