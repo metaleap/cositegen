@@ -98,7 +98,7 @@ func imgSvgToPng(svgFilePath string, pngFilePath string, repl *strings.Replacer,
 	}
 	svgdata := fileRead(svgFilePath)
 	chash := contentHashStr(svgdata)
-	tmpfilepath := ".ccache/.svgpng/" + chash + itoa(reSize) + ".png"
+	tmpfilepath := ".ccache/.svgpng/" + chash + "." + itoa(reSize) + ".png"
 	if fileStat(tmpfilepath) == nil {
 		if repl != nil {
 			svgFilePath += ".fix.svg"

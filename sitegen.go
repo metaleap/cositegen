@@ -199,12 +199,14 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 
 	if me.book != nil {
 		timedLogged("SiteGen: generating cbz/pdf files...", func() string {
-			numfileswritten := 0
+			numfileswritten, dirpath := 0, ".books/"+me.book.Book.Name
 			mkDir(".books")
-			rmDir(".books/" + me.book.Book.Name)
-			mkDir(".books/" + me.book.Book.Name)
+			rmDir(dirpath)
+			mkDir(dirpath)
 			me.book.genBookPrep(&me)
 			var work sync.WaitGroup
+			work.Add(1)
+			go me.book.genBookTitleTocFacesPng(filepath.Join(dirpath, "cover.png"), &me.book.Book.config.CoverSize, 0, work.Done)
 			for lidx, lang := range App.Proj.Langs {
 				if lidx > 0 && os.Getenv("BOOKMIN") != "" {
 					break
@@ -223,7 +225,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 							}
 							work.Add(1)
 							numfileswritten++
-							go me.book.genBookBuild(".books/"+me.book.Book.Name, lang, bgcol, dirrtl, lores, work.Done)
+							go me.book.genBookBuild(dirpath, lang, bgcol, dirrtl, lores, work.Done)
 						}
 					}
 				}
