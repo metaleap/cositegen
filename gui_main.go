@@ -428,7 +428,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	importlist := map[string]string{}
 	for svid, panels := range App.Proj.data.Sv.textRects {
 		if svid != sv.id {
-			sheetfilename := App.Proj.data.Sv.IdsToFileNames[svid]
+			sheetfilename := App.Proj.data.Sv.IdsToFileMeta[svid].FilePath
 			if sheetfilename == "" {
 				panic("expired hash-ID in texts.json: " + svid)
 			}

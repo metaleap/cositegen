@@ -18,6 +18,12 @@ import (
 type Any = interface{}
 type A = map[string]string
 
+type FileInfo struct {
+	FilePath string
+	ModTime  int64
+	Size     int64
+}
+
 type FilePathsSortingByFileSize []string
 
 func (me FilePathsSortingByFileSize) Len() int          { return len(me) }

@@ -220,7 +220,7 @@ func pngOpt(pngFilePath string) bool {
 	}
 	if filedata, err := os.ReadFile(pngFilePath); err == nil {
 		newfilehash := string(contentHashStr(filedata))
-		wasknown1, wasknown2 := App.Proj.data.Sv.ById[curfilehash] != nil, App.Proj.data.Sv.IdsToFileNames[curfilehash] != ""
+		wasknown1, wasknown2 := App.Proj.data.Sv.ById[curfilehash] != nil, App.Proj.data.Sv.IdsToFileMeta[curfilehash].FilePath != ""
 		_, wasknown3 := App.Proj.data.Sv.textRects[curfilehash]
 		crashit := newfilehash != curfilehash && (wasknown1 || wasknown2 || wasknown3)
 		if crashit {
@@ -230,9 +230,9 @@ func pngOpt(pngFilePath string) bool {
 				delete(App.Proj.data.Sv.ById, curfilehash)
 			}
 			if wasknown2 {
-				App.Proj.data.Sv.IdsToFileNames[newfilehash] = App.Proj.data.Sv.IdsToFileNames[curfilehash]
-				delete(App.Proj.data.Sv.IdsToFileNames, curfilehash)
-				App.Proj.data.Sv.fileNamesToIds[App.Proj.data.Sv.IdsToFileNames[newfilehash]] = newfilehash
+				App.Proj.data.Sv.IdsToFileMeta[newfilehash] = App.Proj.data.Sv.IdsToFileMeta[curfilehash]
+				delete(App.Proj.data.Sv.IdsToFileMeta, curfilehash)
+				App.Proj.data.Sv.fileNamesToIds[App.Proj.data.Sv.IdsToFileMeta[newfilehash].FilePath] = newfilehash
 			}
 			if wasknown3 {
 				App.Proj.data.Sv.textRects[newfilehash] = App.Proj.data.Sv.textRects[curfilehash]

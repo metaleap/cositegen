@@ -245,7 +245,7 @@ func (me *Series) genBookPrep(sg *siteGen) {
 		me.genBookTiTocPageSvg(svgfilepath, lang, pgnrs)
 	}
 	pagesvgfilepaths = append(pagesvgfilepaths, me.genBookDirtPageSvgs()...)
-	me.genBookTitleTocFacesPng(filepath.Join(book.genPrepDirPath, "faces.png"), &book.config.PageSize, 160, nil)
+	me.genBookTitleTocFacesPng(filepath.Join(book.genPrepDirPath, "faces.png"), &book.config.PageSize, 170, nil)
 
 	mkDir(".ccache/.svgpng")
 	for i, svgfilepath := range sheetsvgfilepaths {
@@ -290,7 +290,7 @@ func (me *Series) genBookSheetPageSvg(outFilePath string, sheetImgFilePath strin
 		width="` + itoa(mm1*mmwidth) + `" height="` + itoa(mm1*mmheight) + `"
 		xlink:href="./` + filepath.Base(sheetImgFilePath) + `" />`
 
-	svg += `<text dx="0" dy="0" x="` + itoa(pgleft*mm1) + `" y="` + itoa(me.Book.config.PageSize.PxHeight-2*mm1) + `">` + itoa0(pgNr, 3) + `</text>`
+	svg += `<text dx="0" dy="0" x="` + itoa(pgleft*mm1) + `" y="` + itoa(me.Book.config.PageSize.PxHeight-mm1) + `">` + itoa0(pgNr, 3) + `</text>`
 
 	svg += `</svg>`
 	fileWrite(outFilePath, []byte(svg))

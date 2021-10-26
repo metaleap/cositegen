@@ -74,7 +74,7 @@ type Project struct {
 	data         struct {
 		Sv struct {
 			fileNamesToIds map[string]string
-			IdsToFileNames map[string]string
+			IdsToFileMeta  map[string]FileInfo
 			ById           map[string]*SheetVerData
 
 			textRects map[string][][]ImgPanelArea
@@ -181,8 +181,8 @@ func (me *Project) load() (numSheetVers int) {
 		me.data.Sv.textRects = map[string][][]ImgPanelArea{}
 	}
 	me.data.Sv.fileNamesToIds = map[string]string{}
-	if me.data.Sv.IdsToFileNames == nil {
-		me.data.Sv.IdsToFileNames = map[string]string{}
+	if me.data.Sv.IdsToFileMeta == nil {
+		me.data.Sv.IdsToFileMeta = map[string]FileInfo{}
 	}
 	if me.data.Sv.ById == nil {
 		me.data.Sv.ById = map[string]*SheetVerData{}
@@ -264,11 +264,11 @@ func (me *Project) load() (numSheetVers int) {
 					if err != nil {
 						panic(err)
 					}
-					go func(sv *SheetVer, fileinfo os.FileInfo) {
-						if fileinfo.ModTime().UnixNano() < dtdatajson.UnixNano() {
+					go func(sv *SheetVer, svfileinfo os.FileInfo) {
+						if modtime := svfileinfo.ModTime().UnixNano(); modtime < dtdatajson.UnixNano() {
 							work.Lock()
-							for id, filename := range me.data.Sv.IdsToFileNames {
-								if filename == sv.fileName {
+							for id, filemeta := range me.data.Sv.IdsToFileMeta {
+								if filemeta.FilePath == sv.fileName && filemeta.ModTime == modtime && filemeta.Size == svfileinfo.Size() {
 									sv.id = id
 									break
 								}
@@ -281,7 +281,7 @@ func (me *Project) load() (numSheetVers int) {
 						}
 						work.Lock()
 						me.data.Sv.fileNamesToIds[sv.fileName] = sv.id
-						me.data.Sv.IdsToFileNames[sv.id] = sv.fileName
+						me.data.Sv.IdsToFileMeta[sv.id] = FileInfo{sv.fileName, svfileinfo.ModTime().UnixNano(), svfileinfo.Size()}
 						work.Unlock()
 						if sv.data = me.data.Sv.ById[sv.id]; sv.data != nil {
 							sv.data.parentSheetVer = sv
@@ -326,7 +326,7 @@ func (me *Project) load() (numSheetVers int) {
 		}
 	}
 	for svid := range me.data.Sv.ById {
-		if me.data.Sv.IdsToFileNames[svid] == "" {
+		if _, exists := me.data.Sv.IdsToFileMeta[svid]; !exists {
 			delete(me.data.Sv.ById, svid)
 			rmDir(".ccache/" + svid)
 		}
