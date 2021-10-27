@@ -529,7 +529,8 @@ func (me *Series) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool,
 		if dirRtl {
 			tx = w - pw - px
 		}
-		svg += `<g id="` + gid + `" transform="translate(` + itoa(tx) + ` ` + itoa(py) + `)">`
+		svg += `<g id="` + gid + `" clip-path="url(#c` + gid + `)" transform="translate(` + itoa(tx) + ` ` + itoa(py) + `)">`
+		svg += `<defs><clipPath id="c` + gid + `"><rect x="0" y="0"  width="` + itoa(pw) + `" height="` + itoa(ph) + `"></rect></clipPath></defs>`
 		if bgCol {
 			panelbgpngsrcfilepath, err := filepath.Abs(filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png"))
 			if err != nil {

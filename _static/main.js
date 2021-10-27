@@ -45,9 +45,6 @@ function onDualIntTextInputKeyDown(evt) {
 }
 
 function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm, panelSvgTextClsBoxPoly, panelSvgTextBoxPolyStrokeWidthCm) {
-    if (px1cm < 472) // special-casing the 2 lodpi frog sheets
-        px1cm *= 1.33;
-
     const pid = "p" + panelIdx;
     let innerhtml = "";
     const pxfont = parseInt(px1cm * svgTxtFontSizeCmA4);
