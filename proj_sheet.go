@@ -44,6 +44,7 @@ type SheetVerData struct {
 	hasBgCol        bool
 
 	PxCm       float64
+	FontFactor float64   `json:",omitempty"`
 	GrayDistr  []int     `json:",omitempty"`
 	PanelsTree *ImgPanel `json:",omitempty"`
 }
@@ -539,11 +540,15 @@ func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang strin
 			linex = pxcm * App.Proj.Gen.PanelSvgText.BoxPolyDxCmA4
 		}
 		fontSizeCmA4, perLineDyCmA4 := App.Proj.Gen.PanelSvgText.FontSizeCmA4, App.Proj.Gen.PanelSvgText.PerLineDyCmA4
-		if me.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4 > 0.1 { // !=0 in float
+		if me.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4 > 0.01 { // !=0 in float
 			fontSizeCmA4 = me.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4
 		}
-		if me.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4 > 0.1 { // !=0 in float
+		if me.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4 > 0.01 { // !=0 in float
 			perLineDyCmA4 = me.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4
+		}
+		if me.data.FontFactor > 0.01 {
+			fontSizeCmA4 *= me.data.FontFactor
+			perLineDyCmA4 *= me.data.FontFactor
 		}
 		s += imgSvgText(&pta, lang, pxcm, int(linex), fontSizeCmA4, perLineDyCmA4, forHtml)
 		s += "</svg>"

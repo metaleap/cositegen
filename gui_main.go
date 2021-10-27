@@ -30,7 +30,7 @@ func guiMain(r *http.Request, notice string) []byte {
 			s += csssel + "{" + strings.Replace(strings.Join(csslines, ";"), "./", dirpref+"/", -1) + "}"
 		}
 	}
-	s += "</style><script type='text/javascript' language='javascript'>const $ = window, svgTxtPerLineDyCmA4 = " + ftoa(App.Proj.Gen.PanelSvgText.PerLineDyCmA4, 8) + ", svgTxtFontSizeCmA4 = " + ftoa(App.Proj.Gen.PanelSvgText.FontSizeCmA4, 8) + ", numImagePanelTextAreas = " + itoa(App.Proj.MaxImagePanelTextAreas) + ";</script><script src='/main.js' type='text/javascript' language='javascript'></script>"
+	s += "</style><script type='text/javascript' language='javascript'>const $ = window, svgTxtPerLineDyCmA4 = " + ftoa(App.Proj.Gen.PanelSvgText.PerLineDyCmA4, 8) + ", numImagePanelTextAreas = " + itoa(App.Proj.MaxImagePanelTextAreas) + ";</script><script src='/main.js' type='text/javascript' language='javascript'></script>"
 	s += "</head><body><form method='POST' action='/' id='main_form' novalidate='novalidate'>" + guiHtmlInput("hidden", "main_focus_id", fv("main_focus_id"), nil)
 	if notice != "" {
 		s += "<div class='notice'>" + hEsc(notice) + "</div>"
@@ -83,13 +83,13 @@ func guiMain(r *http.Request, notice string) []byte {
 				s += "<hr/><div id='uipane'>" + guiSheetScan(chapter, fv) + "</div>"
 			} else if len(sheet.versions) > 0 {
 				App.Gui.State.Sel.Ver, _ = guiGetFormSel(fv("sheetver"), sheet).(*SheetVer)
+				if App.Gui.State.Sel.Ver == nil {
+					App.Gui.State.Sel.Ver = sheet.versions[0]
+				}
 				s += guiHtmlList("sheetver", "", false, len(sheet.versions), func(i int) (string, string, bool) {
 					sheetver := sheet.versions[i]
 					return sheetver.fileName, time.Unix(0, sheetver.dateTimeUnixNano).Format("2006-01-02"), App.Gui.State.Sel.Ver != nil && App.Gui.State.Sel.Ver.fileName == sheetver.fileName
 				})
-				if App.Gui.State.Sel.Ver == nil {
-					App.Gui.State.Sel.Ver = sheet.versions[0]
-				}
 				if sheetver := App.Gui.State.Sel.Ver; sheetver != nil {
 					havefullgui = true
 					s += "<hr/><div id='uipane'>" + guiSheetEdit(sheetver, fv, &shouldsavemeta) + "</div>"
@@ -322,7 +322,14 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	if bwsrc != sv.data.bwSmallFilePath && bwsrc != sv.data.bwFilePath {
 		bwsrc = sv.data.bwSmallFilePath
 	}
-	s = "<h3>Full Sheet:&nbsp;"
+	fontSizeCmA4 := App.Proj.Gen.PanelSvgText.FontSizeCmA4
+	if sv.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4 > 0.01 {
+		fontSizeCmA4 = sv.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4
+	}
+	if sv.data.FontFactor > 0.01 {
+		fontSizeCmA4 *= sv.data.FontFactor
+	}
+	s = `<script type="text/javascript" language="javascript">const svgTxtFontSizeCmA4 = ` + ftoa(fontSizeCmA4, 8) + `;</script><h3>Full Sheet:&nbsp;`
 	if sw, bw := sv.data.PanelsTree.Rect.Max.X, int(App.Proj.BwSmallWidth); sw > bw {
 		s += guiHtmlList("srcpx", "", true, 2, func(i int) (string, string, bool) {
 			if i == 1 {
