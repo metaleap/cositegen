@@ -19,7 +19,7 @@ var browserCmd = []string{"",
 	"--disk-cache-size=128"}
 
 func main() {
-	App.StaticFilesDirPath = filepath.Join(os.Getenv("HOME"), "c/go/src/github.com/metaleap/cositegen/_static")
+	App.StaticFilesDirPath = filepath.Join(os.Getenv("GOPATH"), "src/github.com/metaleap/cositegen/_static")
 	appDetectBrowser()
 	timedLogged("Loading project (comicsite.json  &  texts.json  &  .ccache/data.json)...", func() string {
 		numsheets := App.Proj.load()
