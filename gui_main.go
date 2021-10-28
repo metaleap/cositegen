@@ -30,7 +30,7 @@ func guiMain(r *http.Request, notice string) []byte {
 			s += csssel + "{" + strings.Replace(strings.Join(csslines, ";"), "./", dirpref+"/", -1) + "}"
 		}
 	}
-	s += "</style><script type='text/javascript' language='javascript'>const $ = window, svgTxtPerLineDyCmA4 = " + ftoa(App.Proj.Gen.PanelSvgText.PerLineDyCmA4, 8) + ", numImagePanelTextAreas = " + itoa(App.Proj.MaxImagePanelTextAreas) + ";</script><script src='/main.js' type='text/javascript' language='javascript'></script>"
+	s += "</style><script type='text/javascript' language='javascript'>const $ = window, numImagePanelTextAreas = " + itoa(App.Proj.MaxImagePanelTextAreas) + ";</script><script src='/main.js' type='text/javascript' language='javascript'></script>"
 	s += "</head><body><form method='POST' action='/' id='main_form' novalidate='novalidate'>" + guiHtmlInput("hidden", "main_focus_id", fv("main_focus_id"), nil)
 	if notice != "" {
 		s += "<div class='notice'>" + hEsc(notice) + "</div>"
@@ -322,14 +322,18 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	if bwsrc != sv.data.bwSmallFilePath && bwsrc != sv.data.bwFilePath {
 		bwsrc = sv.data.bwSmallFilePath
 	}
-	fontSizeCmA4 := App.Proj.Gen.PanelSvgText.FontSizeCmA4
+	fontSizeCmA4, perLineDyCmA4 := App.Proj.Gen.PanelSvgText.FontSizeCmA4, App.Proj.Gen.PanelSvgText.PerLineDyCmA4
 	if sv.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4 > 0.01 {
 		fontSizeCmA4 = sv.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4
 	}
+	if sv.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4 > 0.01 {
+		perLineDyCmA4 = sv.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4
+	}
 	if sv.data.FontFactor > 0.01 {
 		fontSizeCmA4 *= sv.data.FontFactor
+		perLineDyCmA4 *= sv.data.FontFactor
 	}
-	s = `<script type="text/javascript" language="javascript">const svgTxtFontSizeCmA4 = ` + ftoa(fontSizeCmA4, 8) + `;</script><h3>Full Sheet:&nbsp;`
+	s = `<script type="text/javascript" language="javascript">const svgTxtFontSizeCmA4 = ` + ftoa(fontSizeCmA4, 8) + `, svgTxtPerLineDyCmA4 = ` + ftoa(perLineDyCmA4, 8) + `;</script><h3>Full Sheet:&nbsp;`
 	if sw, bw := sv.data.PanelsTree.Rect.Max.X, int(App.Proj.BwSmallWidth); sw > bw {
 		s += guiHtmlList("srcpx", "", true, 2, func(i int) (string, string, bool) {
 			if i == 1 {

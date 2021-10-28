@@ -313,7 +313,7 @@ func (me *Series) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs map
 			</style>
 			<image x="0" y="0" width="100%" height="100%" xlink:href="` + filepath.Join(me.Book.genPrepDirPath, "faces.png") + `" />`
 
-	textx, chapcount, pgnrlast := itoa(h/9), 0, 0
+	chapcount, pgnrlast := 0, 0
 	for _, chap := range me.Chapters {
 		pgnr := pgNrs[chap]
 		if pgnr == pgnrlast {
@@ -322,8 +322,8 @@ func (me *Series) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs map
 		pgnrlast, chapcount = pgnr, chapcount+1
 	}
 
-	htoc, cc := 62.0/float64(chapcount), 0
-	svg += `<text class="title" x="` + textx + `px" y="30%" dx="0" dy="0">` +
+	textx, htoc, cc := h/9, 62.0/float64(chapcount), 0
+	svg += `<text class="title" x="` + itoa(textx) + `px" y="30%" dx="0" dy="0">` +
 		htmlEscdToXmlEsc(hEsc(locStr(me.Book.Title, lang))) + `</text>`
 
 	pgnrlast = 0
@@ -332,7 +332,7 @@ func (me *Series) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs map
 		if pgnr == pgnrlast {
 			continue
 		}
-		svg += `<text class="toc" x="` + textx + `px" y="` + itoa(texty) + `%" dx="0" dy="0">` +
+		svg += `<text class="toc" x="` + itoa(textx*2) + `px" y="` + itoa(texty) + `%" dx="0" dy="0">` +
 			htmlEscdToXmlEsc(hEsc(locStr(chap.Title, lang)+"············"+App.Proj.textStr(lang, "BookTocPagePrefix")+strIf(pgnr < 10, "0", "")+itoa(pgnr))) + `</text>`
 		pgnrlast, cc = pgnr, cc+1
 	}
