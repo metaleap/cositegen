@@ -608,23 +608,18 @@ func (*Series) genBookBuildCbz(outFilePath string, srcFilePaths []string, lang s
 		panic(err)
 	}
 	defer outfile.Close()
-	zw := zip.NewWriter(outfile)
 
+	zw, numdigits := zip.NewWriter(outfile), len(strconv.Itoa(len(srcFilePaths)))
 	for i, srcfilepath := range srcFilePaths {
-		filename := filepath.Base(srcfilepath)
-		if strings.HasPrefix(filename, "dp") && strings.Contains(filename, ".svg.") && strings.HasSuffix(filename, ".png") {
-			filename = "p" + itoa0(i+1, 3) + ".png"
-		}
-		var data = fileRead(srcfilepath)
-		if fw, err := zw.Create(filename); err != nil {
+		if fw, err := zw.Create(itoa0(i+1, numdigits) + filepath.Ext(srcfilepath)); err != nil {
 			panic(err)
 		} else {
-			io.Copy(fw, bytes.NewReader(data))
+			io.Copy(fw, bytes.NewReader(fileRead(srcfilepath)))
 		}
 	}
-
 	if err := zw.Close(); err != nil {
 		panic(err)
 	}
+
 	_ = outfile.Sync()
 }
