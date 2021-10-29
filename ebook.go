@@ -27,12 +27,17 @@ type DualSize struct {
 }
 
 type BookBuild struct {
-	Config         string
-	Book           string
-	Pub            bool
-	InclRtl        bool
-	InclBw         bool
-	InclLangs      bool
+	Config      string
+	Book        string
+	Pub         bool
+	InclRtl     bool
+	InclBw      bool
+	InclLangs   bool
+	NoCol       bool
+	NoHiRes     bool
+	NoLoRes     bool
+	NoDirtPages bool
+
 	OverrideBook   BookDef
 	OverrideConfig BookConfig
 	OverrideFilter BookFilter
@@ -271,6 +276,9 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 		}
 		pgnrs := map[*Chapter]int{}
 		for _, bgcol := range []bool{false, true} {
+			if bgcol && me.NoCol {
+				continue
+			}
 			for _, dirrtl := range []bool{false, true} {
 				if dirrtl && !me.InclRtl {
 					continue
@@ -304,21 +312,29 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 		pagesvgfilepaths = append(pagesvgfilepaths, svgfilepath)
 		me.genBookTiTocPageSvg(svgfilepath, lang, pgnrs)
 	}
-	pagesvgfilepaths = append(pagesvgfilepaths, me.genBookDirtPageSvgs()...)
-	me.genBookTitleTocFacesPng(filepath.Join(me.genPrepDirPath, "faces.png"), &config.PageSize, 170, nil)
+	if !me.NoDirtPages {
+		pagesvgfilepaths = append(pagesvgfilepaths, me.genBookDirtPageSvgs()...)
+		me.genBookTitleTocFacesPng(filepath.Join(me.genPrepDirPath, "faces.png"), &config.PageSize, 170, 0, nil)
+	}
 
 	mkDir(".ccache/.svgpng")
 	for i, svgfilepath := range sheetsvgfilepaths {
 		printLn("\t\t", time.Now().Format("15:04:05"), "shsvg", i, "/", len(sheetsvgfilepaths))
-		imgSvgToPng(svgfilepath, svgfilepath+".png", nil, 0, 1200, nil)
+		if lrw := config.PxLoResWidth; lrw > 0 && me.NoHiRes {
+			imgSvgToPng(svgfilepath, svgfilepath+".png", nil, lrw, 0, nil)
+		} else {
+			imgSvgToPng(svgfilepath, svgfilepath+".png", nil, 0, 1200, nil)
+		}
 	}
 	repl := strings.NewReplacer("./", strings.TrimSuffix(me.genPrepDirPath, "/")+"/")
 	for i, svgfilepath := range pagesvgfilepaths {
 		printLn("\t\t", time.Now().Format("15:04:05"), "pgsvg", i, "/", len(pagesvgfilepaths))
 		var work sync.WaitGroup
-		work.Add(1)
-		go imgSvgToPng(svgfilepath, svgfilepath+".png", repl, 0, 1200, work.Done)
-		if lrw := config.PxLoResWidth; lrw > 0 {
+		if !me.NoHiRes {
+			work.Add(1)
+			go imgSvgToPng(svgfilepath, svgfilepath+".png", repl, 0, 1200, work.Done)
+		}
+		if lrw := config.PxLoResWidth; lrw > 0 && !me.NoLoRes {
 			work.Add(1)
 			go imgSvgToPng(svgfilepath, svgfilepath+"."+itoa(lrw)+".png", repl, lrw, 0, work.Done)
 		}
@@ -337,9 +353,10 @@ func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath st
 			text { ` + strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + "; " + book.CssPgNr + ` }
 		</style>`
 
-	mmleft, mmwidth, pgleft := 4, config.PageSize.MmWidth-18, 6
+	const bs, bl = 4, 14
+	mmleft, mmwidth, pgleft := bs, config.PageSize.MmWidth-(bs+bl), 6
 	if (pgNr % 2) != 0 {
-		mmleft, pgleft = 14, config.PageSize.MmWidth-12
+		mmleft, pgleft = bl, config.PageSize.MmWidth-12
 	}
 	mmheight := int(float64(mmwidth) / (float64(sheetImgSize[0]) / float64(sheetImgSize[1])))
 	if mmheight > config.PageSize.MmHeight {
@@ -347,9 +364,9 @@ func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath st
 	}
 	mmtop := (config.PageSize.MmHeight - mmheight) / 2
 
-	svg += `<image dx="0" dy="0" x="` + itoa(mm1*mmleft) + `" y="` + itoa(mm1*mmtop) + `"
+	svg += `<image x="` + itoa(mm1*mmleft) + `" y="` + itoa(mm1*mmtop) + `"
 		width="` + itoa(mm1*mmwidth) + `" height="` + itoa(mm1*mmheight) + `"
-		xlink:href="./` + filepath.Base(sheetImgFilePath) + `" />`
+		xlink:href="./` + filepath.Base(sheetImgFilePath) + `" dx="0" dy="0" />`
 
 	svg += `<text dx="0" dy="0" x="` + itoa(pgleft*mm1) + `" y="` + itoa(config.PageSize.PxHeight-mm1) + `">` + itoa0(pgNr, 3) + `</text>`
 
@@ -405,6 +422,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs 
 
 func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 	config, series := &me.config, me.series
+	w, h := config.PageSize.PxWidth, config.PageSize.PxHeight
 	var svs []*SheetVer
 	rand.Seed(time.Now().UnixNano())
 	chaps := series.Chapters
@@ -425,7 +443,6 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 
 	var isv int
 	for i := 0; i < 7; i++ {
-		w, h := config.PageSize.PxWidth, config.PageSize.PxHeight
 		cw, ch := w/perrowcol, h/perrowcol
 		svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 			xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -452,7 +469,7 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 	return
 }
 
-func (me *BookBuild) genBookTitleTocFacesPng(outFilePath string, size *DualSize, inkColor uint8, onDone func()) {
+func (me *BookBuild) genBookTitleTocFacesPng(outFilePath string, size *DualSize, inkColor uint8, mmCenterGap int, onDone func()) {
 	if onDone != nil {
 		defer onDone()
 	}
@@ -516,7 +533,13 @@ func (me *BookBuild) genBookTitleTocFacesPng(outFilePath string, size *DualSize,
 	}
 	work.Wait()
 
-	numcols, numrows := 0, 0
+	for len(faces) < 4 {
+		for img, rect := range faces {
+			faces[img.SubImage(img.Bounds()).(*image.Gray)] = rect
+		}
+	}
+
+	numcols, numrows, numnope, wantall, pxcentergap := 0, 0, 0, mmCenterGap != 0, int(float64(mmCenterGap)*(float64(size.PxWidth)/float64(size.MmWidth)))
 	{
 		n, grids := len(faces), make([]int, 0, len(faces)/4)
 		for _, min := range []int{2, 1} {
@@ -529,10 +552,18 @@ func (me *BookBuild) genBookTitleTocFacesPng(outFilePath string, size *DualSize,
 				break
 			}
 		}
-		ratio := float64(size.PxWidth) / float64(size.PxHeight)
+		ratio := float64(size.PxWidth-pxcentergap) / float64(size.PxHeight)
 		sort.Slice(grids, func(i int, j int) bool {
 			w1, h1 := grids[i], n/grids[i]
 			w2, h2 := grids[j], n/grids[j]
+			if mmCenterGap != 0 {
+				if (w1%2) == 0 && (w2%2) != 0 {
+					return true
+				}
+				if (w1%2) != 0 && (w2%2) == 0 {
+					return false
+				}
+			}
 			r1, r2 := float64(w1)/float64(h1), float64(w2)/float64(h2)
 			d1, d2 := n-(w1*h1), n-(w2*h2)
 			if r1 == r2 {
@@ -543,15 +574,27 @@ func (me *BookBuild) genBookTitleTocFacesPng(outFilePath string, size *DualSize,
 		})
 		numcols, numrows = grids[0], n/grids[0]
 	}
+	if diff := len(faces) - (numrows * numcols); wantall && diff > 0 {
+		numrows += (1 + (diff / numcols))
+		if numnope = (numrows * numcols) - len(faces); numnope > 2 {
+			numnope = 2
+		}
+	}
 
-	cellw, cellh := size.PxWidth/numcols, size.PxHeight/numrows
+	cellw, cellh := (size.PxWidth-pxcentergap)/numcols, size.PxHeight/numrows
 	img := image.NewGray(image.Rect(0, 0, size.PxWidth, size.PxHeight))
 	imgFill(img, image.Rect(0, 0, size.PxWidth, size.PxHeight), color.Gray{255})
 
 	var fidx int
 	for fimg, frect := range faces {
 		icol, irow, pad := fidx%numcols, fidx/numcols, size.PxHeight/50
+		if numnope > 0 && irow == numrows-1 {
+			icol += numnope
+		}
 		cx, cy, fw, fh := cellw*icol, cellh*irow, frect.Dx(), frect.Dy()
+		if pxcentergap != 0 && icol >= (numcols/2) {
+			cx += pxcentergap
+		}
 		sf := math.Min(float64(cellw-pad)/float64(fw), float64(cellh-pad)/float64(fh)) //scale factor
 		dw, dh := int(float64(fw)*sf), int(float64(fh)*sf)
 		dx, dy := cx+((cellw-dw)/2), cy+((cellh-dh)/2)
@@ -628,7 +671,9 @@ func (me *BookBuild) genBookBuild(outDirPath string, lang string, bgCol bool, di
 		} else {
 			idp = (idp + 1) % 7
 		}
-		srcfilepaths = append(srcfilepaths, srcfilepath)
+		if !me.NoDirtPages {
+			srcfilepaths = append(srcfilepaths, srcfilepath)
+		}
 	}
 	for _, chap := range series.Chapters {
 		for _, sheet := range chap.sheets {
@@ -641,9 +686,11 @@ func (me *BookBuild) genBookBuild(outDirPath string, lang string, bgCol bool, di
 			pgnr++
 		}
 	}
-	for numtrailingempties := 0; !(numtrailingempties >= 4 && (len(srcfilepaths)%4) == 0 && len(srcfilepaths) >= config.MinPageCount); numtrailingempties++ {
-		srcfilepaths = append(srcfilepaths, filepath.Join(me.genPrepDirPath, "dp"+itoa(idp)+".svg"+strIf(loRes, "."+itoa(config.PxLoResWidth), "")+".png"))
-		idp = (idp + 1) % 7
+	if !me.NoDirtPages {
+		for numtrailingempties := 0; !(numtrailingempties >= 4 && (len(srcfilepaths)%4) == 0 && len(srcfilepaths) >= config.MinPageCount); numtrailingempties++ {
+			srcfilepaths = append(srcfilepaths, filepath.Join(me.genPrepDirPath, "dp"+itoa(idp)+".svg"+strIf(loRes, "."+itoa(config.PxLoResWidth), "")+".png"))
+			idp = (idp + 1) % 7
+		}
 	}
 
 	var work sync.WaitGroup

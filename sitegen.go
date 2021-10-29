@@ -82,6 +82,9 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 			bb := App.Proj.BookBuilds[k]
 			bb.mergeOverrides()
 			bb.series = bb.book.toSeries()
+			if bb.NoCol {
+				bb.InclBw = true
+			}
 			me.books[k] = bb
 		}
 	}
@@ -199,7 +202,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 				var work sync.WaitGroup
 				work.Add(2)
 				go bb.genBookPrep(&me, work.Done)
-				go bb.genBookTitleTocFacesPng(filepath.Join(dirpath, "cover.png"), &bb.config.CoverSize, 0, work.Done)
+				go bb.genBookTitleTocFacesPng(filepath.Join(dirpath, "cover.png"), &bb.config.CoverSize, 0, 10, work.Done)
 				work.Wait()
 
 				for lidx, lang := range App.Proj.Langs {
@@ -207,7 +210,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 						continue
 					}
 					for _, bgcol := range []bool{true, false} {
-						if (!bgcol) && !bb.InclBw {
+						if (bgcol && bb.NoCol) || ((!bgcol) && !bb.InclBw) {
 							continue
 						}
 						for _, dirrtl := range []bool{false, true} {
@@ -215,8 +218,8 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 								continue
 							}
 							for _, lores := range []bool{false, true} {
-								if lores && bb.config.PxLoResWidth == 0 {
-									break
+								if (lores && (bb.config.PxLoResWidth == 0 || bb.NoLoRes)) || (bb.NoHiRes && !lores) {
+									continue
 								}
 								work.Add(1)
 								go bb.genBookBuild(dirpath, lang, bgcol, dirrtl, lores, work.Done)
