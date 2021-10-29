@@ -54,16 +54,16 @@ func appOnExit() {
 	App.Proj.save()
 }
 
-func appMainAction(fromGui bool, name string, args map[string]bool) string {
+func appMainAction(fromGui bool, name string, args map[string]struct{}) string {
 	if appMainActions[name] {
 		return "Action '" + name + "' already in progress and not yet done."
 	}
 	appMainActions[name] = true
 
-	var action func(map[string]bool)
+	var action func(map[string]struct{})
 	switch name {
 	case "sitegen", "now":
-		action = func(flags map[string]bool) { siteGen{}.genSite(fromGui, flags) }
+		action = func(flags map[string]struct{}) { siteGen{}.genSite(fromGui, flags) }
 	default:
 		s := "Unknown action: '" + name + "', try one of these:"
 		for name, desc := range AppMainActions {

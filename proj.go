@@ -12,8 +12,9 @@ import (
 type Project struct {
 	Desc        map[string]string
 	Series      []*Series
-	Books       []*BookDef
+	BookDefs    map[string]*BookDef
 	BookConfigs map[string]*BookConfig
+	BookBuilds  map[string]*BookBuild
 	Langs       []string
 	Qualis      []struct {
 		Name     string
@@ -191,16 +192,25 @@ func (me *Project) load() (numSheetVers int) {
 		me.data.PngOpt = map[string][]string{}
 	}
 
-	for _, book := range me.Books {
-		if len(book.Title) == 0 {
-			book.Title = map[string]string{me.Langs[0]: book.Name}
+	if me.BookDefs == nil {
+		me.BookDefs = map[string]*BookDef{}
+	}
+	if me.BookBuilds == nil {
+		me.BookBuilds = map[string]*BookBuild{}
+	}
+	if me.BookConfigs == nil {
+		me.BookConfigs = map[string]*BookConfig{}
+	}
+	for name, bookdef := range me.BookDefs {
+		bookdef.name = name
+		if len(bookdef.Title) == 0 {
+			bookdef.Title = map[string]string{me.Langs[0]: name}
 		}
-		if me.BookConfigs != nil {
-			book.config = me.BookConfigs[book.Config]
-		}
-		if book.config == nil {
-			panic("Unknown book config: '" + book.Config + "'")
-		}
+	}
+	for name, bb := range me.BookBuilds {
+		bb.name = name
+		bb.config = *me.BookConfigs[bb.Config]
+		bb.book = *me.BookDefs[bb.Book]
 	}
 	for _, series := range me.Series {
 		seriesdirpath := "scans/" + series.Name

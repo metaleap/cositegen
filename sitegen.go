@@ -13,8 +13,6 @@ import (
 	"time"
 )
 
-const siteGenBookSeries = false
-
 var (
 	SiteTitleOrig = os.Getenv(strIf(os.Getenv("NOLINKS") == "", "CSG", "CSG_"))
 	SiteTitleEsc  = strings.NewReplacer("<span>", "", "</span>", "", "&bull;", ".").Replace(SiteTitleOrig)
@@ -24,7 +22,7 @@ var (
 type siteGen struct {
 	tmpl       *template.Template
 	series     []*Series
-	book       *Series
+	books      map[string]*BookBuild
 	page       PageGen
 	lang       string
 	bgCol      bool
@@ -74,23 +72,17 @@ type PageGen struct {
 	ChapTitle        string
 }
 
-func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
+func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 	var err error
 	tstart := time.Now()
 	me.series = App.Proj.Series
-	if len(flags) != 0 || siteGenBookSeries {
-		for _, book := range App.Proj.Books {
-			var bookseries *Series
-			if siteGenBookSeries {
-				bookseries = book.toSeries()
-				me.series = append(me.series, bookseries)
-			}
-			if flags != nil && flags[book.Name] && me.book == nil {
-				if bookseries == nil {
-					bookseries = book.toSeries()
-				}
-				me.book = bookseries
-			}
+	if len(flags) != 0 {
+		me.books = map[string]*BookBuild{}
+		for k := range flags {
+			bb := App.Proj.BookBuilds[k]
+			bb.mergeOverrides()
+			bb.series = bb.book.toSeries()
+			me.books[k] = bb
 		}
 	}
 	me.sheetPgNrs = map[*SheetVer]int{}
@@ -161,7 +153,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 		return "for " + itoa(int(numpngs)) + " PNGs & " + itoa(int(numsvgs)) + " SVGs (" + strSize(int(totalsize)) + ") from " + itoa(int(numpanels)) + " panels in " + itoa(int(numsheets)) + " sheets, max panel pic size: " + strSize(int(me.maxPicSize))
 	})
 
-	if me.book == nil {
+	if len(me.books) == 0 {
 		timedLogged("SiteGen: generating markup files...", func() string {
 			numfileswritten := 0
 			me.tmpl, err = template.New("foo").ParseFiles(siteTmplDirName + "/site.html")
@@ -197,42 +189,44 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 		})
 	}
 
-	if me.book != nil {
+	if len(me.books) != 0 {
 		timedLogged("SiteGen: generating cbz/pdf files...", func() string {
-			numfileswritten, dirpath := 0, ".books/"+me.book.Book.Name
 			mkDir(".books")
-			rmDir(dirpath)
-			mkDir(dirpath)
-			me.book.genBookPrep(&me)
-			var work sync.WaitGroup
-			work.Add(1)
-			go me.book.genBookTitleTocFacesPng(filepath.Join(dirpath, "cover.png"), &me.book.Book.config.CoverSize, 0, work.Done)
-			for lidx, lang := range App.Proj.Langs {
-				if lidx > 0 && os.Getenv("BOOKMIN") != "" {
-					break
-				}
-				for _, bgcol := range []bool{false, true} {
-					if bgcol && os.Getenv("BOOKMIN") != "" {
-						break
-					}
-					for _, dirrtl := range []bool{false, true} {
-						if dirrtl && (os.Getenv("BOOKMIN") != "" || !me.book.Book.config.BuildRtlVersions) {
-							break
-						}
-						for _, lores := range []bool{false, true} {
-							if lores && me.book.Book.config.PxLoResWidth == 0 {
-								break
-							}
-							work.Add(1)
-							numfileswritten++
-							go me.book.genBookBuild(dirpath, lang, bgcol, dirrtl, lores, work.Done)
-						}
-					}
-				}
-			}
-			work.Wait()
+			for name, bb := range me.books {
+				dirpath := ".books/" + name
+				rmDir(dirpath)
+				mkDir(dirpath)
+				var work sync.WaitGroup
+				work.Add(2)
+				go bb.genBookPrep(&me, work.Done)
+				go bb.genBookTitleTocFacesPng(filepath.Join(dirpath, "cover.png"), &bb.config.CoverSize, 0, work.Done)
+				work.Wait()
 
-			return "for " + strconv.Itoa(numfileswritten) + " files written to .books/*/"
+				for lidx, lang := range App.Proj.Langs {
+					if lidx != 0 && !bb.InclLangs {
+						continue
+					}
+					for _, bgcol := range []bool{true, false} {
+						if (!bgcol) && !bb.InclBw {
+							continue
+						}
+						for _, dirrtl := range []bool{false, true} {
+							if dirrtl && !bb.InclRtl {
+								continue
+							}
+							for _, lores := range []bool{false, true} {
+								if lores && bb.config.PxLoResWidth == 0 {
+									break
+								}
+								work.Add(1)
+								go bb.genBookBuild(dirpath, lang, bgcol, dirrtl, lores, work.Done)
+							}
+						}
+					}
+				}
+				work.Wait()
+			}
+			return "for files written to .books/*/"
 		})
 	}
 
