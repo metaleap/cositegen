@@ -353,16 +353,19 @@ func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath st
 			text { ` + strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + "; " + book.CssPgNr + ` }
 		</style>`
 
-	const bs, bl = 4, 14
-	mmleft, mmwidth, pgleft := bs, config.PageSize.MmWidth-(bs+bl), 6
+	const bs, bl = 2, 12
+	mmleft, mmwidth, pgleft := bs, config.PageSize.MmWidth-(bs+bl), 4
 	if (pgNr % 2) != 0 {
-		mmleft, pgleft = bl, config.PageSize.MmWidth-12
+		mmleft, pgleft = bl, config.PageSize.MmWidth-10
 	}
 	mmheight := int(float64(mmwidth) / (float64(sheetImgSize[0]) / float64(sheetImgSize[1])))
 	if mmheight > config.PageSize.MmHeight {
 		panic(sheetImgFilePath + ": width=" + itoa(mmwidth) + "mm height=" + itoa(mmheight) + "mm")
 	}
 	mmtop := (config.PageSize.MmHeight - mmheight) / 2
+	for mmbottom := mmtop + mmheight; mmbottom >= config.PageSize.MmHeight-2 && mmtop > 1; mmbottom = mmtop + mmheight {
+		mmtop--
+	}
 
 	svg += `<image x="` + itoa(mm1*mmleft) + `" y="` + itoa(mm1*mmtop) + `"
 		width="` + itoa(mm1*mmwidth) + `" height="` + itoa(mm1*mmheight) + `"
