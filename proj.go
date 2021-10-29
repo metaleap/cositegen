@@ -12,7 +12,7 @@ import (
 type Project struct {
 	Desc        map[string]string
 	Series      []*Series
-	Books       []*Book
+	Books       []*BookDef
 	BookConfigs map[string]*BookConfig
 	Langs       []string
 	Qualis      []struct {

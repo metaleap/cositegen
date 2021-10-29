@@ -14,7 +14,7 @@ type Series struct {
 	Desc     map[string]string
 	Author   string
 	Chapters []*Chapter
-	Book     *Book
+	Book     *BookDef
 }
 
 type Chapter struct {

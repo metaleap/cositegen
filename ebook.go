@@ -35,7 +35,7 @@ type BookConfig struct {
 	DecosFromSeries  string
 }
 
-type Book struct {
+type BookDef struct {
 	Config   string
 	Name     string
 	Title    map[string]string
@@ -54,12 +54,12 @@ type Book struct {
 	genPrepDirPath string
 }
 
-func (me *Book) id(lang string, bgCol bool, dirRtl bool, loRes bool) string {
+func (me *BookDef) id(lang string, bgCol bool, dirRtl bool, loRes bool) string {
 	return me.Name + strIf(bgCol, "_col_", "_bw_") + lang + strIf(loRes, "_lo_", "_hi_") +
 		strIf(dirRtl, App.Proj.DirModes.Rtl.Name, App.Proj.DirModes.Ltr.Name)
 }
 
-func (me *Book) toSeries() *Series {
+func (me *BookDef) toSeries() *Series {
 	var series = &Series{
 		Book:    me,
 		Name:    me.Name,
@@ -155,10 +155,9 @@ func (me *Book) toSeries() *Series {
 	return series
 }
 
-func (me *Book) rewriteToMonths(chaps []*Chapter) []*Chapter {
+func (me *BookDef) rewriteToMonths(chaps []*Chapter) []*Chapter {
 	var allsheets []*Sheet
 	var monthchaps []*Chapter
-
 	sheetidsdone := map[string]bool{}
 	for _, chap := range chaps {
 		for _, sheet := range chap.sheets {
