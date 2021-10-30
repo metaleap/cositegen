@@ -188,6 +188,9 @@ func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 			Id:     strconv.FormatInt(time.Now().UnixNano(), 36),
 			Series: series, Chapter: chapter, Opts: map[string]string{},
 		}
+		if svn := trim(fv("sheetvername")); svn != "" {
+			sheetvername = svn
+		}
 		sj.PnmFileName, sj.PngFileName = "/dev/shm/csg"+sj.Id+".pnm", "scans/"+series.Name+"/"+chapter.Name+"/"+sheetname+"."+sheetvername+".png"
 		for _, sd := range scanDevices {
 			if sd.Ident == fv("scandev") {
@@ -220,7 +223,7 @@ func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 
 	s += "<h3>New Sheet Version Scan</h3>"
 	s += guiHtmlInput("text", "sheetname", "", A{"placeholder": "Unlock! Unlock! Unlock!"}) +
-		"." + guiHtmlInput("text", "sheetvername", time.Now().Format("20060102"), A{"disabled": "disabled"}) + ".png"
+		"." + guiHtmlInput("text", "sheetvername", time.Now().Format("20060102"), nil) + ".png"
 	s += "<h3>Scanner to use, remember to <u><i>unlock</i></u>:</h3>"
 
 	s += "<div><select name='scandev' id='scandev' onchange='toggleScanOptsPane(this.options[this.selectedIndex].value)'>"

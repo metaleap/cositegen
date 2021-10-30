@@ -79,13 +79,24 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 	if len(flags) != 0 {
 		me.books = map[string]*BookBuild{}
 		for k := range flags {
-			bb := App.Proj.BookBuilds[k]
-			bb.mergeOverrides()
-			bb.series = bb.book.toSeries()
-			if bb.NoCol {
-				bb.InclBw = true
+			var bbs []*BookBuild
+			if bb := App.Proj.BookBuilds[k]; bb != nil {
+				bbs = append(bbs, bb)
+			} else {
+				for _, bb := range App.Proj.BookBuilds {
+					if bb.Book == k {
+						bbs = append(bbs, bb)
+					}
+				}
 			}
-			me.books[k] = bb
+			for _, bb := range bbs {
+				bb.mergeOverrides()
+				bb.series = bb.book.toSeries()
+				if bb.NoCol {
+					bb.InclBw = true
+				}
+				me.books[bb.name] = bb
+			}
 		}
 	}
 	me.sheetPgNrs = map[*SheetVer]int{}
@@ -199,12 +210,9 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 				dirpath := ".books/" + name
 				rmDir(dirpath)
 				mkDir(dirpath)
-				var work sync.WaitGroup
-				work.Add(2)
-				go bb.genBookPrep(&me, work.Done)
-				go bb.genBookTitleTocFacesPng(filepath.Join(dirpath, "cover.png"), &bb.config.CoverSize, 0, 10, work.Done)
-				work.Wait()
+				bb.genBookPrep(&me, nil)
 
+				var work sync.WaitGroup
 				for lidx, lang := range App.Proj.Langs {
 					if lidx != 0 && !bb.InclLangs {
 						continue
