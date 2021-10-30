@@ -258,6 +258,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 	me.data.PanelsTree.iter(func(panel *ImgPanel) {
 		work.Add(1)
 		go func(pidx int) {
+			defer work.Done()
 			pw, ph, sw := panel.Rect.Dx(), panel.Rect.Dy(), me.data.PanelsTree.Rect.Dx()
 			for _, quali := range App.Proj.Qualis {
 				if quali.SizeHint == 0 {
@@ -278,7 +279,6 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 				fileWrite(filepath.Join(me.data.PicDirPath(0), itoa(pidx)+".svg"),
 					imgSubRectSvg(imgsrc.(*image.Gray), panel.Rect, int(me.data.PxCm*App.Proj.PanelBorderCm)))
 			}
-			work.Done()
 		}(pidx)
 		pidx++
 	})

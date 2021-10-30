@@ -269,12 +269,13 @@ func (me *Project) load() (numSheetVers int) {
 					sheet.versions = append([]*SheetVer{sheetver}, sheet.versions...)
 					numSheetVers++
 
-					work.Add(1)
 					fileinfo, err := f.Info()
 					if err != nil {
 						panic(err)
 					}
+					work.Add(1)
 					go func(sv *SheetVer, svfileinfo os.FileInfo) {
+						defer work.Done()
 						if modtime := svfileinfo.ModTime().UnixNano(); modtime < dtdatajson.UnixNano() {
 							work.Lock()
 							for id, filemeta := range me.data.Sv.IdsToFileMeta {
@@ -301,7 +302,6 @@ func (me *Project) load() (numSheetVers int) {
 						if err := os.Symlink("../../../.ccache/"+sv.id, cachedirsymlinkpath); err != nil {
 							panic(err)
 						}
-						work.Done()
 					}(sheetver, fileinfo)
 				}
 			}
