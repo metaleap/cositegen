@@ -92,14 +92,17 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 	_ = dstImgFile.Close()
 }
 
-func imgSvgToPng(svgFilePath string, pngFilePath string, repl *strings.Replacer, reSize int, dpi int, onDone func()) {
+func imgSvgToPng(svgFilePath string, pngFilePath string, repl *strings.Replacer, reSize int, dpi int, noTmpFile bool, onDone func()) {
 	if onDone != nil {
 		defer onDone()
 	}
 	svgdata := fileRead(svgFilePath)
 	chash := contentHashStr(svgdata)
 	tmpfilepath := ".ccache/.svgpng/" + chash + "." + itoa(reSize) + ".png"
-	if fileStat(tmpfilepath) == nil {
+	if noTmpFile {
+		tmpfilepath = pngFilePath
+	}
+	if fileStat(tmpfilepath) == nil || noTmpFile {
 		if repl != nil {
 			svgFilePath += ".fix.svg"
 			fileWrite(svgFilePath, []byte(repl.Replace(string(svgdata))))
@@ -120,7 +123,9 @@ func imgSvgToPng(svgFilePath string, pngFilePath string, repl *strings.Replacer,
 		}
 		_ = osExec(true, "convert", append(cmdargs, tmpfilepath)...)
 	}
-	fileLinkOrCopy(tmpfilepath, pngFilePath)
+	if !noTmpFile {
+		fileLinkOrCopy(tmpfilepath, pngFilePath)
+	}
 }
 
 func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int, transparent bool) []byte {
