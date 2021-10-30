@@ -55,6 +55,12 @@ type BookConfig struct {
 	PxLoResWidth    int
 	MinPageCount    int
 	DecosFromSeries string
+	OffsetsMm       struct {
+		Small  int
+		Large  int
+		PgEven int
+		PgOdd  int
+	}
 }
 
 type BookFilter struct {
@@ -66,9 +72,9 @@ type BookFilter struct {
 type BookDef struct {
 	Title    map[string]string
 	Chapters []struct {
-		FromSeries      []string
-		Filter          BookFilter
-		RewriteToMonths bool
+		FromSeries        []string
+		Filter            BookFilter
+		ReChapterToMonths bool
 	}
 	CssTitle string
 	CssToc   string
@@ -195,8 +201,8 @@ func (me *BookDef) toSeries() (ret *Series) {
 			}
 			newchaps = append(newchaps, newchap)
 		}
-		if chapspec.RewriteToMonths {
-			newchaps = me.rewriteToMonths(newchaps)
+		if chapspec.ReChapterToMonths {
+			newchaps = me.reChapterToMonths(newchaps)
 		}
 		for _, newchap := range newchaps {
 			newchap.UrlName = newchap.Name
@@ -221,7 +227,7 @@ func (me *BookDef) toSeries() (ret *Series) {
 	return ret
 }
 
-func (me *BookDef) rewriteToMonths(chaps []*Chapter) []*Chapter {
+func (me *BookDef) reChapterToMonths(chaps []*Chapter) []*Chapter {
 	var allsheets []*Sheet
 	var monthchaps []*Chapter
 	sheetidsdone := map[string]bool{}
@@ -353,10 +359,9 @@ func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath st
 			text { ` + strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + "; " + book.CssPgNr + ` }
 		</style>`
 
-	const bs, bl = 2, 12
-	mmleft, mmwidth, pgleft := bs, config.PageSize.MmWidth-(bs+bl), 4
+	mmleft, mmwidth, pgleft := config.OffsetsMm.Small, config.PageSize.MmWidth-(config.OffsetsMm.Small+config.OffsetsMm.Large), config.OffsetsMm.PgEven
 	if (pgNr % 2) != 0 {
-		mmleft, pgleft = bl, config.PageSize.MmWidth-10
+		mmleft, pgleft = config.OffsetsMm.Large, config.PageSize.MmWidth-config.OffsetsMm.PgOdd
 	}
 	mmheight := int(float64(mmwidth) / (float64(sheetImgSize[0]) / float64(sheetImgSize[1])))
 	if mmheight > config.PageSize.MmHeight {
