@@ -884,14 +884,14 @@ func (me *siteGen) genSvgTextsFile(chapter *Chapter, onDone func()) {
 			sv.data.PanelsTree.iter(func(pnl *ImgPanel) {
 				for i, area := range sv.panelAreas(pidx) {
 					svg += "\n<symbol id=\"" + sv.id + "_" + itoa(pidx) + "t" + itoa(i+1) + "\">\n\t" +
-						sv.genTextSvgForPanelArea(&area, me.lang, false) + "\n</symbol>"
+						sv.genTextSvgForPanelArea(pidx, i, &area, me.lang, false) + "\n</symbol>"
 				}
 				pidx++
 			})
 		}
 	}
 	svg += `</svg>`
-	fileWrite(".build/texts."+chapter.parentSeries.Name+"."+chapter.Name+"."+me.lang+".svg", []byte(svg))
+	fileWrite(".build/t."+chapter.parentSeries.Name+"."+chapter.Name+"."+me.lang+".svg", []byte(svg))
 	defer onDone()
 }
 

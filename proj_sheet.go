@@ -482,7 +482,7 @@ func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang strin
 
 	pw, ph := panel.Rect.Dx(), panel.Rect.Dy()
 	s := "<svg viewbox='0 0 " + itoa(pw) + " " + itoa(ph) + "'>"
-	for _, pta := range panelareas {
+	for tidx, pta := range panelareas {
 		rx, ry, rw, rh := pta.Rect.Min.X-panel.Rect.Min.X, pta.Rect.Min.Y-panel.Rect.Min.Y, pta.Rect.Dx(), pta.Rect.Dy()
 		borderandfill := pta.PointTo != nil
 		if borderandfill {
@@ -535,14 +535,14 @@ func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang strin
 			s += "' class='" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "' stroke-width='" + itoa(mmh) + "px'/>"
 		}
 		s += "<svg x='" + itoa(rx) + "' y='" + itoa(ry) + "'>" +
-			me.genTextSvgForPanelArea(&pta, lang, forHtml) + "</svg>"
+			me.genTextSvgForPanelArea(panelIdx, tidx, &pta, lang, forHtml) + "</svg>"
 	}
 
 	s += "</svg>"
 	return s
 }
 
-func (me *SheetVer) genTextSvgForPanelArea(pta *ImgPanelArea, lang string, forHtml bool) string {
+func (me *SheetVer) genTextSvgForPanelArea(pidx int, tidx int, pta *ImgPanelArea, lang string, forHtml bool) string {
 	linex := 0.0
 	if pta.PointTo != nil {
 		linex = me.data.PxCm * App.Proj.Gen.PanelSvgText.BoxPolyDxCmA4
@@ -558,5 +558,5 @@ func (me *SheetVer) genTextSvgForPanelArea(pta *ImgPanelArea, lang string, forHt
 		fontSizeCmA4 *= me.data.FontFactor
 		perLineDyCmA4 *= me.data.FontFactor
 	}
-	return imgSvgText(pta, lang, me.data.PxCm, int(linex), fontSizeCmA4, perLineDyCmA4, forHtml)
+	return me.imgSvgText(pidx, tidx, pta, lang, me.data.PxCm, int(linex), fontSizeCmA4, perLineDyCmA4, forHtml)
 }

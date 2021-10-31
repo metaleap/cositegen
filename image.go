@@ -343,7 +343,7 @@ func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, heig
 
 var svgTxtCounter int
 
-func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, lineX int, fontSizeCmA4 float64, perLineDyCmA4 float64, forHtml bool) (s string) {
+func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId string, px1cm float64, lineX int, fontSizeCmA4 float64, perLineDyCmA4 float64, forHtml bool) (s string) {
 	if svgRepl == nil {
 		repls := []string{" ", "&nbsp;"}
 		for _, tagclassname := range append(App.Proj.Gen.PanelSvgText.TspanTagClasses, "b", "i", "u") {
@@ -357,29 +357,30 @@ func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, lineX int, font
 
 	pxfont, pxline := int(px1cm*fontSizeCmA4), int(px1cm*perLineDyCmA4)
 	svgTxtCounter++
+
 	if forHtml {
-		s += "<text id='w" + itoa(svgTxtCounter) + "' style='visibility: hidden; font-size: " + itoa(pxfont) + "px'><tspan><tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>&#9881;...</tspan></tspan><title><tspan>Loading... / Wird geladen...</tspan></title></text>"
-	}
-	s += "<text "
-	if forHtml {
-		s += "id='t" + itoa(svgTxtCounter) + "' "
-	}
-	s += "style='font-size: " + itoa(pxfont) + "px' transform='" + trim(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
-	s += "<tspan style='" + trim(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'>"
-	for _, ln := range strings.Split(svgRepl.Replace(hEsc(locStr(pta.Data, langId))), hEscs['\n']) {
-		if ln == "" {
-			ln = "&nbsp;"
+		s += "<text id='_w_" + itoa(svgTxtCounter) + "' style='visibility: hidden; font-size: " + itoa(pxfont) + "px'><tspan><tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>&#9881;...</tspan></tspan><title><tspan>Loading... / Wird geladen...</tspan></title></text>"
+		s += `<use id='_t_` + itoa(svgTxtCounter) + `' xlink:href="t.` + me.parentSheet.parentChapter.parentSeries.Name + `.` + me.parentSheet.parentChapter.Name + `.` + langId + `.svg#` + me.id + `_` + itoa(pidx) + `t` + itoa(tidx+1) + `"/>`
+	} else {
+		s += "<text style='font-size: " + itoa(pxfont) + "px' transform='" + trim(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
+		ts := "<tspan style='" + trim(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'>"
+		for _, ln := range strings.Split(svgRepl.Replace(hEsc(locStr(pta.Data, langId))), hEscs['\n']) {
+			if ln == "" {
+				ln = "&nbsp;"
+			}
+			ln += hEscs['\n']
+			ts += "<tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>" + ln + "</tspan>"
+			if !forHtml {
+				const diff = 2
+				ts += "<tspan dy='" + itoa(-diff) + "' x='" + itoa(lineX-diff) + "'>" + ln + "</tspan>"
+				ts += "<tspan dy='" + itoa(diff+diff) + "' x='" + itoa(lineX+diff) + "'>" + ln + "</tspan>"
+			}
 		}
-		s += "<tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>" + ln + "</tspan>"
-		if !forHtml {
-			const diff = 2
-			s += "<tspan dy='" + itoa(-diff) + "' x='" + itoa(lineX-diff) + "'>" + ln + "</tspan>"
-			s += "<tspan dy='" + itoa(diff+diff) + "' x='" + itoa(lineX+diff) + "'>" + ln + "</tspan>"
-		}
+		ts += "</tspan>"
+		s += ts + "<title>" + ts + "</title>" + "</text>"
 	}
-	s += "</tspan></text>"
 	if forHtml {
-		s += "<script>vHide('t" + itoa(svgTxtCounter) + "');vShow('w" + itoa(svgTxtCounter) + "');</script>"
+		s += "<script>vHide('_t_" + itoa(svgTxtCounter) + "');vShow('_w_" + itoa(svgTxtCounter) + "');</script>"
 	} else {
 		s = htmlEscdToXmlEsc(s)
 	}
