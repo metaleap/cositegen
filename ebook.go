@@ -27,16 +27,17 @@ type DualSize struct {
 }
 
 type BookBuild struct {
-	Config      string
-	Book        string
-	Pub         bool
-	InclRtl     bool
-	InclBw      bool
-	InclLangs   bool
-	NoCol       bool
-	NoHiRes     bool
-	NoLoRes     bool
-	NoDirtPages bool
+	BasedOn          string
+	Config           string
+	Book             string
+	InclRtl          bool
+	InclBw           bool
+	NoLangs          bool
+	NoCol            bool
+	NoHiRes          bool
+	NoLoRes          bool
+	NoDirtPages      bool
+	DropUntranslated bool
 
 	OverrideBook   BookDef
 	OverrideConfig BookConfig
@@ -92,6 +93,39 @@ type BookDef struct {
 }
 
 func (me *BookBuild) mergeOverrides() {
+	if base := App.Proj.BookBuilds[me.BasedOn]; base != nil && base != me {
+		if me.Config == "" {
+			me.config = base.config
+		}
+		if me.Book == "" {
+			me.book = base.book
+		}
+		if !me.InclBw {
+			me.InclBw = base.InclBw
+		}
+		if !me.InclRtl {
+			me.InclRtl = base.InclRtl
+		}
+		if !me.NoLoRes {
+			me.NoLoRes = base.NoLoRes
+		}
+		if !me.NoHiRes {
+			me.NoHiRes = base.NoHiRes
+		}
+		if !me.NoLangs {
+			me.NoLangs = base.NoLangs
+		}
+		if !me.NoCol {
+			me.NoCol = base.NoCol
+		}
+		if !me.NoDirtPages {
+			me.NoDirtPages = base.NoDirtPages
+		}
+		if !me.DropUntranslated {
+			me.DropUntranslated = base.DropUntranslated
+		}
+	}
+
 	if len(me.OverrideBook.Chapters) != 0 {
 		me.book.Chapters = me.OverrideBook.Chapters
 	}
@@ -300,7 +334,7 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 	mkDir(me.genPrepDirPath)
 	var sheetsvgfilepaths, pagesvgfilepaths []string
 	for lidx, lang := range App.Proj.Langs {
-		if lidx > 0 && !me.InclLangs {
+		if lidx > 0 && me.NoLangs {
 			continue
 		}
 		pgnrs := map[*Chapter]int{}
@@ -317,7 +351,7 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 					pgnrs[chap] = pgnr
 					for _, sheet := range chap.sheets {
 						sv := sheet.versions[0]
-						if skip := (lang != App.Proj.Langs[0] && App.Proj.percentTranslated(lang, series, chap, sv, -1) < 50); skip ||
+						if skip := (me.DropUntranslated && lang != App.Proj.Langs[0] && App.Proj.percentTranslated(lang, series, chap, sv, -1) < 50); skip ||
 							(bgcol && !sv.data.hasBgCol) {
 							if !skip {
 								pgnr++
@@ -669,7 +703,7 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *DualS
 
 	if mmCenterGap != 0 {
 		for i, lang := range App.Proj.Langs {
-			if i > 0 && !me.InclLangs {
+			if i > 0 && me.NoLangs {
 				continue
 			}
 			w, h := size.PxWidth, size.PxHeight
@@ -762,7 +796,7 @@ func (me *BookBuild) genBookBuild(outDirPath string, lang string, bgCol bool, di
 	for _, chap := range series.Chapters {
 		for _, sheet := range chap.sheets {
 			sv := sheet.versions[0]
-			if lang != App.Proj.Langs[0] && App.Proj.percentTranslated(lang, series, chap, sv, -1) < 50 {
+			if me.DropUntranslated && lang != App.Proj.Langs[0] && App.Proj.percentTranslated(lang, series, chap, sv, -1) < 50 {
 				continue
 			}
 			srcfilepaths = append(srcfilepaths, filepath.Join(me.genPrepDirPath,

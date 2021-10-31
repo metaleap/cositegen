@@ -209,8 +209,12 @@ func (me *Project) load() (numSheetVers int) {
 	}
 	for name, bb := range me.BookBuilds {
 		bb.name = name
-		bb.config = *me.BookConfigs[bb.Config]
-		bb.book = *me.BookDefs[bb.Book]
+		if bb.Config != "" {
+			bb.config = *me.BookConfigs[bb.Config]
+		}
+		if bb.Book != "" {
+			bb.book = *me.BookDefs[bb.Book]
+		}
 	}
 	for _, series := range me.Series {
 		seriesdirpath := "scans/" + series.Name

@@ -221,7 +221,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 
 				var work sync.WaitGroup
 				for lidx, lang := range App.Proj.Langs {
-					if lidx != 0 && !bb.InclLangs {
+					if lidx != 0 && bb.NoLangs {
 						continue
 					}
 					for _, bgcol := range []bool{true, false} {
