@@ -377,7 +377,7 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 			}
 		}
 		ts += "</tspan>"
-		s += ts + "<title>" + ts + "</title>" + "</text>"
+		s += ts /*+ "<title>" + ts + "</title>"*/ + "</text>"
 	}
 	if forHtml {
 		s += "<script>vHide('_t_" + itoa(svgTxtCounter) + "');vShow('_w_" + itoa(svgTxtCounter) + "');</script>"

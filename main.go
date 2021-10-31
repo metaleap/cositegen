@@ -15,8 +15,9 @@ var browserCmd = []string{"",
 	"--new-window",
 	// "--single-process",
 	"--user-data-dir=./.ccache/.chromium",
+	"--disk-cache-size=128",
 	"--disable-extensions",
-	"--disk-cache-size=128"}
+	"--allow-file-access-from-files"}
 
 func main() {
 	App.StaticFilesDirPath = filepath.Join(os.Getenv("GOPATH"), "src/github.com/metaleap/cositegen/_static")
