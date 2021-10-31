@@ -481,7 +481,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs 
 	if t := App.Proj.textStr(lang, "BookTocTitleCalendared"); fullycal && t != "" {
 		title = map[string]string{lang: t}
 	}
-	svg += `<text class="title" x="` + itoa(textx) + `px" y="23%" dx="0" dy="0">` +
+	svg += `<text class="title" x="` + itoa(textx) + `px" y="20%" dx="0" dy="0">` +
 		htmlEscdToXmlEsc(hEsc(locStr(title, lang))) + `</text>`
 	if len(book.Desc) != 0 {
 		svg += `<text class="desc" x="` + itoa(textx) + `px" y="` + itoa(h-textx/3) + `px" dx="0" dy="0">` +
