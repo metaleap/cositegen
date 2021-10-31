@@ -438,8 +438,17 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs 
 	}
 
 	textx, htoc, cc := h/9, 62.0/float64(chapcount), 0
-	svg += `<text class="title" x="` + itoa(textx) + `px" y="30%" dx="0" dy="0">` +
-		htmlEscdToXmlEsc(hEsc(locStr(book.Title, lang))) + `</text>`
+	title, fullycal := book.Title, true
+	for _, chap := range book.Chapters {
+		if fullycal = chap.ReChapterToMonths; !fullycal {
+			break
+		}
+	}
+	if t := App.Proj.textStr(lang, "BookTocTitleCalendared"); fullycal && t != "" {
+		title = map[string]string{lang: t}
+	}
+	svg += `<text class="title" x="` + itoa(textx) + `px" y="23%" dx="0" dy="0">` +
+		htmlEscdToXmlEsc(hEsc(locStr(title, lang))) + `</text>`
 	if len(book.Desc) != 0 {
 		svg += `<text class="desc" x="` + itoa(textx) + `px" y="` + itoa(h-textx/3) + `px" dx="0" dy="0">` +
 			htmlEscdToXmlEsc(hEsc(locStr(book.Desc, lang))) + `</text>`
@@ -447,7 +456,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs 
 
 	pgnrlast = 0
 	for _, chap := range series.Chapters {
-		pgnr, texty := pgNrs[chap], int(33.0+(float64(cc)+1.0)*htoc)-5
+		pgnr, texty := pgNrs[chap], int(26.0+(float64(cc)+1.0)*htoc)-5
 		if pgnr == pgnrlast {
 			continue
 		}
