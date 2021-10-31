@@ -155,10 +155,15 @@ textarea.panelcfgtext {
     color: #000000 !important;
     width: 99%;
     height: 0.88em;
+    background-size: 0px 0px;
+    background-blend-mode: screen;
+    background-repeat: repeat;
 }
 
 textarea.panelcfgtext:focus {
     height: 5em;
+    background-position: 0 0;
+    background-size: 100% 100%;
 }
 
 input.panelcfgrect {

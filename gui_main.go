@@ -4,6 +4,7 @@ import (
 	"image"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -582,7 +583,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang, area.Data[lang], A{
 					"placeholder": lang,
 					"onfocus":     jsrefr, "onblur": jsrefr, "onchange": jsrefr, "onkeydown": jsrefr, "onkeyup": jsrefr, "onkeypress": jsrefr,
-					"style": strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css[""], ";"), "letter-spacing:", "xfoo:", -1),
+					"style": "background-image: url(\"/" + path.Join("site", strings.Replace(App.Proj.Gen.ImgSrcLang, "%LANG%", lang, -1)) + "\");" + strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css[""], ";"), "letter-spacing:", "xletterspacing:", -1),
 					"class": "panelcfgtext col" + itoa(i%8)}) + "</div>"
 			}
 
