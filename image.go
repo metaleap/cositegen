@@ -360,7 +360,11 @@ func imgSvgText(pta *ImgPanelArea, langId string, px1cm float64, lineX int, font
 	if forHtml {
 		s += "<text id='w" + itoa(svgTxtCounter) + "' style='visibility: hidden; font-size: " + itoa(pxfont) + "px'><tspan><tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>&#9881;...</tspan></tspan><title><tspan>Loading... / Wird geladen...</tspan></title></text>"
 	}
-	s += "<text id='t" + itoa(svgTxtCounter) + "' style='font-size: " + itoa(pxfont) + "px' transform='" + trim(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
+	s += "<text "
+	if forHtml {
+		s += "id='t" + itoa(svgTxtCounter) + "' "
+	}
+	s += "style='font-size: " + itoa(pxfont) + "px' transform='" + trim(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
 	s += "<tspan style='" + trim(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'>"
 	for _, ln := range strings.Split(svgRepl.Replace(hEsc(locStr(pta.Data, langId))), hEscs['\n']) {
 		if ln == "" {

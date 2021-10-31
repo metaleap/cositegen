@@ -167,41 +167,48 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 		return "for " + itoa(int(numpngs)) + " PNGs & " + itoa(int(numsvgs)) + " SVGs (" + strSize(int(totalsize)) + ") from " + itoa(int(numpanels)) + " panels in " + itoa(int(numsheets)) + " sheets, max panel pic size: " + strSize(int(me.maxPicSize))
 	})
 
-	if len(me.books) == 0 {
-		timedLogged("SiteGen: generating markup files...", func() string {
-			numfileswritten := 0
-			me.tmpl, err = template.New("foo").ParseFiles(siteTmplDirName + "/site.html")
-			if err != nil {
-				panic(err)
-			}
-			for _, me.lang = range App.Proj.Langs {
-				for _, me.dirRtl = range []bool{true, false /*KEEP this order of bools*/} {
-					me.bgCol = false
-					numfileswritten += me.genPages(nil, 0)
-					for _, me.bgCol = range []bool{false, true} {
-						for _, series := range me.series {
-							for _, chapter := range series.Chapters {
-								if me.bgCol && !chapter.HasBgCol() {
-									continue
+	timedLogged("SiteGen: generating markup files...", func() string {
+		numfileswritten := 0
+		me.tmpl, err = template.New("foo").ParseFiles(siteTmplDirName + "/site.html")
+		if err != nil {
+			panic(err)
+		}
+		for _, me.lang = range App.Proj.Langs {
+			for _, me.dirRtl = range []bool{true, false /*KEEP this order of bools*/} {
+				me.bgCol = false
+				numfileswritten += me.genPages(nil, 0)
+				for _, me.bgCol = range []bool{false, true} {
+					for _, series := range me.series {
+						for _, chapter := range series.Chapters {
+							if me.bgCol && !chapter.HasBgCol() {
+								continue
+							}
+							if chapter.SheetsPerPage > 0 {
+								for i := 1; i <= (len(chapter.sheets) / chapter.SheetsPerPage); i++ {
+									numfileswritten += me.genPages(chapter, i)
 								}
-								if chapter.SheetsPerPage > 0 {
-									for i := 1; i <= (len(chapter.sheets) / chapter.SheetsPerPage); i++ {
-										numfileswritten += me.genPages(chapter, i)
-									}
-								} else {
-									numfileswritten += me.genPages(chapter, 0)
-								}
+							} else {
+								numfileswritten += me.genPages(chapter, 0)
 							}
 						}
 					}
-					if App.Proj.AtomFile.Name != "" {
-						numfileswritten += me.genAtomXml()
+				}
+				if App.Proj.AtomFile.Name != "" {
+					numfileswritten += me.genAtomXml()
+				}
+				var work sync.WaitGroup
+				for _, series := range me.series {
+					for _, chapter := range series.Chapters {
+						numfileswritten++
+						work.Add(1)
+						go me.genSvgTextsFile(chapter, work.Done)
 					}
 				}
+				work.Wait()
 			}
-			return "for " + strconv.Itoa(numfileswritten) + " files"
-		})
-	}
+		}
+		return "for " + strconv.Itoa(numfileswritten) + " files"
+	})
 
 	if len(me.books) != 0 {
 		timedLogged("SiteGen: generating cbz/pdf files...", func() string {
@@ -866,6 +873,26 @@ func (me *siteGen) genPageExecAndWrite(name string, chapter *Chapter) (numFilesW
 
 func (me *siteGen) textStr(key string) string {
 	return App.Proj.textStr(me.lang, key)
+}
+
+func (me *siteGen) genSvgTextsFile(chapter *Chapter, onDone func()) {
+	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
+				xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
+	for _, sheet := range chapter.sheets {
+		for _, sv := range sheet.versions {
+			pidx := 0
+			sv.data.PanelsTree.iter(func(pnl *ImgPanel) {
+				for i, area := range sv.panelAreas(pidx) {
+					svg += "\n<symbol id=\"" + sv.id + "_" + itoa(pidx) + "t" + itoa(i+1) + "\">\n\t" +
+						sv.genTextSvgForPanelArea(&area, me.lang, false) + "\n</symbol>"
+				}
+				pidx++
+			})
+		}
+	}
+	svg += `</svg>`
+	fileWrite(".build/texts."+chapter.parentSeries.Name+"."+chapter.Name+"."+me.lang+".svg", []byte(svg))
+	defer onDone()
 }
 
 func (me *siteGen) genAtomXml() (numFilesWritten int) {

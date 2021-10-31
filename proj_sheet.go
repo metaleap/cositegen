@@ -475,7 +475,7 @@ func (me *SheetVer) grayDistrs() (r [][3]float64) {
 }
 
 func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang string, forHtml bool) string {
-	panelareas, pxcm := me.panelAreas(panelIdx), me.data.PxCm
+	panelareas := me.panelAreas(panelIdx)
 	if len(panelareas) == 0 {
 		return ""
 	}
@@ -487,7 +487,7 @@ func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang strin
 		borderandfill := pta.PointTo != nil
 		if borderandfill {
 			rpx, rpy := pta.PointTo.X-panel.Rect.Min.X, pta.PointTo.Y-panel.Rect.Min.Y
-			mmh, cmh := int(pxcm*App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm), int(pxcm/2.0)
+			mmh, cmh := int(me.data.PxCm*App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm), int(me.data.PxCm/2.0)
 			pl, pr, pt, pb := (rx + mmh), ((rx + rw) - mmh), (ry + mmh), ((ry + rh) - mmh)
 			poly := [][2]int{{pl, pt}, {pr, pt}, {pr, pb}, {pl, pb}}
 			ins := func(idx int, pts ...[2]int) {
@@ -534,26 +534,29 @@ func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang strin
 			}
 			s += "' class='" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "' stroke-width='" + itoa(mmh) + "px'/>"
 		}
-		s += "<svg x='" + itoa(rx) + "' y='" + itoa(ry) + "'>"
-		linex := 0.0
-		if borderandfill {
-			linex = pxcm * App.Proj.Gen.PanelSvgText.BoxPolyDxCmA4
-		}
-		fontSizeCmA4, perLineDyCmA4 := App.Proj.Gen.PanelSvgText.FontSizeCmA4, App.Proj.Gen.PanelSvgText.PerLineDyCmA4
-		if me.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4 > 0.01 { // !=0 in float
-			fontSizeCmA4 = me.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4
-		}
-		if me.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4 > 0.01 { // !=0 in float
-			perLineDyCmA4 = me.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4
-		}
-		if me.data.FontFactor > 0.01 {
-			fontSizeCmA4 *= me.data.FontFactor
-			perLineDyCmA4 *= me.data.FontFactor
-		}
-		s += imgSvgText(&pta, lang, pxcm, int(linex), fontSizeCmA4, perLineDyCmA4, forHtml)
-		s += "</svg>"
+		s += "<svg x='" + itoa(rx) + "' y='" + itoa(ry) + "'>" +
+			me.genTextSvgForPanelArea(&pta, lang, forHtml) + "</svg>"
 	}
 
 	s += "</svg>"
 	return s
+}
+
+func (me *SheetVer) genTextSvgForPanelArea(pta *ImgPanelArea, lang string, forHtml bool) string {
+	linex := 0.0
+	if pta.PointTo != nil {
+		linex = me.data.PxCm * App.Proj.Gen.PanelSvgText.BoxPolyDxCmA4
+	}
+	fontSizeCmA4, perLineDyCmA4 := App.Proj.Gen.PanelSvgText.FontSizeCmA4, App.Proj.Gen.PanelSvgText.PerLineDyCmA4
+	if me.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4 > 0.01 { // !=0 in float
+		fontSizeCmA4 = me.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4
+	}
+	if me.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4 > 0.01 { // !=0 in float
+		perLineDyCmA4 = me.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4
+	}
+	if me.data.FontFactor > 0.01 {
+		fontSizeCmA4 *= me.data.FontFactor
+		perLineDyCmA4 *= me.data.FontFactor
+	}
+	return imgSvgText(pta, lang, me.data.PxCm, int(linex), fontSizeCmA4, perLineDyCmA4, forHtml)
 }
