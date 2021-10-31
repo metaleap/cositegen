@@ -883,8 +883,8 @@ func (me *siteGen) genSvgTextsFile(chapter *Chapter, onDone func()) {
 			pidx := 0
 			sv.data.PanelsTree.iter(func(pnl *ImgPanel) {
 				for i, area := range sv.panelAreas(pidx) {
-					svg += "\n<symbol id=\"" + sv.id + "_" + itoa(pidx) + "t" + itoa(i+1) + "\">\n\t" +
-						sv.genTextSvgForPanelArea(pidx, i, &area, me.lang, false) + "\n</symbol>"
+					svg += "<symbol id=\"" + sv.id + "_" + itoa(pidx) + "t" + itoa(i+1) + "\">\t" +
+						sv.genTextSvgForPanelArea(pidx, i, &area, me.lang, false) + "</symbol>"
 				}
 				pidx++
 			})
