@@ -105,7 +105,7 @@ func guiMain(r *http.Request, notice string) []byte {
 		App.Proj.save()
 	}
 
-	s += "<hr/>" + guiHtmlListFrom("main_action", "(Project Actions)", true, AppMainActions)
+	s += "<hr/>" //+ guiHtmlListFrom("main_action", "(Project Actions)", true, AppMainActions)
 
 	s += "</form></body>"
 	if rfv := fv("main_focus_id"); rfv != "" && rfv != "main_action" && notice == "" {
