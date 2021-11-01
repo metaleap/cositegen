@@ -249,16 +249,17 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 	}
 
 	printLn("SiteGen: DONE after " + time.Now().Sub(tstart).String())
-	cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=file://"+os.Getenv("PWD")+"/.build/index.html")...)
-
-	if err := cmd.Start(); err != nil {
-		printLn("[ERR]\tcmd.Start of " + cmd.String() + ":\t" + err.Error())
-	} else {
-		go func() {
-			if err := cmd.Wait(); err != nil {
-				printLn("[ERR]\tcmd.Wait of " + cmd.String() + ":\t" + err.Error())
-			}
-		}()
+	if len(me.books) == 0 {
+		cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=file://"+os.Getenv("PWD")+"/.build/index.html")...)
+		if err := cmd.Start(); err != nil {
+			printLn("[ERR]\tcmd.Start of " + cmd.String() + ":\t" + err.Error())
+		} else {
+			go func() {
+				if err := cmd.Wait(); err != nil {
+					printLn("[ERR]\tcmd.Wait of " + cmd.String() + ":\t" + err.Error())
+				}
+			}()
+		}
 	}
 }
 
