@@ -77,6 +77,18 @@ func strIf(b bool, sThen string, sElse string) string {
 	return sElse
 }
 
+func strNumericSuffix(s string) string {
+	idx := len(s)
+	for i := idx - 1; i >= 0; i-- {
+		if s[i] >= '0' && s[i] <= '9' {
+			idx = i
+		} else {
+			break
+		}
+	}
+	return s[idx:]
+}
+
 func strSize(size int) string {
 	return strSize64(int64(size))
 }
