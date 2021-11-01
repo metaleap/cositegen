@@ -52,7 +52,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm
 
     let divshtml = "";
     innerhtml += "<div class='panelrect panelrectbordered'>";
-    innerhtml += "<svg viewbox='0 0 " + pWidth + " " + pHeight + "'>";
+    innerhtml += "<svg viewbox='0 0 " + pWidth + " " + pHeight + "'><rect x='0' y='0' width='" + pWidth + "px' height='" + pHeight + "px' fill-opacity='0' stroke-width='" + parseInt(px1cm * 0.22) + "px' stroke='#000000'/>";
     for (let i = 0; i < numImagePanelTextAreas; i++) {
         const trXy = document.getElementById(pid + "t" + i + "rxy").value.split(',');
         const trX = parseInt((trXy && trXy.length >= 2) ? trXy[0] : "");
