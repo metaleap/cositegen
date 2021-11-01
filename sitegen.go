@@ -13,11 +13,7 @@ import (
 	"time"
 )
 
-var (
-	SiteTitleOrig = os.Getenv(strIf(os.Getenv("NOLINKS") == "", "CSG", "CSG_"))
-	SiteTitleEsc  = strings.NewReplacer("<span>", "", "</span>", "", "&bull;", ".").Replace(SiteTitleOrig)
-	viewModes     = []string{"s", "r"}
-)
+var viewModes = []string{"s", "r"}
 
 type siteGen struct {
 	tmpl       *template.Template
@@ -33,43 +29,43 @@ type siteGen struct {
 }
 
 type PageGen struct {
-	SiteTitleOrig    string
-	SiteTitleOrigSub string
-	SiteTitleEsc     string
-	SiteDesc         string
-	PageTitle        string
-	PageTitleTxt     string
-	PageDesc         string
-	PageDescTxt      string
-	PageLang         string
-	PageCssClasses   string
-	PageDirCur       string
-	PageDirAlt       string
-	DirCurTitle      string
-	DirAltTitle      string
-	DirCurDesc       string
-	DirAltDesc       string
-	LangsList        string
-	ViewerList       string
-	HrefViewAlt      string
-	HrefViewCur      string
-	QualList         string
-	PagesList        string
-	PageContent      string
-	HintHtmlR        string
-	HintHtmlS        string
-	HintDir          string
-	VerHint          string
-	LegalHtml        string
-	HrefHome         string
-	HrefDirLtr       string
-	HrefDirRtl       string
-	HrefDirCur       string
-	HrefDirAlt       string
-	HrefFeed         string
-	VersList         string
-	ColsList         string
-	ChapTitle        string
+	SiteTitle      string
+	SiteTitleEsc   string
+	SiteDesc       string
+	SiteHost       string
+	PageTitle      string
+	PageTitleTxt   string
+	PageDesc       string
+	PageDescTxt    string
+	PageLang       string
+	PageCssClasses string
+	PageDirCur     string
+	PageDirAlt     string
+	DirCurTitle    string
+	DirAltTitle    string
+	DirCurDesc     string
+	DirAltDesc     string
+	LangsList      string
+	ViewerList     string
+	HrefViewAlt    string
+	HrefViewCur    string
+	QualList       string
+	PagesList      string
+	PageContent    string
+	HintHtmlR      string
+	HintHtmlS      string
+	HintDir        string
+	VerHint        string
+	LegalHtml      string
+	HrefHome       string
+	HrefDirLtr     string
+	HrefDirRtl     string
+	HrefDirCur     string
+	HrefDirAlt     string
+	HrefFeed       string
+	VersList       string
+	ColsList       string
+	ChapTitle      string
 }
 
 func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
@@ -395,19 +391,19 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		"%LANG"+me.lang+"%", itoa(int(App.Proj.percentTranslated(me.lang, nil, nil, nil, -1))),
 	)
 	me.page = PageGen{
-		SiteTitleEsc:     SiteTitleEsc,
-		SiteTitleOrig:    SiteTitleOrig,
-		SiteTitleOrigSub: strings.TrimPrefix(strings.TrimSuffix(SiteTitleOrig[5:], "</span>"), "<span>"),
-		SiteDesc:         repl.Replace(hEsc(locStr(App.Proj.Desc, me.lang))),
-		PageLang:         me.lang,
-		HintHtmlR:        me.textStr("HintHtmlR"),
-		HintHtmlS:        me.textStr("HintHtmlS"),
-		HintDir:          me.textStr("HintDir"),
-		VerHint:          me.textStr("VerHint"),
-		LegalHtml:        me.textStr("LegalHtml"),
-		HrefFeed:         "./" + App.Proj.AtomFile.Name + "." + me.lang + ".atom",
-		PageDirCur:       "ltr",
-		PageDirAlt:       "rtl",
+		SiteTitle:    App.Proj.SiteTitle,
+		SiteTitleEsc: hEsc(App.Proj.SiteTitle),
+		SiteHost:     App.Proj.SiteHost,
+		SiteDesc:     repl.Replace(hEsc(locStr(App.Proj.SiteDesc, me.lang))),
+		PageLang:     me.lang,
+		HintHtmlR:    me.textStr("HintHtmlR"),
+		HintHtmlS:    me.textStr("HintHtmlS"),
+		HintDir:      me.textStr("HintDir"),
+		VerHint:      me.textStr("VerHint"),
+		LegalHtml:    me.textStr("LegalHtml"),
+		HrefFeed:     "./" + App.Proj.AtomFile.Name + "." + me.lang + ".atom",
+		PageDirCur:   "ltr",
+		PageDirAlt:   "rtl",
 	}
 	if idx := strings.IndexByte(me.page.SiteDesc, '.'); idx > 0 {
 		me.page.SiteDesc = "<nobr>" + me.page.SiteDesc[:idx+1] + "</nobr>" + me.page.SiteDesc[idx+1:]
@@ -932,11 +928,11 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 					if entryidx++; tlatest == "" || tpub > tlatest {
 						tlatest = tpub
 					}
-					href := "http://" + strings.TrimRight(strings.ToLower(SiteTitleEsc), "/") + "/" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, pgnr, "s", "", me.lang, 0, true) + ".html"
+					href := "http://" + App.Proj.SiteHost + "/" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, pgnr, "s", "", me.lang, 0, true) + ".html"
 					xml := `<entry><updated>` + tpub + `Z</updated>`
 					xml += `<title>` + hEsc(locStr(chapter.parentSeries.Title, me.lang)) + `: ` + hEsc(locStr(chapter.Title, me.lang)) + `</title>`
 					xml += `<id>` + href + `</id><link href="` + href + `"/>`
-					xml += `<author><name>` + SiteTitleEsc + `</name></author>`
+					xml += `<author><name>` + App.Proj.SiteHost + `</name></author>`
 					xml += `<content type="html">` + strings.NewReplacer(
 						"%NUMSVS%", itoa(numsheets),
 						"%NUMPNL%", itoa(numpanels),
@@ -947,15 +943,14 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 			}
 		}
 	}
-
-	filename := af.Name + "." + me.lang + ".atom"
-	s := `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="` + me.lang + `">`
 	if len(xmls) > 0 && tlatest != "" {
-		s += `<updated>` + tlatest + `Z</updated><title>` + SiteTitleEsc + `</title><link href="http://` + strings.ToLower(SiteTitleEsc) + `"/><link rel="self" href="http://` + strings.ToLower(SiteTitleEsc) + `/` + filename + `"/><id>http://` + strings.ToLower(SiteTitleEsc) + "</id>"
+		filename := af.Name + "." + me.lang + ".atom"
+		s := `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="` + me.lang + `">`
+		s += `<updated>` + tlatest + `Z</updated><title>` + hEsc(App.Proj.SiteTitle) + `</title><link href="http://` + App.Proj.SiteHost + `"/><link rel="self" href="http://` + App.Proj.SiteHost + `/` + filename + `"/><id>http://` + App.Proj.SiteHost + "</id>"
 		s += "\n" + strings.Join(xmls, "\n")
+		fileWrite(".build/"+af.Name+"."+me.lang+".atom", []byte(s+"\n</feed>"))
+		numFilesWritten++
 	}
-	fileWrite(".build/"+af.Name+"."+me.lang+".atom", []byte(s+"\n</feed>"))
-	numFilesWritten++
 	return
 }
 

@@ -175,7 +175,7 @@ func (me *BookBuild) mergeOverrides() {
 
 func (me *BookBuild) id(lang string, bgCol bool, dirRtl bool, loRes bool) string {
 	return me.name + strIf(bgCol, "_col_", "_bw_") + lang + strIf(loRes, "_lo_", "_hi_") +
-		strIf(dirRtl, App.Proj.DirModes.Rtl.Name, App.Proj.DirModes.Ltr.Name)
+		strIf(dirRtl, "rtl", "ltr")
 }
 
 func (me *BookDef) toSeries() (ret *Series) {

@@ -10,7 +10,9 @@ import (
 )
 
 type Project struct {
-	Desc        map[string]string
+	SiteTitle   string
+	SiteHost    string
+	SiteDesc    map[string]string
 	Series      []*Series
 	BookDefs    map[string]*BookDef
 	BookConfigs map[string]*BookConfig
@@ -171,6 +173,9 @@ func (me *Project) save(texts bool) {
 
 func (me *Project) load() (numSheetVers int) {
 	jsonLoad("comicsite.json", nil, me) // exits early if no such file, before creating work dirs:
+	if me.SiteTitle == "" {
+		me.SiteTitle = me.SiteHost
+	}
 	mkDir(".ccache")
 	var dtdatajson time.Time
 	if fileinfo := fileStat(".ccache/data.json"); fileinfo != nil {
