@@ -343,7 +343,7 @@ func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, heig
 
 var svgTxtCounter int
 
-func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId string, px1cm float64, lineX int, fontSizeCmA4 float64, perLineDyCmA4 float64, forHtml bool) (s string) {
+func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId string, px1cm float64, lineX int, fontSizeCmA4 float64, perLineDyCmA4 float64, forHtml bool, forEbook bool) (s string) {
 	if svgRepl == nil {
 		repls := []string{
 			" ", "&nbsp;",
@@ -378,8 +378,10 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 			}
 			ln += hEscs['\n']
 			ts += "<tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>" + ln + "</tspan>"
-			if !forHtml {
-				const diff = 2
+			if diff := 1; !forHtml {
+				if forEbook {
+					diff = 2
+				}
 				ts += "<tspan dy='" + itoa(-diff) + "' x='" + itoa(lineX-diff) + "'>" + ln + "</tspan>"
 				ts += "<tspan dy='" + itoa(diff+diff) + "' x='" + itoa(lineX+diff) + "'>" + ln + "</tspan>"
 			}

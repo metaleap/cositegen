@@ -771,7 +771,7 @@ func (*BookBuild) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool,
 		}
 		svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
 				xlink:href="` + panelpngsrcfilepath + `" />`
-		svg += sv.genTextSvgForPanel(pidx, p, lang, false)
+		svg += sv.genTextSvgForPanel(pidx, p, lang, false, true)
 		svg += "\n</g>\n\n"
 		pidx++
 	})

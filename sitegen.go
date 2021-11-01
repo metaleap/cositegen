@@ -759,7 +759,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			if firstpanel = ""; viewMode == "r" {
 				s += " tabindex='0' onfocus='" + App.Proj.Gen.ClsPanel + "f(this)'"
 			}
-			s += ">" + sv.genTextSvgForPanel(pidx, panel, me.lang, true)
+			s += ">" + sv.genTextSvgForPanel(pidx, panel, me.lang, true, false)
 			me.sheetPgNrs[sv] = pageNr
 			s += "<img src='./" + App.Proj.Gen.PicDirName + "/" + name + ".png' class='" + App.Proj.Gen.ClsImgHq + "'"
 			if hqsrc != "" {
@@ -884,7 +884,7 @@ func (me *siteGen) genSvgTextsFile(chapter *Chapter, onDone func()) {
 			sv.data.PanelsTree.iter(func(pnl *ImgPanel) {
 				for i, area := range sv.panelAreas(pidx) {
 					svg += "<symbol id=\"" + sv.id + "_" + itoa(pidx) + "t" + itoa(i+1) + "\">\t" +
-						sv.genTextSvgForPanelArea(pidx, i, &area, me.lang, false) + "</symbol>"
+						sv.genTextSvgForPanelArea(pidx, i, &area, me.lang, false, false) + "</symbol>"
 				}
 				pidx++
 			})
