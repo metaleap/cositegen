@@ -238,7 +238,7 @@ func pngOpt(pngFilePath string) bool {
 				App.Proj.data.Sv.textRects[newfilehash] = App.Proj.data.Sv.textRects[curfilehash]
 				delete(App.Proj.data.Sv.textRects, curfilehash)
 			}
-			if err := os.Rename(".ccache/"+curfilehash, ".ccache/"+newfilehash); err != nil {
+			if err := os.Rename(".ccache/"+svCacheDirNamePrefix+curfilehash, ".ccache/"+svCacheDirNamePrefix+newfilehash); err != nil {
 				printLn("MUST mv manually:", curfilehash, "to", newfilehash, "because:", err.Error())
 			}
 		}
@@ -249,8 +249,8 @@ func pngOpt(pngFilePath string) bool {
 		}
 		if crashit {
 			for k, v := range App.Proj.data.PngOpt {
-				if pref := ".ccache/" + curfilehash + "/"; strings.HasPrefix(k, pref) {
-					App.Proj.data.PngOpt[".ccache/"+newfilehash+"/"+k[len(pref):]] = v
+				if pref := ".ccache/" + svCacheDirNamePrefix + curfilehash + "/"; strings.HasPrefix(k, pref) {
+					App.Proj.data.PngOpt[".ccache/"+svCacheDirNamePrefix+newfilehash+"/"+k[len(pref):]] = v
 					delete(App.Proj.data.PngOpt, k)
 				}
 			}

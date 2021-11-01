@@ -378,9 +378,9 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 			}
 			ln += hEscs['\n']
 			ts += "<tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>" + ln + "</tspan>"
-			if diff := 1; !forHtml {
+			if diff := 2; !forHtml {
 				if forEbook {
-					diff = 2
+					diff = 1
 				}
 				ts += "<tspan dy='" + itoa(-diff) + "' x='" + itoa(lineX-diff) + "'>" + ln + "</tspan>"
 				ts += "<tspan dy='" + itoa(diff+diff) + "' x='" + itoa(lineX+diff) + "'>" + ln + "</tspan>"

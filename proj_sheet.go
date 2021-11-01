@@ -15,6 +15,8 @@ import (
 	"time"
 )
 
+const svCacheDirNamePrefix = "" // TODO: switch from empty to sth. like "sv."
+
 type Sheet struct {
 	parentChapter *Chapter
 	name          string
@@ -100,7 +102,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 		}
 		App.Proj.data.Sv.ById[me.id] = me.data
 	}
-	me.data.dirPath = ".ccache/" + me.id
+	me.data.dirPath = ".ccache/" + svCacheDirNamePrefix + me.id
 	me.data.bwFilePath = filepath.Join(me.data.dirPath, "bw."+itoa(int(App.Proj.BwThresholds[0]))+".png")
 	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(App.Proj.BwThresholds[0]))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
 	mkDir(me.data.dirPath)

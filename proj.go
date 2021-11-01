@@ -183,9 +183,8 @@ func (me *Project) load() (numSheetVers int) {
 		me.data.Sv.textRects = map[string][][]ImgPanelArea{}
 	}
 	me.data.Sv.fileNamesToIds = map[string]string{}
-	if me.data.Sv.IdsToFileMeta == nil {
-		me.data.Sv.IdsToFileMeta = map[string]FileInfo{}
-	}
+	oldIdsToFileMeta := me.data.Sv.IdsToFileMeta
+	me.data.Sv.IdsToFileMeta = make(map[string]FileInfo, len(oldIdsToFileMeta))
 	if me.data.Sv.ById == nil {
 		me.data.Sv.ById = map[string]*SheetVerData{}
 	}
@@ -217,6 +216,7 @@ func (me *Project) load() (numSheetVers int) {
 			bb.book = *me.BookDefs[bb.Book]
 		}
 	}
+
 	for _, series := range me.Series {
 		seriesdirpath := "scans/" + series.Name
 		if series.UrlName == "" {
@@ -283,7 +283,7 @@ func (me *Project) load() (numSheetVers int) {
 						defer work.Done()
 						if modtime := svfileinfo.ModTime().UnixNano(); modtime < dtdatajson.UnixNano() {
 							work.Lock()
-							for id, filemeta := range me.data.Sv.IdsToFileMeta {
+							for id, filemeta := range oldIdsToFileMeta {
 								if filemeta.FilePath == sv.fileName && filemeta.ModTime == modtime && filemeta.Size == svfileinfo.Size() {
 									sv.id = id
 									break
@@ -304,7 +304,7 @@ func (me *Project) load() (numSheetVers int) {
 						}
 						cachedirsymlinkpath := sv.fileName[:len(sv.fileName)-len(".png")]
 						_ = os.Remove(cachedirsymlinkpath)
-						if err := os.Symlink("../../../.ccache/"+sv.id, cachedirsymlinkpath); err != nil {
+						if err := os.Symlink("../../../.ccache/"+svCacheDirNamePrefix+sv.id, cachedirsymlinkpath); err != nil {
 							panic(err)
 						}
 					}(sheetver, fileinfo)
@@ -340,10 +340,22 @@ func (me *Project) load() (numSheetVers int) {
 			}
 		}
 	}
+
 	for svid := range me.data.Sv.ById {
 		if _, exists := me.data.Sv.IdsToFileMeta[svid]; !exists {
 			delete(me.data.Sv.ById, svid)
-			rmDir(".ccache/" + svid)
+			rmDir(".ccache/" + svCacheDirNamePrefix + svid)
+		}
+	}
+	{ // TODO: detect and remove old stale no-longer-needed svdata dirs in .ccache
+		entries, err := os.ReadDir(".ccache")
+		if err != nil {
+			panic(err)
+		}
+		for _, entry := range entries {
+			if name := entry.Name(); entry.IsDir() && svCacheDirNamePrefix != "" && strings.HasPrefix(name, svCacheDirNamePrefix) {
+				printLn(len(name), me.data.Sv.ById[name] == nil, name, me.data.Sv.IdsToFileMeta[name])
+			}
 		}
 	}
 	return
