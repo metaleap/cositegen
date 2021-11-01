@@ -52,8 +52,6 @@ type PageGen struct {
 	QualList       string
 	PagesList      string
 	PageContent    string
-	HintHtmlR      string
-	HintHtmlS      string
 	HintDir        string
 	VerHint        string
 	LegalHtml      string
@@ -391,8 +389,6 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		SiteHost:     App.Proj.SiteHost,
 		SiteDesc:     repl.Replace(hEsc(locStr(App.Proj.SiteDesc, me.lang))),
 		PageLang:     me.lang,
-		HintHtmlR:    me.textStr("HintHtmlR"),
-		HintHtmlS:    me.textStr("HintHtmlS"),
 		HintDir:      me.textStr("HintDir"),
 		VerHint:      me.textStr("VerHint"),
 		LegalHtml:    me.textStr("LegalHtml"),
@@ -480,7 +476,9 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 					me.page.QualList = "<select disabled='disabled' title='" + hEsc(me.textStr("QualityHint")) + "' name='" + App.Proj.Gen.IdQualiList + "' id='" + App.Proj.Gen.IdQualiList + "'>" + me.page.QualList + "</select>"
 					me.page.HrefDirLtr = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Ltr.Name, me.lang, svdt, me.bgCol) + ".html"
 					me.page.HrefDirRtl = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Rtl.Name, me.lang, svdt, me.bgCol) + ".html"
-
+					if pageNr != 0 {
+						me.page.PageTitleTxt += " (" + itoa(pageNr) + "/" + itoa(len(chapter.sheets)/chapter.SheetsPerPage) + ")"
+					}
 					numFilesWritten += me.genPageExecAndWrite(me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svdt, me.bgCol), chapter)
 				}
 			}
@@ -747,7 +745,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				hqsrc = ""
 			}
 
-			s += "<div id='" + firstpanel + App.Proj.Gen.ClsPanel + "p" + sv.id + itoa(pidx) + "' onclick='" + App.Proj.Gen.ClsPanel + "(this)' class='" + App.Proj.Gen.ClsPanel + "'"
+			s += "<div id='" + firstpanel + App.Proj.Gen.ClsPanel + "p" + sv.id + itoa(pidx) + "' class='" + App.Proj.Gen.ClsPanel + "'"
 			if firstpanel = ""; viewMode == "r" {
 				s += " tabindex='0' onfocus='" + App.Proj.Gen.ClsPanel + "f(this)'"
 			}
