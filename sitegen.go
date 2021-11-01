@@ -382,12 +382,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 }
 
 func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) {
-	strrepl := locStr(App.Proj.DirModes.Ltr.Title, me.lang)
-	if me.dirRtl {
-		strrepl = locStr(App.Proj.DirModes.Rtl.Title, me.lang)
-	}
 	homename, repl := "index", strings.NewReplacer(
-		"%DIR%", "<span class='"+App.Proj.DirModes.Ltr.Name+App.Proj.DirModes.Rtl.Name+"'>"+strrepl+"</span>",
 		"%LANG"+me.lang+"%", itoa(int(App.Proj.percentTranslated(me.lang, nil, nil, nil, -1))),
 	)
 	me.page = PageGen{
@@ -645,7 +640,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		nextchap := chapter.NextAfter(true)
 		if pageNr == numpages && istoplist && nextchap != nil {
 			name := me.namePage(nextchap, quali.SizeHint, 1, viewMode, "", me.lang, 0, me.bgCol)
-			s += "<li><a href='./" + name + ".html'>" + locStr(nextchap.Title, me.lang) + "</a></li>"
+			s += "<li class='" + App.Proj.Gen.APaging + App.Proj.Gen.ClsChapter + "'><a href='./" + name + ".html'>" + locStr(nextchap.Title, me.lang) + "</a></li>"
 		}
 		if s != "" {
 			var pg int
