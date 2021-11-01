@@ -163,9 +163,10 @@ func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sh
 	return float64(numtrans) * (100.0 / float64(numtotal))
 }
 
-func (me *Project) save() {
-	jsonSave(".ccache/data.json", &me.data)
-	jsonSave("texts.json", me.data.Sv.textRects)
+func (me *Project) save(texts bool) {
+	if jsonSave(".ccache/data.json", &me.data); texts {
+		jsonSave("texts.json", me.data.Sv.textRects)
+	}
 }
 
 func (me *Project) load() (numSheetVers int) {

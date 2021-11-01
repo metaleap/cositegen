@@ -111,7 +111,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	didpnlpics := me.ensurePanelPics(forceFullRedo || didpanels)
 
 	if didWork = didgraydistr || didbwsheet || didpanels || didpnlpics; shouldsaveprojdata || didWork {
-		App.Proj.save()
+		App.Proj.save(false)
 	}
 	return
 }

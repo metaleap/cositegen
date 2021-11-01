@@ -102,7 +102,7 @@ func guiMain(r *http.Request, notice string) []byte {
 		s += "<hr/><div id='uipane'>" + guiStartView() + "</div>"
 	}
 	if shouldsavemeta {
-		App.Proj.save()
+		App.Proj.save(true)
 	}
 
 	s += "<hr/>" //+ guiHtmlListFrom("main_action", "(Project Actions)", true, AppMainActions)

@@ -51,7 +51,7 @@ func appDetectBrowser() {
 }
 
 func appOnExit() {
-	App.Proj.save()
+	App.Proj.save(false)
 }
 
 func appMainAction(fromGui bool, name string, args map[string]struct{}) string {
@@ -150,7 +150,7 @@ func pngOptsLoop() {
 			}
 		}
 		if dels {
-			App.Proj.save()
+			App.Proj.save(false)
 		}
 		if App.Gui.Exiting {
 			return
@@ -181,7 +181,7 @@ func pngOptsLoop() {
 			}
 			if pngOpt(pngfilename) {
 				numdone++
-				App.Proj.save()
+				App.Proj.save(false)
 			}
 		}
 		printLn("PNGOPT:", len(matches), "scrutinized &", numdone, "processed, taking a quarter-hour nap...")
@@ -254,7 +254,7 @@ func pngOpt(pngFilePath string) bool {
 					delete(App.Proj.data.PngOpt, k)
 				}
 			}
-			App.Proj.save()
+			App.Proj.save(false)
 			panic("relinked hashes: intentional crash, restart manually")
 		} else if strings.HasSuffix(pngFilePath, "/bwsmall."+itoa(int(App.Proj.BwThresholds[0]))+"."+itoa(int(App.Proj.BwSmallWidth))+".png") {
 			if hashid := filepath.Base(filepath.Dir(pngFilePath)); App.Proj.data.Sv.ById != nil {

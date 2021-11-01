@@ -121,9 +121,9 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm
                 innerhtml += "<tspan dy='" + pxline + "' x='" + (borderandfill ? (px1cm * 0.44) : 0) + "'>"
                     + line
                         .replace(/\s/g, "&nbsp;")
-                        .replace(/<b>/g, "<tspan class='b'>")
-                        .replace(/<u>/g, "<tspan class='u'>")
-                        .replace(/<i>/g, "<tspan class='i'>")
+                        .replace(/<b>/g, "<tspan style='font-weight: bolder'>")
+                        .replace(/<u>/g, "<tspan style='text-decoration: underline'>")
+                        .replace(/<i>/g, "<tspan style='font-style: italic'>")
                         .replace(/<\/b>/g, "</tspan>")
                         .replace(/<\/u>/g, "</tspan>")
                         .replace(/<\/i>/g, "</tspan>")
