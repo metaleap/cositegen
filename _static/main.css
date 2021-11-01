@@ -100,18 +100,6 @@ div.panel .panelrect svg {
     left: 0px;
 }
 
-tspan.b {
-    font-weight: bolder;
-}
-
-tspan.u {
-    text-decoration: underline;
-}
-
-tspan.i {
-    font-style: italic;
-}
-
 .col0 { background-color: lightblue; }
 .col1 { background-color: chocolate; }
 .col2 { background-color: darkseagreen; }

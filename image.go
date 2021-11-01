@@ -345,11 +345,19 @@ var svgTxtCounter int
 
 func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId string, px1cm float64, lineX int, fontSizeCmA4 float64, perLineDyCmA4 float64, forHtml bool) (s string) {
 	if svgRepl == nil {
-		repls := []string{" ", "&nbsp;"}
-		for _, tagclassname := range append(App.Proj.Gen.PanelSvgText.TspanTagClasses, "b", "i", "u") {
+		repls := []string{
+			" ", "&nbsp;",
+			"&lt;/i&gt;", "</tspan>",
+			"&lt;/b&gt;", "</tspan>",
+			"&lt;/u&gt;", "</tspan>",
+			"&lt;i&gt;", "<tspan style='font-style: italic'>",
+			"&lt;b&gt;", "<tspan style='font-weight: bolder'>",
+			"&lt;u&gt;", "<tspan style='text-decoration: underline'>",
+		}
+		for tagname, style := range App.Proj.Gen.PanelSvgText.TspanSubTagStyles {
 			repls = append(repls,
-				"&lt;"+tagclassname+"&gt;", "<tspan class='"+tagclassname+"'>",
-				"&lt;/"+tagclassname+"&gt;", "</tspan>",
+				"&lt;"+tagname+"&gt;", "<tspan style='"+style+"'>",
+				"&lt;/"+tagname+"&gt;", "</tspan>",
 			)
 		}
 		svgRepl = strings.NewReplacer(repls...)

@@ -735,9 +735,6 @@ func (*BookBuild) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool,
 		width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
 			<style type="text/css">
 				polygon { stroke: black; fill: white; }
-				.b, tspan.b { font-weight: bolder; }
-				.u, tspan.u { text-decoration: underline; }
-				.i, tspan.i { font-style: italic; }
 				@font-face { ` +
 		strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) +
 		` 		}
