@@ -245,7 +245,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 		})
 	}
 
-	printLn("SiteGen: DONE after " + time.Now().Sub(tstart).String())
+	printLn("SiteGen: " + App.Proj.SiteHost + " DONE after " + time.Now().Sub(tstart).String())
 	if len(me.books) == 0 {
 		cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=file://"+os.Getenv("PWD")+"/.build/index.html")...)
 		if err := cmd.Start(); err != nil {
@@ -429,7 +429,11 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 	} else {
 		series := chapter.parentSeries
 		me.page.HrefHome += "#" + strings.ToLower(series.Name)
-		me.page.PageTitle = "<span>" + hEsc(locStr(series.Title, me.lang)) + ":</span> " + hEsc(locStr(chapter.Title, me.lang))
+		chaptitlewords := strings.Split(hEsc(trim(locStr(chapter.Title, me.lang))), " ")
+		for i, word := range chaptitlewords {
+			chaptitlewords[i] = "<nobr>" + word + "</nobr>"
+		}
+		me.page.PageTitle = "<span>" + hEsc(locStr(series.Title, me.lang)) + ":</span> " + strings.Join(chaptitlewords, " ")
 		me.page.PageTitleTxt = hEsc(locStr(series.Title, me.lang)) + ": " + hEsc(locStr(chapter.Title, me.lang))
 		author := strIf(chapter.Author == "", series.Author, chapter.Author)
 		if author != "" {
