@@ -806,6 +806,11 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 	me.page.PageContent += "</div>"
 	me.page.PageContent += pageslist()
 	me.page.PageContent += "</div>"
+	if mzs := chapter.GenPanelSvgText.MozScale; mzs > 0.01 {
+		me.page.PageContent = `<style type="text/css">
+				symbol > svg.mz { -moz-transform:scale(` + ftoa(mzs, 2) + `) translateY(48px) !important; }
+			</style>` + me.page.PageContent
+	}
 
 	return allpanels
 }

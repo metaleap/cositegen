@@ -8,13 +8,14 @@ import (
 )
 
 type Series struct {
-	Name     string
-	UrlName  string
-	Title    map[string]string
-	Desc     map[string]string
-	Author   string
-	Chapters []*Chapter
-	Book     *BookDef
+	Name            string
+	UrlName         string
+	Title           map[string]string
+	Desc            map[string]string
+	Author          string
+	Chapters        []*Chapter
+	Book            *BookDef
+	GenPanelSvgText *PanelSvgTextGen
 }
 
 type Chapter struct {
@@ -25,10 +26,7 @@ type Chapter struct {
 	Author          string
 	SheetsPerPage   int
 	StoryboardFile  string
-	GenPanelSvgText struct {
-		PerLineDyCmA4 float64
-		FontSizeCmA4  float64
-	}
+	GenPanelSvgText *PanelSvgTextGen
 
 	defaultQuali int
 	sheets       []*Sheet
@@ -44,6 +42,18 @@ type Chapter struct {
 type ChapterStoryboardPage struct {
 	name      string
 	textBoxes []ChapterStoryboardPageTextBox
+}
+
+type PanelSvgTextGen struct {
+	BoxPolyStrokeWidthCm float64
+	ClsBoxPoly           string
+	BoxPolyDxCmA4        float64
+	PerLineDyCmA4        float64
+	FontSizeCmA4         float64
+	MozScale             float64
+	Css                  map[string][]string
+	AppendToFiles        map[string]bool
+	TspanSubTagStyles    map[string]string
 }
 
 type ChapterStoryboardPageTextBox struct {
@@ -179,6 +189,32 @@ func (me *Chapter) loadStoryboard() {
 		}
 		if len(csp.textBoxes) > 0 {
 			me.storyBoardPages = append(me.storyBoardPages, csp)
+		}
+	}
+}
+
+func (me *PanelSvgTextGen) mergeWithParent(base *PanelSvgTextGen) {
+	if me.ClsBoxPoly == "" {
+		me.ClsBoxPoly = base.ClsBoxPoly
+	}
+	if me.Css == nil {
+		me.Css = base.Css
+	}
+	if me.AppendToFiles == nil {
+		me.AppendToFiles = base.AppendToFiles
+	}
+	if me.TspanSubTagStyles == nil {
+		me.TspanSubTagStyles = base.TspanSubTagStyles
+	}
+	for ptr, val := range map[*float64]float64{
+		&me.BoxPolyStrokeWidthCm: base.BoxPolyStrokeWidthCm,
+		&me.BoxPolyDxCmA4:        base.BoxPolyDxCmA4,
+		&me.PerLineDyCmA4:        base.PerLineDyCmA4,
+		&me.FontSizeCmA4:         base.FontSizeCmA4,
+		&me.MozScale:             base.MozScale,
+	} {
+		if *ptr < 0.01 { // float64 `==0.0`...
+			*ptr = val
 		}
 	}
 }

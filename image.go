@@ -343,7 +343,7 @@ func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, heig
 
 var svgTxtCounter int
 
-func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId string, px1cm float64, lineX int, fontSizeCmA4 float64, perLineDyCmA4 float64, forHtml bool, forEbook bool) (s string) {
+func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId string, lineX int, fontSizeCmA4 float64, perLineDyCmA4 float64, forHtml bool, forEbook bool) (s string) {
 	if svgRepl == nil {
 		repls := []string{
 			" ", "&nbsp;",
@@ -363,15 +363,16 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 		svgRepl = strings.NewReplacer(repls...)
 	}
 
-	pxfont, pxline := int(px1cm*fontSizeCmA4), int(px1cm*perLineDyCmA4)
+	pxfont, pxline := int(me.data.PxCm*fontSizeCmA4), int(me.data.PxCm*perLineDyCmA4)
 	svgTxtCounter++
 
 	if forHtml {
 		s += "<text id='_w_" + itoa(svgTxtCounter) + "' style='visibility: hidden; font-size: " + itoa(pxfont) + "px'><tspan><tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>&#9881;...</tspan></tspan><title><tspan>Loading... / Wird geladen...</tspan></title></text>"
 		s += `<use id='_t_` + itoa(svgTxtCounter) + `' xlink:href="t.` + me.parentSheet.parentChapter.parentSeries.Name + `.` + me.parentSheet.parentChapter.Name + `.` + langId + `.svg#` + me.id + `_` + itoa(pidx) + `t` + itoa(tidx+1) + `"/>`
 	} else {
-		if !forEbook {
-			s += `<svg style="-moz-transform:scale(0.92) !important;" width="` + itoa(me.data.PanelsTree.Rect.Dx()) + `">`
+		mozscale := me.parentSheet.parentChapter.GenPanelSvgText.MozScale > 0.01 && !forEbook
+		if mozscale {
+			s += `<svg class="mz" width="` + itoa(me.data.PanelsTree.Rect.Dx()) + `">`
 		}
 		s += "<text style='font-size: " + itoa(pxfont) + "px;' transform='" + trim(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
 		ts := "<tspan style='" + trim(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'>"
@@ -393,7 +394,7 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 		}
 		ts += "</tspan>"
 		s += ts /*+ "<title>" + ts + "</title>"*/ + "</text>"
-		if !forEbook {
+		if mozscale {
 			s += "</svg>"
 		}
 	}

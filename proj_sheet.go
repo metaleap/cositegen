@@ -560,5 +560,5 @@ func (me *SheetVer) genTextSvgForPanelArea(pidx int, tidx int, pta *ImgPanelArea
 		fontSizeCmA4 *= me.data.FontFactor
 		perLineDyCmA4 *= me.data.FontFactor
 	}
-	return me.imgSvgText(pidx, tidx, pta, lang, me.data.PxCm, int(linex), fontSizeCmA4, perLineDyCmA4, forHtml, forEbook)
+	return me.imgSvgText(pidx, tidx, pta, lang, int(linex), fontSizeCmA4, perLineDyCmA4, forHtml, forEbook)
 }

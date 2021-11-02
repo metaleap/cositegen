@@ -62,16 +62,7 @@ type Project struct {
 		APaging          string
 		ImgSrcLang       string
 		PicDirName       string
-		PanelSvgText     struct {
-			BoxPolyStrokeWidthCm float64
-			ClsBoxPoly           string
-			BoxPolyDxCmA4        float64
-			PerLineDyCmA4        float64
-			FontSizeCmA4         float64
-			Css                  map[string][]string
-			AppendToFiles        map[string]bool
-			TspanSubTagStyles    map[string]string
-		}
+		PanelSvgText     PanelSvgTextGen
 	}
 
 	allPrepsDone bool
@@ -232,6 +223,11 @@ func (me *Project) load() (numSheetVers int) {
 	}
 
 	for _, series := range me.Series {
+		if series.GenPanelSvgText == nil {
+			series.GenPanelSvgText = &me.Gen.PanelSvgText
+		} else {
+			series.GenPanelSvgText.mergeWithParent(&me.Gen.PanelSvgText)
+		}
 		seriesdirpath := "scans/" + series.Name
 		if series.UrlName == "" {
 			series.UrlName = series.Name
@@ -240,6 +236,11 @@ func (me *Project) load() (numSheetVers int) {
 			series.Title = map[string]string{me.Langs[0]: series.Name}
 		}
 		for _, chap := range series.Chapters {
+			if chap.GenPanelSvgText == nil {
+				chap.GenPanelSvgText = series.GenPanelSvgText
+			} else {
+				chap.GenPanelSvgText.mergeWithParent(series.GenPanelSvgText)
+			}
 			chap.parentSeries = series
 			chapdirpath := filepath.Join(seriesdirpath, chap.Name)
 			if chap.UrlName == "" {
