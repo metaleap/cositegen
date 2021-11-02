@@ -197,6 +197,11 @@ func (me *Project) load() (numSheetVers int) {
 	if me.data.PngOpt == nil {
 		me.data.PngOpt = map[string][]string{}
 	}
+	for i := range me.Qualis {
+		if me.Qualis[i].Name = trim(me.Qualis[i].Name); me.Qualis[i].Name == "" {
+			me.Qualis[i].Name = itoa(me.Qualis[i].SizeHint)
+		}
+	}
 
 	if me.BookDefs == nil {
 		me.BookDefs = map[string]*BookDef{}

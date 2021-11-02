@@ -148,6 +148,9 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 			}
 			qstats[chapter] = chq
 			for qidx, totalsize := range chq {
+				if App.Proj.Qualis[qidx].ExcludeInSiteGen {
+					continue
+				}
 				if (min == 0 || totalsize < min) && App.Proj.Qualis[qidx].SizeHint <= 4096 && App.Proj.Qualis[qidx].SizeHint > 0 {
 					min, chapter.defaultQuali = totalsize, qidx
 				}
@@ -333,7 +336,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 		numPanels++
 		go func(pidx int) {
 			for qidx, quali := range App.Proj.Qualis {
-				if quali.Name == "" {
+				if quali.ExcludeInSiteGen {
 					continue
 				}
 				fext := strIf(quali.SizeHint == 0, ".svg", ".png")
@@ -436,7 +439,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		me.page.PageDesc = hEsc(strIf(desc == "", locStr(series.Desc, me.lang), desc)) + author
 		me.page.PageDescTxt = hEsc(strIf(desc == "", locStr(series.Desc, me.lang), desc))
 		for qidx, quali := range App.Proj.Qualis {
-			if quali.Name == "" {
+			if quali.ExcludeInSiteGen {
 				continue
 			}
 			for _, viewmode := range viewModes {
@@ -464,7 +467,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 						}
 					}
 					for i, q := range App.Proj.Qualis[:len(qsizes)] {
-						if q.Name == "" {
+						if q.ExcludeInSiteGen {
 							continue
 						}
 						me.page.QualList += "<option value='" + me.namePage(chapter, q.SizeHint, pageNr, viewmode, "", me.lang, svdt, me.bgCol) + "'"
