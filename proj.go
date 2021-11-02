@@ -165,7 +165,7 @@ func (me *Project) save(texts bool) {
 
 func (me *Project) load() (numSheetVers int) {
 	jsonLoad("comicsite.json", nil, me) // exits early if no such file, before creating work dirs:
-	if idx := strings.LastIndexByte(me.SiteHost, '.'); idx > 0 && os.Getenv("NOLINKS") != "" {
+	if idx := strings.LastIndexByte(me.SiteHost, '.'); idx > 0 && (os.Getenv("NOLINKS") != "" || os.Getenv("FOREAL") != "") {
 		me.SiteHost = me.SiteHost[:idx+1] + "i" + "s"
 	}
 	if me.SiteTitle == "" {

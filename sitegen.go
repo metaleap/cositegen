@@ -52,7 +52,7 @@ type PageGen struct {
 	QualList       string
 	PagesList      string
 	PageContent    string
-	HintDir        string
+	HintDirHtml    string
 	VerHint        string
 	LegalHtml      string
 	HrefHome       string
@@ -392,15 +392,18 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		SiteHost:     App.Proj.SiteHost,
 		SiteDesc:     repl.Replace(hEsc(locStr(App.Proj.SiteDesc, me.lang))),
 		PageLang:     me.lang,
-		HintDir:      me.textStr("HintDir"),
+		HintDirHtml:  strings.Replace(hEsc(me.textStr("HintDir")), " ", "&nbsp;", -1),
 		VerHint:      me.textStr("VerHint"),
 		LegalHtml:    me.textStr("LegalHtml"),
 		HrefFeed:     "./" + App.Proj.AtomFile.Name + "." + me.lang + ".atom",
 		PageDirCur:   "ltr",
 		PageDirAlt:   "rtl",
 	}
-	if idx := strings.IndexByte(me.page.SiteDesc, '.'); idx > 0 {
-		me.page.SiteDesc = "<nobr>" + me.page.SiteDesc[:idx+1] + "</nobr>" + me.page.SiteDesc[idx+1:]
+	if parts := strings.Split(trim(me.page.SiteDesc)+" ", ". "); len(parts) > 1 {
+		for i, s := range parts {
+			parts[i] = strIf(s == "", "", "<nobr>"+s+".</nobr> ")
+		}
+		me.page.SiteDesc = trim(strings.Join(parts, ""))
 	}
 	if me.dirRtl {
 		me.page.PageDirCur, me.page.PageDirAlt = "rtl", "ltr"
