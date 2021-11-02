@@ -126,7 +126,15 @@ func guiStartView() (s string) {
 					if chapter.SheetsPerPage != 0 {
 						numpages = len(chapter.sheets) / chapter.SheetsPerPage
 					}
-					s += "<div><input class='collchk' id='" + id + "' type='checkbox' checked='checked'/><h3><label for='" + id + "'>" + series.Name + "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;" + chapter.Name + "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;(" + itoa(len(chapter.sheets)) + " sheet/s, " + itoa(numpages) + " page/s)</label></h3>"
+					fontsizecm, lineheight := App.Proj.Gen.PanelSvgText.FontSizeCmA4, App.Proj.Gen.PanelSvgText.PerLineDyCmA4
+					if chapter.GenPanelSvgText.FontSizeCmA4 > 0.01 {
+						fontsizecm = chapter.GenPanelSvgText.FontSizeCmA4
+					}
+					if chapter.GenPanelSvgText.PerLineDyCmA4 > 0.01 {
+						lineheight = chapter.GenPanelSvgText.PerLineDyCmA4
+					}
+					title := "Default font size: " + ftoa(fontsizecm, 3) + "cm (" + ftoa((fontsizecm*10)/0.3528, 3) + "pt), line height: " + ftoa(lineheight, 3) + "cm (" + ftoa((lineheight*10)/0.3528, 3) + "pt)"
+					s += "<div title='" + title + "'><input class='collchk' id='" + id + "' type='checkbox' checked='checked'/><h3><label for='" + id + "'>" + series.Name + "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;" + chapter.Name + "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;(" + itoa(len(chapter.sheets)) + " sheet/s, " + itoa(numpages) + " page/s)</label></h3>"
 					s += "<div class='collchk'><table width='99%'>"
 					pgnr, pgprev := 0, 0
 					for i, sheet := range chapter.sheets {

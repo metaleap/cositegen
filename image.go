@@ -370,7 +370,10 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 		s += "<text id='_w_" + itoa(svgTxtCounter) + "' style='visibility: hidden; font-size: " + itoa(pxfont) + "px'><tspan><tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>&#9881;...</tspan></tspan><title><tspan>Loading... / Wird geladen...</tspan></title></text>"
 		s += `<use id='_t_` + itoa(svgTxtCounter) + `' xlink:href="t.` + me.parentSheet.parentChapter.parentSeries.Name + `.` + me.parentSheet.parentChapter.Name + `.` + langId + `.svg#` + me.id + `_` + itoa(pidx) + `t` + itoa(tidx+1) + `"/>`
 	} else {
-		s += "<text style='font-size: " + itoa(pxfont) + "px' transform='" + trim(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
+		if !forEbook {
+			s += `<svg style="-moz-transform:scale(0.92) !important;" width="` + itoa(me.data.PanelsTree.Rect.Dx()) + `">`
+		}
+		s += "<text style='font-size: " + itoa(pxfont) + "px;' transform='" + trim(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
 		ts := "<tspan style='" + trim(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'>"
 		for _, ln := range strings.Split(svgRepl.Replace(hEsc(locStr(pta.Data, langId))), hEscs['\n']) {
 			if ln == "" {
@@ -390,6 +393,9 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 		}
 		ts += "</tspan>"
 		s += ts /*+ "<title>" + ts + "</title>"*/ + "</text>"
+		if !forEbook {
+			s += "</svg>"
+		}
 	}
 	if forHtml {
 		s += "<script>vHide('_t_" + itoa(svgTxtCounter) + "');vShow('_w_" + itoa(svgTxtCounter) + "');</script>"
