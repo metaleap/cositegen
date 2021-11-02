@@ -548,12 +548,8 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 			for row := 0; row < perrowcol; row++ {
 				sv, cx, cy := svs[isv], col*cw, row*ch
 				isv = (isv + 1) % len(svs)
-				scanfilepath, err := filepath.Abs(sv.data.bwFilePath)
-				if err != nil {
-					panic(err)
-				}
 				svg += `<image opacity="0.44" x="` + itoa(cx) + `" y="` + itoa(cy) + `" width="` + itoa(cw) + `" height="` + itoa(ch) + `"
-					xlink:href="` + scanfilepath + `" />`
+					xlink:href="` + absPath((sv.data.bwFilePath)) + `" />`
 			}
 		}
 
@@ -758,11 +754,6 @@ func (*BookBuild) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool,
 	pidx := 0
 
 	sv.data.PanelsTree.iter(func(p *ImgPanel) {
-		panelpngsrcfilepath, err := filepath.Abs(filepath.Join(sv.data.PicDirPath(App.Proj.Qualis[App.Proj.maxQualiIdx()].SizeHint), itoa(pidx)+".png"))
-		if err != nil {
-			panic(err)
-		}
-
 		px, py, pw, ph := p.Rect.Min.X, p.Rect.Min.Y, p.Rect.Dx(), p.Rect.Dy()
 		tx, gid := px, "pnl"+itoa(pidx)
 		if dirRtl {
@@ -771,16 +762,14 @@ func (*BookBuild) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool,
 		svg += `<g id="` + gid + `" clip-path="url(#c` + gid + `)" transform="translate(` + itoa(tx) + ` ` + itoa(py) + `)">`
 		svg += `<defs><clipPath id="c` + gid + `"><rect x="0" y="0"  width="` + itoa(pw) + `" height="` + itoa(ph) + `"></rect></clipPath></defs>`
 		if bgCol {
-			panelbgpngsrcfilepath, err := filepath.Abs(filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png"))
-			if err != nil {
-				panic(err)
-			}
+			panelbgpngsrcfilepath := absPath(filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png"))
 			svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
 				xlink:href="` + panelbgpngsrcfilepath + `" />`
 		} else {
 			svg += `<rect x="0" y="0" stroke="#000000" stroke-width="0" fill="#ffffff"
 				width="` + itoa(pw) + `" height="` + itoa(ph) + `"></rect>`
 		}
+		panelpngsrcfilepath := absPath(filepath.Join(sv.data.PicDirPath(App.Proj.Qualis[App.Proj.maxQualiIdx()].SizeHint), itoa(pidx)+".png"))
 		svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
 				xlink:href="` + panelpngsrcfilepath + `" />`
 		svg += sv.genTextSvgForPanel(pidx, p, lang, false, true)

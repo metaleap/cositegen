@@ -19,8 +19,9 @@ type Project struct {
 	BookBuilds  map[string]*BookBuild
 	Langs       []string
 	Qualis      []struct {
-		Name     string
-		SizeHint int
+		Name             string
+		SizeHint         int
+		ExcludeInSiteGen bool
 	}
 	AtomFile struct {
 		PubDates    []string

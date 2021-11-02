@@ -146,9 +146,7 @@ func percent(hundred int, val int) int {
 func fileLinkOrCopy(srcPath string, dstPath string) {
 	if os.Getenv("NOLINKS") != "" {
 		fileWrite(dstPath, fileRead(srcPath))
-	} else if srcpathabs, err := filepath.Abs(srcPath); err != nil {
-		panic(err)
-	} else if err := os.Symlink(srcpathabs, dstPath); err != nil {
+	} else if err := os.Symlink(absPath(srcPath), dstPath); err != nil {
 		panic(err)
 	}
 }
@@ -177,6 +175,14 @@ func fileWrite(fileName string, data []byte) {
 		_ = os.Remove(tmpfilename)
 		panic(err)
 	}
+}
+
+func absPath(relPath string) string {
+	s, err := filepath.Abs(relPath)
+	if err != nil {
+		panic(err)
+	}
+	return s
 }
 
 func stat(fileName string, isDir bool) os.FileInfo {
