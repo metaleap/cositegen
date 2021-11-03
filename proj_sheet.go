@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"image"
 	_ "image/png"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -561,4 +562,23 @@ func (me *SheetVer) genTextSvgForPanelArea(pidx int, tidx int, pta *ImgPanelArea
 		perLineDyCmA4 *= me.data.FontFactor
 	}
 	return me.imgSvgText(pidx, tidx, pta, lang, int(linex), fontSizeCmA4, perLineDyCmA4, forHtml, forEbook)
+}
+
+func (me *SheetVerData) pxBounds() (ret image.Rectangle) {
+	ret.Min, ret.Max = image.Point{math.MaxInt, math.MaxInt}, image.Point{math.MinInt, math.MinInt}
+	me.PanelsTree.iter(func(pnl *ImgPanel) {
+		if pnl.Rect.Min.X < ret.Min.X {
+			ret.Min.X = pnl.Rect.Min.X
+		}
+		if pnl.Rect.Min.Y < ret.Min.Y {
+			ret.Min.Y = pnl.Rect.Min.Y
+		}
+		if pnl.Rect.Max.X > ret.Max.X {
+			ret.Max.X = pnl.Rect.Max.X
+		}
+		if pnl.Rect.Max.Y > ret.Max.Y {
+			ret.Max.Y = pnl.Rect.Max.Y
+		}
+	})
+	return
 }

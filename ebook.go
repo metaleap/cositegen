@@ -374,7 +374,7 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 							ui, _ := strconv.ParseUint(strnumsuff, 10, 64)
 							doublearrow = ui > 0 && ui < me.DoubleSpreadArrowsForLen
 						}
-						me.genBookSheetPageSvg(pagesvgfilepath, svgfilepath+".png", [2]int{sv.data.PanelsTree.Rect.Dx(), sv.data.PanelsTree.Rect.Dy()}, pgnr, doublearrow)
+						me.genBookSheetPageSvg(pagesvgfilepath, svgfilepath+".png", sv.data.pxBounds().Size(), pgnr, doublearrow)
 						pgnr++
 					}
 				}
@@ -418,7 +418,7 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 	}
 }
 
-func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath string, sheetImgSize [2]int, pgNr int, doubleSpreadArrowIndicator bool) {
+func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath string, sheetImgSize image.Point, pgNr int, doubleSpreadArrowIndicator bool) {
 	book, config := &me.book, &me.config
 	w, h, mm1 := config.PageSize.PxWidth, config.PageSize.PxHeight, config.PageSize.PxHeight/config.PageSize.MmHeight
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
@@ -433,22 +433,21 @@ func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath st
 	if (pgNr % 2) != 0 {
 		mmleft, pgleft = config.OffsetsMm.Large, config.PageSize.MmWidth-config.OffsetsMm.PgOdd
 	}
-	mmheight := int(float64(mmwidth) / (float64(sheetImgSize[0]) / float64(sheetImgSize[1])))
+	mmheight := int(float64(mmwidth) / (float64(sheetImgSize.X) / float64(sheetImgSize.Y)))
 	if mmheight > config.PageSize.MmHeight {
 		panic(sheetImgFilePath + ": width=" + itoa(mmwidth) + "mm height=" + itoa(mmheight) + "mm")
 	}
 	mmtop := (config.PageSize.MmHeight - mmheight) / 2
-	for mmbottom := mmtop + mmheight; mmbottom >= config.PageSize.MmHeight-2 && mmtop > 1; mmbottom = mmtop + mmheight {
-		mmtop--
-	}
 
 	svg += `<image x="` + itoa(mm1*mmleft) + `" y="` + itoa(mm1*mmtop) + `"
 		width="` + itoa(mm1*mmwidth) + `" height="` + itoa(mm1*mmheight) + `"
 		xlink:href="./` + filepath.Base(sheetImgFilePath) + `" dx="0" dy="0" />`
 
-	svg += `<text dx="0" dy="0" x="` + itoa(pgleft*mm1) + `" y="` + itoa(config.PageSize.PxHeight-mm1) + `">` + itoa0(pgNr, 3) + `</text>`
-	if doubleSpreadArrowIndicator { // ➪
-		svg += `<text dx="0" dy="0" x="` + itoa(w/2) + `" y="` + itoa(config.PageSize.PxHeight-mm1) + `">&#10155;</text>`
+	if bottomfreespace := (config.PageSize.PxHeight / mm1) - (mmheight + mmtop); bottomfreespace >= 3 {
+		svg += `<text dx="0" dy="0" x="` + itoa(pgleft*mm1) + `" y="` + itoa(config.PageSize.PxHeight-mm1) + `">` + itoa0(pgNr, 3) + `</text>`
+		if doubleSpreadArrowIndicator { // ➪
+			svg += `<text dx="0" dy="0" x="` + itoa(w/2) + `" y="` + itoa(config.PageSize.PxHeight-mm1) + `">&#10155;</text>`
+		}
 	}
 
 	svg += `</svg>`
@@ -737,7 +736,9 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *DualS
 }
 
 func (*BookBuild) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string, bgCol bool) {
-	w, h := sv.data.PanelsTree.Rect.Max.X, sv.data.PanelsTree.Rect.Max.Y
+	rectinner := sv.data.pxBounds()
+	w, h := rectinner.Dx(), rectinner.Dy()
+
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 		xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
 		width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
@@ -754,7 +755,13 @@ func (*BookBuild) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool,
 	pidx := 0
 
 	sv.data.PanelsTree.iter(func(p *ImgPanel) {
-		px, py, pw, ph := p.Rect.Min.X, p.Rect.Min.Y, p.Rect.Dx(), p.Rect.Dy()
+		px, py, pw, ph := p.Rect.Min.X-rectinner.Min.X, p.Rect.Min.Y-rectinner.Min.Y, p.Rect.Dx(), p.Rect.Dy()
+		if px < 0 {
+			panic(px)
+		}
+		if py < 0 {
+			panic(py)
+		}
 		tx, gid := px, "pnl"+itoa(pidx)
 		if dirRtl {
 			tx = w - pw - px
