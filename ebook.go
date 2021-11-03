@@ -386,12 +386,12 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 	}
 	if !me.NoDirtPages {
 		pagesvgfilepaths = append(pagesvgfilepaths, me.genBookDirtPageSvgs()...)
-		var work sync.WaitGroup
-		work.Add(2)
-		go me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrepDirPath, "cover.png"), &config.CoverSize, 0, config.OffsetsMm.CoverGap, work.Done)
-		go me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrepDirPath, "bgtoc.png"), &config.PageSize, 177, 0, work.Done)
-		work.Wait()
 	}
+	var work sync.WaitGroup
+	work.Add(2)
+	me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrepDirPath, "cover.png"), &config.CoverSize, 0, config.OffsetsMm.CoverGap, work.Done)
+	me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrepDirPath, "bgtoc.png"), &config.PageSize, 177, 0, work.Done)
+	work.Wait()
 
 	mkDir(".ccache/.svgpng")
 	for i, svgfilepath := range sheetsvgfilepaths {
@@ -630,7 +630,8 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *DualS
 		}
 	}
 
-	numcols, numrows, numnope, wantall, pxcentergap := 0, 0, 0, mmCenterGap != 0, int(float64(mmCenterGap)*(float64(size.PxWidth)/float64(size.MmWidth)))
+	px1mm := float64(size.PxWidth) / float64(size.MmWidth)
+	numcols, numrows, numnope, wantall, pxcentergap := 0, 0, 0, mmCenterGap != 0, int(float64(mmCenterGap)*px1mm)
 	{
 		n, grids := len(faces), make([]int, 0, len(faces)/4)
 		for _, min := range []int{2, 1} {
@@ -673,13 +674,24 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *DualS
 	cellw, cellh := (size.PxWidth-pxcentergap)/numcols, size.PxHeight/numrows
 	img := image.NewGray(image.Rect(0, 0, size.PxWidth, size.PxHeight))
 	imgFill(img, image.Rect(0, 0, size.PxWidth, size.PxHeight), color.Gray{0})
+	if diffbottom := size.PxHeight - (cellh * numrows); diffbottom > 0 {
+		imgFill(img, image.Rect(0, size.PxHeight-diffbottom-1, size.PxWidth, size.PxHeight), color.Gray{255})
+	}
+	if diffright := size.PxWidth - (pxcentergap + (cellw * numcols)); diffright > 0 {
+		imgFill(img, image.Rect(size.PxWidth-diffright-1, 0, size.PxWidth, size.PxHeight), color.Gray{255})
+	}
 
 	var fidx, cantitler int
-	var cantitlel bool
+	var cantitlel int
+	numleftblank := 1
+	for min := int(50.0 * px1mm); (numleftblank * cellw) < min; {
+		numleftblank++
+	}
+
 	for fimg, frect := range faces {
 		icol, irow, pad := fidx%numcols, fidx/numcols, size.PxHeight/50
 		if numnope > 0 && icol == 0 && irow == numrows-1 {
-			cantitlel, icol, fidx = true, 2, fidx+2
+			cantitlel, icol, fidx = numleftblank*cellw, numleftblank, fidx+numleftblank
 		}
 		cx, cy, fw, fh := cellw*icol, cellh*irow, frect.Dx(), frect.Dy()
 		if pxcentergap != 0 && icol >= (numcols/2) {
@@ -692,7 +704,7 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *DualS
 		drect := image.Rect(dx, dy, dx+dw, dy+dh)
 		ImgScaler.Scale(img, drect, fimg, frect, draw.Over, nil)
 		fidx++
-		if cantitler = dx + dw; icol == (numcols - 1) {
+		if cantitler = cx + cellw; cantitler >= size.PxWidth {
 			cantitler = 0
 		}
 	}
@@ -713,21 +725,24 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *DualS
 			if i > 0 && me.NoLangs {
 				continue
 			}
-			w, h := size.PxWidth, size.PxHeight
+			w, h, title := size.PxWidth, size.PxHeight, locStr(book.Title, lang)
 			svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
-		xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-		width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">`
+				xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+				width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">`
 			svg += `<image x="0" y="0" width="` + itoa(w) + `" height="` + itoa(h) + `"
-			xlink:href="` + outFilePath + `" />`
+				xlink:href="` + outFilePath + `" />`
 			if cantitler != 0 {
-				svg += `<text dx="0" dy="0" x="` + itoa(cantitler) + `" y="` + itoa(h-(cellh/5)) + `" style="` + book.CssCoverTitle + `">` +
-					htmlEscdToXmlEsc(hEsc(locStr(book.Title, lang))) + `</text>`
+				fs := 2.77 * (float64(size.PxWidth-cantitler) / float64(len(title)))
+				svg += `<text dx="0" dy="0" x="` + itoa(cantitler-int(fs*0.22)) + `" y="` + itoa(h-(cellh/3)) + `" style="` + strings.Replace(book.CssCoverTitle, "font-size:", "-moz-moz:", -1) + `; font-size: ` + itoa(int(fs)) + `px !important">` +
+					htmlEscdToXmlEsc(hEsc(title)) + `</text>`
 			}
+			printLn(cantitlel, size.PxWidth-cantitler)
 			svg += `<text dx="0" dy="0" x="` + itoa(size.PxWidth/2) + `" y="` + itoa(size.PxHeight/4) + `" style="` + book.CssCoverSpine + `">` +
-				htmlEscdToXmlEsc(hEsc(locStr(book.Title, lang))) + `</text>`
-			if cantitlel {
-				svg += `<text dx="0" dy="0" x="0" y="` + itoa((h-(cellh/5))-0) + `" style="` + book.CssCoverTitle + `">` +
-					htmlEscdToXmlEsc(hEsc(locStr(book.Title, lang))) + `</text>`
+				htmlEscdToXmlEsc(hEsc(title)) + `</text>`
+			if cantitlel != 0 {
+				fs := 2.77 * (float64(cantitlel) / float64(len(title)))
+				svg += `<text dx="0" dy="0" x="0" y="` + itoa(h-(cellh/3)) + `" style="` + strings.Replace(book.CssCoverTitle, "font-size:", "-moz-moz:", -1) + `; font-size: ` + itoa(int(fs)) + `px !important">` +
+					htmlEscdToXmlEsc(hEsc(title)) + `</text>`
 			}
 			svg += `</svg>`
 			fileWrite(outFilePath+"."+lang+".svg", []byte(svg))
@@ -799,7 +814,7 @@ func (me *BookBuild) genBookBuild(outDirPath string, lang string, bgCol bool, di
 		} else if me.genNumUniqueDirtPages != 0 {
 			idp = (idp + 1) % me.genNumUniqueDirtPages
 		}
-		if !me.NoDirtPages {
+		if pgnr == 3 || !me.NoDirtPages {
 			srcfilepaths = append(srcfilepaths, srcfilepath)
 		}
 	}
@@ -823,11 +838,8 @@ func (me *BookBuild) genBookBuild(outDirPath string, lang string, bgCol bool, di
 
 	bookid := me.id(lang, bgCol, dirRtl, loRes)
 	var work sync.WaitGroup
-	if !me.NoDirtPages {
-		work.Add(1)
-		go imgSvgToPng(filepath.Join(me.genPrepDirPath, "cover.png."+lang+".svg"), filepath.Join(outDirPath, "cover."+lang+".png"), nil, 0, 1200, true, work.Done)
-	}
-	work.Add(2)
+	work.Add(3)
+	go imgSvgToPng(filepath.Join(me.genPrepDirPath, "cover.png."+lang+".svg"), filepath.Join(outDirPath, "cover."+lang+".png"), nil, 0, 1200, true, work.Done)
 	go me.genBookBuildCbz(filepath.Join(outDirPath, bookid+".cbz"), srcfilepaths, lang, bgCol, dirRtl, loRes, work.Done)
 	go me.genBookBuildPdf(filepath.Join(outDirPath, bookid+".pdf"), srcfilepaths, lang, bgCol, dirRtl, loRes, work.Done)
 	work.Wait()
