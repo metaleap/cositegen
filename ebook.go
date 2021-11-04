@@ -388,9 +388,10 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 		pagesvgfilepaths = append(pagesvgfilepaths, me.genBookDirtPageSvgs()...)
 	}
 	var work sync.WaitGroup
-	work.Add(2)
-	me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrepDirPath, "cover.png"), &config.CoverSize, 0, config.OffsetsMm.CoverGap, work.Done)
-	me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrepDirPath, "bgtoc.png"), &config.PageSize, 177, 0, work.Done)
+	work.Add(1)
+	go me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrepDirPath, "cover.png"), &config.CoverSize, 0, config.OffsetsMm.CoverGap, work.Done)
+	work.Add(1)
+	go me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrepDirPath, "bgtoc.png"), &config.PageSize, 177, 0, work.Done)
 	work.Wait()
 
 	mkDir(".ccache/.svgpng")
@@ -443,11 +444,10 @@ func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath st
 		width="` + itoa(mm1*mmwidth) + `" height="` + itoa(mm1*mmheight) + `"
 		xlink:href="./` + filepath.Base(sheetImgFilePath) + `" dx="0" dy="0" />`
 
-	if bottomfreespace := (config.PageSize.PxHeight / mm1) - (mmheight + mmtop); bottomfreespace >= 3 {
-		svg += `<text dx="0" dy="0" x="` + itoa(pgleft*mm1) + `" y="` + itoa(config.PageSize.PxHeight-mm1) + `">` + itoa0(pgNr, 3) + `</text>`
-		if doubleSpreadArrowIndicator { // ➪
-			svg += `<text dx="0" dy="0" x="` + itoa(w/2) + `" y="` + itoa(config.PageSize.PxHeight-mm1) + `">&#10155;</text>`
-		}
+	pgy := itoa(config.PageSize.PxHeight - 3*mm1)
+	svg += `<text dx="0" dy="0" x="` + itoa(pgleft*mm1) + `" y="` + pgy + `">` + itoa0(pgNr, 3) + `</text>`
+	if doubleSpreadArrowIndicator { // ➪
+		svg += `<text dx="0" dy="0" x="` + itoa(w/2) + `" y="` + pgy + `">&#10155;</text>`
 	}
 
 	svg += `</svg>`
@@ -506,7 +506,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs 
 			continue
 		}
 		svg += `<text class="toc" x="` + itoa(textx*2) + `px" y="` + itoa(texty) + `%" dx="0" dy="0">` +
-			htmlEscdToXmlEsc(hEsc(locStr(chap.Title, lang)+"········"+App.Proj.textStr(lang, "BookTocPagePrefix")+strIf(pgnr < 10, "0", "")+itoa(pgnr))) + `</text>`
+			htmlEscdToXmlEsc(hEsc(locStr(chap.Title, lang)+"······"+App.Proj.textStr(lang, "BookTocPagePrefix")+strIf(pgnr < 10, "0", "")+itoa(pgnr))) + `</text>`
 		pgnrlast, cc = pgnr, cc+1
 	}
 
@@ -673,13 +673,11 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *DualS
 
 	cellw, cellh := (size.PxWidth-pxcentergap)/numcols, size.PxHeight/numrows
 	img := image.NewGray(image.Rect(0, 0, size.PxWidth, size.PxHeight))
-	imgFill(img, image.Rect(0, 0, size.PxWidth, size.PxHeight), color.Gray{0})
-	if diffbottom := size.PxHeight - (cellh * numrows); diffbottom > 0 {
-		imgFill(img, image.Rect(0, size.PxHeight-diffbottom-1, size.PxWidth, size.PxHeight), color.Gray{255})
+	var bggray uint8
+	if pxcentergap == 0 {
+		bggray = 255
 	}
-	if diffright := size.PxWidth - (pxcentergap + (cellw * numcols)); diffright > 0 {
-		imgFill(img, image.Rect(size.PxWidth-diffright-1, 0, size.PxWidth, size.PxHeight), color.Gray{255})
-	}
+	imgFill(img, image.Rect(0, 0, size.PxWidth, size.PxHeight), color.Gray{bggray})
 
 	var fidx, cantitler int
 	var cantitlel int
@@ -713,6 +711,22 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *DualS
 		halfgapleft := (size.PxWidth / 2) - (halfgapwidth / 2)
 		imgFill(img, image.Rect(halfgapleft, 0, halfgapleft+halfgapwidth, size.PxHeight), color.Gray{64})
 	}
+	if pxcentergap != 0 {
+		if cr, diffbottom := cantitler, size.PxHeight-(cellh*numrows); diffbottom > 0 {
+			imgFill(img, image.Rect(cantitlel, size.PxHeight-diffbottom-1, (size.PxWidth/2)-(pxcentergap/2), size.PxHeight), color.Gray{255})
+			if cantitler == 0 {
+				cr = size.PxWidth
+			}
+			imgFill(img, image.Rect(((size.PxWidth/2)-(pxcentergap/2)+pxcentergap), size.PxHeight-diffbottom-1, cr, size.PxHeight), color.Gray{255})
+		}
+		if diffright := size.PxWidth - (pxcentergap + (cellw * numcols)); diffright > 0 {
+			var off int
+			if cantitler != 0 {
+				off = cellh
+			}
+			imgFill(img, image.Rect(size.PxWidth-diffright-1, 0, size.PxWidth, size.PxHeight-off), color.Gray{255})
+		}
+	}
 
 	var buf bytes.Buffer
 	if err := PngEncoder.Encode(&buf, img); err != nil {
@@ -732,15 +746,14 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *DualS
 			svg += `<image x="0" y="0" width="` + itoa(w) + `" height="` + itoa(h) + `"
 				xlink:href="` + outFilePath + `" />`
 			if cantitler != 0 {
-				fs := 2.77 * (float64(size.PxWidth-cantitler) / float64(len(title)))
+				fs := 2.7 * (float64(size.PxWidth-cantitler) / float64(len(title)))
 				svg += `<text dx="0" dy="0" x="` + itoa(cantitler-int(fs*0.22)) + `" y="` + itoa(h-(cellh/3)) + `" style="` + strings.Replace(book.CssCoverTitle, "font-size:", "-moz-moz:", -1) + `; font-size: ` + itoa(int(fs)) + `px !important">` +
 					htmlEscdToXmlEsc(hEsc(title)) + `</text>`
 			}
-			printLn(cantitlel, size.PxWidth-cantitler)
 			svg += `<text dx="0" dy="0" x="` + itoa(size.PxWidth/2) + `" y="` + itoa(size.PxHeight/4) + `" style="` + book.CssCoverSpine + `">` +
 				htmlEscdToXmlEsc(hEsc(title)) + `</text>`
 			if cantitlel != 0 {
-				fs := 2.77 * (float64(cantitlel) / float64(len(title)))
+				fs := 2.7 * (float64(cantitlel) / float64(len(title)))
 				svg += `<text dx="0" dy="0" x="0" y="` + itoa(h-(cellh/3)) + `" style="` + strings.Replace(book.CssCoverTitle, "font-size:", "-moz-moz:", -1) + `; font-size: ` + itoa(int(fs)) + `px !important">` +
 					htmlEscdToXmlEsc(hEsc(title)) + `</text>`
 			}

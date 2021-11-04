@@ -482,7 +482,7 @@ func (me ImgPanel) flattened() ImgPanel {
 }
 
 func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
-	panelmin := srcImg.Rect.Max.X / 10 // min. ~2.9+cm
+	panelmin := srcImg.Rect.Max.Y / 10
 
 	detectRows := func(area image.Rectangle) (ret []image.Rectangle) {
 		laststart, seps := -1, [][2]int{}
