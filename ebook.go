@@ -338,6 +338,8 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 	config, series := &me.config, me.series
 	me.genPrepDirPath = "/dev/shm/" + strconv.FormatInt(time.Now().UnixNano(), 36)
 	mkDir(me.genPrepDirPath)
+	me.genBookDirtPageSvgs()
+	panic("YO")
 	var sheetsvgfilepaths, pagesvgfilepaths []string
 	for lidx, lang := range App.Proj.Langs {
 		if lidx > 0 && me.NoLangs {
@@ -542,18 +544,19 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 	perpage := float64(len(svs)) / float64(me.genNumUniqueDirtPages)
 	perrowcol := int(math.Ceil(math.Sqrt(perpage)))
 
-	var isv int
 	for i := 0; i < me.genNumUniqueDirtPages; i++ {
 		cw, ch := w/(perrowcol+1), h/(perrowcol+1)
 		svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 					xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
 					width="` + itoa(w+cb) + `" height="` + itoa(h+cb) + `"
 					viewBox="0 0 ` + itoa(w+cb) + ` ` + itoa(h+cb) + `"><defs>`
+		svs := svs[i*int(perrowcol*perrowcol):][:int(perrowcol*perrowcol)]
 		for i, sv := range svs {
 			svg += `<image xlink:href="` + absPath((sv.data.bwFilePath)) + `"
 						id="p` + itoa(i) + `" width="` + itoa(cw) + `" height="` + itoa(ch) + `" />`
 		}
 		svg += `</defs><g opacity="0.44" transform="rotate(-15 ` + itoa(w/2) + ` ` + itoa(h/2) + `)">`
+		var isv int
 		for col := -1; col <= perrowcol+1; col++ {
 			for row := -1; row <= perrowcol+1; row++ {
 				cx, cy := col*cw, row*ch
