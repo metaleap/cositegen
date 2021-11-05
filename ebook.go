@@ -339,6 +339,8 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 	me.genPrepDirPath = "/dev/shm/" + strconv.FormatInt(time.Now().UnixNano(), 36)
 	mkDir(me.genPrepDirPath)
 	var sheetsvgfilepaths, pagesvgfilepaths []string
+	me.genBookDirtPageSvgs()
+	panic("done")
 	for lidx, lang := range App.Proj.Langs {
 		if lidx > 0 && me.NoLangs {
 			continue
@@ -521,7 +523,8 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs 
 
 func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 	config, series := &me.config, me.series
-	w, h := config.PageSize.pxWidth(), config.PageSize.pxHeight()
+	w, h, cb := config.PageSize.pxWidth(), config.PageSize.pxHeight(), config.PageSize.pxCutBorder()
+
 	var svs []*SheetVer
 	rand.Seed(time.Now().UnixNano())
 	chaps := series.Chapters
@@ -546,18 +549,22 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 		cw, ch := w/perrowcol, h/perrowcol
 		svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 					xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-					width="` + itoa(w) + `" height="` + itoa(h) + `"
-					viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
-						<g transform="rotate(-22 ` + itoa(w/2) + ` ` + itoa(h/2) + `)">`
+					width="` + itoa(w+cb) + `" height="` + itoa(h+cb) + `"
+					viewBox="0 0 ` + itoa(w+cb) + ` ` + itoa(h+cb) + `"><defs>`
+		for i, sv := range svs {
+			svg += `<image xlink:href="` + absPath((sv.data.bwFilePath)) + `"
+						id="p` + itoa(i) + `" width="` + itoa(cw) + `" height="` + itoa(ch) + `" />`
+		}
+		svg += `</defs><g opacity="0.44" transform="rotate(-15 ` + itoa(w/2) + ` ` + itoa(h/2) + `)">`
 
-		for col := -perrowcol; col < 2*perrowcol; col++ {
-			for row := -perrowcol; row < 2*perrowcol; row++ {
-				sv, cx, cy := svs[isv], col*cw, row*ch
-				if isv = (isv + 1) % len(svs); (row % 2) == 0 {
+		for col := -1; col <= perrowcol; col++ {
+			for row := -1; row <= perrowcol; row++ {
+				cx, cy := col*cw, row*ch
+				if (row % 2) == 0 {
 					cx += cw / 2
 				}
-				svg += `<image opacity="0.44" x="` + itoa(cx) + `" y="` + itoa(cy) + `" width="` + itoa(cw) + `" height="` + itoa(ch) + `"
-							xlink:href="` + absPath((sv.data.bwFilePath)) + `" />`
+				svg += `<use x="` + itoa(cx) + `" y="` + itoa(cy) + `" xlink:href="#p` + itoa(isv) + `" />`
+				isv = (isv + 1) % len(svs)
 			}
 		}
 
@@ -730,8 +737,8 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *Size,
 			w, h, cb, title := size.pxWidth(), size.pxHeight(), size.pxCutBorder(), locStr(book.Title, lang)
 			svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 				xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-				width="` + itoa(w+cb*2) + `" height="` + itoa(h+cb*2) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">`
-			svg += `<image x="` + itoa(cb) + `" y="` + itoa(cb) + `" width="` + itoa(w) + `" height="` + itoa(h) + `"
+				width="` + itoa(w+cb*2) + `" height="` + itoa(h+cb*2) + `" viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `">`
+			svg += `<image dx="0" dy="0" x="` + itoa(cb) + `" y="` + itoa(cb) + `" width="` + itoa(w) + `" height="` + itoa(h) + `"
 						xlink:href="` + outFilePath + `" />`
 			if cantitler != 0 {
 				fs := 2.7 * (float64(w-cantitler) / float64(len(title)))
