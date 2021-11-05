@@ -110,7 +110,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 
 	didgraydistr := me.ensureGrayDistr(forceFullRedo || shouldsaveprojdata)
 	didbwsheet := me.ensureBwSheetPngs(forceFullRedo)
-	didpanels := me.ensurePanelsTree(forceFullRedo || didbwsheet || shouldsaveprojdata)
+	didpanels := me.ensurePanelsTree(me.data.PanelsTree == nil || forceFullRedo || didbwsheet || shouldsaveprojdata)
 	didpnlpics := me.ensurePanelPics(forceFullRedo || didpanels)
 
 	if didWork = didgraydistr || didbwsheet || didpanels || didpnlpics; shouldsaveprojdata || didWork {
@@ -155,9 +155,9 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 	for _, direntry := range diritems {
 		if fileinfo, _ := direntry.Info(); (!direntry.IsDir()) && strings.HasPrefix(direntry.Name(), "bg") &&
 			(strings.HasSuffix(direntry.Name(), ".png") || strings.HasSuffix(direntry.Name(), ".svg")) &&
-			(bgsrcfile == nil || fileinfo == nil ||
+			(bgsrcfile == nil || fileinfo == nil || os.Getenv("REDO_BGS") != "" ||
 				bgsrcfile.ModTime().UnixNano() > fileinfo.ModTime().UnixNano() ||
-				!strings.HasSuffix(direntry.Name(), App.Proj.PanelBgFileExt)) {
+				!strings.HasSuffix(direntry.Name(), ".png")) {
 			_ = os.Remove(filepath.Join(me.data.dirPath, direntry.Name()))
 		}
 	}
@@ -165,7 +165,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 		pidx, bgsvgsrc := 0, string(fileRead(bgsrcpath))
 		me.data.hasBgCol = true
 		me.data.PanelsTree.iter(func(p *ImgPanel) {
-			gid, dstfilepath := "pnl"+itoa(pidx), filepath.Join(me.data.dirPath, "bg"+itoa(pidx)+App.Proj.PanelBgFileExt)
+			gid, dstfilepath := "pnl"+itoa(pidx), filepath.Join(me.data.dirPath, "bg"+itoa(pidx)+".png")
 			if s, svg := "", bgsvgsrc; force || (nil == fileStat(dstfilepath)) {
 				_ = os.Remove(dstfilepath)
 				if idx := strings.Index(svg, `id="`+gid+`"`); idx > 0 {
@@ -181,7 +181,17 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 					}
 				}
 				if s != "" {
-					scale := float64(App.Proj.BwSmallWidth) / float64(me.data.PanelsTree.Rect.Max.X)
+					srcwidth := App.Proj.BwSmallWidth
+					if idx := strings.Index(bgsvgsrc, `width="`); idx > 0 {
+						strw := bgsvgsrc[idx+len(`width="`):]
+						strw = strw[:strings.IndexByte(strw, '"')]
+						if sw, _ := strconv.ParseUint(strw, 10, 16); sw > 0 {
+							srcwidth = uint16(sw)
+						} else {
+							panic(strw)
+						}
+					}
+					scale := float64(srcwidth) / float64(me.data.PanelsTree.Rect.Max.X)
 					pw, ph := int(float64(p.Rect.Dx())*scale), int(float64(p.Rect.Dy())*scale)
 					s = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 						<svg width="` + itoa(pw) + `" height="` + itoa(ph) + `" viewbox="0 0 ` + itoa(pw) + ` ` + itoa(ph) + `" xmlns="http://www.w3.org/2000/svg">` +
@@ -190,23 +200,16 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 							<style type="text/css">path { filter: url(#leblur); }</style>`) +
 						s + "</svg>"
 
-					switch App.Proj.PanelBgFileExt {
-					case ".svg":
-						fileWrite(dstfilepath, []byte(s))
-					case ".png":
-						tmpfilepath := "/dev/shm/" + me.id + "_bg" + itoa(pidx) + ".svg"
-						fileWrite(tmpfilepath, []byte(s))
-						out, err := exec.Command("convert", tmpfilepath, "-resize", itoa(int(100.0*App.Proj.PanelBgScaleIfPng))+"%", dstfilepath).CombinedOutput()
-						_ = os.Remove(tmpfilepath)
-						if s := trim(string(out)); err != nil {
-							_ = os.Remove(dstfilepath)
-							panic(err.Error() + ">>>>" + s + "<<<<")
-						} else if len(s) != 0 {
-							_ = os.Remove(dstfilepath)
-							panic(s)
-						}
-					default:
-						panic(App.Proj.PanelBgFileExt)
+					tmpfilepath := "/dev/shm/" + me.id + "_bg" + itoa(pidx) + ".svg"
+					fileWrite(tmpfilepath, []byte(s))
+					out, err := exec.Command("convert", tmpfilepath, "-resize", itoa(int(100.0*App.Proj.PanelBgScale))+"%", dstfilepath).CombinedOutput()
+					_ = os.Remove(tmpfilepath)
+					if s := trim(string(out)); err != nil {
+						_ = os.Remove(dstfilepath)
+						panic(err.Error() + ">>>>" + s + "<<<<")
+					} else if len(s) != 0 {
+						_ = os.Remove(dstfilepath)
+						panic(s)
 					}
 				}
 			}

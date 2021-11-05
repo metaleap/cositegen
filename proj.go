@@ -32,8 +32,7 @@ type Project struct {
 	BwThresholds           []uint8
 	BwSmallWidth           uint16
 	PanelBorderCm          float64
-	PanelBgFileExt         string
-	PanelBgScaleIfPng      float64
+	PanelBgScale           float64
 	PanelBgBlur            int
 	PageContentTexts       map[string]map[string]string
 	NumSheetsInHomeBgs     int

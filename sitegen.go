@@ -361,16 +361,12 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 					}
 				}
 			}
-			if srcpath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+App.Proj.PanelBgFileExt); sv.data.hasBgCol {
+			if srcpath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png"); sv.data.hasBgCol {
 				if fileinfo := fileStat(srcpath); fileinfo != nil {
 					atomic.AddUint64(&totalSize, uint64(fileinfo.Size()))
-					dstpath := filepath.Join(".build/" + App.Proj.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg" + App.Proj.PanelBgFileExt)
+					dstpath := filepath.Join(".build/" + App.Proj.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg.png")
 					fileLinkOrCopy(srcpath, dstpath)
-					if App.Proj.PanelBgFileExt == ".png" {
-						atomic.AddUint32(&numPngs, 1)
-					} else {
-						atomic.AddUint32(&numSvgs, 1)
-					}
+					atomic.AddUint32(&numPngs, 1)
 				}
 			}
 			work.Done()
@@ -458,7 +454,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 						var totalimgsize int64
 						for sv, maxpidx := range allpanels {
 							for pidx := 0; pidx <= maxpidx; pidx++ {
-								if bgfile := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg" + App.Proj.PanelBgFileExt); bgfile != nil && me.bgCol {
+								if bgfile := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg.png"); bgfile != nil && me.bgCol {
 									totalimgsize += bgfile.Size()
 								}
 								name := me.namePanelPic(sv, pidx, q.SizeHint)
@@ -766,8 +762,8 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				s += " " + App.Proj.Gen.ClsImgHq + "='" + hqsrc + "'"
 			}
 			if me.bgCol && sv.data.hasBgCol {
-				if bgsvg := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg" + App.Proj.PanelBgFileExt); bgsvg != nil {
-					s += " style='background-image:url(\"./" + App.Proj.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg" + App.Proj.PanelBgFileExt + "\");'"
+				if bgsvg := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg.png"); bgsvg != nil {
+					s += " style='background-image:url(\"./" + App.Proj.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg.png\");'"
 				}
 			}
 			s += "/>"
