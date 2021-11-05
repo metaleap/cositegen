@@ -339,8 +339,6 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 	me.genPrepDirPath = "/dev/shm/" + strconv.FormatInt(time.Now().UnixNano(), 36)
 	mkDir(me.genPrepDirPath)
 	var sheetsvgfilepaths, pagesvgfilepaths []string
-	me.genBookDirtPageSvgs()
-	panic("done")
 	for lidx, lang := range App.Proj.Langs {
 		if lidx > 0 && me.NoLangs {
 			continue
@@ -546,7 +544,7 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 
 	var isv int
 	for i := 0; i < me.genNumUniqueDirtPages; i++ {
-		cw, ch := w/perrowcol, h/perrowcol
+		cw, ch := w/(perrowcol+1), h/(perrowcol+1)
 		svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 					xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
 					width="` + itoa(w+cb) + `" height="` + itoa(h+cb) + `"
@@ -556,9 +554,8 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 						id="p` + itoa(i) + `" width="` + itoa(cw) + `" height="` + itoa(ch) + `" />`
 		}
 		svg += `</defs><g opacity="0.44" transform="rotate(-15 ` + itoa(w/2) + ` ` + itoa(h/2) + `)">`
-
-		for col := -1; col <= perrowcol; col++ {
-			for row := -1; row <= perrowcol; row++ {
+		for col := -1; col <= perrowcol+1; col++ {
+			for row := -1; row <= perrowcol+1; row++ {
 				cx, cy := col*cw, row*ch
 				if (row % 2) == 0 {
 					cx += cw / 2
