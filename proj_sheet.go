@@ -16,6 +16,7 @@ import (
 	"time"
 )
 
+const dpi1200 float64 = 472.424242424
 const svCacheDirNamePrefix = "" // TODO: switch from empty to sth. like "sv."
 
 type Sheet struct {
@@ -92,7 +93,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	shouldsaveprojdata := forceFullRedo
 	if me.data == nil {
 		shouldsaveprojdata = true
-		me.data = &SheetVerData{parentSheetVer: me, PxCm: 472.424242424} //1200dpi
+		me.data = &SheetVerData{parentSheetVer: me, PxCm: dpi1200} //1200dpi
 		{
 			pngdata := fileRead(me.fileName)
 			if img, _, err := image.Decode(bytes.NewReader(pngdata)); err != nil {

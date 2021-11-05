@@ -138,7 +138,6 @@ func appPrepWork(fromGui bool) {
 }
 
 func pngOptsLoop() {
-	return
 	App.pngOptBusy = true
 	defer func() { App.pngOptBusy = false }()
 

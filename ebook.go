@@ -19,12 +19,16 @@ import (
 	"time"
 )
 
-type DualSize struct {
-	MmWidth  int
-	MmHeight int
-	PxWidth  int
-	PxHeight int
+type Size struct {
+	MmWidth     int
+	MmHeight    int
+	MmCutBorder int
 }
+
+func (me Size) px() Size         { return Size{me.pxWidth(), me.pxHeight(), me.pxCutBorder()} }
+func (me Size) pxHeight() int    { return int(math.Ceil(float64(me.MmHeight) * (0.1 * dpi1200))) }
+func (me Size) pxWidth() int     { return int(math.Ceil(float64(me.MmWidth) * (0.1 * dpi1200))) }
+func (me Size) pxCutBorder() int { return int(math.Ceil(float64(me.MmCutBorder) * (0.1 * dpi1200))) }
 
 type BookBuild struct {
 	BasedOn                  string
@@ -53,8 +57,8 @@ type BookBuild struct {
 }
 
 type BookConfig struct {
-	PageSize        DualSize
-	CoverSize       DualSize
+	PageSize        Size
+	CoverSize       Size
 	PxLoResWidth    int
 	MinPageCount    int
 	DecosFromSeries string
@@ -62,8 +66,6 @@ type BookConfig struct {
 		CoverGap int
 		Small    int
 		Large    int
-		PgEven   int
-		PgOdd    int
 	}
 }
 
@@ -107,11 +109,11 @@ func (me *BookBuild) mergeOverrides() {
 		if !me.InclRtl {
 			me.InclRtl = base.InclRtl
 		}
-		if !me.NoLoRes {
-			me.NoLoRes = base.NoLoRes
-		}
 		if !me.NoHiRes {
 			me.NoHiRes = base.NoHiRes
+		}
+		if (!me.NoLoRes) && !me.NoHiRes {
+			me.NoLoRes = base.NoLoRes
 		}
 		if !me.NoLangs {
 			me.NoLangs = base.NoLangs
@@ -165,10 +167,10 @@ func (me *BookBuild) mergeOverrides() {
 	if me.OverrideConfig.PxLoResWidth > 0 {
 		me.config.PxLoResWidth = me.OverrideConfig.PxLoResWidth
 	}
-	if me.OverrideConfig.CoverSize.MmHeight != 0 && me.OverrideConfig.CoverSize.MmWidth != 0 && me.OverrideConfig.CoverSize.PxHeight != 0 && me.OverrideConfig.CoverSize.PxWidth != 0 {
+	if me.OverrideConfig.CoverSize.MmHeight != 0 && me.OverrideConfig.CoverSize.MmWidth != 0 {
 		me.config.CoverSize = me.OverrideConfig.CoverSize
 	}
-	if me.OverrideConfig.PageSize.MmHeight != 0 && me.OverrideConfig.PageSize.MmWidth != 0 && me.OverrideConfig.PageSize.PxHeight != 0 && me.OverrideConfig.PageSize.PxWidth != 0 {
+	if me.OverrideConfig.PageSize.MmHeight != 0 && me.OverrideConfig.PageSize.MmWidth != 0 {
 		me.config.PageSize = me.OverrideConfig.PageSize
 	}
 }
@@ -421,7 +423,7 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 
 func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath string, sheetImgSize image.Point, pgNr int, doubleSpreadArrowIndicator bool) {
 	book, config := &me.book, &me.config
-	w, h, mm1 := config.PageSize.PxWidth, config.PageSize.PxHeight, config.PageSize.PxHeight/config.PageSize.MmHeight
+	w, h, mm1 := config.PageSize.pxWidth(), config.PageSize.pxHeight(), config.PageSize.pxHeight()/config.PageSize.MmHeight
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 		xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
 		width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
@@ -430,22 +432,25 @@ func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath st
 			text { ` + strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + "; " + book.CssPgNr + ` }
 		</style>`
 
-	mmleft, mmwidth, pgleft := config.OffsetsMm.Small, config.PageSize.MmWidth-(config.OffsetsMm.Small+config.OffsetsMm.Large), config.OffsetsMm.PgEven
-	if (pgNr % 2) != 0 {
-		mmleft, pgleft = config.OffsetsMm.Large, config.PageSize.MmWidth-config.OffsetsMm.PgOdd
+	// for now treat page as being odd-numbered aka. right-hand-side
+	pgx := config.PageSize.MmWidth - (6 + config.OffsetsMm.Small)
+	var mmx, mmy, mmw, mmh float64
+	for mmo := float64(config.OffsetsMm.Large); mmy < float64(config.OffsetsMm.Small); mmo++ {
+		mmx, mmw = mmo, float64(config.PageSize.MmWidth)-(float64(config.OffsetsMm.Small)+mmo)
+		mmh = float64(mmw) / (float64(sheetImgSize.X) / float64(sheetImgSize.Y))
+		mmy = 0.5 * (float64(config.PageSize.MmHeight) - mmh)
 	}
-	mmheight := int(float64(mmwidth) / (float64(sheetImgSize.X) / float64(sheetImgSize.Y)))
-	if mmheight > config.PageSize.MmHeight {
-		panic(sheetImgFilePath + ": width=" + itoa(mmwidth) + "mm height=" + itoa(mmheight) + "mm")
+	// but is it an even-numbered/left-hand-side page?
+	if (pgNr % 2) == 0 {
+		mmx, pgx = float64(config.OffsetsMm.Small), config.OffsetsMm.Small
 	}
-	mmtop := (config.PageSize.MmHeight - mmheight) / 2
 
-	svg += `<image x="` + itoa(mm1*mmleft) + `" y="` + itoa(mm1*mmtop) + `"
-		width="` + itoa(mm1*mmwidth) + `" height="` + itoa(mm1*mmheight) + `"
+	svg += `<image x="` + itoa(int(float64(mm1)*mmx)) + `" y="` + itoa(int(float64(mm1)*mmy)) + `"
+		width="` + itoa(int(float64(mm1)*mmw)) + `" height="` + itoa(int(float64(mm1)*mmh)) + `"
 		xlink:href="./` + filepath.Base(sheetImgFilePath) + `" dx="0" dy="0" />`
 
-	pgy := itoa(config.PageSize.PxHeight - 3*mm1)
-	svg += `<text dx="0" dy="0" x="` + itoa(pgleft*mm1) + `" y="` + pgy + `">` + itoa0(pgNr, 3) + `</text>`
+	pgy := itoa(config.PageSize.pxHeight() - config.OffsetsMm.Small*mm1)
+	svg += `<text dx="0" dy="0" x="` + itoa(pgx*mm1) + `" y="` + pgy + `">` + itoa0(pgNr, 3) + `</text>`
 	if doubleSpreadArrowIndicator { // ➪
 		svg += `<text dx="0" dy="0" x="` + itoa(w/2) + `" y="` + pgy + `">&#10155;</text>`
 	}
@@ -456,7 +461,7 @@ func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath st
 
 func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs map[*Chapter]int) {
 	book, config, series := &me.book, &me.config, me.series
-	w, h := config.PageSize.PxWidth, config.PageSize.PxHeight
+	w, h := config.PageSize.pxWidth(), config.PageSize.pxHeight()
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 	xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
 	width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">`
@@ -516,7 +521,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs 
 
 func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 	config, series := &me.config, me.series
-	w, h := config.PageSize.PxWidth, config.PageSize.PxHeight
+	w, h := config.PageSize.pxWidth(), config.PageSize.pxHeight()
 	var svs []*SheetVer
 	rand.Seed(time.Now().UnixNano())
 	chaps := series.Chapters
@@ -540,19 +545,23 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 	for i := 0; i < me.genNumUniqueDirtPages; i++ {
 		cw, ch := w/perrowcol, h/perrowcol
 		svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
-			xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-			width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">`
+					xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+					width="` + itoa(w) + `" height="` + itoa(h) + `"
+					viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
+						<g transform="rotate(-22 ` + itoa(w/2) + ` ` + itoa(h/2) + `)">`
 
-		for col := 0; col < perrowcol; col++ {
-			for row := 0; row < perrowcol; row++ {
+		for col := -perrowcol; col < 2*perrowcol; col++ {
+			for row := -perrowcol; row < 2*perrowcol; row++ {
 				sv, cx, cy := svs[isv], col*cw, row*ch
-				isv = (isv + 1) % len(svs)
+				if isv = (isv + 1) % len(svs); (row % 2) == 0 {
+					cx += cw / 2
+				}
 				svg += `<image opacity="0.44" x="` + itoa(cx) + `" y="` + itoa(cy) + `" width="` + itoa(cw) + `" height="` + itoa(ch) + `"
-					xlink:href="` + absPath((sv.data.bwFilePath)) + `" />`
+							xlink:href="` + absPath((sv.data.bwFilePath)) + `" />`
 			}
 		}
 
-		svg += "</svg>"
+		svg += "</g></svg>"
 		outfilepath := filepath.Join(me.genPrepDirPath, "dp"+itoa(i)+".svg")
 		outFilePaths = append(outFilePaths, outfilepath)
 		fileWrite(outfilepath, []byte(svg))
@@ -560,7 +569,7 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 	return
 }
 
-func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *DualSize, inkColor uint8, mmCenterGap int, onDone func()) {
+func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *Size, inkColor uint8, mmCenterGap int, onDone func()) {
 	if onDone != nil {
 		defer onDone()
 	}
@@ -630,7 +639,7 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *DualS
 		}
 	}
 
-	px1mm := float64(size.PxWidth) / float64(size.MmWidth)
+	px1mm := float64(size.pxWidth()) / float64(size.MmWidth)
 	numcols, numrows, numnope, wantall, pxcentergap := 0, 0, 0, mmCenterGap != 0, int(float64(mmCenterGap)*px1mm)
 	{
 		n, grids := len(faces), make([]int, 0, len(faces)/4)
@@ -644,7 +653,7 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *DualS
 				break
 			}
 		}
-		ratio := float64(size.PxWidth-pxcentergap) / float64(size.PxHeight)
+		ratio := float64(size.pxWidth()-pxcentergap) / float64(size.pxHeight())
 		sort.Slice(grids, func(i int, j int) bool {
 			w1, h1 := grids[i], n/grids[i]
 			w2, h2 := grids[j], n/grids[j]
@@ -671,13 +680,9 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *DualS
 		numnope = (numrows * numcols) - len(faces)
 	}
 
-	cellw, cellh := (size.PxWidth-pxcentergap)/numcols, size.PxHeight/numrows
-	img := image.NewGray(image.Rect(0, 0, size.PxWidth, size.PxHeight))
-	var bggray uint8
-	if pxcentergap == 0 {
-		bggray = 255
-	}
-	imgFill(img, image.Rect(0, 0, size.PxWidth, size.PxHeight), color.Gray{bggray})
+	cellw, cellh := (size.pxWidth()-pxcentergap)/numcols, size.pxHeight()/numrows
+	img := image.NewGray(image.Rect(0, 0, size.pxWidth(), size.pxHeight()))
+	imgFill(img, image.Rect(0, 0, size.pxWidth(), size.pxHeight()), color.Gray{255})
 
 	var fidx, cantitler int
 	var cantitlel int
@@ -687,7 +692,7 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *DualS
 	}
 
 	for fimg, frect := range faces {
-		icol, irow, pad := fidx%numcols, fidx/numcols, size.PxHeight/50
+		icol, irow, pad := fidx%numcols, fidx/numcols, size.pxHeight()/50
 		if numnope > 0 && icol == 0 && irow == numrows-1 {
 			cantitlel, icol, fidx = numleftblank*cellw, numleftblank, fidx+numleftblank
 		}
@@ -695,37 +700,20 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *DualS
 		if pxcentergap != 0 && icol >= (numcols/2) {
 			cx += pxcentergap
 		}
-		imgFill(img, image.Rect(cx, cy, cx+cellw, cy+cellh), color.Gray{255})
 		sf := math.Min(float64(cellw-pad)/float64(fw), float64(cellh-pad)/float64(fh)) //scale factor
 		dw, dh := int(float64(fw)*sf), int(float64(fh)*sf)
 		dx, dy := cx+((cellw-dw)/2), cy+((cellh-dh)/2)
 		drect := image.Rect(dx, dy, dx+dw, dy+dh)
 		ImgScaler.Scale(img, drect, fimg, frect, draw.Over, nil)
 		fidx++
-		if cantitler = cx + cellw; cantitler >= size.PxWidth {
+		if cantitler = cx + cellw; cantitler >= size.pxWidth() {
 			cantitler = 0
 		}
 	}
 	if showhalfgap := false; showhalfgap {
 		halfgapwidth := pxcentergap / 2
-		halfgapleft := (size.PxWidth / 2) - (halfgapwidth / 2)
-		imgFill(img, image.Rect(halfgapleft, 0, halfgapleft+halfgapwidth, size.PxHeight), color.Gray{64})
-	}
-	if pxcentergap != 0 {
-		if cr, diffbottom := cantitler, size.PxHeight-(cellh*numrows); diffbottom > 0 {
-			imgFill(img, image.Rect(cantitlel, size.PxHeight-diffbottom-1, (size.PxWidth/2)-(pxcentergap/2), size.PxHeight), color.Gray{255})
-			if cantitler == 0 {
-				cr = size.PxWidth
-			}
-			imgFill(img, image.Rect(((size.PxWidth/2)-(pxcentergap/2)+pxcentergap), size.PxHeight-diffbottom-1, cr, size.PxHeight), color.Gray{255})
-		}
-		if diffright := size.PxWidth - (pxcentergap + (cellw * numcols)); diffright > 0 {
-			var off int
-			if cantitler != 0 {
-				off = cellh
-			}
-			imgFill(img, image.Rect(size.PxWidth-diffright-1, 0, size.PxWidth, size.PxHeight-off), color.Gray{255})
-		}
+		halfgapleft := (size.pxWidth() / 2) - (halfgapwidth / 2)
+		imgFill(img, image.Rect(halfgapleft, 0, halfgapleft+halfgapwidth, size.pxHeight()), color.Gray{64})
 	}
 
 	var buf bytes.Buffer
@@ -739,23 +727,26 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *DualS
 			if i > 0 && me.NoLangs {
 				continue
 			}
-			w, h, title := size.PxWidth, size.PxHeight, locStr(book.Title, lang)
+			w, h, cb, title := size.pxWidth(), size.pxHeight(), size.pxCutBorder(), locStr(book.Title, lang)
 			svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 				xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-				width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">`
-			svg += `<image x="0" y="0" width="` + itoa(w) + `" height="` + itoa(h) + `"
-				xlink:href="` + outFilePath + `" />`
+				width="` + itoa(w+cb*2) + `" height="` + itoa(h+cb*2) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">`
+			svg += `<image x="` + itoa(cb) + `" y="` + itoa(cb) + `" width="` + itoa(w) + `" height="` + itoa(h) + `"
+						xlink:href="` + outFilePath + `" />`
 			if cantitler != 0 {
-				fs := 2.7 * (float64(size.PxWidth-cantitler) / float64(len(title)))
-				svg += `<text dx="0" dy="0" x="` + itoa(cantitler-int(fs*0.22)) + `" y="` + itoa(h-(cellh/3)) + `" style="` + strings.Replace(book.CssCoverTitle, "font-size:", "-moz-moz:", -1) + `; font-size: ` + itoa(int(fs)) + `px !important">` +
-					htmlEscdToXmlEsc(hEsc(title)) + `</text>`
+				fs := 2.7 * (float64(w-cantitler) / float64(len(title)))
+				if ch := float64(cellh); fs > ch {
+					fs = ch
+				}
+				svg += `<rect stroke-width="0" fill="#000000" x="` + itoa(cb+cantitler) + `" y="` + itoa(cb+(numrows*cellh-cellh)) + `" width="` + itoa(w) + `" height="` + itoa(cellh*4) + `"/>
+							<text dx="0" dy="0" x="` + itoa(cb+(cantitler-int(fs*0.22))) + `" y="` + itoa(cb+(h-(cellh/3))) + `" style="` + strings.Replace(book.CssCoverTitle, "font-size:", "-moz-moz:", -1) + `; font-size: ` + itoa(int(fs)) + `px !important">` + htmlEscdToXmlEsc(hEsc(title)) + `</text>`
 			}
-			svg += `<text dx="0" dy="0" x="` + itoa(size.PxWidth/2) + `" y="` + itoa(size.PxHeight/4) + `" style="` + book.CssCoverSpine + `">` +
-				htmlEscdToXmlEsc(hEsc(title)) + `</text>`
+			svg += `<rect stroke-width="0" fill="#000000" x="` + itoa(cb+(w/2-pxcentergap/2)) + `" y="` + itoa(-h) + `" width="` + itoa(pxcentergap) + `" height="` + itoa(h*3) + `"/>
+						<text dx="0" dy="0" x="` + itoa(cb+(w/2)) + `" y="` + itoa(cb+(h/4)) + `" style="` + book.CssCoverSpine + `">` + htmlEscdToXmlEsc(hEsc(title)) + `</text>`
 			if cantitlel != 0 {
 				fs := 2.7 * (float64(cantitlel) / float64(len(title)))
-				svg += `<text dx="0" dy="0" x="0" y="` + itoa(h-(cellh/3)) + `" style="` + strings.Replace(book.CssCoverTitle, "font-size:", "-moz-moz:", -1) + `; font-size: ` + itoa(int(fs)) + `px !important">` +
-					htmlEscdToXmlEsc(hEsc(title)) + `</text>`
+				svg += `<rect stroke-width="0" fill="#000000" x="` + itoa(-w) + `" y="` + itoa(cb+(numrows*cellh-cellh)) + `" width="` + itoa(w+cantitlel+cb) + `" height="` + itoa(cellh*4) + `"/>
+							<text dx="0" dy="0" x="` + itoa(cb) + `" y="` + itoa(cb+(h-(cellh/3))) + `" style="` + strings.Replace(book.CssCoverTitle, "font-size:", "-moz-moz:", -1) + `; font-size: ` + itoa(int(fs)) + `px !important">` + htmlEscdToXmlEsc(hEsc(title)) + `</text>`
 			}
 			svg += `</svg>`
 			fileWrite(outFilePath+"."+lang+".svg", []byte(svg))
@@ -796,17 +787,16 @@ func (*BookBuild) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool,
 		}
 		svg += `<g id="` + gid + `" clip-path="url(#c` + gid + `)" transform="translate(` + itoa(tx) + ` ` + itoa(py) + `)">`
 		svg += `<defs><clipPath id="c` + gid + `"><rect x="0" y="0"  width="` + itoa(pw) + `" height="` + itoa(ph) + `"></rect></clipPath></defs>`
-		if bgCol {
-			panelbgpngsrcfilepath := absPath(filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png"))
+		if panelbgpngsrcfilepath := absPath(filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png")); bgCol && fileStat(panelbgpngsrcfilepath) != nil {
 			svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
-				xlink:href="` + panelbgpngsrcfilepath + `" />`
+						xlink:href="` + panelbgpngsrcfilepath + `" />`
 		} else {
 			svg += `<rect x="0" y="0" stroke="#000000" stroke-width="0" fill="#ffffff"
-				width="` + itoa(pw) + `" height="` + itoa(ph) + `"></rect>`
+						width="` + itoa(pw) + `" height="` + itoa(ph) + `"></rect>`
 		}
 		panelpngsrcfilepath := absPath(filepath.Join(sv.data.PicDirPath(App.Proj.Qualis[App.Proj.maxQualiIdx()].SizeHint), itoa(pidx)+".png"))
 		svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
-				xlink:href="` + panelpngsrcfilepath + `" />`
+					xlink:href="` + panelpngsrcfilepath + `" />`
 		svg += sv.genTextSvgForPanel(pidx, p, lang, false, true)
 		svg += "\n</g>\n\n"
 		pidx++
