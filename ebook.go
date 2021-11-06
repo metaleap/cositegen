@@ -338,8 +338,6 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 	config, series := &me.config, me.series
 	me.genPrepDirPath = "/dev/shm/" + strconv.FormatInt(time.Now().UnixNano(), 36)
 	mkDir(me.genPrepDirPath)
-	me.genBookDirtPageSvgs()
-	panic("YO")
 	var sheetsvgfilepaths, pagesvgfilepaths []string
 	for lidx, lang := range App.Proj.Langs {
 		if lidx > 0 && me.NoLangs {
@@ -463,10 +461,10 @@ func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath st
 
 func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs map[*Chapter]int) {
 	book, config, series := &me.book, &me.config, me.series
-	w, h := config.PageSize.pxWidth(), config.PageSize.pxHeight()
+	w, h, cb := config.PageSize.pxWidth(), config.PageSize.pxHeight(), config.PageSize.pxCutBorder()
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 	xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-	width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">`
+	width="` + itoa(w+cb*2) + `" height="` + itoa(h+cb*2) + `" viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `">`
 
 	svg += `
 			<style type="text/css">
@@ -478,7 +476,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs 
 			.toc { ` + book.CssToc + ` }
 			.desc { ` + book.CssDesc + ` }
 			</style>
-			<image x="0" y="0" width="100%" height="100%" xlink:href="` + filepath.Join(me.genPrepDirPath, "bgtoc.png") + `" />`
+			<image x="` + itoa(cb) + `" y="` + itoa(cb) + `" width="100%" height="100%" xlink:href="` + filepath.Join(me.genPrepDirPath, "bgtoc.png") + `" />`
 
 	chapcount, pgnrlast := 0, 0
 	for _, chap := range series.Chapters {
@@ -499,10 +497,10 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs 
 	if t := App.Proj.textStr(lang, "BookTocTitleCalendared"); fullycal && t != "" {
 		title = map[string]string{lang: t}
 	}
-	svg += `<text class="title" x="` + itoa(textx) + `px" y="20%" dx="0" dy="0">` +
+	svg += `<text class="title" x="` + itoa(cb+textx) + `px" y="` + itoa(cb+(h/5)) + `" dx="0" dy="0">` +
 		htmlEscdToXmlEsc(hEsc(locStr(title, lang))) + `</text>`
 	if len(book.Desc) != 0 {
-		svg += `<text class="desc" x="` + itoa(textx) + `px" y="` + itoa(h-textx/3) + `px" dx="0" dy="0">` +
+		svg += `<text class="desc" x="` + itoa(cb+textx) + `px" y="` + itoa(cb+(h-textx/3)) + `px" dx="0" dy="0">` +
 			htmlEscdToXmlEsc(hEsc(locStr(book.Desc, lang))) + `</text>`
 	}
 
@@ -512,7 +510,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs 
 		if pgnr == pgnrlast {
 			continue
 		}
-		svg += `<text class="toc" x="` + itoa(textx*2) + `px" y="` + itoa(texty) + `%" dx="0" dy="0">` +
+		svg += `<text class="toc" x="` + itoa(cb+(textx*2)) + `px" y="` + itoa(texty) + `%" dx="0" dy="0">` +
 			htmlEscdToXmlEsc(hEsc(locStr(chap.Title, lang)+"······"+App.Proj.textStr(lang, "BookTocPagePrefix")+strIf(pgnr < 10, "0", "")+itoa(pgnr))) + `</text>`
 		pgnrlast, cc = pgnr, cc+1
 	}
@@ -544,32 +542,32 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 	perpage := float64(len(svs)) / float64(me.genNumUniqueDirtPages)
 	perrowcol := int(math.Ceil(math.Sqrt(perpage)))
 
-	for i := 0; i < me.genNumUniqueDirtPages; i++ {
-		cw, ch := w/(perrowcol+1), h/(perrowcol+1)
+	for idp := 0; idp < me.genNumUniqueDirtPages; idp++ {
+		cw, ch := w/perrowcol, h/perrowcol
 		svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 					xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-					width="` + itoa(w+cb) + `" height="` + itoa(h+cb) + `"
-					viewBox="0 0 ` + itoa(w+cb) + ` ` + itoa(h+cb) + `"><defs>`
-		svs := svs[i*int(perrowcol*perrowcol):][:int(perrowcol*perrowcol)]
-		for i, sv := range svs {
-			svg += `<image xlink:href="` + absPath((sv.data.bwFilePath)) + `"
-						id="p` + itoa(i) + `" width="` + itoa(cw) + `" height="` + itoa(ch) + `" />`
+					width="` + itoa(w+cb*2) + `" height="` + itoa(h+cb*2) + `"
+					viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `"><defs>`
+
+		for idx := 0; idx < perrowcol*perrowcol; idx++ {
+			svg += `<image xlink:href="` + absPath(svs[(idx+(idp*perrowcol*perrowcol))%len(svs)].data.bwFilePath) + `"
+						id="p` + itoa(idx) + `" width="` + itoa(cw) + `" height="` + itoa(ch) + `" />`
 		}
-		svg += `</defs><g opacity="0.44" transform="rotate(-15 ` + itoa(w/2) + ` ` + itoa(h/2) + `)">`
-		var isv int
+		svg += `</defs><g opacity="0.33" transform="rotate(-15 ` + itoa(w/2) + ` ` + itoa(h/2) + `)">`
+		var idx int
 		for col := -1; col <= perrowcol+1; col++ {
 			for row := -1; row <= perrowcol+1; row++ {
 				cx, cy := col*cw, row*ch
 				if (row % 2) == 0 {
 					cx += cw / 2
 				}
-				svg += `<use x="` + itoa(cx) + `" y="` + itoa(cy) + `" xlink:href="#p` + itoa(isv) + `" />`
-				isv = (isv + 1) % len(svs)
+				svg += `<use x="` + itoa(cx+(77*(col+1))) + `" y="` + itoa(cy+(55*(row+1))) + `" xlink:href="#p` + itoa(idx%(perrowcol*perrowcol)) + `" />`
+				idx++
 			}
 		}
 
 		svg += "</g></svg>"
-		outfilepath := filepath.Join(me.genPrepDirPath, "dp"+itoa(i)+".svg")
+		outfilepath := filepath.Join(me.genPrepDirPath, "dp"+itoa(idp)+".svg")
 		outFilePaths = append(outFilePaths, outfilepath)
 		fileWrite(outfilepath, []byte(svg))
 	}
