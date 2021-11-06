@@ -423,17 +423,18 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 
 func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath string, sheetImgSize image.Point, pgNr int, doubleSpreadArrowIndicator bool) {
 	book, config := &me.book, &me.config
-	w, h, mm1 := config.PageSize.pxWidth(), config.PageSize.pxHeight(), config.PageSize.pxHeight()/config.PageSize.MmHeight
+	const mm1 = 0.1 * dpi1200
+	w, h, cb := config.PageSize.pxWidth(), config.PageSize.pxHeight(), config.PageSize.pxCutBorder()
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 		xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-		width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
+		width="` + itoa(w+cb*2) + `" height="` + itoa(h+cb*2) + `" viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `">
 		<style type="text/css">
 			@font-face { ` + strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) + ` }
 			text { ` + strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + "; " + book.CssPgNr + ` }
 		</style>`
 
 	// for now treat page as being odd-numbered aka. right-hand-side
-	pgx := config.PageSize.MmWidth - (6 + config.OffsetsMm.Small)
+	mmpgx := config.PageSize.MmWidth - (6 + config.OffsetsMm.Small)
 	var mmx, mmy, mmw, mmh float64
 	for mmo := float64(config.OffsetsMm.Large); mmy < float64(config.OffsetsMm.Small); mmo++ {
 		mmx, mmw = mmo, float64(config.PageSize.MmWidth)-(float64(config.OffsetsMm.Small)+mmo)
@@ -442,17 +443,17 @@ func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath st
 	}
 	// but is it an even-numbered/left-hand-side page?
 	if (pgNr % 2) == 0 {
-		mmx, pgx = float64(config.OffsetsMm.Small), config.OffsetsMm.Small
+		mmx, mmpgx = float64(config.OffsetsMm.Small), config.OffsetsMm.Small
 	}
 
-	svg += `<image x="` + itoa(int(float64(mm1)*mmx)) + `" y="` + itoa(int(float64(mm1)*mmy)) + `"
-		width="` + itoa(int(float64(mm1)*mmw)) + `" height="` + itoa(int(float64(mm1)*mmh)) + `"
+	svg += `<image x="` + itoa(cb+int(mm1*mmx)) + `" y="` + itoa(cb+int(mm1*mmy)) + `"
+		width="` + itoa(int(mm1*mmw)) + `" height="` + itoa(int(mm1*mmh)) + `"
 		xlink:href="./` + filepath.Base(sheetImgFilePath) + `" dx="0" dy="0" />`
 
-	pgy := itoa(config.PageSize.pxHeight() - config.OffsetsMm.Small*mm1)
-	svg += `<text dx="0" dy="0" x="` + itoa(pgx*mm1) + `" y="` + pgy + `">` + itoa0(pgNr, 3) + `</text>`
+	pgy := itoa(cb + (config.PageSize.pxHeight() - int(float64(config.OffsetsMm.Small)*mm1)))
+	svg += `<text dx="0" dy="0" x="` + itoa(cb+int(float64(mmpgx)*mm1)) + `" y="` + pgy + `">` + itoa0(pgNr, 3) + `</text>`
 	if doubleSpreadArrowIndicator { // ➪
-		svg += `<text dx="0" dy="0" x="` + itoa(w/2) + `" y="` + pgy + `">&#10155;</text>`
+		svg += `<text dx="0" dy="0" x="` + itoa(cb+w/2) + `" y="` + pgy + `">&#10155;</text>`
 	}
 
 	svg += `</svg>`
@@ -476,7 +477,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs 
 			.toc { ` + book.CssToc + ` }
 			.desc { ` + book.CssDesc + ` }
 			</style>
-			<image x="` + itoa(cb) + `" y="` + itoa(cb) + `" width="100%" height="100%" xlink:href="` + filepath.Join(me.genPrepDirPath, "bgtoc.png") + `" />`
+			<image x="` + itoa(cb) + `" y="` + itoa(cb) + `" width="` + itoa(w) + `" height="` + itoa(h) + `" xlink:href="` + filepath.Join(me.genPrepDirPath, "bgtoc.png") + `" />`
 
 	chapcount, pgnrlast := 0, 0
 	for _, chap := range series.Chapters {
@@ -487,7 +488,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs 
 		pgnrlast, chapcount = pgnr, chapcount+1
 	}
 
-	textx, htoc, cc := h/9, 62.0/float64(chapcount), 0
+	textx, htoc, cc := h/9, 44.0/float64(chapcount), 0
 	title, fullycal := book.Title, true
 	for _, chap := range book.Chapters {
 		if fullycal = chap.ReChapterToMonths; !fullycal {
@@ -499,20 +500,21 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs 
 	}
 	svg += `<text class="title" x="` + itoa(cb+textx) + `px" y="` + itoa(cb+(h/5)) + `" dx="0" dy="0">` +
 		htmlEscdToXmlEsc(hEsc(locStr(title, lang))) + `</text>`
-	if len(book.Desc) != 0 {
-		svg += `<text class="desc" x="` + itoa(cb+textx) + `px" y="` + itoa(cb+(h-textx/3)) + `px" dx="0" dy="0">` +
-			htmlEscdToXmlEsc(hEsc(locStr(book.Desc, lang))) + `</text>`
-	}
 
 	pgnrlast = 0
 	for _, chap := range series.Chapters {
-		pgnr, texty := pgNrs[chap], int(26.0+(float64(cc)+1.0)*htoc)-5
+		pgnr, texty := pgNrs[chap], int(31.0+(float64(cc)+1.0)*htoc)-5
 		if pgnr == pgnrlast {
 			continue
 		}
 		svg += `<text class="toc" x="` + itoa(cb+(textx*2)) + `px" y="` + itoa(texty) + `%" dx="0" dy="0">` +
-			htmlEscdToXmlEsc(hEsc(locStr(chap.Title, lang)+"······"+App.Proj.textStr(lang, "BookTocPagePrefix")+strIf(pgnr < 10, "0", "")+itoa(pgnr))) + `</text>`
+			htmlEscdToXmlEsc(hEsc(locStr(chap.Title, lang)+"............"+App.Proj.textStr(lang, "BookTocPagePrefix")+strIf(pgnr < 10, "0", "")+itoa(pgnr))) + `</text>`
 		pgnrlast, cc = pgnr, cc+1
+	}
+
+	if len(book.Desc) != 0 {
+		svg += `<text class="desc" x="` + itoa(cb+textx) + `px" y="` + itoa(cb+(h-textx/2)) + `px" dx="0" dy="0">` +
+			htmlEscdToXmlEsc(hEsc(locStr(book.Desc, lang))) + `</text>`
 	}
 
 	svg += `</svg>`
