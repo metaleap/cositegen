@@ -488,7 +488,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string, pgNrs 
 		pgnrlast, chapcount = pgnr, chapcount+1
 	}
 
-	textx, htoc, cc := h/9, 44.0/float64(chapcount), 0
+	textx, htoc, cc := h/9, 50.0/float64(chapcount), 0
 	title, fullycal := book.Title, true
 	for _, chap := range book.Chapters {
 		if fullycal = chap.ReChapterToMonths; !fullycal {
@@ -551,8 +551,10 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 					width="` + itoa(w+cb*2) + `" height="` + itoa(h+cb*2) + `"
 					viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `"><defs>`
 
-		for idx := 0; idx < perrowcol*perrowcol; idx++ {
-			svg += `<image xlink:href="` + absPath(svs[(idx+(idp*perrowcol*perrowcol))%len(svs)].data.bwFilePath) + `"
+		numpics := (3 + perrowcol) * (3 + perrowcol)
+		printLn(numpics)
+		for idx := 0; idx < numpics; idx++ {
+			svg += `<image xlink:href="` + absPath(svs[(idx+(idp*numpics))%len(svs)].data.bwFilePath) + `"
 						id="p` + itoa(idx) + `" width="` + itoa(cw) + `" height="` + itoa(ch) + `" />`
 		}
 		svg += `</defs><g opacity="0.33" transform="rotate(-15 ` + itoa(w/2) + ` ` + itoa(h/2) + `)">`
@@ -563,7 +565,8 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 				if (row % 2) == 0 {
 					cx += cw / 2
 				}
-				svg += `<use x="` + itoa(cx+(77*(col+1))) + `" y="` + itoa(cy+(55*(row+1))) + `" xlink:href="#p` + itoa(idx%(perrowcol*perrowcol)) + `" />`
+				svg += `<use x="` + itoa(cx+(77*(col+1))) + `" y="` + itoa(cy+(55*(row+1))) + `"
+							xlink:href="#p` + itoa(idx%(numpics)) + `" />`
 				idx++
 			}
 		}
