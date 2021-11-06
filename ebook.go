@@ -552,7 +552,6 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 					viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `"><defs>`
 
 		numpics := (3 + perrowcol) * (3 + perrowcol)
-		printLn(numpics)
 		for idx := 0; idx < numpics; idx++ {
 			svg += `<image xlink:href="` + absPath(svs[(idx+(idp*numpics))%len(svs)].data.bwFilePath) + `"
 						id="p` + itoa(idx) + `" width="` + itoa(cw) + `" height="` + itoa(ch) + `" />`
