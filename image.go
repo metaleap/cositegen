@@ -96,17 +96,22 @@ func imgSvgToPng(svgFilePath string, pngFilePath string, repl *strings.Replacer,
 	if onDone != nil {
 		defer onDone()
 	}
-	svgdata := fileRead(svgFilePath)
+	var svgdata []byte
+	if repl != nil {
+		svgdata = fileRead(svgFilePath)
+		svgFilePath += ".fix.svg"
+		svgdata = []byte(repl.Replace(string(svgdata)))
+		fileWrite(svgFilePath, svgdata)
+	}
+	if svgdata == nil {
+		svgdata = fileRead(svgFilePath)
+	}
 	chash := contentHashStr(svgdata)
 	tmpfilepath := ".ccache/.svgpng/" + chash + "." + itoa(reSize) + ".png"
 	if noTmpFile {
 		tmpfilepath = pngFilePath
 	}
-	if fileStat(tmpfilepath) == nil || noTmpFile {
-		if repl != nil {
-			svgFilePath += ".fix.svg"
-			fileWrite(svgFilePath, []byte(repl.Replace(string(svgdata))))
-		}
+	if noTmpFile || fileStat(tmpfilepath) == nil {
 		cmdargs := []string{svgFilePath,
 			"-quality", "90", /*png max lossless compression*/
 			"-background", "white",

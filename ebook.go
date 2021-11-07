@@ -91,6 +91,7 @@ type BookDef struct {
 	CssCoverTitle      string
 	CssCoverSpine      string
 	CoverTitlePxOffset int
+	GreetingSvgPic     string
 
 	name string
 }
@@ -579,6 +580,11 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 		outFilePaths = append(outFilePaths, outfilepath)
 		fileWrite(outfilepath, []byte(svg))
 	}
+	if me.book.GreetingSvgPic != "" {
+		outfilepath := filepath.Join(me.genPrepDirPath, "dp"+itoa(me.genNumUniqueDirtPages)+".svg")
+		fileLinkOrCopy(me.book.GreetingSvgPic, outfilepath)
+		outFilePaths = append(outFilePaths, outfilepath)
+	}
 	return
 }
 
@@ -845,8 +851,12 @@ func (me *BookBuild) genBookBuild(outDirPath string, lang string, bgCol bool, di
 			pgnr++
 		}
 	}
-	if !me.NoDirtPages {
-		for numtrailingempties := 0; !(numtrailingempties >= 4 && (len(srcfilepaths)%4) == 0 && len(srcfilepaths) >= config.MinPageCount); numtrailingempties++ {
+	if ntrailingdps := 0; !me.NoDirtPages {
+		if me.book.GreetingSvgPic != "" {
+			srcfilepaths = append(srcfilepaths, filepath.Join(me.genPrepDirPath, "dp"+itoa(me.genNumUniqueDirtPages)+".svg"+strIf(loRes, "."+itoa(config.PxLoResWidth), "")+".png"))
+			ntrailingdps++
+		}
+		for ; !(ntrailingdps >= 4 && (len(srcfilepaths)%4) == 0 && len(srcfilepaths) >= config.MinPageCount); ntrailingdps++ {
 			srcfilepaths = append(srcfilepaths, filepath.Join(me.genPrepDirPath, "dp"+itoa(idp)+".svg"+strIf(loRes, "."+itoa(config.PxLoResWidth), "")+".png"))
 			idp = (idp + 1) % me.genNumUniqueDirtPages
 		}
