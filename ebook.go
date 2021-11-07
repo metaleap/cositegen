@@ -95,6 +95,10 @@ type BookDef struct {
 	name string
 }
 
+func (me *BookBuild) effectiveMmSize() Size {
+	return Size{me.config.PageSize.MmWidth + 2*me.config.PageSize.MmCutBorder, me.config.PageSize.MmHeight + 2*me.config.PageSize.MmCutBorder, 0}
+}
+
 func (me *BookBuild) mergeOverrides() {
 	if base := App.Proj.BookBuilds[me.BasedOn]; base != nil && base != me {
 		if me.Config == "" {
@@ -857,10 +861,13 @@ func (me *BookBuild) genBookBuild(outDirPath string, lang string, bgCol bool, di
 	work.Wait()
 }
 
-func (*BookBuild) genBookBuildPdf(outFilePath string, srcFilePaths []string, lang string, bgCol bool, dirRtl bool, loRes bool, onDone func()) {
+func (me *BookBuild) genBookBuildPdf(outFilePath string, srcFilePaths []string, lang string, bgCol bool, dirRtl bool, loRes bool, onDone func()) {
 	defer onDone()
 	cmdArgs := append(make([]string, 0, 3+len(srcFilePaths)),
 		"--pillow-limit-break", "--nodate")
+	if mmsize := me.effectiveMmSize(); !loRes {
+		cmdArgs = append(cmdArgs, "--pagesize", itoa(mmsize.MmWidth)+"mmx"+itoa(mmsize.MmHeight)+"mm")
+	}
 	cmdArgs = append(cmdArgs, srcFilePaths...)
 	osExec(true, "img2pdf", append(cmdArgs, "-o", outFilePath)...)
 }
