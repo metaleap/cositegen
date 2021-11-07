@@ -92,20 +92,11 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 	_ = dstImgFile.Close()
 }
 
-func imgSvgToPng(svgFilePath string, pngFilePath string, repl *strings.Replacer, reSize int, dpi int, noTmpFile bool, onDone func()) {
+func imgSvgToPng(svgFilePath string, pngFilePath string, reSize int, dpi int, noTmpFile bool, onDone func()) {
 	if onDone != nil {
 		defer onDone()
 	}
-	var svgdata []byte
-	if repl != nil {
-		svgdata = fileRead(svgFilePath)
-		svgFilePath += ".fix.svg"
-		svgdata = []byte(repl.Replace(string(svgdata)))
-		fileWrite(svgFilePath, svgdata)
-	}
-	if svgdata == nil {
-		svgdata = fileRead(svgFilePath)
-	}
+	svgdata := fileRead(svgFilePath)
 	chash := contentHashStr(svgdata)
 	tmpfilepath := ".ccache/.svgpng/" + chash + "." + itoa(reSize) + ".png"
 	if noTmpFile {

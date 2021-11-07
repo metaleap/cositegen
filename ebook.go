@@ -404,22 +404,21 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 	mkDir(".ccache/.svgpng")
 	for i, svgfilepath := range sheetsvgfilepaths {
 		if lrw := config.PxLoResWidth; lrw > 0 && me.NoHiRes {
-			imgSvgToPng(svgfilepath, svgfilepath+".png", nil, lrw, 0, false, nil)
+			imgSvgToPng(svgfilepath, svgfilepath+".png", lrw, 0, false, nil)
 		} else {
-			imgSvgToPng(svgfilepath, svgfilepath+".png", nil, 0, 1200, false, nil)
+			imgSvgToPng(svgfilepath, svgfilepath+".png", 0, 1200, false, nil)
 		}
 		printLn("\t\t", time.Now().Format("15:04:05"), "shsvg", i+1, "/", len(sheetsvgfilepaths))
 	}
-	repl := strings.NewReplacer("./", strings.TrimSuffix(me.genPrepDirPath, "/")+"/")
 	for i, svgfilepath := range pagesvgfilepaths {
 		var work sync.WaitGroup
 		if !me.NoHiRes {
 			work.Add(1)
-			go imgSvgToPng(svgfilepath, svgfilepath+".png", repl, 0, 1200, false, work.Done)
+			go imgSvgToPng(svgfilepath, svgfilepath+".png", 0, 1200, false, work.Done)
 		}
 		if lrw := config.PxLoResWidth; lrw > 0 && !me.NoLoRes {
 			work.Add(1)
-			go imgSvgToPng(svgfilepath, svgfilepath+"."+itoa(lrw)+".png", repl, lrw, 0, false, work.Done)
+			go imgSvgToPng(svgfilepath, svgfilepath+"."+itoa(lrw)+".png", lrw, 0, false, work.Done)
 		}
 		work.Wait()
 		printLn("\t\t", time.Now().Format("15:04:05"), "pgsvg", i+1, "/", len(pagesvgfilepaths))
@@ -451,9 +450,10 @@ func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath st
 		mmx, mmpgx = float64(config.OffsetsMm.Small), config.OffsetsMm.Small
 	}
 
+	imghref := absPath(filepath.Join(filepath.Dir(outFilePath), filepath.Base(sheetImgFilePath)))
 	svg += `<image x="` + itoa(cb+int(mm1*mmx)) + `" y="` + itoa(cb+int(mm1*mmy)) + `"
 		width="` + itoa(int(mm1*mmw)) + `" height="` + itoa(int(mm1*mmh)) + `"
-		xlink:href="./` + filepath.Base(sheetImgFilePath) + `" dx="0" dy="0" />`
+		xlink:href="` + imghref + `" dx="0" dy="0" />`
 
 	pgy := itoa(cb + (config.PageSize.pxHeight() - int(float64(config.OffsetsMm.Small)*mm1)))
 	svg += `<text dx="0" dy="0" x="` + itoa(cb+int(float64(mmpgx)*mm1)) + `" y="` + pgy + `">` + itoa0(pgNr, 3) + `</text>`
@@ -556,7 +556,7 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 					width="` + itoa(w+cb*2) + `" height="` + itoa(h+cb*2) + `"
 					viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `"><defs>`
 
-		numpics := (3 + perrowcol) * (3 + perrowcol)
+		numpics := perrowcol * perrowcol * 2
 		for idx := 0; idx < numpics; idx++ {
 			svg += `<image xlink:href="` + absPath(svs[(idx+(idp*numpics))%len(svs)].data.bwFilePath) + `"
 						id="p` + itoa(idx) + `" width="` + itoa(cw) + `" height="` + itoa(ch) + `" />`
@@ -865,7 +865,7 @@ func (me *BookBuild) genBookBuild(outDirPath string, lang string, bgCol bool, di
 	bookid := me.id(lang, bgCol, dirRtl, loRes)
 	var work sync.WaitGroup
 	work.Add(3)
-	go imgSvgToPng(filepath.Join(me.genPrepDirPath, "cover.png."+lang+".svg"), filepath.Join(outDirPath, "cover."+lang+".png"), nil, 0, 1200, true, work.Done)
+	go imgSvgToPng(filepath.Join(me.genPrepDirPath, "cover.png."+lang+".svg"), filepath.Join(outDirPath, "cover."+lang+".png"), 0, 1200, true, work.Done)
 	go me.genBookBuildCbz(filepath.Join(outDirPath, bookid+".cbz"), srcfilepaths, lang, bgCol, dirRtl, loRes, work.Done)
 	go me.genBookBuildPdf(filepath.Join(outDirPath, bookid+".pdf"), srcfilepaths, lang, bgCol, dirRtl, loRes, work.Done)
 	work.Wait()
