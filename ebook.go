@@ -35,11 +35,8 @@ type BookBuild struct {
 	Config                   string
 	Book                     string
 	InclRtl                  bool
-	InclBw                   bool
 	NoLangs                  bool
-	NoCol                    bool
-	NoHiRes                  bool
-	NoLoRes                  bool
+	PxWidths                 []int
 	NoDirtPages              bool
 	DropUntranslated         bool
 	DoubleSpreadArrowsForLen uint64
@@ -59,7 +56,6 @@ type BookBuild struct {
 type BookConfig struct {
 	PageSize        Size
 	CoverSize       Size
-	PxLoResWidth    int
 	MinPageCount    int
 	DecosFromSeries string
 	OffsetsMm       struct {
@@ -84,14 +80,15 @@ type BookDef struct {
 		ReChapterToMonths bool
 		SwapSheets        map[string]string
 	}
-	CssTitle           string
-	CssToc             string
-	CssDesc            string
-	CssPgNr            string
-	CssCoverTitle      string
-	CssCoverSpine      string
-	CoverTitlePxOffset int
-	GreetingSvgPic     string
+	CssTitle                string
+	CssToc                  string
+	CssDesc                 string
+	CssPgNr                 string
+	CssCoverTitle           string
+	CssCoverSpine           string
+	CoverTitlePxOffset      int
+	GreetingSvgPic          string
+	StartOnEvenNumberedPage bool
 
 	name string
 }
@@ -102,29 +99,18 @@ func (me *BookBuild) effectiveMmSize() Size {
 
 func (me *BookBuild) mergeOverrides() {
 	if base := App.Proj.BookBuilds[me.BasedOn]; base != nil && base != me {
+		base.mergeOverrides()
 		if me.Config == "" {
 			me.config = base.config
 		}
 		if me.Book == "" {
 			me.book = base.book
 		}
-		if !me.InclBw {
-			me.InclBw = base.InclBw
-		}
 		if !me.InclRtl {
 			me.InclRtl = base.InclRtl
 		}
-		if !me.NoHiRes {
-			me.NoHiRes = base.NoHiRes
-		}
-		if (!me.NoLoRes) && !me.NoHiRes {
-			me.NoLoRes = base.NoLoRes
-		}
 		if !me.NoLangs {
 			me.NoLangs = base.NoLangs
-		}
-		if !me.NoCol {
-			me.NoCol = base.NoCol
 		}
 		if !me.NoDirtPages {
 			me.NoDirtPages = base.NoDirtPages
@@ -134,6 +120,9 @@ func (me *BookBuild) mergeOverrides() {
 		}
 		if me.DoubleSpreadArrowsForLen == 0 {
 			me.DoubleSpreadArrowsForLen = base.DoubleSpreadArrowsForLen
+		}
+		if len(me.PxWidths) == 0 {
+			me.PxWidths = base.PxWidths
 		}
 	}
 
@@ -169,9 +158,6 @@ func (me *BookBuild) mergeOverrides() {
 	if me.OverrideConfig.MinPageCount > 0 {
 		me.config.MinPageCount = me.OverrideConfig.MinPageCount
 	}
-	if me.OverrideConfig.PxLoResWidth > 0 {
-		me.config.PxLoResWidth = me.OverrideConfig.PxLoResWidth
-	}
 	if me.OverrideConfig.CoverSize.MmHeight != 0 && me.OverrideConfig.CoverSize.MmWidth != 0 {
 		me.config.CoverSize = me.OverrideConfig.CoverSize
 	}
@@ -180,9 +166,8 @@ func (me *BookBuild) mergeOverrides() {
 	}
 }
 
-func (me *BookBuild) id(lang string, bgCol bool, dirRtl bool, loRes bool) string {
-	return me.name + strIf(bgCol, "_col_", "_bw_") + lang + strIf(loRes, "_lo_", "_hi_") +
-		strIf(dirRtl, "rtl", "ltr")
+func (me *BookBuild) id(lang string, dirRtl bool, res int) string {
+	return me.name + "_" + lang + strIf(dirRtl, "_rtl_", "_ltr_") + itoa(res)
 }
 
 func (me *BookDef) toSeries() (ret *Series) {
@@ -348,46 +333,47 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 		if lidx > 0 && me.NoLangs {
 			continue
 		}
-		pgnrs := map[*Chapter]int{}
-		for _, bgcol := range []bool{false, true} {
-			if bgcol && me.NoCol {
+		pgnrs, pgtoc := map[*Chapter]int{}, "p003_"
+		if me.NoDirtPages {
+			pgtoc = "p001_"
+		}
+		for _, dirrtl := range []bool{false, true} {
+			if dirrtl && !me.InclRtl {
 				continue
 			}
-			for _, dirrtl := range []bool{false, true} {
-				if dirrtl && !me.InclRtl {
-					continue
-				}
-				pgnr := 6
-				for _, chap := range series.Chapters {
-					pgnrs[chap] = pgnr
-					for _, sheet := range chap.sheets {
-						sv := sheet.versions[0]
-						if skip := (me.DropUntranslated && lang != App.Proj.Langs[0] && App.Proj.percentTranslated(lang, series, chap, sv, -1) < 50); skip ||
-							(bgcol && !sv.data.hasBgCol) {
-							if !skip {
-								pgnr++
-							}
-							continue
-						}
-						svgfilename := sheet.name + strIf(dirrtl, "_rtl_", "_ltr_") + lang + strIf(bgcol, "_col", "_bw") + ".svg"
-						svgfilepath := filepath.Join(me.genPrepDirPath, svgfilename)
-						sheetsvgfilepaths = append(sheetsvgfilepaths, svgfilepath)
-						me.genBookSheetSvg(sv, svgfilepath, dirrtl, lang, bgcol)
-						pagesvgfilename := "p" + itoa0(pgnr, 3) + strIf(dirrtl, "_rtl_", "_ltr_") + lang + strIf(bgcol, "_col", "_bw") + ".svg"
-						pagesvgfilepath := filepath.Join(me.genPrepDirPath, pagesvgfilename)
-						pagesvgfilepaths = append(pagesvgfilepaths, pagesvgfilepath)
-						var doublearrow bool
-						if strnumsuff := strNumericSuffix(sheet.name); me.DoubleSpreadArrowsForLen > 1 {
-							ui, _ := strconv.ParseUint(strnumsuff, 10, 64)
-							doublearrow = ui > 0 && ui < me.DoubleSpreadArrowsForLen
-						}
-						me.genBookSheetPageSvg(pagesvgfilepath, svgfilepath+".png", sv.data.pxBounds().Size(), pgnr, doublearrow)
+			pgnr := 5
+			if me.NoDirtPages {
+				pgnr = 2
+			} else if me.book.StartOnEvenNumberedPage {
+				pgnr = 6
+			}
+			for _, chap := range series.Chapters {
+				pgnrs[chap] = pgnr
+				for _, sheet := range chap.sheets {
+					sv := sheet.versions[0]
+					if skip := (me.DropUntranslated && lang != App.Proj.Langs[0] && App.Proj.percentTranslated(lang, series, chap, sv, -1) < 50); skip {
 						pgnr++
+						continue
 					}
+					svgfilename := sheet.name + strIf(dirrtl, "_rtl_", "_ltr_") + lang + ".svg"
+					svgfilepath := filepath.Join(me.genPrepDirPath, svgfilename)
+					sheetsvgfilepaths = append(sheetsvgfilepaths, svgfilepath)
+					me.genBookSheetSvg(sv, svgfilepath, dirrtl, lang)
+					pagesvgfilename := "p" + itoa0(pgnr, 3) + strIf(dirrtl, "_rtl_", "_ltr_") + lang + ".svg"
+					pagesvgfilepath := filepath.Join(me.genPrepDirPath, pagesvgfilename)
+					pagesvgfilepaths = append(pagesvgfilepaths, pagesvgfilepath)
+					var doublearrow bool
+					if strnumsuff := strNumericSuffix(sheet.name); me.DoubleSpreadArrowsForLen > 1 {
+						ui, _ := strconv.ParseUint(strnumsuff, 10, 64)
+						doublearrow = ui > 0 && ui < me.DoubleSpreadArrowsForLen
+					}
+					me.genBookSheetPageSvg(pagesvgfilepath, svgfilepath+".png", sv.data.pxBounds().Size(), pgnr, doublearrow)
+					pgnr++
 				}
 			}
 		}
-		svgfilepath := filepath.Join(me.genPrepDirPath, "p003_"+lang+".svg")
+
+		svgfilepath := filepath.Join(me.genPrepDirPath, pgtoc+lang+".svg")
 		pagesvgfilepaths = append(pagesvgfilepaths, svgfilepath)
 		me.genBookTiTocPageSvg(svgfilepath, lang, pgnrs)
 	}
@@ -403,22 +389,14 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 
 	mkDir(".ccache/.svgpng")
 	for i, svgfilepath := range sheetsvgfilepaths {
-		if lrw := config.PxLoResWidth; lrw > 0 && me.NoHiRes {
-			imgSvgToPng(svgfilepath, svgfilepath+".png", lrw, 0, false, nil)
-		} else {
-			imgSvgToPng(svgfilepath, svgfilepath+".png", 0, 1200, false, nil)
-		}
+		imgSvgToPng(svgfilepath, svgfilepath+".png", 0, false, nil)
 		printLn("\t\t", time.Now().Format("15:04:05"), "shsvg", i+1, "/", len(sheetsvgfilepaths))
 	}
 	for i, svgfilepath := range pagesvgfilepaths {
 		var work sync.WaitGroup
-		if !me.NoHiRes {
+		for _, res := range me.PxWidths {
 			work.Add(1)
-			go imgSvgToPng(svgfilepath, svgfilepath+".png", 0, 1200, false, work.Done)
-		}
-		if lrw := config.PxLoResWidth; lrw > 0 && !me.NoLoRes {
-			work.Add(1)
-			go imgSvgToPng(svgfilepath, svgfilepath+"."+itoa(lrw)+".png", lrw, 0, false, work.Done)
+			go imgSvgToPng(svgfilepath, svgfilepath+"."+itoa(res)+".png", res, false, work.Done)
 		}
 		work.Wait()
 		printLn("\t\t", time.Now().Format("15:04:05"), "pgsvg", i+1, "/", len(pagesvgfilepaths))
@@ -557,11 +535,12 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 					viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `"><defs>`
 
 		numpics := perrowcol * perrowcol * 2
+		numpics, perrowcol = 1, 1
 		for idx := 0; idx < numpics; idx++ {
 			svg += `<image xlink:href="` + absPath(svs[(idx+(idp*numpics))%len(svs)].data.bwFilePath) + `"
 						id="p` + itoa(idx) + `" width="` + itoa(cw) + `" height="` + itoa(ch) + `" />`
 		}
-		svg += `</defs><g opacity="0.33" transform="rotate(-15 ` + itoa(w/2) + ` ` + itoa(h/2) + `)">`
+		svg += `</defs><g opacity="0.33">` // transform="rotate(-15 ` + itoa(w/2) + ` ` + itoa(h/2) + `)"
 		var idx int
 		for col := -1; col <= perrowcol+1; col++ {
 			for row := -1; row <= perrowcol+1; row++ {
@@ -773,7 +752,7 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *Size,
 	}
 }
 
-func (*BookBuild) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string, bgCol bool) {
+func (*BookBuild) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string) {
 	rectinner := sv.data.pxBounds()
 	w, h := rectinner.Dx(), rectinner.Dy()
 
@@ -806,7 +785,7 @@ func (*BookBuild) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool,
 		}
 		svg += `<g id="` + gid + `" clip-path="url(#c` + gid + `)" transform="translate(` + itoa(tx) + ` ` + itoa(py) + `)">`
 		svg += `<defs><clipPath id="c` + gid + `"><rect x="0" y="0"  width="` + itoa(pw) + `" height="` + itoa(ph) + `"></rect></clipPath></defs>`
-		if panelbgpngsrcfilepath := absPath(filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png")); bgCol && fileStat(panelbgpngsrcfilepath) != nil {
+		if panelbgpngsrcfilepath := absPath(filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png")); fileStat(panelbgpngsrcfilepath) != nil {
 			svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
 						xlink:href="` + panelbgpngsrcfilepath + `" />`
 		} else {
@@ -824,19 +803,24 @@ func (*BookBuild) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool,
 	fileWrite(outFilePath, []byte(svg))
 }
 
-func (me *BookBuild) genBookBuild(outDirPath string, lang string, bgCol bool, dirRtl bool, loRes bool, onDone func()) {
+func (me *BookBuild) genBookBuild(outDirPath string, lang string, dirRtl bool, res int, onDone func()) {
 	defer onDone()
 	config, series := &me.config, me.series
-	pgnr, idp, srcfilepaths := 1, 0, make([]string, 0, series.numSheets())
-
-	for ; pgnr <= 5; pgnr++ {
-		srcfilepath := filepath.Join(me.genPrepDirPath, "dp"+itoa(idp)+".svg"+strIf(loRes, "."+itoa(config.PxLoResWidth), "")+".png")
-		if pgnr == 3 {
-			srcfilepath = filepath.Join(me.genPrepDirPath, "p003_"+lang+".svg"+strIf(loRes, "."+itoa(config.PxLoResWidth), "")+".png")
+	pgnr, idp, dpl, srcfilepaths := 1, 0, 4, make([]string, 0, series.numSheets())
+	if me.NoDirtPages {
+		dpl = 1
+	} else if me.book.StartOnEvenNumberedPage {
+		dpl = 5
+	}
+	for ; pgnr <= dpl; pgnr++ {
+		srcfilepath := filepath.Join(me.genPrepDirPath, "dp"+itoa(idp)+".svg"+"."+itoa(res)+".png")
+		istoc := (pgnr == 3 || (me.NoDirtPages && pgnr == 1))
+		if istoc {
+			srcfilepath = filepath.Join(me.genPrepDirPath, "p00"+itoa(pgnr)+"_"+lang+".svg"+"."+itoa(res)+".png")
 		} else if me.genNumUniqueDirtPages != 0 {
 			idp = (idp + 1) % me.genNumUniqueDirtPages
 		}
-		if pgnr == 3 || !me.NoDirtPages {
+		if istoc || !me.NoDirtPages {
 			srcfilepaths = append(srcfilepaths, srcfilepath)
 		}
 	}
@@ -847,42 +831,41 @@ func (me *BookBuild) genBookBuild(outDirPath string, lang string, bgCol bool, di
 				continue
 			}
 			srcfilepaths = append(srcfilepaths, filepath.Join(me.genPrepDirPath,
-				"p"+itoa0(pgnr, 3)+strIf(dirRtl, "_rtl_", "_ltr_")+lang+strIf(bgCol && sv.data.hasBgCol, "_col", "_bw")+".svg"+strIf(loRes, "."+itoa(config.PxLoResWidth), "")+".png"))
+				"p"+itoa0(pgnr, 3)+strIf(dirRtl, "_rtl_", "_ltr_")+lang+".svg"+"."+itoa(res)+".png"))
 			pgnr++
 		}
 	}
 	if ntrailingdps := 0; !me.NoDirtPages {
 		if me.book.GreetingSvgPic != "" {
-			srcfilepaths = append(srcfilepaths, filepath.Join(me.genPrepDirPath, "dp"+itoa(me.genNumUniqueDirtPages)+".svg"+strIf(loRes, "."+itoa(config.PxLoResWidth), "")+".png"))
+			srcfilepaths = append(srcfilepaths, filepath.Join(me.genPrepDirPath, "dp"+itoa(me.genNumUniqueDirtPages)+".svg"+"."+itoa(res)+".png"))
 			ntrailingdps++
 		}
 		for ; !(ntrailingdps >= 4 && (len(srcfilepaths)%4) == 0 && len(srcfilepaths) >= config.MinPageCount); ntrailingdps++ {
-			srcfilepaths = append(srcfilepaths, filepath.Join(me.genPrepDirPath, "dp"+itoa(idp)+".svg"+strIf(loRes, "."+itoa(config.PxLoResWidth), "")+".png"))
+			srcfilepaths = append(srcfilepaths, filepath.Join(me.genPrepDirPath, "dp"+itoa(idp)+".svg"+"."+itoa(res)+".png"))
 			idp = (idp + 1) % me.genNumUniqueDirtPages
 		}
 	}
 
-	bookid := me.id(lang, bgCol, dirRtl, loRes)
+	bookid := me.id(lang, dirRtl, res)
 	var work sync.WaitGroup
 	work.Add(3)
-	go imgSvgToPng(filepath.Join(me.genPrepDirPath, "cover.png."+lang+".svg"), filepath.Join(outDirPath, "cover."+lang+".png"), 0, 1200, true, work.Done)
-	go me.genBookBuildCbz(filepath.Join(outDirPath, bookid+".cbz"), srcfilepaths, lang, bgCol, dirRtl, loRes, work.Done)
-	go me.genBookBuildPdf(filepath.Join(outDirPath, bookid+".pdf"), srcfilepaths, lang, bgCol, dirRtl, loRes, work.Done)
+	go imgSvgToPng(filepath.Join(me.genPrepDirPath, "cover.png."+lang+".svg"), filepath.Join(outDirPath, "cover."+lang+".png"), 0, true, work.Done)
+	go me.genBookBuildCbz(filepath.Join(outDirPath, bookid+".cbz"), srcfilepaths, lang, dirRtl, res, work.Done)
+	go me.genBookBuildPdf(filepath.Join(outDirPath, bookid+".pdf"), srcfilepaths, lang, dirRtl, res, work.Done)
 	work.Wait()
 }
 
-func (me *BookBuild) genBookBuildPdf(outFilePath string, srcFilePaths []string, lang string, bgCol bool, dirRtl bool, loRes bool, onDone func()) {
+func (me *BookBuild) genBookBuildPdf(outFilePath string, srcFilePaths []string, lang string, dirRtl bool, res int, onDone func()) {
 	defer onDone()
-	cmdArgs := append(make([]string, 0, 3+len(srcFilePaths)),
-		"--pillow-limit-break", "--nodate")
-	if mmsize := me.effectiveMmSize(); !loRes {
+	cmdArgs := []string{"--pillow-limit-break", "--nodate"}
+	if mmsize := me.effectiveMmSize(); res == 0 {
 		cmdArgs = append(cmdArgs, "--pagesize", itoa(mmsize.MmWidth)+"mmx"+itoa(mmsize.MmHeight)+"mm")
 	}
 	cmdArgs = append(cmdArgs, srcFilePaths...)
 	osExec(true, "img2pdf", append(cmdArgs, "-o", outFilePath)...)
 }
 
-func (*BookBuild) genBookBuildCbz(outFilePath string, srcFilePaths []string, lang string, bgCol bool, dirRtl bool, loRes bool, onDone func()) {
+func (*BookBuild) genBookBuildCbz(outFilePath string, srcFilePaths []string, lang string, dirRtl bool, res int, onDone func()) {
 	defer onDone()
 	outfile, err := os.Create(outFilePath)
 	if err != nil {

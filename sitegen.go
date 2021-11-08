@@ -86,9 +86,6 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 			for _, bb := range bbs {
 				bb.mergeOverrides()
 				bb.series = bb.book.toSeries()
-				if bb.NoCol {
-					bb.InclBw = true
-				}
 				me.books[bb.name] = bb
 			}
 		}
@@ -221,21 +218,13 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 					if lidx != 0 && bb.NoLangs {
 						continue
 					}
-					for _, bgcol := range []bool{true, false} {
-						if (bgcol && bb.NoCol) || ((!bgcol) && !bb.InclBw) {
+					for _, dirrtl := range []bool{false, true} {
+						if dirrtl && !bb.InclRtl {
 							continue
 						}
-						for _, dirrtl := range []bool{false, true} {
-							if dirrtl && !bb.InclRtl {
-								continue
-							}
-							for _, lores := range []bool{false, true} {
-								if (lores && (bb.config.PxLoResWidth == 0 || bb.NoLoRes)) || (bb.NoHiRes && !lores) {
-									continue
-								}
-								work.Add(1)
-								go bb.genBookBuild(dirpath, lang, bgcol, dirrtl, lores, work.Done)
-							}
+						for _, res := range bb.PxWidths {
+							work.Add(1)
+							go bb.genBookBuild(dirpath, lang, dirrtl, res, work.Done)
 						}
 					}
 				}
