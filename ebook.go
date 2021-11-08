@@ -37,7 +37,6 @@ type BookBuild struct {
 	InclRtl                  bool
 	NoLangs                  bool
 	PxWidths                 []int
-	NoDirtPages              bool
 	DropUntranslated         bool
 	DoubleSpreadArrowsForLen uint64
 
@@ -111,9 +110,6 @@ func (me *BookBuild) mergeOverrides() {
 		}
 		if !me.NoLangs {
 			me.NoLangs = base.NoLangs
-		}
-		if !me.NoDirtPages {
-			me.NoDirtPages = base.NoDirtPages
 		}
 		if !me.DropUntranslated {
 			me.DropUntranslated = base.DropUntranslated
@@ -333,18 +329,13 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 		if lidx > 0 && me.NoLangs {
 			continue
 		}
-		pgnrs, pgtoc := map[*Chapter]int{}, "p003_"
-		if me.NoDirtPages {
-			pgtoc = "p001_"
-		}
+		pgnrs := map[*Chapter]int{}
 		for _, dirrtl := range []bool{false, true} {
 			if dirrtl && !me.InclRtl {
 				continue
 			}
 			pgnr := 5
-			if me.NoDirtPages {
-				pgnr = 2
-			} else if me.book.StartOnEvenNumberedPage {
+			if me.book.StartOnEvenNumberedPage {
 				pgnr = 6
 			}
 			for _, chap := range series.Chapters {
@@ -373,13 +364,11 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 			}
 		}
 
-		svgfilepath := filepath.Join(me.genPrepDirPath, pgtoc+lang+".svg")
+		svgfilepath := filepath.Join(me.genPrepDirPath, "p003_"+lang+".svg")
 		pagesvgfilepaths = append(pagesvgfilepaths, svgfilepath)
 		me.genBookTiTocPageSvg(svgfilepath, lang, pgnrs)
 	}
-	if !me.NoDirtPages {
-		pagesvgfilepaths = append(pagesvgfilepaths, me.genBookDirtPageSvgs()...)
-	}
+	pagesvgfilepaths = append(pagesvgfilepaths, me.genBookDirtPageSvgs()...)
 	var work sync.WaitGroup
 	work.Add(1)
 	go me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrepDirPath, "cover.png"), &config.CoverSize, 0, config.OffsetsMm.CoverGap, work.Done)
@@ -526,6 +515,9 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 	me.genNumUniqueDirtPages = 1 + (len(svs) / 16)
 	perpage := float64(len(svs)) / float64(me.genNumUniqueDirtPages)
 	perrowcol := int(math.Ceil(math.Sqrt(perpage)))
+	if os.Getenv("LODIRT") != "" {
+		perrowcol, me.genNumUniqueDirtPages = 1, 1
+	}
 
 	for idp := 0; idp < me.genNumUniqueDirtPages; idp++ {
 		cw, ch := w/perrowcol, h/perrowcol
@@ -535,7 +527,9 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 					viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `"><defs>`
 
 		numpics := perrowcol * perrowcol * 2
-		numpics, perrowcol = 1, 1
+		if os.Getenv("LODIRT") != "" {
+			numpics = 1
+		}
 		for idx := 0; idx < numpics; idx++ {
 			svg += `<image xlink:href="` + absPath(svs[(idx+(idp*numpics))%len(svs)].data.bwFilePath) + `"
 						id="p` + itoa(idx) + `" width="` + itoa(cw) + `" height="` + itoa(ch) + `" />`
@@ -807,22 +801,18 @@ func (me *BookBuild) genBookBuild(outDirPath string, lang string, dirRtl bool, r
 	defer onDone()
 	config, series := &me.config, me.series
 	pgnr, idp, dpl, srcfilepaths := 1, 0, 4, make([]string, 0, series.numSheets())
-	if me.NoDirtPages {
-		dpl = 1
-	} else if me.book.StartOnEvenNumberedPage {
+	if me.book.StartOnEvenNumberedPage {
 		dpl = 5
 	}
 	for ; pgnr <= dpl; pgnr++ {
 		srcfilepath := filepath.Join(me.genPrepDirPath, "dp"+itoa(idp)+".svg"+"."+itoa(res)+".png")
-		istoc := (pgnr == 3 || (me.NoDirtPages && pgnr == 1))
+		istoc := (pgnr == 3)
 		if istoc {
 			srcfilepath = filepath.Join(me.genPrepDirPath, "p00"+itoa(pgnr)+"_"+lang+".svg"+"."+itoa(res)+".png")
 		} else if me.genNumUniqueDirtPages != 0 {
 			idp = (idp + 1) % me.genNumUniqueDirtPages
 		}
-		if istoc || !me.NoDirtPages {
-			srcfilepaths = append(srcfilepaths, srcfilepath)
-		}
+		srcfilepaths = append(srcfilepaths, srcfilepath)
 	}
 	for _, chap := range series.Chapters {
 		for _, sheet := range chap.sheets {
@@ -835,15 +825,14 @@ func (me *BookBuild) genBookBuild(outDirPath string, lang string, dirRtl bool, r
 			pgnr++
 		}
 	}
-	if ntrailingdps := 0; !me.NoDirtPages {
-		if me.book.GreetingSvgPic != "" {
-			srcfilepaths = append(srcfilepaths, filepath.Join(me.genPrepDirPath, "dp"+itoa(me.genNumUniqueDirtPages)+".svg"+"."+itoa(res)+".png"))
-			ntrailingdps++
-		}
-		for ; !(ntrailingdps >= 4 && (len(srcfilepaths)%4) == 0 && len(srcfilepaths) >= config.MinPageCount); ntrailingdps++ {
-			srcfilepaths = append(srcfilepaths, filepath.Join(me.genPrepDirPath, "dp"+itoa(idp)+".svg"+"."+itoa(res)+".png"))
-			idp = (idp + 1) % me.genNumUniqueDirtPages
-		}
+	var ntrailingdps int
+	if me.book.GreetingSvgPic != "" {
+		srcfilepaths = append(srcfilepaths, filepath.Join(me.genPrepDirPath, "dp"+itoa(me.genNumUniqueDirtPages)+".svg"+"."+itoa(res)+".png"))
+		ntrailingdps++
+	}
+	for ; !(ntrailingdps >= 4 && (len(srcfilepaths)%4) == 0 && len(srcfilepaths) >= config.MinPageCount); ntrailingdps++ {
+		srcfilepaths = append(srcfilepaths, filepath.Join(me.genPrepDirPath, "dp"+itoa(idp)+".svg"+"."+itoa(res)+".png"))
+		idp = (idp + 1) % me.genNumUniqueDirtPages
 	}
 
 	bookid := me.id(lang, dirRtl, res)
