@@ -62,7 +62,7 @@ func appMainAction(fromGui bool, name string, args map[string]struct{}) string {
 
 	var action func(map[string]struct{})
 	switch name {
-	case "sitegen", "now":
+	case "gen":
 		action = func(flags map[string]struct{}) { siteGen{}.genSite(fromGui, flags) }
 	default:
 		s := "Unknown action: '" + name + "', try one of these:"
@@ -71,13 +71,13 @@ func appMainAction(fromGui bool, name string, args map[string]struct{}) string {
 		}
 		return s
 	}
+
 	if fromGui {
 		go func() { defer func() { appMainActions[name] = false }(); action(args) }()
 		return "Action '" + name + "' kicked off. Progress printed to stdio."
-	} else {
-		action(args)
-		return ""
 	}
+	action(args)
+	return ""
 }
 
 func appPrepWork(fromGui bool) {

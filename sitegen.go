@@ -108,7 +108,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 			App.Proj.Gen.PanelSvgText.AppendToFiles = map[string]bool{}
 		}
 		numfilescopied := me.copyStaticFiles("")
-		return "for " + strconv.Itoa(numfilescopied) + " files"
+		return "for " + itoa(numfilescopied) + " files"
 	})
 
 	timedLogged("SiteGen: generating (but mostly copying pre-generated) PNGs & SVGs...", func() string {
@@ -201,7 +201,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 				work.Wait()
 			}
 		}
-		return "for " + strconv.Itoa(numfileswritten) + " files"
+		return "for " + itoa(numfileswritten) + " files"
 	})
 
 	if len(me.books) != 0 {
