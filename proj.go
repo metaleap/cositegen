@@ -9,6 +9,12 @@ import (
 	"time"
 )
 
+type DirMode struct {
+	Name  string
+	Title map[string]string
+	Desc  map[string]string
+}
+
 type Project struct {
 	SiteTitle   string
 	SiteHost    string
@@ -38,11 +44,8 @@ type Project struct {
 	NumSheetsInHomeBgs     int
 	NumColorDistrClusters  int
 	DirModes               struct {
-		Ltr, Rtl struct {
-			Name  string
-			Title map[string]string
-			Desc  map[string]string
-		}
+		Ltr DirMode
+		Rtl DirMode
 	}
 	Gen struct {
 		IdQualiList      string
@@ -105,6 +108,13 @@ func (me *Project) seriesByName(name string) *Series {
 		}
 	}
 	return nil
+}
+
+func (me *Project) dirMode(rtl bool) *DirMode {
+	if rtl {
+		return &me.DirModes.Rtl
+	}
+	return &me.DirModes.Ltr
 }
 
 func (me *Project) textStr(lang string, key string) (s string) {
@@ -211,6 +221,11 @@ func (me *Project) load() (numSheetVers int) {
 			bookdef.Title = map[string]string{me.Langs[0]: name}
 		}
 	}
+	for name, bookconfig := range me.BookConfigs {
+		if len(bookconfig.Title) == 0 {
+			bookconfig.Title = map[string]string{me.Langs[0]: name}
+		}
+	}
 	for name, bb := range me.BookBuilds {
 		bb.name = name
 		if bb.Config != "" {
@@ -219,6 +234,12 @@ func (me *Project) load() (numSheetVers int) {
 		if bb.Book != "" {
 			bb.book = *me.BookDefs[bb.Book]
 		}
+		if bb.UxSizeHints == nil {
+			bb.UxSizeHints = map[int]string{}
+		}
+	}
+	for _, bb := range me.BookBuilds {
+		bb.mergeOverrides()
 	}
 
 	for _, series := range me.Series {
@@ -371,6 +392,10 @@ func (me *Project) load() (numSheetVers int) {
 				printLn(len(name), me.data.Sv.ById[name] == nil, name, me.data.Sv.IdsToFileMeta[name])
 			}
 		}
+	}
+
+	for _, bb := range me.BookBuilds {
+		bb.series = bb.book.toSeries()
 	}
 	return
 }

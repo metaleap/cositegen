@@ -37,6 +37,7 @@ type BookBuild struct {
 	InclRtl                  bool
 	NoLangs                  bool
 	PxWidths                 []int
+	UxSizeHints              map[int]string
 	DropUntranslated         bool
 	DoubleSpreadArrowsForLen uint64
 
@@ -56,6 +57,7 @@ type BookBuild struct {
 }
 
 type BookConfig struct {
+	Title           map[string]string
 	PageSize        Size
 	CoverSize       Size
 	MinPageCount    int
@@ -88,11 +90,11 @@ type BookDef struct {
 	CssPgNr                 string
 	CssCoverTitle           string
 	CssCoverSpine           string
-	CoverTitlePxOffset      int
 	GreetingSvgPic          string
 	StartOnEvenNumberedPage bool
 
-	name string
+	name      string
+	numSheets int
 }
 
 func (me *BookBuild) effectiveMmSize() Size {
@@ -169,13 +171,9 @@ func (me *BookBuild) id(lang string, dirRtl bool, res int) string {
 	return me.name + "_" + lang + strIf(dirRtl, "_rtl_", "_ltr_") + itoa(res)
 }
 
-func (me *BookDef) toSeries() (ret *Series) {
-	ret = &Series{
-		Book:    me,
-		Name:    me.name,
-		UrlName: me.name,
-		Title:   me.Title,
-	}
+func (me *BookDef) toSeries() *Series {
+	me.numSheets = 0
+	ret := &Series{Book: me, Name: me.name, UrlName: me.name, Title: me.Title}
 
 	for _, chapspec := range me.Chapters {
 		var srcchaps []*Chapter
@@ -235,6 +233,7 @@ func (me *BookDef) toSeries() (ret *Series) {
 					parentChapter: newchap,
 					versions:      []*SheetVer{sheet.versions[0]},
 				})
+				me.numSheets++
 			}
 			newchaps = append(newchaps, newchap)
 		}
@@ -320,9 +319,11 @@ func (me *BookDef) reChapterToMonths(chaps []*Chapter) []*Chapter {
 	return monthchaps
 }
 
-func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
-	if onDone != nil {
-		defer onDone()
+func (me *BookBuild) genBookPrep(sg *siteGen, outDirPath string) {
+	for i := 1; me.PxWidths[0] != 0 && i < len(me.PxWidths); i++ {
+		if me.PxWidths[i] == 0 || me.PxWidths[i] > me.PxWidths[0] {
+			me.PxWidths[0], me.PxWidths[i] = me.PxWidths[i], me.PxWidths[0]
+		}
 	}
 	config, series := &me.config, me.series
 	me.genPrep.pgNrs = map[string]map[*Chapter]int{}
@@ -380,19 +381,21 @@ func (me *BookBuild) genBookPrep(sg *siteGen, onDone func()) {
 	work.Add(1)
 	go me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrep.dirPath, "bgtoc.png"), &config.PageSize, 177, 0, work.Done)
 	work.Wait()
+	for _, lang := range App.Proj.Langs {
+		imgAnyToPng(filepath.Join(me.genPrep.dirPath, "cover.png."+lang+".svg"), filepath.Join(outDirPath, me.name+".cover."+lang+".png"), 0, true)
+	}
 
-	mkDir(".ccache/.svgpng")
+	mkDir(".ccache/.pngtmp")
 	for i, svgfilepath := range sheetsvgfilepaths {
-		imgSvgToPng(svgfilepath, svgfilepath+".png", 0, false, nil)
+		imgAnyToPng(svgfilepath, svgfilepath+".png", 0, false)
 		printLn("\t\t", time.Now().Format("15:04:05"), "shsvg", i+1, "/", len(sheetsvgfilepaths))
 	}
 	for i, svgfilepath := range pagesvgfilepaths {
-		var work sync.WaitGroup
-		for _, res := range me.PxWidths {
-			work.Add(1)
-			go imgSvgToPng(svgfilepath, svgfilepath+"."+itoa(res)+".png", res, false, work.Done)
+		bigfilepath := svgfilepath + "." + itoa(me.PxWidths[0]) + ".png"
+		imgAnyToPng(svgfilepath, bigfilepath, me.PxWidths[0], false)
+		for i := 1; i < len(me.PxWidths); i++ {
+			imgAnyToPng(bigfilepath, svgfilepath+"."+itoa(me.PxWidths[i])+".png", me.PxWidths[i], false)
 		}
-		work.Wait()
 		printLn("\t\t", time.Now().Format("15:04:05"), "pgsvg", i+1, "/", len(pagesvgfilepaths))
 	}
 }
@@ -499,7 +502,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string) {
 }
 
 func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
-	config, series := &me.config, me.series
+	config, series, elcheapo := &me.config, me.series, os.Getenv("LODIRT") != "" || os.Getenv("NODIRT") != ""
 	w, h, cb := config.PageSize.pxWidth(), config.PageSize.pxHeight(), config.PageSize.pxCutBorder()
 
 	var svs []*SheetVer
@@ -520,7 +523,7 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 	me.genPrep.numUniqueDirtPages = 1 + (len(svs) / 16)
 	perpage := float64(len(svs)) / float64(me.genPrep.numUniqueDirtPages)
 	perrowcol := int(math.Ceil(math.Sqrt(perpage)))
-	if os.Getenv("LODIRT") != "" || os.Getenv("NODIRT") != "" {
+	if elcheapo {
 		perrowcol, me.genPrep.numUniqueDirtPages = 1, 1
 	}
 
@@ -532,14 +535,19 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 					viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `"><defs>`
 
 		numpics := perrowcol * perrowcol * 2
-		if os.Getenv("LODIRT") != "" {
+		if elcheapo {
 			numpics = 1
 		}
+		const usescans = true
 		for idx := 0; idx < numpics; idx++ {
-			svg += `<image xlink:href="` + absPath(svs[(idx+(idp*numpics))%len(svs)].data.bwFilePath) + `"
+			svg += `<image xlink:href="` + absPath(strIf(usescans, svs[(idx+(idp*numpics))%len(svs)].fileName, strIf(elcheapo, svs[(idx+(idp*numpics))%len(svs)].data.bwSmallFilePath, svs[(idx+(idp*numpics))%len(svs)].data.bwFilePath))) + `"
 						id="p` + itoa(idx) + `" width="` + itoa(cw) + `" height="` + itoa(ch) + `" />`
 		}
-		svg += `</defs><g opacity="0.33">` // transform="rotate(-15 ` + itoa(w/2) + ` ` + itoa(h/2) + `)"
+		svg += `</defs><g opacity="0.` + strIf(usescans, "77", "33") + `"`
+		if !elcheapo {
+			svg += ` transform="rotate(-15 ` + itoa(w/2) + ` ` + itoa(h/2) + `)"`
+		}
+		svg += ">"
 		var idx int
 		for col := -1; col <= perrowcol+1; col++ {
 			for row := -1; row <= perrowcol+1; row++ {
@@ -802,8 +810,7 @@ func (*BookBuild) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool,
 	fileWrite(outFilePath, []byte(svg))
 }
 
-func (me *BookBuild) genBookBuild(outDirPath string, lang string, dirRtl bool, res int, onDone func()) {
-	defer onDone()
+func (me *BookBuild) genBookBuild(outDirPath string, lang string, dirRtl bool, res int) {
 	config, series := &me.config, me.series
 	pgnr, idp, dpl, srcfilepaths := 1, 0, 4, make([]string, 0, series.numSheets())
 	if me.book.StartOnEvenNumberedPage {
@@ -842,11 +849,14 @@ func (me *BookBuild) genBookBuild(outDirPath string, lang string, dirRtl bool, r
 
 	bookid := me.id(lang, dirRtl, res)
 	var work sync.WaitGroup
-	work.Add(4)
-	go imgSvgToPng(filepath.Join(me.genPrep.dirPath, "cover.png."+lang+".svg"), filepath.Join(outDirPath, "cover."+lang+".png"), 0, true, work.Done)
+	work.Add(1)
 	go me.genBookBuildPdf(filepath.Join(outDirPath, bookid+".pdf"), srcfilepaths, lang, res, work.Done)
-	go me.genBookBuildCbz(filepath.Join(outDirPath, bookid+".cbz"), srcfilepaths, lang, work.Done)
-	go me.genBookBuildEpub(filepath.Join(outDirPath, bookid+".epub"), srcfilepaths, lang, dirRtl, res, work.Done)
+	if res != 0 {
+		work.Add(1)
+		go me.genBookBuildCbz(filepath.Join(outDirPath, bookid+".cbz"), srcfilepaths, lang, work.Done)
+		// work.Add(1)
+		// go me.genBookBuildEpub(filepath.Join(outDirPath, bookid+".epub"), srcfilepaths, lang, dirRtl, res, work.Done)
+	}
 	work.Wait()
 }
 
@@ -857,7 +867,7 @@ func (me *BookBuild) genBookBuildPdf(outFilePath string, srcFilePaths []string, 
 		cmdArgs = append(cmdArgs, "--pagesize", itoa(mmsize.MmWidth)+"mmx"+itoa(mmsize.MmHeight)+"mm")
 	}
 	cmdArgs = append(cmdArgs, srcFilePaths...)
-	osExec(true, "img2pdf", append(cmdArgs, "-o", outFilePath)...)
+	osExec(true, nil, "img2pdf", append(cmdArgs, "-o", outFilePath)...)
 }
 
 func (*BookBuild) genBookBuildCbz(outFilePath string, srcFilePaths []string, lang string, onDone func()) {

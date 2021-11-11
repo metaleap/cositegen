@@ -123,8 +123,11 @@ func rmDir(dirPath string) {
 	}
 }
 
-func osExec(outputMeansFailure bool, cmdPath string, cmdArgs ...string) string {
+func osExec(outputMeansFailure bool, cmdEnvAdd []string, cmdPath string, cmdArgs ...string) string {
 	cmd := exec.Command(cmdPath, cmdArgs...)
+	if len(cmdEnvAdd) != 0 {
+		cmd.Env = append(os.Environ(), cmdEnvAdd...)
+	}
 	output, err := cmd.CombinedOutput()
 	s := strings.TrimSpace(string(output))
 	if err != nil {

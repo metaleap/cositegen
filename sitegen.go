@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -84,8 +85,6 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 				}
 			}
 			for _, bb := range bbs {
-				bb.mergeOverrides()
-				bb.series = bb.book.toSeries()
 				me.books[bb.name] = bb
 			}
 		}
@@ -211,9 +210,8 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 				dirpath := ".books/" + name
 				rmDir(dirpath)
 				mkDir(dirpath)
-				bb.genBookPrep(&me, nil)
+				bb.genBookPrep(&me, dirpath)
 
-				var work sync.WaitGroup
 				for lidx, lang := range App.Proj.Langs {
 					if lidx != 0 && bb.NoLangs {
 						continue
@@ -223,12 +221,10 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 							continue
 						}
 						for _, res := range bb.PxWidths {
-							work.Add(1)
-							go bb.genBookBuild(dirpath, lang, dirrtl, res, work.Done)
+							bb.genBookBuild(dirpath, lang, dirrtl, res)
 						}
 					}
 				}
-				work.Wait()
 			}
 			return "for files written to .books/*/"
 		})
@@ -530,6 +526,73 @@ func (me *siteGen) prepHomePage() {
 			s += "</li>"
 		}
 		s += "</ul></span><div></div></span>"
+	}
+	{
+		var bbs []string
+		for name := range App.Proj.BookBuilds {
+			if dirStat(".books/"+name) != nil || fileStat(".books/"+name+".json") != nil {
+				bbs = append(bbs, name)
+			}
+		}
+		if len(bbs) > 0 {
+			sort.Strings(bbs)
+			s += "<span id='downloads' style='display: none;'><h5>Downloads</h5>"
+			s += "<span style='font-size: 1.22em; display: block'>" + me.textStr("DownHtml") + "</span><ul>"
+			for i := len(bbs) - 1; i >= 0; i-- {
+				bb := App.Proj.BookBuilds[bbs[i]]
+				s += "<li><b style='font-size: 1.55em'>" +
+					hEsc(locStr(bb.book.Title, me.lang)) + "</b> &bull; " +
+					hEsc(locStr(bb.config.Title, me.lang)) + " &bull; " +
+					hEsc(App.Proj.textStr(me.lang, "LangName")) + " &bull; " +
+					hEsc(locStr(App.Proj.dirMode(me.dirRtl).Desc, me.lang)) + " &bull; " +
+					itoa(bb.book.numSheets) + " " + me.textStr("DownHint")
+				inclseries := map[*Series]bool{}
+				for _, chap := range bb.book.Chapters {
+					for _, seriesname := range chap.FromSeries {
+						inclseries[App.Proj.seriesByName(seriesname)] = true
+					}
+				}
+				for series := range inclseries {
+					s += " <a href='#" + series.Name + "'>" + hEsc(locStr(series.Title, me.lang)) + "</a> &amp;"
+				}
+				s = s[:len(s)-len(" &amp;")]
+				s += "<ul>"
+				for _, res := range bb.PxWidths {
+					name, title := bb.id(me.lang, me.dirRtl, res), "~"+itoa(res)+"px"
+					for _, quali := range App.Proj.Qualis {
+						if quali.SizeHint == res {
+							title = quali.Name + " (" + title + ")"
+							break
+						}
+					}
+					if res == 0 {
+						title = "Print (1200dpi)"
+					}
+					s += "<li>" + hEsc(title)
+					for _, ext := range []string{"cbz", "pdf" /*, "epub"*/} {
+						if res == 0 && ext != "pdf" {
+							continue
+						}
+						filename := name + "." + ext
+						if sizehint := bb.UxSizeHints[res]; sizehint == "" {
+							if filestat := fileStat(".books/" + bb.name + "/" + filename); filestat != nil {
+								bb.UxSizeHints[res] = strSize64(filestat.Size())
+							}
+						}
+						s += " &mdash; <a target='_blank' class='grdlh' rel='noreferrer' href='" + ext + "?" + name + "'>" + ext + "</a>"
+					}
+					if sizehint := bb.UxSizeHints[res]; sizehint != "" {
+						s += " &mdash; ~" + sizehint
+					}
+					if res == 0 {
+						s += " &mdash; <a target='_blank' rel='noreferrer' class='grdlh' href='png?" + bb.name + ".cover." + me.lang + "'>cover.png</a> (<10MB)"
+					}
+					s += "</li>"
+				}
+				s += "</ul></li>"
+			}
+			s += "</ul><div></div></span>"
+		}
 	}
 	s += "</div>"
 	me.page.PageContent = s

@@ -7,6 +7,7 @@ import (
 	"image/png"
 	"io"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -92,18 +93,16 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 	_ = dstImgFile.Close()
 }
 
-func imgSvgToPng(svgFilePath string, pngFilePath string, reSize int, noTmpFile bool, onDone func()) {
-	if onDone != nil {
-		defer onDone()
-	}
-	svgdata := fileRead(svgFilePath)
-	chash := contentHashStr(svgdata)
-	tmpfilepath := ".ccache/.svgpng/" + chash + "." + itoa(reSize) + ".png"
+func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile bool) {
+	srcdata := fileRead(srcFilePath)
+	chash, optpng := contentHashStr(srcdata), os.Getenv("PNGOPT") != "" || os.Getenv("OPTPNG") != ""
+	tmpfilepath := ".ccache/.pngtmp/" + chash + "." + itoa(reSize) + ".png"
 	if noTmpFile {
-		tmpfilepath = pngFilePath
+		tmpfilepath = outFilePath
 	}
 	if noTmpFile || fileStat(tmpfilepath) == nil {
-		cmdargs := []string{svgFilePath,
+		runtime.GC()
+		cmdargs := []string{srcFilePath,
 			"-quality", "90", /*png max lossless compression*/
 			"-background", "white",
 			"-alpha", "remove",
@@ -116,10 +115,12 @@ func imgSvgToPng(svgFilePath string, pngFilePath string, reSize int, noTmpFile b
 				"-set", "units", "PixelsPerInch",
 				"-density", "1200")
 		}
-		_ = osExec(true, "convert", append(cmdargs, tmpfilepath)...)
+		if _ = osExec(true, nil, "convert", append(cmdargs, tmpfilepath)...); optpng {
+			_ = osExec(false, []string{"NO_RGBA_CHECK=1"}, "pngbattle", tmpfilepath)
+		}
 	}
 	if !noTmpFile {
-		fileLinkOrCopy(tmpfilepath, pngFilePath)
+		fileLinkOrCopy(tmpfilepath, outFilePath)
 	}
 }
 
@@ -286,7 +287,7 @@ func imgSubRectSvg(srcImg *image.Gray, srcImgRect image.Rectangle, blackBorderSi
 		panic(err)
 	}
 	fileWrite(pnmpath, buf.Bytes())
-	osExec(true, "potrace", "-s", pnmpath, "-o", svgpath)
+	osExec(true, nil, "potrace", "-s", pnmpath, "-o", svgpath)
 	ret = fileRead(svgpath)
 	_, _ = os.Remove(pnmpath), os.Remove(svgpath)
 	return
