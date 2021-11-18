@@ -405,12 +405,12 @@ func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath st
 	const mm1 = 0.1 * dpi1200
 	w, h, cb := config.PageSize.pxWidth(), config.PageSize.pxHeight(), config.PageSize.pxCutBorder()
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
-		xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-		width="` + itoa(w+cb*2) + `" height="` + itoa(h+cb*2) + `" viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `">
-		<style type="text/css">
-			@font-face { ` + strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) + ` }
-			text { ` + strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + "; " + book.CssPgNr + ` }
-		</style>`
+        xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+        width="` + itoa(w+cb*2) + `" height="` + itoa(h+cb*2) + `" viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `">
+        <style type="text/css">
+            @font-face { ` + strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) + ` }
+            text { ` + strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + "; " + book.CssPgNr + ` }
+        </style>`
 
 	// for now treat page as being odd-numbered aka. right-hand-side
 	mmpgx := config.PageSize.MmWidth - (6 + config.OffsetsMm.Small)
@@ -427,8 +427,8 @@ func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath st
 
 	imghref := absPath(filepath.Join(filepath.Dir(outFilePath), filepath.Base(sheetImgFilePath)))
 	svg += `<image x="` + itoa(cb+int(mm1*mmx)) + `" y="` + itoa(cb+int(mm1*mmy)) + `"
-		width="` + itoa(int(mm1*mmw)) + `" height="` + itoa(int(mm1*mmh)) + `"
-		xlink:href="` + imghref + `" dx="0" dy="0" />`
+        width="` + itoa(int(mm1*mmw)) + `" height="` + itoa(int(mm1*mmh)) + `"
+        xlink:href="` + imghref + `" dx="0" dy="0" />`
 
 	pgy := itoa(cb + (config.PageSize.pxHeight() - int(float64(config.OffsetsMm.Small)*mm1)))
 	svg += `<text dx="0" dy="0" x="` + itoa(cb+int(float64(mmpgx)*mm1)) + `" y="` + pgy + `">` + itoa0(pgNr, 3) + `</text>`
@@ -444,20 +444,20 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string) {
 	book, config, series := &me.book, &me.config, me.series
 	w, h, cb := config.PageSize.pxWidth(), config.PageSize.pxHeight(), config.PageSize.pxCutBorder()
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
-	xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-	width="` + itoa(w+cb*2) + `" height="` + itoa(h+cb*2) + `" viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `">`
+    xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+    width="` + itoa(w+cb*2) + `" height="` + itoa(h+cb*2) + `" viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `">`
 
 	svg += `
-			<style type="text/css">
-			@font-face { ` +
+            <style type="text/css">
+            @font-face { ` +
 		strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) + ` }
-			.title, .toc, .desc, g > svg > svg > text, g > svg > svg > text > tspan { ` +
+            .title, .toc, .desc, g > svg > svg > text, g > svg > svg > text > tspan { ` +
 		strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + `; }
-			.title { ` + book.CssTitle + ` }
-			.toc { ` + book.CssToc + ` }
-			.desc { ` + book.CssDesc + ` }
-			</style>
-			<image x="` + itoa(cb) + `" y="` + itoa(cb) + `" width="` + itoa(w) + `" height="` + itoa(h) + `" xlink:href="` + filepath.Join(me.genPrep.dirPath, "bgtoc.png") + `" />`
+            .title { ` + book.CssTitle + ` }
+            .toc { ` + book.CssToc + ` }
+            .desc { ` + book.CssDesc + ` }
+            </style>
+            <image x="` + itoa(cb) + `" y="` + itoa(cb) + `" width="` + itoa(w) + `" height="` + itoa(h) + `" xlink:href="` + filepath.Join(me.genPrep.dirPath, "bgtoc.png") + `" />`
 
 	chapcount, pgnrlast := 0, 0
 	for _, chap := range series.Chapters {
@@ -502,6 +502,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string) {
 }
 
 func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
+	const usescans = true
 	config, series, elcheapo := &me.config, me.series, os.Getenv("LODIRT") != "" || os.Getenv("NODIRT") != ""
 	w, h, cb := config.PageSize.pxWidth(), config.PageSize.pxHeight(), config.PageSize.pxCutBorder()
 
@@ -530,18 +531,17 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 	for idp := 0; idp < me.genPrep.numUniqueDirtPages; idp++ {
 		cw, ch := w/perrowcol, h/perrowcol
 		svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
-					xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-					width="` + itoa(w+cb*2) + `" height="` + itoa(h+cb*2) + `"
-					viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `"><defs>`
+                    xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+                    width="` + itoa(w+cb*2) + `" height="` + itoa(h+cb*2) + `"
+                    viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `"><defs>`
 
 		numpics := perrowcol * perrowcol * 2
 		if elcheapo {
 			numpics = 1
 		}
-		const usescans = true
 		for idx := 0; idx < numpics; idx++ {
 			svg += `<image xlink:href="` + absPath(strIf(usescans, svs[(idx+(idp*numpics))%len(svs)].fileName, strIf(elcheapo, svs[(idx+(idp*numpics))%len(svs)].data.bwSmallFilePath, svs[(idx+(idp*numpics))%len(svs)].data.bwFilePath))) + `"
-						id="p` + itoa(idx) + `" width="` + itoa(cw) + `" height="` + itoa(ch) + `" />`
+                        id="p` + itoa(idx) + `" width="` + itoa(cw) + `" height="` + itoa(ch) + `" />`
 		}
 		svg += `</defs><g opacity="0.` + strIf(usescans, "77", "33") + `"`
 		if !elcheapo {
@@ -556,7 +556,7 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 					cx += cw / 2
 				}
 				svg += `<use x="` + itoa(cx+(77*(col+1))) + `" y="` + itoa(cy+(55*(row+1))) + `"
-							xlink:href="#p` + itoa(idx%(numpics)) + `" />`
+                            xlink:href="#p` + itoa(idx%(numpics)) + `" />`
 				idx++
 			}
 		}
@@ -734,24 +734,24 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *Size,
 			}
 			w, h, cb, title := size.pxWidth(), size.pxHeight(), size.pxCutBorder(), locStr(book.Title, lang)
 			svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
-				xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-				width="` + itoa(w+cb*2) + `" height="` + itoa(h+cb*2) + `" viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `">`
+                xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+                width="` + itoa(w+cb*2) + `" height="` + itoa(h+cb*2) + `" viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `">`
 			svg += `<image dx="0" dy="0" x="` + itoa(cb) + `" y="` + itoa(cb) + `" width="` + itoa(w) + `" height="` + itoa(h) + `"
-						xlink:href="` + outFilePath + `" />`
+                        xlink:href="` + outFilePath + `" />`
 			if cantitler != 0 {
 				fs := 2.7 * (float64(w-cantitler) / float64(len(title)))
 				if ch := float64(cellh); fs > ch {
 					fs = ch
 				}
 				svg += `<rect stroke-width="0" fill="#000000" x="` + itoa(cb+cantitler) + `" y="` + itoa(cb+(numrows*cellh-cellh)) + `" width="` + itoa(w) + `" height="` + itoa(cellh*4) + `"/>
-							<text dx="0" dy="0" x="` + itoa(cb+(cantitler-int(fs*0.22))) + `" y="` + itoa(cb+(h-(cellh/3))) + `" style="` + strings.Replace(book.CssCoverTitle, "font-size:", "-moz-moz:", -1) + `; font-size: ` + itoa(int(fs)) + `px !important">` + htmlEscdToXmlEsc(hEsc(title)) + `</text>`
+                            <text dx="0" dy="0" x="` + itoa(cb+(cantitler-int(fs*0.22))) + `" y="` + itoa(cb+(h-(cellh/3))) + `" style="` + strings.Replace(book.CssCoverTitle, "font-size:", "-moz-moz:", -1) + `; font-size: ` + itoa(int(fs)) + `px !important">` + htmlEscdToXmlEsc(hEsc(title)) + `</text>`
 			}
 			svg += `<rect stroke-width="0" fill="#000000" x="` + itoa(cb+(w/2-pxcentergap/2)) + `" y="` + itoa(-h) + `" width="` + itoa(pxcentergap) + `" height="` + itoa(h*3) + `"/>
-						<text dx="0" dy="0" x="` + itoa(cb+(w/2)) + `" y="` + itoa(cb+(h/4)) + `" style="` + book.CssCoverSpine + `">` + htmlEscdToXmlEsc(hEsc(title)) + `</text>`
+                        <text dx="0" dy="0" x="` + itoa(cb+(w/2)) + `" y="` + itoa(cb+(h/4)) + `" style="` + book.CssCoverSpine + `">` + htmlEscdToXmlEsc(hEsc(title)) + `</text>`
 			if cantitlel != 0 {
 				fs := 2.7 * (float64(cantitlel) / float64(len(title)))
 				svg += `<rect stroke-width="0" fill="#000000" x="` + itoa(-w) + `" y="` + itoa(cb+(numrows*cellh-cellh)) + `" width="` + itoa(w+cantitlel+cb) + `" height="` + itoa(cellh*4) + `"/>
-							<text dx="0" dy="0" x="` + itoa(cb) + `" y="` + itoa(cb+(h-(cellh/3))) + `" style="` + strings.Replace(book.CssCoverTitle, "font-size:", "-moz-moz:", -1) + `; font-size: ` + itoa(int(fs)) + `px !important">` + htmlEscdToXmlEsc(hEsc(title)) + `</text>`
+                            <text dx="0" dy="0" x="` + itoa(cb) + `" y="` + itoa(cb+(h-(cellh/3))) + `" style="` + strings.Replace(book.CssCoverTitle, "font-size:", "-moz-moz:", -1) + `; font-size: ` + itoa(int(fs)) + `px !important">` + htmlEscdToXmlEsc(hEsc(title)) + `</text>`
 			}
 			svg += `</svg>`
 			fileWrite(outFilePath+"."+lang+".svg", []byte(svg))
@@ -764,17 +764,17 @@ func (*BookBuild) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool,
 	w, h := rectinner.Dx(), rectinner.Dy()
 
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
-		xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-		width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
-			<style type="text/css">
-				polygon { stroke: black; fill: white; }
-				@font-face { ` +
+        xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+        width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
+            <style type="text/css">
+                polygon { stroke: black; fill: white; }
+                @font-face { ` +
 		strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) +
 		` 		}
-				g > svg > svg > text, g > svg > svg > text > tspan { ` +
+                g > svg > svg > text, g > svg > svg > text > tspan { ` +
 		strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") +
 		` 		}
-			</style>`
+            </style>`
 
 	pidx := 0
 
@@ -794,14 +794,14 @@ func (*BookBuild) genBookSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool,
 		svg += `<defs><clipPath id="c` + gid + `"><rect x="0" y="0"  width="` + itoa(pw) + `" height="` + itoa(ph) + `"></rect></clipPath></defs>`
 		if panelbgpngsrcfilepath := absPath(filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png")); fileStat(panelbgpngsrcfilepath) != nil {
 			svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
-						xlink:href="` + panelbgpngsrcfilepath + `" />`
+                        xlink:href="` + panelbgpngsrcfilepath + `" />`
 		} else {
 			svg += `<rect x="0" y="0" stroke="#000000" stroke-width="0" fill="#ffffff"
-						width="` + itoa(pw) + `" height="` + itoa(ph) + `"></rect>`
+                        width="` + itoa(pw) + `" height="` + itoa(ph) + `"></rect>`
 		}
 		panelpngsrcfilepath := absPath(filepath.Join(sv.data.PicDirPath(App.Proj.Qualis[App.Proj.maxQualiIdx()].SizeHint), itoa(pidx)+".png"))
 		svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
-					xlink:href="` + panelpngsrcfilepath + `" />`
+                    xlink:href="` + panelpngsrcfilepath + `" />`
 		svg += sv.genTextSvgForPanel(pidx, p, lang, false, true)
 		svg += "\n</g>\n\n"
 		pidx++
