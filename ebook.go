@@ -502,7 +502,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string) {
 }
 
 func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
-	const usescans = true
+	const usescans = false
 	config, series, elcheapo := &me.config, me.series, os.Getenv("LODIRT") != "" || os.Getenv("NODIRT") != ""
 	w, h, cb := config.PageSize.pxWidth(), config.PageSize.pxHeight(), config.PageSize.pxCutBorder()
 
@@ -543,7 +543,7 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 			svg += `<image xlink:href="` + absPath(strIf(usescans, svs[(idx+(idp*numpics))%len(svs)].fileName, strIf(elcheapo, svs[(idx+(idp*numpics))%len(svs)].data.bwSmallFilePath, svs[(idx+(idp*numpics))%len(svs)].data.bwFilePath))) + `"
                         id="p` + itoa(idx) + `" width="` + itoa(cw) + `" height="` + itoa(ch) + `" />`
 		}
-		svg += `</defs><g opacity="0.` + strIf(usescans, "77", "33") + `"`
+		svg += `</defs><g opacity="0.` + strIf(usescans, "77", "44") + `"`
 		if !elcheapo {
 			svg += ` transform="rotate(-15 ` + itoa(w/2) + ` ` + itoa(h/2) + `)"`
 		}
