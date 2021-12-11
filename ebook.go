@@ -850,7 +850,7 @@ func (me *BookBuild) genBookBuild(outDirPath string, lang string, dirRtl bool, r
 	bookid := me.id(lang, dirRtl, res)
 	var work sync.WaitGroup
 	work.Add(1)
-	go me.genBookBuildPdf(filepath.Join(outDirPath, bookid+".pdf"), srcfilepaths, lang, res, work.Done)
+	go me.genBookBuildPdf(filepath.Join(outDirPath, bookid+".pdf"), srcfilepaths, lang, work.Done)
 	if res != 0 {
 		work.Add(1)
 		go me.genBookBuildCbz(filepath.Join(outDirPath, bookid+".cbz"), srcfilepaths, lang, work.Done)
@@ -860,12 +860,11 @@ func (me *BookBuild) genBookBuild(outDirPath string, lang string, dirRtl bool, r
 	work.Wait()
 }
 
-func (me *BookBuild) genBookBuildPdf(outFilePath string, srcFilePaths []string, lang string, res int, onDone func()) {
+func (me *BookBuild) genBookBuildPdf(outFilePath string, srcFilePaths []string, lang string, onDone func()) {
 	defer onDone()
-	cmdArgs := []string{"--pillow-limit-break", "--nodate"}
-	if mmsize := me.effectiveMmSize(); res == 0 {
-		cmdArgs = append(cmdArgs, "--pagesize", itoa(mmsize.MmWidth)+"mmx"+itoa(mmsize.MmHeight)+"mm")
-	}
+	mmsize := me.effectiveMmSize()
+	cmdArgs := []string{"--pillow-limit-break", "--nodate",
+		"--pagesize", itoa(mmsize.MmWidth) + "mmx" + itoa(mmsize.MmHeight) + "mm"}
 	cmdArgs = append(cmdArgs, srcFilePaths...)
 	osExec(true, nil, "img2pdf", append(cmdArgs, "-o", outFilePath)...)
 }
