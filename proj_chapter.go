@@ -16,6 +16,7 @@ type Series struct {
 	Chapters        []*Chapter
 	Book            *BookDef
 	GenPanelSvgText *PanelSvgTextGen
+	Priv            bool
 }
 
 type Chapter struct {
@@ -27,6 +28,7 @@ type Chapter struct {
 	SheetsPerPage   int
 	StoryboardFile  string
 	GenPanelSvgText *PanelSvgTextGen
+	Priv            bool
 
 	defaultQuali int
 	sheets       []*Sheet

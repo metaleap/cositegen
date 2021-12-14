@@ -482,6 +482,9 @@ func (me *siteGen) prepHomePage() {
 	s := "<div class='" + App.Proj.Gen.ClsNonViewerPage + "'>"
 	cssanimdirs := []string{"alternate-reverse", "alternate"}
 	for i, series := range me.series {
+		if series.Priv {
+			continue
+		}
 		author := series.Author
 		if author != "" {
 			author = strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", strIf(author == "?", me.textStr("Unknown"), author), 1)
@@ -489,6 +492,9 @@ func (me *siteGen) prepHomePage() {
 		s += "<span class='" + App.Proj.Gen.ClsSeries + "' style='animation-direction: " + cssanimdirs[i%2] + "; background-image: url(\"./" + App.Proj.Gen.PicDirName + "/" + me.nameThumb(series) + ".png\");'><span><h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + "</h5><div class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Desc, me.lang)) + author + "</div>"
 		s += "<ul class='" + App.Proj.Gen.ClsSeries + "'>"
 		for _, chapter := range series.Chapters {
+			if chapter.Priv {
+				continue
+			}
 			s += "<li class='" + App.Proj.Gen.ClsChapter + "'>"
 			if len(chapter.sheets) == 0 {
 				s += "<b>" + hEsc(locStr(chapter.Title, me.lang)) + "</b>"

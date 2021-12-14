@@ -38,8 +38,9 @@ func main() {
 		}
 		appOnExit()
 	} else {
+		App.Gui.BrowserPid = -1
 		go appPrepWork(true)
-		if App.Gui.BrowserPid = -1; os.Getenv("NOGUI") == "" {
+		if os.Getenv("NOGUI") == "" {
 			go scanDevicesDetection()
 			go httpListenAndServe()
 			go launchGuiInKioskyBrowser()

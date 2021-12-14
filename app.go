@@ -220,21 +220,21 @@ func pngOpt(pngFilePath string) bool {
 	}
 	if filedata, err := os.ReadFile(pngFilePath); err == nil {
 		newfilehash := string(contentHashStr(filedata))
-		wasknown1, wasknown2 := App.Proj.data.Sv.ById[curfilehash] != nil, App.Proj.data.Sv.IdsToFileMeta[curfilehash].FilePath != ""
-		_, wasknown3 := App.Proj.data.Sv.textRects[curfilehash]
-		crashit := newfilehash != curfilehash && (wasknown1 || wasknown2 || wasknown3)
+		known_byid, known_bymeta := App.Proj.data.Sv.ById[curfilehash] != nil, App.Proj.data.Sv.IdsToFileMeta[curfilehash].FilePath != ""
+		_, known_bytexts := App.Proj.data.Sv.textRects[curfilehash]
+		crashit := (newfilehash != curfilehash) && (known_byid || known_bymeta || known_bytexts)
 		if crashit {
 			go exec.Command("beepintime", "1ns").Run()
-			if wasknown1 {
+			if known_byid {
 				App.Proj.data.Sv.ById[newfilehash] = App.Proj.data.Sv.ById[curfilehash]
 				delete(App.Proj.data.Sv.ById, curfilehash)
 			}
-			if wasknown2 {
+			if known_bymeta {
 				App.Proj.data.Sv.IdsToFileMeta[newfilehash] = App.Proj.data.Sv.IdsToFileMeta[curfilehash]
 				delete(App.Proj.data.Sv.IdsToFileMeta, curfilehash)
 				App.Proj.data.Sv.fileNamesToIds[App.Proj.data.Sv.IdsToFileMeta[newfilehash].FilePath] = newfilehash
 			}
-			if wasknown3 {
+			if known_bytexts {
 				App.Proj.data.Sv.textRects[newfilehash] = App.Proj.data.Sv.textRects[curfilehash]
 				delete(App.Proj.data.Sv.textRects, curfilehash)
 			}
@@ -254,8 +254,13 @@ func pngOpt(pngFilePath string) bool {
 					delete(App.Proj.data.PngOpt, k)
 				}
 			}
-			App.Proj.save(false)
-			panic("relinked hashes: intentional crash, restart manually")
+			if svgfilepath := ".ccache/" + svCacheDirNamePrefix + newfilehash + "/" + strings.ReplaceAll(filepath.Base(pngFilePath), ".png", ".svg"); fileStat(svgfilepath) != nil {
+				if svg := fileRead(svgfilepath); len(svg) != 0 {
+					fileWrite(svgfilepath, []byte(strings.ReplaceAll(string(svg), curfilehash, newfilehash)))
+				}
+			}
+			App.Proj.save(os.Getenv("NOGUI") != "")
+			panic("relinked hash from " + curfilehash + " to " + newfilehash + " — intentional crash, restart manually")
 		} else if strings.HasSuffix(pngFilePath, "/bwsmall."+itoa(int(App.Proj.BwThresholds[0]))+"."+itoa(int(App.Proj.BwSmallWidth))+".png") {
 			if hashid := filepath.Base(filepath.Dir(pngFilePath)); App.Proj.data.Sv.ById != nil {
 				if svdata := App.Proj.data.Sv.ById[hashid]; svdata != nil && svdata.parentSheetVer != nil {
