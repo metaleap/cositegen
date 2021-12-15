@@ -116,8 +116,7 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 				"-density", "1200")
 		}
 		if _ = osExec(true, nil, "convert", append(cmdargs, tmpfilepath)...); optpng {
-			printLn("pngbattle", tmpfilepath)
-			printLn(osExec(false, []string{"NO_RGBA_CHECK=1"}, "pngbattle", tmpfilepath))
+			osExec(false, []string{"NO_RGBA_CHECK=1"}, "pngbattle", tmpfilepath)
 		}
 	}
 	if !noTmpFile {

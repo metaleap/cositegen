@@ -328,17 +328,14 @@ func (me *BookDef) reChapterToMonths(chaps []*Chapter) []*Chapter {
 }
 
 func (me *BookBuild) genBookPrep(sg *siteGen, outDirPath string) {
-	printLn("S1")
 	for i := 1; me.PxWidths[0] != 0 && i < len(me.PxWidths); i++ {
 		if me.PxWidths[i] == 0 || me.PxWidths[i] > me.PxWidths[0] {
 			me.PxWidths[0], me.PxWidths[i] = me.PxWidths[i], me.PxWidths[0]
 		}
 	}
-	printLn("S2")
 	config, series := &me.config, me.series
 	me.genPrep.pgNrs = map[string]map[*Chapter]int{}
 	me.genPrep.dirPath = "/dev/shm/" + me.name
-	printLn("S3")
 	rmDir(me.genPrep.dirPath)
 	mkDir(me.genPrep.dirPath)
 	var sheetsvgfilepaths, pagesvgfilepaths []string
@@ -383,18 +380,14 @@ func (me *BookBuild) genBookPrep(sg *siteGen, outDirPath string) {
 				}
 			}
 		}
-		printLn("S4")
 
 		if !me.OnlyPanelPages {
-			printLn("S5")
 			svgfilepath := filepath.Join(me.genPrep.dirPath, "p003_"+lang+".svg")
 			pagesvgfilepaths = append(pagesvgfilepaths, svgfilepath)
 			me.genBookTiTocPageSvg(svgfilepath, lang)
 		}
 	}
-	printLn("S6")
 	if !me.OnlyPanelPages {
-		printLn("S7")
 		pagesvgfilepaths = append(pagesvgfilepaths, me.genBookDirtPageSvgs()...)
 		var work sync.WaitGroup
 		work.Add(1)
@@ -402,18 +395,14 @@ func (me *BookBuild) genBookPrep(sg *siteGen, outDirPath string) {
 		work.Add(1)
 		go me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrep.dirPath, "bgtoc.png"), &config.PageSize, 177, 0, work.Done)
 		work.Wait()
-		printLn("S8")
 		imgAnyToPng(filepath.Join(me.genPrep.dirPath, "cover.png.svg"), filepath.Join(outDirPath, me.name+".cover.png"), 0, true)
-		printLn("S9")
 	}
 
 	mkDir(".ccache/.pngtmp")
-	printLn("S9")
 	for i, svgfilepath := range sheetsvgfilepaths {
 		imgAnyToPng(svgfilepath, svgfilepath+".png", 0, false)
 		printLn("\t\t", time.Now().Format("15:04:05"), "shsvg", i+1, "/", len(sheetsvgfilepaths))
 	}
-	printLn("S10")
 	for i, svgfilepath := range pagesvgfilepaths {
 		bigfilepath := svgfilepath + "." + itoa(me.PxWidths[0]) + ".png"
 		imgAnyToPng(svgfilepath, bigfilepath, me.PxWidths[0], false)
@@ -422,7 +411,6 @@ func (me *BookBuild) genBookPrep(sg *siteGen, outDirPath string) {
 		}
 		printLn("\t\t", time.Now().Format("15:04:05"), "pgsvg", i+1, "/", len(pagesvgfilepaths))
 	}
-	printLn("S11")
 }
 
 func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath string, sheetImgSize image.Point, pgNr int, doubleSpreadArrowIndicator bool) {
