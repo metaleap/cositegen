@@ -36,6 +36,8 @@ type BookBuild struct {
 	Book                     string
 	InclRtl                  bool
 	NoLangs                  bool
+	NoPageNumsOrArrows       bool
+	OnlyPanelPages           bool
 	PxWidths                 []int
 	UxSizeHints              map[int]string
 	DropUntranslated         bool
@@ -115,6 +117,12 @@ func (me *BookBuild) mergeOverrides() {
 		}
 		if !me.NoLangs {
 			me.NoLangs = base.NoLangs
+		}
+		if !me.NoPageNumsOrArrows {
+			me.NoPageNumsOrArrows = base.NoPageNumsOrArrows
+		}
+		if !me.OnlyPanelPages {
+			me.OnlyPanelPages = base.OnlyPanelPages
 		}
 		if !me.DropUntranslated {
 			me.DropUntranslated = base.DropUntranslated
@@ -320,14 +328,17 @@ func (me *BookDef) reChapterToMonths(chaps []*Chapter) []*Chapter {
 }
 
 func (me *BookBuild) genBookPrep(sg *siteGen, outDirPath string) {
+	printLn("S1")
 	for i := 1; me.PxWidths[0] != 0 && i < len(me.PxWidths); i++ {
 		if me.PxWidths[i] == 0 || me.PxWidths[i] > me.PxWidths[0] {
 			me.PxWidths[0], me.PxWidths[i] = me.PxWidths[i], me.PxWidths[0]
 		}
 	}
+	printLn("S2")
 	config, series := &me.config, me.series
 	me.genPrep.pgNrs = map[string]map[*Chapter]int{}
 	me.genPrep.dirPath = "/dev/shm/" + me.name
+	printLn("S3")
 	rmDir(me.genPrep.dirPath)
 	mkDir(me.genPrep.dirPath)
 	var sheetsvgfilepaths, pagesvgfilepaths []string
@@ -343,6 +354,9 @@ func (me *BookBuild) genBookPrep(sg *siteGen, outDirPath string) {
 			pgnr := 5
 			if me.book.StartOnEvenNumberedPage {
 				pgnr = 6
+			}
+			if me.OnlyPanelPages {
+				pgnr = 1
 			}
 			for _, chap := range series.Chapters {
 				me.genPrep.pgNrs[lang][chap] = pgnr
@@ -369,27 +383,37 @@ func (me *BookBuild) genBookPrep(sg *siteGen, outDirPath string) {
 				}
 			}
 		}
+		printLn("S4")
 
-		svgfilepath := filepath.Join(me.genPrep.dirPath, "p003_"+lang+".svg")
-		pagesvgfilepaths = append(pagesvgfilepaths, svgfilepath)
-		me.genBookTiTocPageSvg(svgfilepath, lang)
+		if !me.OnlyPanelPages {
+			printLn("S5")
+			svgfilepath := filepath.Join(me.genPrep.dirPath, "p003_"+lang+".svg")
+			pagesvgfilepaths = append(pagesvgfilepaths, svgfilepath)
+			me.genBookTiTocPageSvg(svgfilepath, lang)
+		}
 	}
-	pagesvgfilepaths = append(pagesvgfilepaths, me.genBookDirtPageSvgs()...)
-	var work sync.WaitGroup
-	work.Add(1)
-	go me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrep.dirPath, "cover.png"), &config.CoverSize, 0, config.OffsetsMm.CoverGap, work.Done)
-	work.Add(1)
-	go me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrep.dirPath, "bgtoc.png"), &config.PageSize, 177, 0, work.Done)
-	work.Wait()
-	for _, lang := range App.Proj.Langs {
-		imgAnyToPng(filepath.Join(me.genPrep.dirPath, "cover.png."+lang+".svg"), filepath.Join(outDirPath, me.name+".cover."+lang+".png"), 0, true)
+	printLn("S6")
+	if !me.OnlyPanelPages {
+		printLn("S7")
+		pagesvgfilepaths = append(pagesvgfilepaths, me.genBookDirtPageSvgs()...)
+		var work sync.WaitGroup
+		work.Add(1)
+		go me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrep.dirPath, "cover.png"), &config.CoverSize, 0, config.OffsetsMm.CoverGap, work.Done)
+		work.Add(1)
+		go me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrep.dirPath, "bgtoc.png"), &config.PageSize, 177, 0, work.Done)
+		work.Wait()
+		printLn("S8")
+		imgAnyToPng(filepath.Join(me.genPrep.dirPath, "cover.png.svg"), filepath.Join(outDirPath, me.name+".cover.png"), 0, true)
+		printLn("S9")
 	}
 
 	mkDir(".ccache/.pngtmp")
+	printLn("S9")
 	for i, svgfilepath := range sheetsvgfilepaths {
 		imgAnyToPng(svgfilepath, svgfilepath+".png", 0, false)
 		printLn("\t\t", time.Now().Format("15:04:05"), "shsvg", i+1, "/", len(sheetsvgfilepaths))
 	}
+	printLn("S10")
 	for i, svgfilepath := range pagesvgfilepaths {
 		bigfilepath := svgfilepath + "." + itoa(me.PxWidths[0]) + ".png"
 		imgAnyToPng(svgfilepath, bigfilepath, me.PxWidths[0], false)
@@ -398,6 +422,7 @@ func (me *BookBuild) genBookPrep(sg *siteGen, outDirPath string) {
 		}
 		printLn("\t\t", time.Now().Format("15:04:05"), "pgsvg", i+1, "/", len(pagesvgfilepaths))
 	}
+	printLn("S11")
 }
 
 func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath string, sheetImgSize image.Point, pgNr int, doubleSpreadArrowIndicator bool) {
@@ -430,12 +455,12 @@ func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePath st
         width="` + itoa(int(mm1*mmw)) + `" height="` + itoa(int(mm1*mmh)) + `"
         xlink:href="` + imghref + `" dx="0" dy="0" />`
 
-	pgy := itoa(cb + (config.PageSize.pxHeight() - int(float64(config.OffsetsMm.Small)*mm1)))
-	svg += `<text dx="0" dy="0" x="` + itoa(cb+int(float64(mmpgx)*mm1)) + `" y="` + pgy + `">` + itoa0(pgNr, 3) + `</text>`
-	if doubleSpreadArrowIndicator { // ➪
-		svg += `<text dx="0" dy="0" x="` + itoa(cb+w/2) + `" y="` + pgy + `">&#10155;</text>`
+	if pgy := itoa(cb + (config.PageSize.pxHeight() - int(float64(config.OffsetsMm.Small)*mm1))); !me.NoPageNumsOrArrows {
+		svg += `<text dx="0" dy="0" x="` + itoa(cb+int(float64(mmpgx)*mm1)) + `" y="` + pgy + `">` + itoa0(pgNr, 3) + `</text>`
+		if doubleSpreadArrowIndicator { // ➪
+			svg += `<text dx="0" dy="0" x="` + itoa(cb+w/2) + `" y="` + pgy + `">&#10155;</text>`
+		}
 	}
-
 	svg += `</svg>`
 	fileWrite(outFilePath, []byte(svg))
 }
@@ -728,34 +753,29 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *Size,
 	fileWrite(outFilePath, buf.Bytes())
 
 	if mmCenterGap != 0 {
-		for i, lang := range App.Proj.Langs {
-			if i > 0 && me.NoLangs {
-				continue
-			}
-			w, h, cb, title := size.pxWidth(), size.pxHeight(), size.pxCutBorder(), locStr(book.Title, lang)
-			svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
+		w, h, cb, title := size.pxWidth(), size.pxHeight(), size.pxCutBorder(), locStr(book.Title, App.Proj.Langs[0])
+		svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
                 xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
                 width="` + itoa(w+cb*2) + `" height="` + itoa(h+cb*2) + `" viewBox="0 0 ` + itoa(w+cb*2) + ` ` + itoa(h+cb*2) + `">`
-			svg += `<image dx="0" dy="0" x="` + itoa(cb) + `" y="` + itoa(cb) + `" width="` + itoa(w) + `" height="` + itoa(h) + `"
+		svg += `<image dx="0" dy="0" x="` + itoa(cb) + `" y="` + itoa(cb) + `" width="` + itoa(w) + `" height="` + itoa(h) + `"
                         xlink:href="` + outFilePath + `" />`
-			if cantitler != 0 {
-				fs := 2.7 * (float64(w-cantitler) / float64(len(title)))
-				if ch := float64(cellh); fs > ch {
-					fs = ch
-				}
-				svg += `<rect stroke-width="0" fill="#000000" x="` + itoa(cb+cantitler) + `" y="` + itoa(cb+(numrows*cellh-cellh)) + `" width="` + itoa(w) + `" height="` + itoa(cellh*4) + `"/>
+		if cantitler != 0 {
+			fs := 2.7 * (float64(w-cantitler) / float64(len(title)))
+			if ch := float64(cellh); fs > ch {
+				fs = ch
+			}
+			svg += `<rect stroke-width="0" fill="#000000" x="` + itoa(cb+cantitler) + `" y="` + itoa(cb+(numrows*cellh-cellh)) + `" width="` + itoa(w) + `" height="` + itoa(cellh*4) + `"/>
                             <text dx="0" dy="0" x="` + itoa(cb+(cantitler-int(fs*0.22))) + `" y="` + itoa(cb+(h-(cellh/3))) + `" style="` + strings.Replace(book.CssCoverTitle, "font-size:", "-moz-moz:", -1) + `; font-size: ` + itoa(int(fs)) + `px !important">` + htmlEscdToXmlEsc(hEsc(title)) + `</text>`
-			}
-			svg += `<rect stroke-width="0" fill="#000000" x="` + itoa(cb+(w/2-pxcentergap/2)) + `" y="` + itoa(-h) + `" width="` + itoa(pxcentergap) + `" height="` + itoa(h*3) + `"/>
-                        <text dx="0" dy="0" x="` + itoa(cb+(w/2)) + `" y="` + itoa(cb+(h/4)) + `" style="` + book.CssCoverSpine + `">` + htmlEscdToXmlEsc(hEsc(title)) + `</text>`
-			if cantitlel != 0 {
-				fs := 2.7 * (float64(cantitlel) / float64(len(title)))
-				svg += `<rect stroke-width="0" fill="#000000" x="` + itoa(-w) + `" y="` + itoa(cb+(numrows*cellh-cellh)) + `" width="` + itoa(w+cantitlel+cb) + `" height="` + itoa(cellh*4) + `"/>
-                            <text dx="0" dy="0" x="` + itoa(cb) + `" y="` + itoa(cb+(h-(cellh/3))) + `" style="` + strings.Replace(book.CssCoverTitle, "font-size:", "-moz-moz:", -1) + `; font-size: ` + itoa(int(fs)) + `px !important">` + htmlEscdToXmlEsc(hEsc(title)) + `</text>`
-			}
-			svg += `</svg>`
-			fileWrite(outFilePath+"."+lang+".svg", []byte(svg))
 		}
+		svg += `<rect stroke-width="0" fill="#000000" x="` + itoa(cb+(w/2-pxcentergap/2)) + `" y="` + itoa(-h) + `" width="` + itoa(pxcentergap) + `" height="` + itoa(h*3) + `"/>
+                        <text dx="0" dy="0" x="` + itoa(cb+(w/2)) + `" y="` + itoa(cb+(h/4)) + `" style="` + book.CssCoverSpine + `">` + htmlEscdToXmlEsc(hEsc(title)) + `</text>`
+		if cantitlel != 0 {
+			fs := 2.7 * (float64(cantitlel) / float64(len(title)))
+			svg += `<rect stroke-width="0" fill="#000000" x="` + itoa(-w) + `" y="` + itoa(cb+(numrows*cellh-cellh)) + `" width="` + itoa(w+cantitlel+cb) + `" height="` + itoa(cellh*4) + `"/>
+                            <text dx="0" dy="0" x="` + itoa(cb) + `" y="` + itoa(cb+(h-(cellh/3))) + `" style="` + strings.Replace(book.CssCoverTitle, "font-size:", "-moz-moz:", -1) + `; font-size: ` + itoa(int(fs)) + `px !important">` + htmlEscdToXmlEsc(hEsc(title)) + `</text>`
+		}
+		svg += `</svg>`
+		fileWrite(outFilePath+".svg", []byte(svg))
 	}
 }
 
@@ -816,7 +836,7 @@ func (me *BookBuild) genBookBuild(outDirPath string, lang string, dirRtl bool, r
 	if me.book.StartOnEvenNumberedPage {
 		dpl = 5
 	}
-	for ; pgnr <= dpl; pgnr++ {
+	for ; pgnr <= dpl && !me.OnlyPanelPages; pgnr++ {
 		srcfilepath := filepath.Join(me.genPrep.dirPath, "dp"+itoa(idp)+".svg"+"."+itoa(res)+".png")
 		istoc := (pgnr == 3)
 		if istoc {
@@ -842,7 +862,7 @@ func (me *BookBuild) genBookBuild(outDirPath string, lang string, dirRtl bool, r
 		srcfilepaths = append(srcfilepaths, filepath.Join(me.genPrep.dirPath, "dp"+itoa(me.genPrep.numUniqueDirtPages)+".svg"+"."+itoa(res)+".png"))
 		ntrailingdps++
 	}
-	for ; !(ntrailingdps >= 4 && (len(srcfilepaths)%4) == 0 && len(srcfilepaths) >= config.MinPageCount); ntrailingdps++ {
+	for ; (!me.OnlyPanelPages) && !(ntrailingdps >= 4 && (len(srcfilepaths)%4) == 0 && len(srcfilepaths) >= config.MinPageCount); ntrailingdps++ {
 		srcfilepaths = append(srcfilepaths, filepath.Join(me.genPrep.dirPath, "dp"+itoa(idp)+".svg"+"."+itoa(res)+".png"))
 		idp = (idp + 1) % me.genPrep.numUniqueDirtPages
 	}

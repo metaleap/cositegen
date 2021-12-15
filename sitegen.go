@@ -966,7 +966,13 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 			nextolderdate = af.PubDates[i+1]
 		}
 		for _, series := range App.Proj.Series {
+			if series.Priv {
+				continue
+			}
 			for _, chapter := range series.Chapters {
+				if chapter.Priv {
+					continue
+				}
 				pgnr, numpanels, numsheets, pages := -1, 0, 0, map[int]bool{}
 				for _, sheet := range chapter.sheets {
 					for _, sv := range sheet.versions {
@@ -1018,6 +1024,9 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 
 func (me *siteGen) copyHomeThumbsPngs() (numPngs uint32) {
 	for _, series := range App.Proj.Series {
+		if series.Priv {
+			continue
+		}
 		thumbfilename := me.nameThumb(series) + ".png"
 		if srcfilepath, dstfilepath := ".ccache/"+thumbfilename, ".build/"+App.Proj.Gen.PicDirName+"/"+thumbfilename; fileStat(srcfilepath) != nil {
 			numPngs++

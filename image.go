@@ -103,7 +103,7 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 	if noTmpFile || fileStat(tmpfilepath) == nil {
 		runtime.GC()
 		cmdargs := []string{srcFilePath,
-			"-quality", "90", /*png max lossless compression*/
+			"-quality", strIf(optpng, "00", "90"), /*png max lossless compression*/
 			"-background", "white",
 			"-alpha", "remove",
 			"-alpha", "off"}
@@ -116,7 +116,8 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 				"-density", "1200")
 		}
 		if _ = osExec(true, nil, "convert", append(cmdargs, tmpfilepath)...); optpng {
-			_ = osExec(false, []string{"NO_RGBA_CHECK=1"}, "pngbattle", tmpfilepath)
+			printLn("pngbattle", tmpfilepath)
+			printLn(osExec(false, []string{"NO_RGBA_CHECK=1"}, "pngbattle", tmpfilepath))
 		}
 	}
 	if !noTmpFile {
