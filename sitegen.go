@@ -535,7 +535,10 @@ func (me *siteGen) prepHomePage() {
 	}
 	{
 		var bbs []string
-		for name := range App.Proj.BookBuilds {
+		for name, bb := range App.Proj.BookBuilds {
+			if bb.Priv {
+				continue
+			}
 			if dirStat(".books/"+name) != nil || fileStat(".books/"+name+".json") != nil {
 				bbs = append(bbs, name)
 			}

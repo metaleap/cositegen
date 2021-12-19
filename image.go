@@ -95,7 +95,7 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 
 func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile bool) {
 	srcdata := fileRead(srcFilePath)
-	chash, optpng := contentHashStr(srcdata), os.Getenv("PNGOPT") != "" || os.Getenv("OPTPNG") != ""
+	chash := contentHashStr(srcdata)
 	tmpfilepath := ".ccache/.pngtmp/" + chash + "." + itoa(reSize) + ".png"
 	if noTmpFile {
 		tmpfilepath = outFilePath
@@ -103,7 +103,7 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 	if noTmpFile || fileStat(tmpfilepath) == nil {
 		runtime.GC()
 		cmdargs := []string{srcFilePath,
-			"-quality", strIf(optpng, "00", "90"), /*png max lossless compression*/
+			"-quality", "90", /*png max lossless compression*/
 			"-background", "white",
 			"-alpha", "remove",
 			"-alpha", "off"}
@@ -115,9 +115,7 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 				"-set", "units", "PixelsPerInch",
 				"-density", "1200")
 		}
-		if _ = osExec(true, nil, "convert", append(cmdargs, tmpfilepath)...); optpng {
-			osExec(false, []string{"NO_RGBA_CHECK=1"}, "pngbattle", tmpfilepath)
-		}
+		_ = osExec(true, nil, "convert", append(cmdargs, tmpfilepath)...)
 	}
 	if !noTmpFile {
 		fileLinkOrCopy(tmpfilepath, outFilePath)

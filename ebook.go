@@ -37,6 +37,7 @@ type BookBuild struct {
 	InclRtl                  bool
 	NoLangs                  bool
 	NoPageNumsOrArrows       bool
+	Priv                     bool
 	OnlyPanelPages           bool
 	PxWidths                 []int
 	UxSizeHints              map[int]string
@@ -120,6 +121,9 @@ func (me *BookBuild) mergeOverrides() {
 		}
 		if !me.NoPageNumsOrArrows {
 			me.NoPageNumsOrArrows = base.NoPageNumsOrArrows
+		}
+		if !me.Priv {
+			me.Priv = base.Priv
 		}
 		if !me.OnlyPanelPages {
 			me.OnlyPanelPages = base.OnlyPanelPages
@@ -530,9 +534,13 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 			svs = append(svs, sheet.versions[0])
 		}
 	}
-	rand.Shuffle(len(svs), func(i int, j int) {
-		svs[i], svs[j] = svs[j], svs[i]
-	})
+	if os.Getenv("NORAND") == "" {
+		for x, r := 0, rand.Intn(len(svs))+len(svs); x < r; x++ {
+			rand.Shuffle(len(svs), func(i int, j int) {
+				svs[i], svs[j] = svs[j], svs[i]
+			})
+		}
+	}
 
 	me.genPrep.numUniqueDirtPages = 1 + (len(svs) / 16)
 	perpage := float64(len(svs)) / float64(me.genPrep.numUniqueDirtPages)
@@ -606,55 +614,48 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *Size,
 			}
 		}
 	}
-	rand.Shuffle(len(svs), func(i int, j int) {
-		svs[i], svs[j] = svs[j], svs[i]
-	})
 
-	faces := map[*image.Gray]image.Rectangle{}
-	var work sync.WaitGroup
-	var lock sync.Mutex
+	faces := []*image.Gray{}
 	for _, sv := range svs {
-		work.Add(1)
-		go func(sv *SheetVer) {
-			defer work.Done()
-			img, err := png.Decode(bytes.NewReader(fileRead(sv.data.bwFilePath)))
-			if err != nil {
-				panic(err)
-			}
-			imgpng := img.(*image.Gray)
-			var pidx int
-			sv.data.PanelsTree.iter(func(p *ImgPanel) {
-				for _, area := range sv.panelFaceAreas(pidx) {
-					subimg := imgpng.SubImage(area.Rect).(*image.Gray)
-					fimg := subimg
-					if inkColor != 0 {
-						fimg = image.NewGray(area.Rect)
-						for x := fimg.Bounds().Min.X; x < fimg.Bounds().Max.X; x++ {
-							for y := fimg.Bounds().Min.Y; y < fimg.Bounds().Max.Y; y++ {
-								gray := subimg.GrayAt(x, y)
-								if gray.Y == 0 {
-									gray.Y = inkColor
-								} else if gray.Y != 255 {
-									panic(gray.Y)
-								}
-								fimg.SetGray(x, y, gray)
+		img, err := png.Decode(bytes.NewReader(fileRead(sv.data.bwFilePath)))
+		if err != nil {
+			panic(err)
+		}
+		imgpng := img.(*image.Gray)
+		var pidx int
+		sv.data.PanelsTree.iter(func(p *ImgPanel) {
+			for _, area := range sv.panelFaceAreas(pidx) {
+				subimg := imgpng.SubImage(area.Rect).(*image.Gray)
+				fimg := subimg
+				if inkColor != 0 {
+					fimg = image.NewGray(area.Rect)
+					for x := fimg.Bounds().Min.X; x < fimg.Bounds().Max.X; x++ {
+						for y := fimg.Bounds().Min.Y; y < fimg.Bounds().Max.Y; y++ {
+							gray := subimg.GrayAt(x, y)
+							if gray.Y == 0 {
+								gray.Y = inkColor
+							} else if gray.Y != 255 {
+								panic(gray.Y)
 							}
+							fimg.SetGray(x, y, gray)
 						}
 					}
-					lock.Lock()
-					faces[fimg] = area.Rect
-					lock.Unlock()
 				}
-				pidx++
-			})
-		}(sv)
+				faces = append(faces, fimg)
+			}
+			pidx++
+		})
 	}
-	work.Wait()
+	if os.Getenv("NORAND") == "" || mmCenterGap != 0 {
+		for x, r := 0, rand.Intn(len(faces))+len(faces); x < r; x++ {
+			rand.Shuffle(len(faces), func(i int, j int) {
+				faces[i], faces[j] = faces[j], faces[i]
+			})
+		}
+	}
 
 	for len(faces) < 4 {
-		for img, rect := range faces {
-			faces[img.SubImage(img.Bounds()).(*image.Gray)] = rect
-		}
+		faces = append(faces, faces...)
 	}
 
 	px1mm := float64(size.pxWidth()) / float64(size.MmWidth)
@@ -709,8 +710,8 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *Size,
 		numleftblank++
 	}
 
-	for fimg, frect := range faces {
-		icol, irow, pad := fidx%numcols, fidx/numcols, size.pxHeight()/50
+	for _, fimg := range faces {
+		icol, irow, pad, frect := fidx%numcols, fidx/numcols, size.pxHeight()/50, fimg.Bounds()
 		if numnope > 0 && icol == 0 && irow == numrows-1 {
 			cantitlel, icol, fidx = numleftblank*cellw, numleftblank, fidx+numleftblank
 		}
