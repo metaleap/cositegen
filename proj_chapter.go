@@ -2,9 +2,6 @@ package main
 
 import (
 	"fmt"
-	"path/filepath"
-	"strconv"
-	"strings"
 	"time"
 )
 
@@ -46,11 +43,6 @@ type Chapter struct {
 	storyBoardPages []ChapterStoryboardPage
 }
 
-type ChapterStoryboardPage struct {
-	name      string
-	textBoxes []ChapterStoryboardPageTextBox
-}
-
 type PanelSvgTextGen struct {
 	BoxPolyStrokeWidthCm float64
 	ClsBoxPoly           string
@@ -61,11 +53,6 @@ type PanelSvgTextGen struct {
 	Css                  map[string][]string
 	AppendToFiles        map[string]bool
 	TspanSubTagStyles    map[string]string
-}
-
-type ChapterStoryboardPageTextBox struct {
-	xywhCm    []float64
-	textSpans []string
 }
 
 func (me *Series) At(i int) fmt.Stringer { return me.Chapters[i] }
@@ -160,85 +147,6 @@ func (me *Chapter) DateRangeOfSheets() (time.Time, time.Time) {
 func (me *Chapter) At(i int) fmt.Stringer { return me.sheets[i] }
 func (me *Chapter) Len() int              { return len(me.sheets) }
 func (me *Chapter) String() string        { return me.Name }
-
-func (me *Chapter) loadStoryboard() {
-	switch filepath.Ext(me.StoryboardFile) {
-	case ".json":
-		me.loadStoryboardJson()
-	case ".fodp":
-		me.loadStoryboardFodp()
-	}
-}
-
-func (me *Chapter) loadStoryboardJson() {
-	type SizeAndPos struct {
-		CmW float64
-		CmH float64
-		CmX float64
-		CmY float64
-	}
-	type Object struct {
-		SizeAndPos
-		Paras []string
-	}
-	type Page struct {
-		Name     string
-		Balloons []Object
-		Panels   []Object
-	}
-	type Storyboard []Page
-	var sb Storyboard
-	jsonLoad(me.StoryboardFile, nil, &sb)
-
-	for _, page := range sb {
-		pg := ChapterStoryboardPage{name: page.Name}
-		for _, txt := range page.Balloons {
-			pg.textBoxes = append(pg.textBoxes, ChapterStoryboardPageTextBox{
-				xywhCm:    []float64{txt.CmX, txt.CmY, txt.CmW, txt.CmH},
-				textSpans: txt.Paras,
-			})
-		}
-		me.storyBoardPages = append(me.storyBoardPages, pg)
-	}
-}
-
-func (me *Chapter) loadStoryboardFodp() {
-	s := strings.Replace(string(fileRead(me.StoryboardFile)), "<text:s/>", "", -1)
-	for _, sp := range xmlOuters(s, `<draw:page>`, `</draw:page>`) {
-		csp := ChapterStoryboardPage{name: xmlAttr(sp, "draw:name")}
-		for _, sf := range xmlOuters(sp, `<draw:frame>`, `</draw:frame>`) {
-			csptb := ChapterStoryboardPageTextBox{}
-			for _, attr := range xmlAttrs(sf, "svg:x", "svg:y", "svg:width", "svg:height") {
-				if f, err := strconv.ParseFloat(strings.TrimSuffix(attr, "cm"), 64); err != nil || !strings.HasSuffix(attr, "cm") {
-					panic(attr)
-				} else {
-					csptb.xywhCm = append(csptb.xywhCm, f)
-				}
-			}
-			assert(len(csptb.xywhCm) == 4)
-			for itb, stb := range xmlOuters(sf, "<draw:text-box>", "</draw:text-box>") {
-				if itb > 0 {
-					panic(sf)
-				}
-				for _, stp := range xmlOuters(stb, "<text:p>", "</text:p>") {
-					for _, sts := range xmlOuters(stp, "<text:span>", "</text:span>") {
-						sts = sts[:strings.LastIndexByte(sts, '<')]
-						sts = sts[strings.LastIndexByte(sts, '>')+1:]
-						if sts = trim(xmlUnesc(sts)); sts != "" {
-							csptb.textSpans = append(csptb.textSpans, sts)
-						}
-					}
-				}
-			}
-			if len(csptb.textSpans) > 0 {
-				csp.textBoxes = append(csp.textBoxes, csptb)
-			}
-		}
-		if len(csp.textBoxes) > 0 {
-			me.storyBoardPages = append(me.storyBoardPages, csp)
-		}
-	}
-}
 
 func (me *PanelSvgTextGen) mergeWithParent(base *PanelSvgTextGen) {
 	if me.ClsBoxPoly == "" {

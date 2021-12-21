@@ -388,19 +388,22 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 				}
 			}
 			s += "<div id='txtprev" + itoa(i) + "' class='txtprev'>"
-			for _, tb := range pg.textBoxes {
+			for _, tb := range pg.dualLangTextBoxes() {
 				xywh := sv.cmToPx(tb.xywhCm...)
 				rect := image.Rect(xywh[0], xywh[1], xywh[0]+xywh[2], xywh[1]+xywh[3])
 				_, pidx := sv.panelMostCoveredBy(rect)
 				px, py, pw, ph := 100.0/(sw/tb.xywhCm[0]), 100.0/(sh/tb.xywhCm[1]), 100.0/(sw/tb.xywhCm[2]), 100.0/(sh/tb.xywhCm[3])
-				fulltext := strings.Join(tb.textSpans, " ")
-				s += "<div style='left: " + ftoa(px, 1) + "%; top: " + ftoa(py, 1) + "%; width: " + ftoa(pw, 1) + "%; xheight: " + ftoa(ph, 1) + "%;' class='txtprevbox' title='" + hEsc(fulltext) + "'>"
-				s += "<b><i>(P" + itoa(pidx) + ") </i></b> " + fulltext + "</div>"
+				fulltexts := map[string]string{}
+				for idx, textspan := range tb.textSpans {
+					fulltext := strings.Join(textspan, " ")
+					fulltexts[App.Proj.Langs[idx]] = fulltext
+					if idx == 0 {
+						s += "<div style='left: " + ftoa(px, 1) + "%; top: " + ftoa(py, 1) + "%; width: " + ftoa(pw, 1) + "%; xheight: " + ftoa(ph, 1) + "%;' class='txtprevbox' title='" + hEsc(fulltext) + "'>"
+						s += "<b><i>(P" + itoa(pidx) + ") </i></b> " + fulltext + "</div>"
+					}
+				}
 				if doimport && pidx >= 0 && pidx < len(pareas) {
-					pareas[pidx] = append(pareas[pidx], ImgPanelArea{
-						Data: map[string]string{App.Proj.Langs[0]: fulltext},
-						Rect: rect,
-					})
+					pareas[pidx] = append(pareas[pidx], ImgPanelArea{Data: fulltexts, Rect: rect})
 				}
 			}
 			if doimport {
