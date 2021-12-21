@@ -16,6 +16,8 @@ import (
 	"golang.org/x/image/draw"
 )
 
+const panelMinDiv = 11
+
 var PngEncoder = png.Encoder{CompressionLevel: png.BestCompression}
 var ImgScaler draw.Interpolator = draw.CatmullRom
 var DeNewLineRepl = strings.NewReplacer("\n", " ")
@@ -253,6 +255,17 @@ func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessT
 	return pngbuf.Bytes()
 }
 
+func imgIsRectFullyOfColor(img *image.Gray, rect image.Rectangle, col color.Gray) bool {
+	for x := rect.Min.X; x < rect.Max.X; x++ {
+		for y := rect.Min.Y; y < rect.Max.Y; y++ {
+			if img.GrayAt(x, y).Y != col.Y {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func imgBwBorder(imgdst draw.Image, bwColor color.Gray, size int, offset int, transparent bool) {
 	if size > 0 {
 		var col color.Color = bwColor
@@ -476,7 +489,8 @@ func (me ImgPanel) flattened() ImgPanel {
 }
 
 func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
-	panelmin := srcImg.Rect.Max.Y / 11
+	panelmin := srcImg.Rect.Max.Y / panelMinDiv // ~1.9cm
+	mm3 := int(4.0 * (float64(srcImg.Rect.Max.Y) / 210.0))
 
 	detectRows := func(area image.Rectangle) (ret []image.Rectangle) {
 		laststart, seps := -1, [][2]int{}
@@ -506,6 +520,9 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 				ret = append(ret, rect)
 			}
 			prev = sep[1]
+			if blackrect := image.Rect(area.Min.X, sep[0]+mm3, area.Max.X, sep[1]-mm3); ((sep[1] - sep[0]) > panelmin) && imgIsRectFullyOfColor(srcImg, blackrect, color.Gray{0}) {
+				ret = append(ret, blackrect)
+			}
 		}
 		if area.Max.Y-prev > panelmin {
 			ret = append(ret, image.Rect(area.Min.X, prev, area.Max.X, area.Max.Y))
@@ -541,6 +558,9 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 				ret = append(ret, rect)
 			}
 			prev = sep[1]
+			if blackrect := image.Rect(sep[0]+mm3, area.Min.Y, sep[1]-mm3, area.Max.Y); ((sep[1] - sep[0]) > panelmin) && imgIsRectFullyOfColor(srcImg, blackrect, color.Gray{0}) {
+				ret = append(ret, blackrect)
+			}
 		}
 		if (area.Max.X - prev) > panelmin {
 			ret = append(ret, image.Rect(prev, area.Min.Y, area.Max.X, area.Max.Y))
