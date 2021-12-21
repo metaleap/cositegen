@@ -398,7 +398,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 	if chapter == nil {
 		me.page.PageTitle = hEsc(me.textStr("HomeTitle"))
 		me.page.PageDesc = repl.Replace(hEsc(me.textStr("HomeDesc")))
-		me.page.PageDescTxt = "Index"
+		me.page.PageDescTxt = me.page.PageDesc
 		me.page.PageCssClasses = App.Proj.Gen.ClsChapter + "n"
 		if me.lang == App.Proj.Langs[0] {
 			me.page.HrefDirLtr = "./index.html"
@@ -427,8 +427,8 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		}
 		desc := locStr(chapter.Desc, me.lang)
 		if desc == "" && chapter.Year != 0 && len(chapter.StoryUrls) != 0 {
-			desc = "<pre>" + chapter.StoryUrls[0] + "</pre>, " + itoa(chapter.Year)
-			desc = "Story: " + strIf(me.lang == App.Proj.Langs[0], "", locStr(chapter.Title, App.Proj.Langs[0])+", ") + desc
+			desc = "<pre>" + chapter.StoryUrls[0] + "</pre>"
+			desc = "Story: " + strIf(me.lang == App.Proj.Langs[0], "", "&quot;"+locStr(chapter.Title, App.Proj.Langs[0])+"&quot;, ") + desc
 		}
 		me.page.PageDesc = strIf(desc == "", locStr(series.Desc, me.lang), desc) + author
 		me.page.PageDescTxt = hEsc(strIf(desc == "", locStr(series.Desc, me.lang), desc))

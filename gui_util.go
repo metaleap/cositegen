@@ -33,6 +33,7 @@ var hEscs = map[rune]string{
 	0xa0: "&nbsp;",
 }
 var hEscRepl *strings.Replacer
+var preRepl *strings.Replacer
 
 func init() {
 	repl := make([]string, 0, len(hEscs)*2)
@@ -40,10 +41,11 @@ func init() {
 		repl = append(repl, string([]rune{k}), v)
 	}
 	hEscRepl = strings.NewReplacer(repl...)
+	preRepl = strings.NewReplacer("<pre>", "", "</pre>", "", "&quot;", "\"") // for automatic PageDesc
 }
 
 func hEsc(s string) string {
-	s = html.EscapeString(s)
+	s = html.EscapeString(preRepl.Replace(s))
 	for i, r := range s {
 		if (r < 32 || r > 127) && hEscs[r] == "" {
 			if str := s[i:]; r > 127 {
