@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -161,8 +162,48 @@ func (me *Chapter) Len() int              { return len(me.sheets) }
 func (me *Chapter) String() string        { return me.Name }
 
 func (me *Chapter) loadStoryboard() {
-	s := strings.Replace(string(fileRead(me.StoryboardFile)), "<text:s/>", "", -1)
+	switch filepath.Ext(me.StoryboardFile) {
+	case ".json":
+		me.loadStoryboardJson()
+	case ".fodp":
+		me.loadStoryboardFodp()
+	}
+}
 
+func (me *Chapter) loadStoryboardJson() {
+	type SizeAndPos struct {
+		CmW float64
+		CmH float64
+		CmX float64
+		CmY float64
+	}
+	type Object struct {
+		SizeAndPos
+		Paras []string
+	}
+	type Page struct {
+		Name     string
+		Balloons []Object
+		Panels   []Object
+	}
+	type Storyboard []Page
+	var sb Storyboard
+	jsonLoad(me.StoryboardFile, nil, &sb)
+
+	for _, page := range sb {
+		pg := ChapterStoryboardPage{name: page.Name}
+		for _, txt := range page.Balloons {
+			pg.textBoxes = append(pg.textBoxes, ChapterStoryboardPageTextBox{
+				xywhCm:    []float64{txt.CmX, txt.CmY, txt.CmW, txt.CmH},
+				textSpans: txt.Paras,
+			})
+		}
+		me.storyBoardPages = append(me.storyBoardPages, pg)
+	}
+}
+
+func (me *Chapter) loadStoryboardFodp() {
+	s := strings.Replace(string(fileRead(me.StoryboardFile)), "<text:s/>", "", -1)
 	for _, sp := range xmlOuters(s, `<draw:page>`, `</draw:page>`) {
 		csp := ChapterStoryboardPage{name: xmlAttr(sp, "draw:name")}
 		for _, sf := range xmlOuters(sp, `<draw:frame>`, `</draw:frame>`) {

@@ -23,6 +23,7 @@ var hEscs = map[rune]string{
 	'€':  "&euro;",
 	'\n': "&#xA;",
 	'’':  "&apos;",
+	'‘':  "&apos;",
 	'…':  "&hellip;",
 	'—':  "&mdash;",
 	'–':  "&mdash;",
