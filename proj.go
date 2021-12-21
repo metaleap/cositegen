@@ -256,6 +256,12 @@ func (me *Project) load() (numSheetVers int) {
 			series.Title = map[string]string{me.Langs[0]: series.Name}
 		}
 		for _, chap := range series.Chapters {
+			if chap.Year == 0 {
+				chap.Year = series.Year
+			}
+			if len(chap.StoryUrls) == 0 {
+				chap.StoryUrls = series.StoryUrls
+			}
 			if chap.GenPanelSvgText == nil {
 				chap.GenPanelSvgText = series.GenPanelSvgText
 			} else {

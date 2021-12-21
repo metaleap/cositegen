@@ -13,6 +13,8 @@ type Series struct {
 	Title           map[string]string
 	Desc            map[string]string
 	Author          string
+	Year            int
+	StoryUrls       []string
 	Chapters        []*Chapter
 	Book            *BookDef
 	GenPanelSvgText *PanelSvgTextGen
@@ -25,6 +27,8 @@ type Chapter struct {
 	Title           map[string]string
 	Desc            map[string]string
 	Author          string
+	Year            int
+	StoryUrls       []string
 	SheetsPerPage   int
 	StoryboardFile  string
 	GenPanelSvgText *PanelSvgTextGen
