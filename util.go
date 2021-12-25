@@ -70,7 +70,21 @@ func itoa0(i int, digits int) string {
 	return strings.Repeat("0", digits-len(s)) + s
 }
 
-func strIf(b bool, sThen string, sElse string) string {
+func fIf(b bool, fThen float64, fElse float64) float64 {
+	if b {
+		return fThen
+	}
+	return fElse
+}
+
+func iIf(b bool, iThen int, iElse int) int {
+	if b {
+		return iThen
+	}
+	return iElse
+}
+
+func sIf(b bool, sThen string, sElse string) string {
 	if b {
 		return sThen
 	}

@@ -28,7 +28,7 @@ func (me *BookBuild) genBookBuildEpub(outFilePath string, srcFilePaths []string,
 
 	xmlopf := `<?xml version="1.0" encoding="UTF-8" ?>
 				<package version="3.0" xmlns="http://www.idpf.org/2007/opf"
-					dir="` + strIf(dirRtl, "rtl", "ltr") + `" xml:lang="` + lang + `" unique-identifier="bid"
+					dir="` + sIf(dirRtl, "rtl", "ltr") + `" xml:lang="` + lang + `" unique-identifier="bid"
 					prefix="rendition:http://www.idpf.org/vocab/rendition/#">
 					<metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/">
 						<dc:identifier id="bid">urn:uuid:` + bookuid + `</dc:identifier>

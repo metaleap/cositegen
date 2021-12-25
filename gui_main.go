@@ -165,7 +165,7 @@ func guiStartView() (s string) {
 							}
 							s += ">p" + itoa(pgnr) + "</span>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;" + a + hEsc(sheet.name) + "</a>"
 							if numpanels > 0 {
-								s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(numpanelareas) + " </b> data-rect" + strIf(numpanelareas == 1, "", "s") + " in " + itoa(numpanels) + " panel/s"
+								s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(numpanelareas) + " </b> data-rect" + sIf(numpanelareas == 1, "", "s") + " in " + itoa(numpanels) + " panel/s"
 								if numpanelareas > 0 {
 									for _, langid := range App.Proj.Langs[1:] {
 										s += "&nbsp;(<b>" + langid + "</b>: " + ftoa(App.Proj.percentTranslated(langid, nil, nil, sv, -1), 1) + "%)"
@@ -373,7 +373,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		} else if fv("srcpx") != sv.data.bwFilePath {
 			break
 		}
-		s += "<option value='" + href + "' style='background-image: url(\"" + href + "\");'>&lt; " + itoa(int(bwt)) + " (" + strIf(i == 0, "current", "preview") + ")" + "</option>"
+		s += "<option value='" + href + "' style='background-image: url(\"" + href + "\");'>&lt; " + itoa(int(bwt)) + " (" + sIf(i == 0, "current", "preview") + ")" + "</option>"
 	}
 	s += "</select></div>"
 	s += "<div id='fullsheet'>" + guiHtmlImg("/"+bwsrc, A{"id": "fsimg", "style": "background-image: none"})
@@ -560,7 +560,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		btnhtml := guiHtmlButton(pid+"save", "Save changes (all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 
 		numpanelareas := len(sv.panelAreas(pidx))
-		s += "<hr/><h4 id='pa" + sv.id + itoa(pidx) + "'><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(numpanelareas) + " text" + strIf(numpanelareas == 1, "", "s")
+		s += "<hr/><h4 id='pa" + sv.id + itoa(pidx) + "'><u>Panel #" + itoa(pidx+1) + "</u>: " + itoa(numpanelareas) + " text" + sIf(numpanelareas == 1, "", "s")
 		for i, lang := range App.Proj.Langs {
 			s += "&nbsp;&nbsp;<a href='javascript:refreshAllPanelRects(" + itoa(numpanels) + "," + itoa(i) + ",\"" + lang + "\");'><b>" + lang + "</b></a>"
 		}

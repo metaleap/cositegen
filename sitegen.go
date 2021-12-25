@@ -324,7 +324,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 				if quali.ExcludeInSiteGen {
 					continue
 				}
-				fext := strIf(quali.SizeHint == 0, ".svg", ".png")
+				fext := sIf(quali.SizeHint == 0, ".svg", ".png")
 				srcpath := filepath.Join(sv.data.PicDirPath(quali.SizeHint), itoa(pidx)+fext)
 				if fileinfo := fileStat(srcpath); fileinfo == nil && quali.SizeHint != 0 {
 					break
@@ -382,7 +382,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 	}
 	if parts := strings.Split(trim(me.page.SiteDesc)+" ", ". "); len(parts) > 1 {
 		for i, s := range parts {
-			parts[i] = strIf(s == "", "", "<nobr>"+s+".</nobr> ")
+			parts[i] = sIf(s == "", "", "<nobr>"+s+".</nobr> ")
 		}
 		me.page.SiteDesc = trim(strings.Join(parts, ""))
 	}
@@ -419,19 +419,19 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 		}
 		me.page.PageTitle = "<span>" + hEsc(locStr(series.Title, me.lang)) + ":</span> " + strings.Join(chaptitlewords, " ")
 		me.page.PageTitleTxt = hEsc(locStr(series.Title, me.lang)) + ": " + hEsc(locStr(chapter.Title, me.lang))
-		author := strIf(chapter.Author == "", series.Author, chapter.Author)
+		author := sIf(chapter.Author == "", series.Author, chapter.Author)
 		if author != "" {
 			author = strings.Replace(
-				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", strIf(author == "?", me.textStr("Unknown"), author), 1),
-				"%YEAR%", strIf(chapter.Year == 0, "", ", "+itoa(chapter.Year)), 1)
+				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", sIf(author == "?", me.textStr("Unknown"), author), 1),
+				"%YEAR%", sIf(chapter.Year == 0, "", ", "+itoa(chapter.Year)), 1)
 		}
 		desc := locStr(chapter.Desc, me.lang)
 		if desc == "" && chapter.Year != 0 && len(chapter.StoryUrls) != 0 {
 			desc = "<pre>" + chapter.StoryUrls[0] + "</pre>"
-			desc = "Story: " + strIf(me.lang == App.Proj.Langs[0], "", "&quot;"+locStr(chapter.Title, App.Proj.Langs[0])+"&quot;, ") + desc
+			desc = "Story: " + sIf(me.lang == App.Proj.Langs[0], "", "&quot;"+locStr(chapter.Title, App.Proj.Langs[0])+"&quot;, ") + desc
 		}
-		me.page.PageDesc = strIf(desc == "", locStr(series.Desc, me.lang), desc) + author
-		me.page.PageDescTxt = hEsc(strIf(desc == "", locStr(series.Desc, me.lang), desc))
+		me.page.PageDesc = sIf(desc == "", locStr(series.Desc, me.lang), desc) + author
+		me.page.PageDescTxt = hEsc(sIf(desc == "", locStr(series.Desc, me.lang), desc))
 		for qidx, quali := range App.Proj.Qualis {
 			if quali.ExcludeInSiteGen {
 				continue
@@ -449,7 +449,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 									totalimgsize += bgfile.Size()
 								}
 								name := me.namePanelPic(sv, pidx, q.SizeHint)
-								if fileinfo := fileStat(strings.ToLower(".build/" + App.Proj.Gen.PicDirName + "/" + name + strIf(q.SizeHint == 0, ".svg", ".png"))); fileinfo != nil {
+								if fileinfo := fileStat(strings.ToLower(".build/" + App.Proj.Gen.PicDirName + "/" + name + sIf(q.SizeHint == 0, ".svg", ".png"))); fileinfo != nil {
 									totalimgsize += fileinfo.Size()
 								}
 							}
@@ -494,8 +494,8 @@ func (me *siteGen) prepHomePage() {
 		author := series.Author
 		if author != "" {
 			author = strings.Replace(
-				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", strIf(author == "?", me.textStr("Unknown"), author), 1),
-				"%YEAR%", strIf(series.Year == 0, "", ", "+itoa(series.Year)), 1)
+				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", sIf(author == "?", me.textStr("Unknown"), author), 1),
+				"%YEAR%", sIf(series.Year == 0, "", ", "+itoa(series.Year)), 1)
 		}
 		s += "<span class='" + App.Proj.Gen.ClsSeries + "' style='animation-direction: " + cssanimdirs[i%2] + "; background-image: url(\"./" + App.Proj.Gen.PicDirName + "/" + me.nameThumb(series) + ".png\");'><span><h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + "</h5><div class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Desc, me.lang)) + author + "</div>"
 		s += "<ul class='" + App.Proj.Gen.ClsSeries + "'>"
@@ -536,8 +536,8 @@ func (me *siteGen) prepHomePage() {
 			author := chapter.Author
 			if author != "" {
 				s += strings.Replace(
-					strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", strIf(author == "?", me.textStr("Unknown"), author), 1),
-					"%YEAR%", strIf(chapter.Year == 0, "", ", "+itoa(chapter.Year)), 1,
+					strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", sIf(author == "?", me.textStr("Unknown"), author), 1),
+					"%YEAR%", sIf(chapter.Year == 0, "", ", "+itoa(chapter.Year)), 1,
 				)
 			} else if chapter.Year != 0 {
 				s += " (" + itoa(chapter.Year) + ")"
@@ -653,7 +653,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		if bgcol && !chapter.HasBgCol() {
 			continue
 		}
-		text := me.textStr("Bg" + strIf(!bgcol, "Bw", strIf(chapter.PercentColorized() < 100.0, "ColP", "Col")))
+		text := me.textStr("Bg" + sIf(!bgcol, "Bw", sIf(chapter.PercentColorized() < 100.0, "ColP", "Col")))
 		if perc := chapter.PercentColorized(); bgcol && perc < 100.0 {
 			text += " (" + ftoa(perc, 0) + "%)"
 		}
@@ -816,7 +816,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			allpanels[sv] = pidx
 			hqsrc, name := "", me.namePanelPic(sv, pidx, App.Proj.Qualis[0].SizeHint)
 			for i := qIdx; i > 0; i-- {
-				hqsrc = me.namePanelPic(sv, pidx, App.Proj.Qualis[i].SizeHint) + strIf(App.Proj.Qualis[i].SizeHint == 0, ".svg", ".png")
+				hqsrc = me.namePanelPic(sv, pidx, App.Proj.Qualis[i].SizeHint) + sIf(App.Proj.Qualis[i].SizeHint == 0, ".svg", ".png")
 				if fileinfo := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + hqsrc); fileinfo != nil && fileinfo.Size() > 0 {
 					break
 				}
@@ -1069,5 +1069,5 @@ func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, vie
 			dirMode = App.Proj.DirModes.Rtl.Name
 		}
 	}
-	return strings.ToLower(chapter.parentSeries.UrlName + "-" + chapter.UrlName + "-" + itoa(pageNr) + strIf(bgCol && chapter.HasBgCol(), "col", "bw") + strconv.FormatInt(svDt, 36) + viewMode + itoa(qualiSizeHint) + "-" + dirMode + "." + langId)
+	return strings.ToLower(chapter.parentSeries.UrlName + "-" + chapter.UrlName + "-" + itoa(pageNr) + sIf(bgCol && chapter.HasBgCol(), "col", "bw") + strconv.FormatInt(svDt, 36) + viewMode + itoa(qualiSizeHint) + "-" + dirMode + "." + langId)
 }

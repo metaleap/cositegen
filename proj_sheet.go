@@ -196,7 +196,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 					pw, ph := int(float64(p.Rect.Dx())*scale), int(float64(p.Rect.Dy())*scale)
 					s = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 						<svg width="` + itoa(pw) + `" height="` + itoa(ph) + `" viewbox="0 0 ` + itoa(pw) + ` ` + itoa(ph) + `" xmlns="http://www.w3.org/2000/svg">` +
-						strIf(App.Proj.PanelBgBlur == 0, "",
+						sIf(App.Proj.PanelBgBlur == 0, "",
 							`<filter id="leblur"><feGaussianBlur in="SourceGraphic" stdDeviation="`+itoa(App.Proj.PanelBgBlur)+`" /></filter>
 							<style type="text/css">path { filter: url(#leblur); }</style>`) +
 						s + "</svg>"
