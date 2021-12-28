@@ -531,9 +531,7 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 	}
 	for _, chap := range chaps {
 		for _, sheet := range chap.sheets {
-			if sheet.name != "01FROGF1" && sheet.name != "01FROGF2" {
-				svs = append(svs, sheet.versions[0])
-			}
+			svs = append(svs, sheet.versions[0])
 		}
 	}
 	if os.Getenv("NORAND") == "" {
@@ -642,7 +640,7 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *Size,
 		}
 	}
 
-	for len(faces) < 4 {
+	for len(faces) < 16 {
 		faces = append(faces, faces...)
 	}
 
