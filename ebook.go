@@ -1,5 +1,7 @@
 package main
 
+// TODO: nameprefix for imgAnyToPng calls!
+
 import (
 	"archive/zip"
 	"bytes"
