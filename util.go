@@ -256,6 +256,14 @@ func jsonSave(fileName string, obj Any) {
 	fileWrite(fileName, data)
 }
 
+func toJsonStr(obj Any) string {
+	data, err := json.Marshal(obj)
+	if err != nil {
+		panic(err)
+	}
+	return string(data)
+}
+
 func locStr(m map[string]string, langId string) (s string) {
 	if s = m[langId]; s == "" {
 		s = m[App.Proj.Langs[0]]

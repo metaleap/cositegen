@@ -374,8 +374,11 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 	svgTxtCounter++
 
 	if forHtml {
-		s += "<text id='_w_" + itoa(svgTxtCounter) + "' style='visibility: hidden; font-size: " + itoa(pxfont) + "px'><tspan><tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>&#9881;...</tspan></tspan><title><tspan>Loading... / Wird geladen...</tspan></title></text>"
-		s += `<use id='_t_` + itoa(svgTxtCounter) + `' xlink:href="t.` + me.parentSheet.parentChapter.parentSeries.Name + `.` + me.parentSheet.parentChapter.Name + `.` + langId + `.svg#` + me.id + `_` + itoa(pidx) + `t` + itoa(tidx+1) + `"/>`
+		hide := (pta.SvgTextTspanStyleAttr == "_storytitle")
+		s += sIf(hide, "<span style='display:none'>", "") +
+			"<text id='_w_" + itoa(svgTxtCounter) + "' style='visibility: hidden; font-size: " + itoa(pxfont) + "px'><tspan><tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>&#9881;...</tspan></tspan><title><tspan>Loading... / Wird geladen...</tspan></title></text>"
+		s += `<use id='_t_` + itoa(svgTxtCounter) + `' xlink:href="t.` + me.parentSheet.parentChapter.parentSeries.Name + `.` + me.parentSheet.parentChapter.Name + `.` + langId + `.svg#` + me.id + `_` + itoa(pidx) + `t` + itoa(tidx+1) + `"/>` +
+			sIf(hide, "</span>", "")
 	} else {
 		mozscale := me.parentSheet.parentChapter.GenPanelSvgText.MozScale > 0.01 && !forEbook
 		if mozscale {

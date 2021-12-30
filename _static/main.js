@@ -44,7 +44,7 @@ function onDualIntTextInputKeyDown(evt) {
     }
 }
 
-function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm, panelSvgTextClsBoxPoly, panelSvgTextBoxPolyStrokeWidthCm) {
+function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm, panelSvgTextClsBoxPoly, panelSvgTextBoxPolyStrokeWidthCm, tspanSubTagStyles) {
     const pid = "p" + panelIdx;
     let innerhtml = "";
     const pxfont = parseInt(px1cm * svgTxtFontSizeCmA4);
@@ -118,9 +118,17 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm
             for (let line of ptext.split('\n')) {
                 if ((!line) || line.length == 0)
                     line = '&nbsp;';
+                else {
+                    line = line.replace(/\s/g, "&nbsp;");
+                    if (tspanSubTagStyles)
+                        for (const k in tspanSubTagStyles) {
+                            line = line
+                                .replace("<" + k + ">", "<tspan style='" + tspanSubTagStyles[k] + "'>")
+                                .replace("</" + k + ">", "</tspan>");
+                        }
+                }
                 innerhtml += "<tspan dy='" + pxline + "' x='" + (borderandfill ? (px1cm * 0.44) : 0) + "'>"
                     + line
-                        .replace(/\s/g, "&nbsp;")
                         .replace(/<b>/g, "<tspan style='font-weight: bolder'>")
                         .replace(/<u>/g, "<tspan style='text-decoration: underline'>")
                         .replace(/<i>/g, "<tspan style='font-style: italic'>")

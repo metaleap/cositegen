@@ -556,7 +556,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		for _, lang := range App.Proj.Langs {
 			langs = append(langs, lang)
 		}
-		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Dx()) + ", " + itoa(panel.Rect.Dy()) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + ftoa(sv.data.PxCm, 8) + ", '" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "', " + ftoa(App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm, 8) + ");"
+		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Dx()) + ", " + itoa(panel.Rect.Dy()) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + ftoa(sv.data.PxCm, 8) + ", '" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "', " + ftoa(App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm, 8) + ", " + toJsonStr(App.Proj.Gen.PanelSvgText.TspanSubTagStyles) + ");"
 		btnhtml := guiHtmlButton(pid+"save", "Save changes (all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 
 		numpanelareas := len(sv.panelAreas(pidx))
