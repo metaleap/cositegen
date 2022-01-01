@@ -515,6 +515,10 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string) {
 		svg += `<text class="desc" x="` + itoa(cb+textx) + `px" y="` + itoa(cb+(h-textx/2)) + `px" dx="0" dy="0">` +
 			htmlEscdToXmlEsc(hEsc(locStr(book.Desc, lang))) + `</text>`
 	}
+	if fontinfo := App.Proj.textStr(lang, "BookFontInfo"); fontinfo != "" {
+		svg += `<text class="desc" x="444px" y="-444px" dx="0" dy="0" transform="rotate(90)">
+					<tspan style="font-size:0.5em">` + htmlEscdToXmlEsc(hEsc(fontinfo)) + `</tspan></text>`
+	}
 
 	svg += `</svg>`
 	fileWrite(outFilePath, []byte(svg))
