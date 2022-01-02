@@ -113,6 +113,19 @@ func (me *BookBuild) numPagesApprox() (ret int) {
 	if ret = me.book.numSheets; me.config.TwoSheetsPerPage {
 		ret *= 2
 	}
+	if !me.OnlyPanelPages {
+		ret++ // toc page
+		if me.book.GreetingSvgPic != "" {
+			ret++
+		}
+		if me.genPrep.numUniqueDirtPages == 0 {
+			me.genBookDirtPageSvgs(true)
+		}
+		ret += me.genPrep.numUniqueDirtPages
+		for (ret % 4) != 0 {
+			ret++
+		}
+	}
 	return
 }
 
@@ -402,7 +415,7 @@ func (me *BookBuild) genBookPrep(sg *siteGen, outDirPath string) {
 		}
 	}
 	if !me.OnlyPanelPages {
-		pagesvgfilepaths = append(pagesvgfilepaths, me.genBookDirtPageSvgs()...)
+		pagesvgfilepaths = append(pagesvgfilepaths, me.genBookDirtPageSvgs(false)...)
 		var work sync.WaitGroup
 		work.Add(1)
 		go me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrep.dirPath, "cover.png"), &config.CoverSize, 0, config.OffsetsMm.CoverGap, work.Done)
@@ -535,7 +548,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string) {
 	fileWrite(outFilePath, []byte(svg))
 }
 
-func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
+func (me *BookBuild) genBookDirtPageSvgs(noOpMerelyCount bool) (outFilePaths []string) {
 	const usescans = false
 	config, series := &me.config, me.series
 	w, h, cb := config.PageSize.pxWidth(), config.PageSize.pxHeight(), config.PageSize.pxCutBorder()
@@ -586,11 +599,13 @@ func (me *BookBuild) genBookDirtPageSvgs() (outFilePaths []string) {
 			}
 		}
 		svg += "</svg>"
-		outfilepath := filepath.Join(me.genPrep.dirPath, "dp"+itoa(idp)+".svg")
-		outFilePaths = append(outFilePaths, outfilepath)
-		fileWrite(outfilepath, []byte(svg))
+		if !noOpMerelyCount {
+			outfilepath := filepath.Join(me.genPrep.dirPath, "dp"+itoa(idp)+".svg")
+			outFilePaths = append(outFilePaths, outfilepath)
+			fileWrite(outfilepath, []byte(svg))
+		}
 	}
-	if me.book.GreetingSvgPic != "" {
+	if me.book.GreetingSvgPic != "" && !noOpMerelyCount {
 		outfilepath := filepath.Join(me.genPrep.dirPath, "dp"+itoa(me.genPrep.numUniqueDirtPages)+".svg")
 		fileLinkOrCopy(me.book.GreetingSvgPic, outfilepath)
 		outFilePaths = append(outFilePaths, outfilepath)

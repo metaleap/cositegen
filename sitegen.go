@@ -587,7 +587,8 @@ func (me *siteGen) prepHomePage() {
 				for series := range inclseries {
 					s += " <a href='#" + series.Name + "'>" + hEsc(locStr(series.Title, me.lang)) + "</a> &amp;"
 				}
-				s = s[:len(s)-len(" &amp;")]
+				s = s[:len(s)-len(" &amp;")] + strings.Replace(hEsc(me.textStr("DownHintNumPgs")),
+					"%NUMPGS%", itoa(bb.numPagesApprox()), 1)
 				s += "<ul>"
 				for _, res := range bb.PxWidths {
 					name, title := bb.id(me.lang, me.dirRtl, res), "~"+itoa(res)+"px"
