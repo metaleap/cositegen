@@ -30,9 +30,10 @@ type Project struct {
 		ExcludeInSiteGen bool
 	}
 	AtomFile struct {
-		PubDates    []string
-		Name        string
-		ContentHtml map[string]string
+		PubDates         []string
+		Name             string
+		ContentTxt       map[string]string
+		ContentTxtAlbums map[string]string
 	}
 	MaxImagePanelTextAreas int
 	BwThresholds           []uint8

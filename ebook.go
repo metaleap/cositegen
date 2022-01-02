@@ -36,7 +36,7 @@ type BookBuild struct {
 	BasedOn                  string
 	Config                   string
 	Book                     string
-	InclRtl                  bool
+	NoRtl                    bool
 	NoLangs                  bool
 	NoPageNumsOrArrows       bool
 	Priv                     bool
@@ -44,6 +44,7 @@ type BookBuild struct {
 	PxWidths                 []int
 	UxSizeHints              map[int]string
 	DoubleSpreadArrowsForLen uint64
+	PubDate                  string
 
 	OverrideBook   BookDef
 	OverrideConfig BookConfig
@@ -108,6 +109,13 @@ func (me *BookBuild) effectiveMmSize() Size {
 	return Size{me.config.PageSize.MmWidth + 2*me.config.PageSize.MmCutBorder, me.config.PageSize.MmHeight + 2*me.config.PageSize.MmCutBorder, 0}
 }
 
+func (me *BookBuild) numPagesApprox() (ret int) {
+	if ret = me.book.numSheets; me.config.TwoSheetsPerPage {
+		ret *= 2
+	}
+	return
+}
+
 func (me *BookBuild) mergeOverrides() {
 	if base := App.Proj.BookBuilds[me.BasedOn]; base != nil && base != me {
 		base.mergeOverrides()
@@ -117,8 +125,11 @@ func (me *BookBuild) mergeOverrides() {
 		if me.Book == "" {
 			me.book = base.book
 		}
-		if !me.InclRtl {
-			me.InclRtl = base.InclRtl
+		if me.PubDate == "" {
+			me.PubDate = base.PubDate
+		}
+		if !me.NoRtl {
+			me.NoRtl = base.NoRtl
 		}
 		if !me.NoLangs {
 			me.NoLangs = base.NoLangs
@@ -350,7 +361,7 @@ func (me *BookBuild) genBookPrep(sg *siteGen, outDirPath string) {
 		}
 		me.genPrep.pgNrs[lang] = map[*Chapter]int{}
 		for _, dirrtl := range []bool{false, true} {
-			if dirrtl && !me.InclRtl {
+			if dirrtl && me.NoRtl {
 				continue
 			}
 			pgnr := 5

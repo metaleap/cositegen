@@ -19,7 +19,7 @@ var viewModes = []string{"s", "r"}
 type siteGen struct {
 	tmpl       *template.Template
 	series     []*Series
-	books      map[string]*BookBuild
+	genBooks   map[string]*BookBuild
 	page       PageGen
 	lang       string
 	bgCol      bool
@@ -72,7 +72,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 	tstart := time.Now()
 	me.series = App.Proj.Series
 	if len(flags) != 0 {
-		me.books = map[string]*BookBuild{}
+		me.genBooks = map[string]*BookBuild{}
 		for k := range flags {
 			var bbs []*BookBuild
 			if bb := App.Proj.BookBuilds[k]; bb != nil {
@@ -88,7 +88,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 				panic("Found none of the specified books.")
 			}
 			for _, bb := range bbs {
-				me.books[bb.name] = bb
+				me.genBooks[bb.name] = bb
 			}
 		}
 	}
@@ -206,10 +206,10 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 		return "for " + itoa(numfileswritten) + " files"
 	})
 
-	if len(me.books) != 0 {
+	if len(me.genBooks) != 0 {
 		timedLogged("SiteGen: generating cbz/pdf files...", func() string {
 			mkDir(".books")
-			for name, bb := range me.books {
+			for name, bb := range me.genBooks {
 				dirpath := ".books/" + name
 				rmDir(dirpath)
 				mkDir(dirpath)
@@ -220,7 +220,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 						continue
 					}
 					for _, dirrtl := range []bool{false, true} {
-						if dirrtl && !bb.InclRtl {
+						if dirrtl && bb.NoRtl {
 							continue
 						}
 						for _, res := range bb.PxWidths {
@@ -234,7 +234,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 	}
 
 	printLn("SiteGen: " + App.Proj.SiteHost + " DONE after " + time.Now().Sub(tstart).String())
-	if len(me.books) == 0 {
+	if len(me.genBooks) == 0 {
 		cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=file://"+os.Getenv("PWD")+"/.build/index.html")...)
 		if err := cmd.Start(); err != nil {
 			printLn("[ERR]\tcmd.Start of " + cmd.String() + ":\t" + err.Error())
@@ -572,7 +572,7 @@ func (me *siteGen) prepHomePage() {
 			s += "<span style='font-size: larger; display: block'>" + me.textStr("DownHtml") + "</span><ul>"
 			for i := len(bbs) - 1; i >= 0; i-- {
 				bb := App.Proj.BookBuilds[bbs[i]]
-				s += "<li><b style='font-size: xx-large'>" +
+				s += "<li id='" + bb.name + "'><b style='font-size: xx-large'>" +
 					hEsc(locStr(bb.book.Title, me.lang)) + "</b> &bull; " +
 					hEsc(locStr(bb.config.Title, me.lang)) + " &bull; " +
 					hEsc(App.Proj.textStr(me.lang, "LangName")) + " &bull; " +
@@ -600,7 +600,7 @@ func (me *siteGen) prepHomePage() {
 					if res == 0 {
 						title = "Print (1200dpi)"
 					}
-					s += "<li>" + hEsc(title)
+					s += "<li style='font-size: larger;'>" + hEsc(title)
 					for _, ext := range []string{"cbz", "pdf" /*, "epub"*/} {
 						if res == 0 && ext != "pdf" {
 							continue
@@ -1028,15 +1028,35 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 					xml += `<title>` + hEsc(locStr(chapter.parentSeries.Title, me.lang)) + `: ` + hEsc(locStr(chapter.Title, me.lang)) + `</title>`
 					xml += `<id>` + href + `</id><link href="` + href + `"/>`
 					xml += `<author><name>` + App.Proj.SiteHost + `</name></author>`
-					xml += `<content type="html">` + strings.NewReplacer(
+					xml += `<content type="text">` + strings.NewReplacer(
 						"%NUMSVS%", itoa(numsheets),
 						"%NUMPNL%", itoa(numpanels),
 						"%NUMPGS%", itoa(len(pages)),
-					).Replace(locStr(af.ContentHtml, me.lang)) + `</content>`
+					).Replace(locStr(af.ContentTxt, me.lang)) + `</content>`
 					xmls = append(xmls, xml+`</entry>`)
 				}
 			}
 		}
+	}
+	for _, bb := range App.Proj.BookBuilds {
+		if bb.Priv || bb.PubDate == "" {
+			continue
+		}
+		tpub := bb.PubDate + `T00:00:00`
+		if tlatest == "" || tpub > tlatest {
+			tlatest = tpub
+		}
+		href := "http://" + App.Proj.SiteHost + "/index" + sIf(me.lang == App.Proj.Langs[0], "", "."+me.lang) + ".html#" + bb.name
+		xml := `<entry><updated>` + tpub + `Z</updated>`
+		xml += `<title>Album: ` + hEsc(locStr(bb.book.Title, me.lang)) + `</title>`
+		xml += `<id>` + href + `</id><link href="` + href + `"/>`
+		xml += `<author><name>` + App.Proj.SiteHost + `</name></author>`
+		xml += `<content type="text">` + strings.NewReplacer(
+			"%NUMPGS%", itoa(bb.numPagesApprox()),
+			"%CBHREF%", href[3+strings.Index(href, "://"):],
+			"%CBNAME%", bb.name,
+		).Replace(locStr(af.ContentTxtAlbums, me.lang)) + `</content>`
+		xmls = append(xmls, xml+`</entry>`)
 	}
 	if len(xmls) > 0 && tlatest != "" {
 		filename := af.Name + "." + me.lang + ".atom"
