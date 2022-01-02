@@ -569,10 +569,10 @@ func (me *siteGen) prepHomePage() {
 		if len(bbs) > 0 {
 			sort.Strings(bbs)
 			s += "<span id='downloads' style='display: none;'><h5>Downloads</h5>"
-			s += "<span style='font-size: 1.22em; display: block'>" + me.textStr("DownHtml") + "</span><ul>"
+			s += "<span style='font-size: larger; display: block'>" + me.textStr("DownHtml") + "</span><ul>"
 			for i := len(bbs) - 1; i >= 0; i-- {
 				bb := App.Proj.BookBuilds[bbs[i]]
-				s += "<li><b style='font-size: 1.55em'>" +
+				s += "<li><b style='font-size: xx-large'>" +
 					hEsc(locStr(bb.book.Title, me.lang)) + "</b> &bull; " +
 					hEsc(locStr(bb.config.Title, me.lang)) + " &bull; " +
 					hEsc(App.Proj.textStr(me.lang, "LangName")) + " &bull; " +
@@ -611,13 +611,13 @@ func (me *siteGen) prepHomePage() {
 								bb.UxSizeHints[res] = strSize64(filestat.Size())
 							}
 						}
-						s += " &mdash; <a target='_blank' class='grdlh' rel='noreferrer' href='" + ext + "?" + name + "'>" + ext + "</a>"
+						s += " &mdash; <a target='_blank' class='grdlh' rel='noreferrer' href='" + bb.name + "." + ext + "?" + name + "'>" + ext + "</a>"
 					}
 					if sizehint := bb.UxSizeHints[res]; sizehint != "" {
 						s += " &mdash; ~" + sizehint
 					}
 					if res == 0 {
-						s += " &mdash; <a target='_blank' rel='noreferrer' class='grdlh' href='png?" + bb.name + ".cover." + me.lang + "'>cover.png</a> (<10MB)"
+						s += " &mdash; <a target='_blank' rel='noreferrer' class='grdlh' href='" + bb.name + ".png?" + bb.name + ".cover" + "'>cover.png</a> (<10MB)"
 					}
 					s += "</li>"
 				}
