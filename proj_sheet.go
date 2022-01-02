@@ -109,26 +109,26 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(App.Proj.BwThresholds[0]))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
 	mkDir(me.data.dirPath)
 
-	didgraydistr := me.ensureGrayDistr(forceFullRedo || shouldsaveprojdata)
+	didgraydistr := me.ensureGrayDistr(forceFullRedo || len(me.data.GrayDistr) == 0)
 	didbwsheet := me.ensureBwSheetPngs(forceFullRedo)
-	didpanels := me.ensurePanelsTree(me.data.PanelsTree == nil || forceFullRedo || didbwsheet || shouldsaveprojdata)
-	didpnlpics := me.ensurePanelPics(forceFullRedo || didpanels)
+	didpanels := me.ensurePanelsTree(me.data.PanelsTree == nil || forceFullRedo || didbwsheet)
+	_ = me.ensurePanelPics(forceFullRedo || didpanels)
 
-	if didWork = didgraydistr || didbwsheet || didpanels || didpnlpics; shouldsaveprojdata || didWork {
+	if diddatajson := didgraydistr || didpanels; shouldsaveprojdata || diddatajson {
 		App.Proj.save(false)
 	}
 	return
 }
 
-func (me *SheetVer) ensureBwSheetPngs(force bool) bool {
+func (me *SheetVer) ensureBwSheetPngs(force bool) (didWork bool) {
 	var exist1, exist2 bool
 	for fname, bptr := range map[string]*bool{me.data.bwFilePath: &exist1, me.data.bwSmallFilePath: &exist2} {
 		*bptr = (fileStat(fname) != nil)
 	}
 
-	if force || !(exist1 && exist2) {
-		rmDir(me.data.dirPath) // because BwThreshold or BwSmallWidth might have been..
-		mkDir(me.data.dirPath) // ..changed and thus the file names: so rm stale ones.
+	if didWork = force || !(exist1 && exist2); didWork {
+		rmDir(me.data.dirPath) // because BwThreshold might have been changed and..
+		mkDir(me.data.dirPath) // ..thus everything in this dir needs re-gen'ing
 		if file, err := os.Open(me.fileName); err != nil {
 			panic(err)
 		} else if data := imgToMonochrome(file, file.Close, uint8(App.Proj.BwThresholds[0])); data != nil {
@@ -143,9 +143,13 @@ func (me *SheetVer) ensureBwSheetPngs(force bool) bool {
 		} else if err = os.Symlink(filepath.Base(me.data.bwFilePath), me.data.bwSmallFilePath); err != nil {
 			panic(err)
 		}
-		return true
 	}
-	return false
+
+	if symlinkpath := filepath.Join(filepath.Dir(me.fileName), "s4k."+filepath.Base(me.fileName)); didWork || fileStat(symlinkpath) == nil {
+		_ = os.Remove(symlinkpath)
+		fileLink(me.data.bwFilePath, symlinkpath)
+	}
+	return
 }
 
 func (me *SheetVer) ensurePanelPics(force bool) bool {

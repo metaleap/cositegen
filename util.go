@@ -160,11 +160,17 @@ func percent(hundred int, val int) int {
 	return 100 / (hundred / val)
 }
 
+func fileLink(srcPath string, dstPath string) {
+	if err := os.Symlink(absPath(srcPath), dstPath); err != nil {
+		panic(err)
+	}
+}
+
 func fileLinkOrCopy(srcPath string, dstPath string) {
 	if os.Getenv("NOLINKS") != "" {
 		fileWrite(dstPath, fileRead(srcPath))
-	} else if err := os.Symlink(absPath(srcPath), dstPath); err != nil {
-		panic(err)
+	} else {
+		fileLink(srcPath, dstPath)
 	}
 }
 

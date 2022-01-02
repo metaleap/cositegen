@@ -84,6 +84,9 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 					}
 				}
 			}
+			if len(bbs) == 0 {
+				panic("Found none of the specified books.")
+			}
 			for _, bb := range bbs {
 				me.books[bb.name] = bb
 			}
@@ -476,7 +479,14 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 					if pageNr != 0 {
 						me.page.PageTitleTxt += " (" + itoa(pageNr) + "/" + itoa(len(chapter.sheets)/chapter.SheetsPerPage) + ")"
 					}
-					numFilesWritten += me.genPageExecAndWrite(me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svdt, me.bgCol), chapter)
+					pagename := me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svdt, me.bgCol)
+					numFilesWritten += me.genPageExecAndWrite(pagename, chapter)
+					if chapter.UrlJumpName != "" && me.lang == App.Proj.Langs[0] &&
+						viewmode == viewModes[0] && qidx == 0 && pageNr <= 1 &&
+						(me.bgCol || !chapter.HasBgCol()) && !me.dirRtl {
+						fileLinkOrCopy(".build/"+pagename+".html", ".build/"+chapter.UrlJumpName+".html")
+						numFilesWritten++
+					}
 				}
 			}
 		}
@@ -941,7 +951,8 @@ func (me *siteGen) genPageExecAndWrite(name string, chapter *Chapter) (numFilesW
 	if err := me.tmpl.ExecuteTemplate(buf, "site.html", &me.page); err != nil {
 		panic(err)
 	}
-	fileWrite(".build/"+strings.ToLower(name)+".html", buf.Bytes())
+	outfilepath := ".build/" + strings.ToLower(name) + ".html"
+	fileWrite(outfilepath, buf.Bytes())
 	numFilesWritten++
 	return
 }
