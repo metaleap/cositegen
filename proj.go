@@ -287,7 +287,7 @@ func (me *Project) load() (numSheetVers int) {
 			}{}
 			for _, f := range files {
 				if fnamebase := f.Name(); strings.HasSuffix(fnamebase, ".png") &&
-					!(strings.HasPrefix(fnamebase, "s4k.") || f.IsDir()) {
+					!(strings.HasPrefix(fnamebase, "bw.") || f.IsDir()) {
 					fname := filepath.Join(chapdirpath, fnamebase)
 					fnamebase = fnamebase[:len(fnamebase)-len(".png")]
 					versionname := fnamebase[1+strings.LastIndexByte(fnamebase, '.'):]

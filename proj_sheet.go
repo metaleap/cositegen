@@ -145,7 +145,7 @@ func (me *SheetVer) ensureBwSheetPngs(force bool) (didWork bool) {
 		}
 	}
 
-	if symlinkpath := filepath.Join(filepath.Dir(me.fileName), "s4k."+filepath.Base(me.fileName)); didWork || fileStat(symlinkpath) == nil {
+	if symlinkpath := filepath.Join(filepath.Dir(me.fileName), "bw."+filepath.Base(me.fileName)); didWork || fileStat(symlinkpath) == nil {
 		_ = os.Remove(symlinkpath)
 		fileLink(me.data.bwFilePath, symlinkpath)
 	}

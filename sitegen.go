@@ -428,13 +428,13 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", sIf(author == "?", me.textStr("Unknown"), author), 1),
 				"%YEAR%", sIf(chapter.Year == 0, "", ", "+itoa(chapter.Year)), 1)
 		}
-		desc := locStr(chapter.Desc, me.lang)
+		desc := locStr(chapter.DescHtml, me.lang)
 		if desc == "" && chapter.Year != 0 && len(chapter.StoryUrls) != 0 {
 			desc = "<pre>" + chapter.StoryUrls[0] + "</pre>"
 			desc = "Story: " + sIf(me.lang == App.Proj.Langs[0], "", "&quot;"+locStr(chapter.Title, App.Proj.Langs[0])+"&quot;, ") + desc
 		}
-		me.page.PageDesc = sIf(desc == "", locStr(series.Desc, me.lang), desc) + author
-		me.page.PageDescTxt = hEsc(sIf(desc == "", locStr(series.Desc, me.lang), desc))
+		me.page.PageDesc = sIf(desc == "", locStr(series.DescHtml, me.lang), desc) + author
+		me.page.PageDescTxt = hEsc(sIf(desc == "", locStr(series.DescHtml, me.lang), desc))
 		for qidx, quali := range App.Proj.Qualis {
 			if quali.ExcludeInSiteGen {
 				continue
@@ -507,7 +507,7 @@ func (me *siteGen) prepHomePage() {
 				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", sIf(author == "?", me.textStr("Unknown"), author), 1),
 				"%YEAR%", sIf(series.Year == 0, "", ", "+itoa(series.Year)), 1)
 		}
-		s += "<span class='" + App.Proj.Gen.ClsSeries + "' style='animation-direction: " + cssanimdirs[i%2] + "; background-image: url(\"./" + App.Proj.Gen.PicDirName + "/" + me.nameThumb(series) + ".png\");'><span><h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + "</h5><div class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Desc, me.lang)) + author + "</div>"
+		s += "<span class='" + App.Proj.Gen.ClsSeries + "' style='animation-direction: " + cssanimdirs[i%2] + "; background-image: url(\"./" + App.Proj.Gen.PicDirName + "/" + me.nameThumb(series) + ".png\");'><span><h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + "</h5><div class='" + App.Proj.Gen.ClsSeries + "'>" + locStr(series.DescHtml, me.lang) + author + "</div>"
 		s += "<ul class='" + App.Proj.Gen.ClsSeries + "'>"
 		for _, chapter := range series.Chapters {
 			if chapter.Priv {
@@ -559,7 +559,7 @@ func (me *siteGen) prepHomePage() {
 	{
 		var bbs []string
 		for name, bb := range App.Proj.BookBuilds {
-			if bb.Priv {
+			if bb.Priv || bb.PubDate == "" {
 				continue
 			}
 			if dirStat(".books/"+name) != nil || fileStat(".books/"+name+".json") != nil {
@@ -615,10 +615,13 @@ func (me *siteGen) prepHomePage() {
 						s += " &mdash; <a target='_blank' class='grdlh' rel='noreferrer' href='" + bb.name + "." + ext + "?" + name + "'>" + ext + "</a>"
 					}
 					if sizehint := bb.UxSizeHints[res]; sizehint != "" {
+						if idx := strings.IndexByte(sizehint, '.'); idx > 0 && strings.HasSuffix(sizehint, "MB") {
+							sizehint = sizehint[:idx] + "MB"
+						}
 						s += " &mdash; ~" + sizehint
 					}
 					if res == 0 {
-						s += " &mdash; <a target='_blank' rel='noreferrer' class='grdlh' href='" + bb.name + ".png?" + bb.name + ".cover" + "'>cover.png</a> (<10MB)"
+						s += "; plus <a target='_blank' rel='noreferrer' class='grdlh' href='" + bb.name + ".png?" + bb.name + ".cover" + "'>Cover</a>"
 					}
 					s += "</li>"
 				}

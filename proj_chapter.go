@@ -9,7 +9,7 @@ type Series struct {
 	Name            string
 	UrlName         string
 	Title           map[string]string
-	Desc            map[string]string
+	DescHtml        map[string]string
 	Author          string
 	Year            int
 	StoryUrls       []string
@@ -24,7 +24,7 @@ type Chapter struct {
 	UrlName         string
 	UrlJumpName     string
 	Title           map[string]string
-	Desc            map[string]string
+	DescHtml        map[string]string
 	Author          string
 	Year            int
 	StoryUrls       []string
