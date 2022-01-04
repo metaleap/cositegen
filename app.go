@@ -174,7 +174,13 @@ func pngOptsLoop() {
 		}
 		sort.Sort(matches)
 
-		printLn("PNGOPT: found", len(matches), "PNGs (~"+itoa(int(totalsize/(1024*1024)))+"MB) to scrutinize...")
+		var numfullynew int
+		for _, pngfilepath := range matches {
+			if _, known := App.Proj.data.PngOpt[pngfilepath]; !known {
+				numfullynew++
+			}
+		}
+		printLn("PNGOPT: found", len(matches), "("+itoa(numfullynew)+" new) PNGs (~"+itoa(int(totalsize/(1024*1024)))+"MB) to scrutinize...")
 		for _, pngfilename := range matches {
 			if App.Gui.Exiting {
 				return
