@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"image/color"
+	_ "image/png"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -175,7 +176,8 @@ func pngOptsLoop() {
 		sort.Sort(matches)
 
 		var numfullynew int
-		for _, pngfilepath := range matches {
+		for i := 0; i < len(matches); i++ {
+			pngfilepath := matches[i]
 			if _, known := App.Proj.data.PngOpt[pngfilepath]; !known {
 				numfullynew++
 			}
