@@ -67,6 +67,26 @@ func (me *Series) numSheets() (ret int) {
 	return
 }
 
+func (me *Series) allSheetVersSortedByScanDate() (ret []*SheetVer) {
+	for _, chapter := range me.Chapters {
+		for _, sheet := range chapter.sheets {
+			for _, sv := range sheet.versions {
+				var added bool
+				for i := range ret {
+					if added = ret[i].dateTimeUnixNano > sv.dateTimeUnixNano; added {
+						ret = append(append(append(make([]*SheetVer, 0, len(ret)+1), ret[:i]...), sv), ret[i:]...)
+						break
+					}
+				}
+				if !added {
+					ret = append(ret, sv)
+				}
+			}
+		}
+	}
+	return
+}
+
 func (me *Chapter) NextAfter(withSheetsOnly bool) *Chapter {
 	series := me.parentSeries
 	for now, i := false, 0; i < len(series.Chapters); i++ {

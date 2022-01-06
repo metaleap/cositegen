@@ -5,6 +5,7 @@ import (
 	"image/color"
 	_ "image/png"
 	"io/fs"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -87,11 +88,10 @@ func appPrepWork(fromGui bool) {
 	timedLogged("Reprocessing...", func() string {
 		var numjobs, numwork int
 		for _, series := range App.Proj.Series {
-			var thumbsrcfilenames FilePathsSortingByModTime
 			var didanywork bool
 			for _, chapter := range series.Chapters {
 				for _, sheet := range chapter.sheets {
-					for i, sv := range sheet.versions {
+					for _, sv := range sheet.versions {
 						if !sv.prep.done {
 							sv.prep.Lock()
 							if !sv.prep.done {
@@ -102,11 +102,12 @@ func appPrepWork(fromGui bool) {
 							}
 							sv.prep.Unlock()
 						}
-						if i == 0 {
-							thumbsrcfilenames = append(thumbsrcfilenames, sv.data.bwSmallFilePath)
-						}
 					}
 				}
+			}
+			var thumbsrcfilenames FilePathsSortingByModTime
+			for _, sv := range series.allSheetVersSortedByScanDate() {
+				thumbsrcfilenames = append(thumbsrcfilenames, sv.data.bwSmallFilePath)
 			}
 			const maxthumbs = 22
 			if App.Proj.NumSheetsInHomeBgs > maxthumbs {
@@ -124,9 +125,12 @@ func appPrepWork(fromGui bool) {
 			}
 			if len(thumbsrcfilenames) > 0 && App.Proj.NumSheetsInHomeBgs > 0 &&
 				(didanywork || nil == fileStat(thumbfilepath)) {
-				if sort.Sort(thumbsrcfilenames); len(thumbsrcfilenames) > App.Proj.NumSheetsInHomeBgs {
+				if len(thumbsrcfilenames) > App.Proj.NumSheetsInHomeBgs {
 					thumbsrcfilenames = thumbsrcfilenames[len(thumbsrcfilenames)-App.Proj.NumSheetsInHomeBgs:]
 				}
+				rand.Shuffle(len(thumbsrcfilenames), func(i int, j int) {
+					thumbsrcfilenames[i], thumbsrcfilenames[j] = thumbsrcfilenames[j], thumbsrcfilenames[i]
+				})
 				fileWrite(thumbfilepath, imgStitchHorizontally(thumbsrcfilenames, 320, 44, color.NRGBA{0, 0, 0, 0}))
 			}
 		}
