@@ -146,18 +146,18 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 				}
 			}
 			qstats[chapter] = chq
-			for qidx, totalsize := range chq {
+			for qidx, size := range chq {
 				if App.Proj.Qualis[qidx].ExcludeInSiteGen {
 					continue
 				}
-				if (min == 0 || totalsize < min) && App.Proj.Qualis[qidx].SizeHint <= 4096 && App.Proj.Qualis[qidx].SizeHint > 0 {
-					min, chapter.defaultQuali = totalsize, qidx
+				if (min == 0 || size < min) && App.Proj.Qualis[qidx].SizeHint <= 4096 && App.Proj.Qualis[qidx].SizeHint > 0 {
+					min, chapter.defaultQuali = size, qidx
 				}
 				pref := chapter.Name
 				if qidx > 0 {
 					pref = strings.Repeat(" ", len(pref))
 				}
-				printLn("\t\t" + pref + "\t\t" + App.Proj.Qualis[qidx].Name + "(" + itoa(App.Proj.Qualis[qidx].SizeHint) + ") => " + strSize64(totalsize))
+				printLn("\t\t" + pref + "\t\t" + App.Proj.Qualis[qidx].Name + "(" + itoa(App.Proj.Qualis[qidx].SizeHint) + ") => " + strSize64(size))
 			}
 		}
 		return "for " + itoa(int(numpngs)) + " PNGs & " + itoa(int(numsvgs)) + " SVGs (" + strSize(int(totalsize)) + ") from " + itoa(int(numpanels)) + " panels in " + itoa(int(numsheets)) + " sheets, max panel pic size: " + strSize(int(me.maxPicSize))
@@ -165,6 +165,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 
 	timedLogged("SiteGen: generating markup files...", func() string {
 		numfileswritten := 0
+		var totalsize uint64
 		me.tmpl, err = template.New("foo").ParseFiles(siteTmplDirName + "/site.html")
 		if err != nil {
 			panic(err)
@@ -172,7 +173,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 		for _, me.lang = range App.Proj.Langs {
 			for _, me.dirRtl = range []bool{true, false /*KEEP this order of bools*/} {
 				me.bgCol = false
-				numfileswritten += me.genPages(nil, 0)
+				numfileswritten += me.genPages(nil, 0, &totalsize)
 				for _, me.bgCol = range []bool{false, true} {
 					for _, series := range me.series {
 						for _, chapter := range series.Chapters {
@@ -181,29 +182,26 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 							}
 							if chapter.SheetsPerPage > 0 {
 								for i := 1; i <= (len(chapter.sheets) / chapter.SheetsPerPage); i++ {
-									numfileswritten += me.genPages(chapter, i)
+									numfileswritten += me.genPages(chapter, i, &totalsize)
 								}
 							} else {
-								numfileswritten += me.genPages(chapter, 0)
+								numfileswritten += me.genPages(chapter, 0, &totalsize)
 							}
 						}
 					}
 				}
 				if App.Proj.AtomFile.Name != "" {
-					numfileswritten += me.genAtomXml()
+					numfileswritten += me.genAtomXml(&totalsize)
 				}
-				var work sync.WaitGroup
 				for _, series := range me.series {
 					for _, chapter := range series.Chapters {
 						numfileswritten++
-						work.Add(1)
-						go me.genSvgTextsFile(chapter, work.Done)
+						totalsize += uint64(len(me.genSvgTextsFile(chapter)))
 					}
 				}
-				work.Wait()
 			}
 		}
-		return "for " + itoa(numfileswritten) + " files"
+		return "for " + itoa(numfileswritten) + " files (~" + strSize64(int64(totalsize)) + ")"
 	})
 
 	if len(me.genBooks) != 0 {
@@ -366,7 +364,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 	return
 }
 
-func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) {
+func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) (numFilesWritten int) {
 	homename, repl := "index", strings.NewReplacer(
 		"%LANG"+me.lang+"%", itoa(int(App.Proj.percentTranslated(me.lang, nil, nil, nil, -1))),
 	)
@@ -411,7 +409,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 			me.page.HrefDirRtl = "./index." + App.Proj.DirModes.Rtl.Name + "." + me.lang + ".html"
 		}
 		me.prepHomePage()
-		numFilesWritten += me.genPageExecAndWrite(homename, nil)
+		numFilesWritten += me.genPageExecAndWrite(homename, nil, totalSizeRec)
 
 	} else {
 		series := chapter.parentSeries
@@ -480,7 +478,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int) (numFilesWritten int) 
 						me.page.PageTitleTxt += " (" + itoa(pageNr) + "/" + itoa(len(chapter.sheets)/chapter.SheetsPerPage) + ")"
 					}
 					pagename := me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svdt, me.bgCol)
-					numFilesWritten += me.genPageExecAndWrite(pagename, chapter)
+					numFilesWritten += me.genPageExecAndWrite(pagename, chapter, totalSizeRec)
 					if chapter.UrlJumpName != "" && me.lang == App.Proj.Langs[0] &&
 						viewmode == viewModes[0] && qidx == 0 && pageNr <= 1 &&
 						(me.bgCol || !chapter.HasBgCol()) && !me.dirRtl {
@@ -902,7 +900,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 	return allpanels
 }
 
-func (me *siteGen) genPageExecAndWrite(name string, chapter *Chapter) (numFilesWritten int) {
+func (me *siteGen) genPageExecAndWrite(name string, chapter *Chapter, totalSizeRec *uint64) (numFilesWritten int) {
 	me.page.LangsList = ""
 	for lidx, lang := range App.Proj.Langs {
 		title, imgsrcpath := lang, strings.Replace(App.Proj.Gen.ImgSrcLang, "%LANG%", lang, -1)
@@ -956,6 +954,7 @@ func (me *siteGen) genPageExecAndWrite(name string, chapter *Chapter) (numFilesW
 		panic(err)
 	}
 	outfilepath := ".build/" + strings.ToLower(name) + ".html"
+	*totalSizeRec = *totalSizeRec + uint64(buf.Len())
 	fileWrite(outfilepath, buf.Bytes())
 	numFilesWritten++
 	return
@@ -965,7 +964,7 @@ func (me *siteGen) textStr(key string) string {
 	return App.Proj.textStr(me.lang, key)
 }
 
-func (me *siteGen) genSvgTextsFile(chapter *Chapter, onDone func()) {
+func (me *siteGen) genSvgTextsFile(chapter *Chapter) string {
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
 				xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">`
 	for _, sheet := range chapter.sheets {
@@ -982,10 +981,10 @@ func (me *siteGen) genSvgTextsFile(chapter *Chapter, onDone func()) {
 	}
 	svg += `</svg>`
 	fileWrite(".build/t."+chapter.parentSeries.Name+"."+chapter.Name+"."+me.lang+".svg", []byte(svg))
-	defer onDone()
+	return svg
 }
 
-func (me *siteGen) genAtomXml() (numFilesWritten int) {
+func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 	af, tlatest := App.Proj.AtomFile, ""
 	if len(af.PubDates) == 0 {
 		return
@@ -1066,8 +1065,9 @@ func (me *siteGen) genAtomXml() (numFilesWritten int) {
 		filename := af.Name + "." + me.lang + ".atom"
 		s := `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="` + me.lang + `">`
 		s += `<updated>` + tlatest + `Z</updated><title>` + hEsc(App.Proj.SiteTitle) + `</title><link href="http://` + App.Proj.SiteHost + `"/><link rel="self" href="http://` + App.Proj.SiteHost + `/` + filename + `"/><id>http://` + App.Proj.SiteHost + "</id>"
-		s += "\n" + strings.Join(xmls, "\n")
-		fileWrite(".build/"+af.Name+"."+me.lang+".atom", []byte(s+"\n</feed>"))
+		s += "\n" + strings.Join(xmls, "\n") + "\n</feed>"
+		*totalSizeRec = *totalSizeRec + uint64(len(s))
+		fileWrite(".build/"+af.Name+"."+me.lang+".atom", []byte(s))
 		numFilesWritten++
 	}
 	return
