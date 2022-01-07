@@ -95,10 +95,10 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 	_ = dstImgFile.Close()
 }
 
-func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile bool) {
+func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile bool, tmpFileNamePrefix string) {
 	srcdata := fileRead(srcFilePath)
 	chash := contentHashStr(srcdata)
-	tmpfilepath := ".ccache/.pngtmp/" + chash + "." + itoa(reSize) + ".png"
+	tmpfilepath := ".ccache/.pngtmp/" + tmpFileNamePrefix + chash + "." + itoa(reSize) + ".png"
 	if noTmpFile {
 		tmpfilepath = outFilePath
 	}

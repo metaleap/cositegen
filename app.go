@@ -168,7 +168,7 @@ func pngOptsLoop() {
 			}
 			if fileinfo, err := os.Lstat(fspath); err == nil && (!fileinfo.IsDir()) &&
 				(!fileIsSymlink(fileinfo)) && strings.HasSuffix(fspath, ".png") &&
-				!(strings.HasPrefix(fspath, ".build/") || strings.HasPrefix(fspath, ".chromium/") /*|| strings.Contains(fspath, "/.pngtmp/")*/) {
+				!(strings.HasPrefix(fspath, ".build/") || strings.HasPrefix(fspath, ".chromium/") || strings.Contains(fspath, "/.pngtmp/sh.")) {
 				matches, totalsize = append(matches, fspath), totalsize+uint64(fileinfo.Size())
 			}
 			return nil

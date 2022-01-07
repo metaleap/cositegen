@@ -422,19 +422,19 @@ func (me *BookBuild) genBookPrep(sg *siteGen, outDirPath string) {
 		work.Add(1)
 		go me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrep.dirPath, "bgtoc.png"), &config.PageSize, 177, 0, work.Done)
 		work.Wait()
-		imgAnyToPng(filepath.Join(me.genPrep.dirPath, "cover.png.svg"), filepath.Join(outDirPath, me.name+".cover.png"), 0, true)
+		imgAnyToPng(filepath.Join(me.genPrep.dirPath, "cover.png.svg"), filepath.Join(outDirPath, me.name+".cover.png"), 0, true, "")
 	}
 
 	mkDir(".ccache/.pngtmp")
 	for i, svgfilepath := range sheetsvgfilepaths {
-		imgAnyToPng(svgfilepath, svgfilepath+".png", 0, false)
+		imgAnyToPng(svgfilepath, svgfilepath+".png", 0, false, "sh.")
 		printLn("\t\t", time.Now().Format("15:04:05"), "shsvg", i+1, "/", len(sheetsvgfilepaths))
 	}
 	for i, svgfilepath := range pagesvgfilepaths {
 		bigfilepath := svgfilepath + "." + itoa(me.PxWidths[0]) + ".png"
-		imgAnyToPng(svgfilepath, bigfilepath, me.PxWidths[0], false)
+		imgAnyToPng(svgfilepath, bigfilepath, me.PxWidths[0], false, "pg.")
 		for i := 1; i < len(me.PxWidths); i++ {
-			imgAnyToPng(bigfilepath, svgfilepath+"."+itoa(me.PxWidths[i])+".png", me.PxWidths[i], false)
+			imgAnyToPng(bigfilepath, svgfilepath+"."+itoa(me.PxWidths[i])+".png", me.PxWidths[i], false, "pg.")
 		}
 		printLn("\t\t", time.Now().Format("15:04:05"), "pgsvg", i+1, "/", len(pagesvgfilepaths))
 	}
