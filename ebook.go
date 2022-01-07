@@ -1,7 +1,5 @@
 package main
 
-// TODO: nameprefix for imgAnyToPng calls!
-
 import (
 	"archive/zip"
 	"bytes"
@@ -554,7 +552,6 @@ func (me *BookBuild) genBookDirtPageSvgs(noOpMerelyCount bool) (outFilePaths []s
 	w, h, cb := config.PageSize.pxWidth(), config.PageSize.pxHeight(), config.PageSize.pxCutBorder()
 
 	var svs []*SheetVer
-	rand.Seed(time.Now().UnixNano())
 	chaps := series.Chapters
 	if forceFrom := App.Proj.seriesByName(config.DecosFromSeries); forceFrom != nil {
 		chaps = forceFrom.Chapters
@@ -564,13 +561,10 @@ func (me *BookBuild) genBookDirtPageSvgs(noOpMerelyCount bool) (outFilePaths []s
 			svs = append(svs, sheet.versions[0])
 		}
 	}
-	if os.Getenv("NORAND") == "" {
-		for x, r := 0, rand.Intn(len(svs))+len(svs); x < r; x++ {
-			rand.Shuffle(len(svs), func(i int, j int) {
-				svs[i], svs[j] = svs[j], svs[i]
-			})
-		}
-	}
+	rand.Seed(123456789)
+	rand.Shuffle(len(svs), func(i int, j int) {
+		svs[i], svs[j] = svs[j], svs[i]
+	})
 
 	const mm1 = 0.1 * dpi1200
 	svidx, pagesdone := 0, false
@@ -620,7 +614,6 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *Size,
 	book, config, series := &me.book, &me.config, me.series
 
 	var svs []*SheetVer
-	rand.Seed(time.Now().UnixNano())
 	chaps := series.Chapters
 	if forceFrom := App.Proj.seriesByName(config.DecosFromSeries); forceFrom != nil {
 		chaps = forceFrom.Chapters
@@ -664,13 +657,10 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *Size,
 			pidx++
 		})
 	}
-	if os.Getenv("NORAND") == "" || mmCenterGap != 0 {
-		for x, r := 0, rand.Intn(len(faces))+len(faces); x < r; x++ {
-			rand.Shuffle(len(faces), func(i int, j int) {
-				faces[i], faces[j] = faces[j], faces[i]
-			})
-		}
-	}
+	rand.Seed(987654321)
+	rand.Shuffle(len(faces), func(i int, j int) {
+		faces[i], faces[j] = faces[j], faces[i]
+	})
 
 	for len(faces) < 16 {
 		faces = append(faces, faces...)
