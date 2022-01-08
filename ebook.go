@@ -429,10 +429,8 @@ func (me *BookBuild) genBookPrep(sg *siteGen, outDirPath string) {
 		printLn("\t\t", time.Now().Format("15:04:05"), "shsvg", i+1, "/", len(sheetsvgfilepaths))
 	}
 	for i, svgfilepath := range pagesvgfilepaths {
-		bigfilepath := svgfilepath + "." + itoa(me.PxWidths[0]) + ".png"
-		imgAnyToPng(svgfilepath, bigfilepath, me.PxWidths[0], false, "pg.")
-		for i := 1; i < len(me.PxWidths); i++ {
-			imgAnyToPng(bigfilepath, svgfilepath+"."+itoa(me.PxWidths[i])+".png", me.PxWidths[i], false, "pg.")
+		for i := 0; i < len(me.PxWidths); i++ {
+			imgAnyToPng(svgfilepath, svgfilepath+"."+itoa(me.PxWidths[i])+".png", me.PxWidths[i], false, "pg.")
 		}
 		printLn("\t\t", time.Now().Format("15:04:05"), "pgsvg", i+1, "/", len(pagesvgfilepaths))
 	}
