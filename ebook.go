@@ -415,12 +415,16 @@ func (me *BookBuild) genBookPrep(sg *siteGen, outDirPath string) {
 	if !me.OnlyPanelPages {
 		pagesvgfilepaths = append(pagesvgfilepaths, me.genBookDirtPageSvgs(false)...)
 		var work sync.WaitGroup
-		work.Add(1)
-		go me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrep.dirPath, "cover.png"), &config.CoverSize, 0, config.OffsetsMm.CoverGap, work.Done)
+		if os.Getenv("NOCOVER") == "" {
+			work.Add(1)
+			go me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrep.dirPath, "cover.png"), &config.CoverSize, 0, config.OffsetsMm.CoverGap, work.Done)
+		}
 		work.Add(1)
 		go me.genBookTitlePanelCutoutsPng(filepath.Join(me.genPrep.dirPath, "bgtoc.png"), &config.PageSize, 177, 0, work.Done)
 		work.Wait()
-		imgAnyToPng(filepath.Join(me.genPrep.dirPath, "cover.png.svg"), filepath.Join(outDirPath, me.name+".cover.png"), 0, true, "")
+		if os.Getenv("NOCOVER") == "" {
+			imgAnyToPng(filepath.Join(me.genPrep.dirPath, "cover.png.svg"), filepath.Join(outDirPath, me.name+".cover.png"), 0, true, "")
+		}
 	}
 
 	mkDir(".ccache/.pngtmp")
