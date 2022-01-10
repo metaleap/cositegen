@@ -29,6 +29,7 @@ func (me *Chapter) loadStoryboard() {
 }
 
 func (me *Chapter) loadStoryboardJson() {
+	// BEGIN SHARED TYPES: keep in sync with ../sb*/types.go
 	type SizeAndPos struct {
 		CmW float64
 		CmH float64
@@ -45,6 +46,8 @@ func (me *Chapter) loadStoryboardJson() {
 		Panels   []Object
 	}
 	type Storyboard []Page
+	// END SHARED TYPES
+
 	var sb Storyboard
 	jsonLoad(me.StoryboardFile, nil, &sb)
 
