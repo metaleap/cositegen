@@ -22,7 +22,7 @@ var browserCmd = []string{"",
 func main() {
 	App.StaticFilesDirPath = filepath.Join(os.Getenv("GOPATH"), "src/github.com/metaleap/cositegen/_static")
 	appDetectBrowser()
-	timedLogged("Loading project (comicsite.json  &  texts.json  &  .ccache/data.json)...", func() string {
+	timedLogged("Loading project (cx.json  &  txt.json  &  .ccache/data.json)...", func() string {
 		numsheets := App.Proj.load()
 		return "for " + itoa(numsheets) + " sheets"
 	})

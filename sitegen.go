@@ -420,10 +420,10 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 		}
 		me.page.PageTitle = "<span>" + hEsc(locStr(series.Title, me.lang)) + ":</span> " + strings.Join(chaptitlewords, " ")
 		me.page.PageTitleTxt = hEsc(locStr(series.Title, me.lang)) + ": " + hEsc(locStr(chapter.Title, me.lang))
-		author := sIf(chapter.Author == "", series.Author, chapter.Author)
-		if author != "" {
+		var author string
+		if chapter.author != nil {
 			author = strings.Replace(
-				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", sIf(author == "?", me.textStr("Unknown"), author), 1),
+				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", chapter.author.fullName(), 1),
 				"%YEAR%", sIf(chapter.Year == 0, "", ", "+itoa(chapter.Year)), 1)
 		}
 		desc := locStr(chapter.DescHtml, me.lang)
@@ -505,10 +505,10 @@ func (me *siteGen) prepHomePage() {
 		if series.Priv || len(series.Chapters) == 0 || !gotsheets {
 			continue
 		}
-		author := series.Author
-		if author != "" {
+		var author string
+		if series.author != nil {
 			author = strings.Replace(
-				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", sIf(author == "?", me.textStr("Unknown"), author), 1),
+				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", series.author.fullName(), 1),
 				"%YEAR%", sIf(series.Year == 0, "", ", "+itoa(series.Year)), 1)
 		}
 		s += "<span class='" + App.Proj.Gen.ClsSeries + "' style='animation-direction: " + cssanimdirs[i%2] + "; background-image: url(\"./" + App.Proj.Gen.PicDirName + "/" + me.nameThumb(series) + ".png\");'><span><h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + "</h5><div class='" + App.Proj.Gen.ClsSeries + "'>" + locStr(series.DescHtml, me.lang) + author + "</div>"
@@ -547,10 +547,9 @@ func (me *siteGen) prepHomePage() {
 				}
 				s += "<a title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0, true) + ".html'>" + hEsc(locStr(chapter.Title, me.lang)) + "</a>"
 			}
-			author := chapter.Author
-			if author != "" {
+			if chapter.author != nil && chapter.author != series.author {
 				s += strings.Replace(
-					strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", sIf(author == "?", me.textStr("Unknown"), author), 1),
+					strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", chapter.author.fullName(), 1),
 					"%YEAR%", sIf(chapter.Year == 0, "", ", "+itoa(chapter.Year)), 1,
 				)
 			} else if chapter.Year != 0 {

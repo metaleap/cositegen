@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -17,6 +18,8 @@ type Series struct {
 	Book            *BookDef
 	GenPanelSvgText *PanelSvgTextGen
 	Priv            bool
+
+	author *Author
 }
 
 type Chapter struct {
@@ -33,6 +36,7 @@ type Chapter struct {
 	GenPanelSvgText *PanelSvgTextGen
 	Priv            bool
 
+	author       *Author
 	defaultQuali int
 	sheets       []*Sheet
 	parentSeries *Series
@@ -54,6 +58,10 @@ type PanelSvgTextGen struct {
 	Css                  map[string][]string
 	AppendToFiles        map[string]bool
 	TspanSubTagStyles    map[string]string
+}
+
+type Author struct {
+	Name []string
 }
 
 func (me *Series) At(i int) fmt.Stringer { return me.Chapters[i] }
@@ -193,4 +201,11 @@ func (me *PanelSvgTextGen) mergeWithParent(base *PanelSvgTextGen) {
 			*ptr = val
 		}
 	}
+}
+
+func (me *Author) fullName() (ret string) {
+	if me != nil {
+		ret = strings.Join(me.Name, " ")
+	}
+	return
 }

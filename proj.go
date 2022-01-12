@@ -20,6 +20,7 @@ type Project struct {
 	SiteHost    string
 	SiteDesc    map[string]string
 	Series      []*Series
+	Authors     map[string]*Author
 	BookDefs    map[string]*BookDef
 	BookConfigs map[string]*BookConfig
 	BookBuilds  map[string]*BookBuild
@@ -169,12 +170,12 @@ func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sh
 
 func (me *Project) save(texts bool) {
 	if jsonSave(".ccache/data.json", &me.data); texts {
-		jsonSave("texts.json", me.data.Sv.textRects)
+		jsonSave("txt.json", me.data.Sv.textRects)
 	}
 }
 
 func (me *Project) load() (numSheetVers int) {
-	jsonLoad("comicsite.json", nil, me) // exits early if no such file, before creating work dirs:
+	jsonLoad("cx.json", nil, me) // exits early if no such file, before creating work dirs:
 	if idx := strings.LastIndexByte(me.SiteHost, '.'); idx > 0 && (os.Getenv("NOLINKS") != "" || os.Getenv("FOREAL") != "") {
 		me.SiteHost = me.SiteHost[:idx+1] + "i" + "s"
 	}
@@ -187,8 +188,8 @@ func (me *Project) load() (numSheetVers int) {
 		dtdatajson = fileinfo.ModTime()
 		jsonLoad(".ccache/data.json", nil, &me.data)
 	}
-	if fileStat("texts.json") != nil {
-		jsonLoad("texts.json", nil, &me.data.Sv.textRects)
+	if fileStat("txt.json") != nil {
+		jsonLoad("txt.json", nil, &me.data.Sv.textRects)
 	} else {
 		me.data.Sv.textRects = map[string][][]ImgPanelArea{}
 	}
@@ -207,6 +208,9 @@ func (me *Project) load() (numSheetVers int) {
 		}
 	}
 
+	if me.Authors == nil {
+		me.Authors = map[string]*Author{}
+	}
 	if me.BookDefs == nil {
 		me.BookDefs = map[string]*BookDef{}
 	}
@@ -249,6 +253,11 @@ func (me *Project) load() (numSheetVers int) {
 		} else {
 			series.GenPanelSvgText.mergeWithParent(&me.Gen.PanelSvgText)
 		}
+		if series.Author != "" {
+			if series.author = me.Authors[series.Author]; series.author == nil {
+				panic("unknown author: " + series.Author)
+			}
+		}
 		seriesdirpath := "scans/" + series.Name
 		if series.UrlName == "" {
 			series.UrlName = series.Name
@@ -263,6 +272,12 @@ func (me *Project) load() (numSheetVers int) {
 			if len(chap.StoryUrls) == 0 {
 				chap.StoryUrls = series.StoryUrls
 			}
+			if chap.Author == "" {
+				chap.author = series.author
+			} else if chap.author = me.Authors[chap.Author]; chap.author == nil {
+				panic("unknown author: " + chap.Author)
+			}
+
 			if chap.GenPanelSvgText == nil {
 				chap.GenPanelSvgText = series.GenPanelSvgText
 			} else {
