@@ -66,18 +66,10 @@ func guiMain(r *http.Request, notice string) []byte {
 		})
 		if chapter := App.Gui.State.Sel.Chapter; chapter != nil {
 			App.Gui.State.Sel.Sheet, _ = guiGetFormSel(fv("sheet"), chapter).(*Sheet)
-			numpages, pgnr := 1, 0
-			if chapter.SheetsPerPage != 0 {
-				numpages = len(chapter.sheets) / chapter.SheetsPerPage
-			}
+			numpages := len(chapter.SheetsPerPage)
 			s += guiHtmlList("sheet", "("+itoa(len(chapter.sheets))+" sheet/s, "+itoa(numpages)+" page/s)", false, len(chapter.sheets), func(i int) (string, string, bool) {
 				sheet := chapter.sheets[i]
-				if chapter.SheetsPerPage == 0 {
-					pgnr = 1
-				} else if (i % chapter.SheetsPerPage) == 0 {
-					pgnr++
-				}
-				return sheet.name, "p" + itoa(pgnr) + ": " + sheet.name + " (" + itoa(len(sheet.versions)) + ")", App.Gui.State.Sel.Sheet != nil && App.Gui.State.Sel.Sheet.name == sheet.name
+				return sheet.name, "p" + itoa(1+chapter.pgIdxOfSheet(i)) + ": " + sheet.name + " (" + itoa(len(sheet.versions)) + ")", App.Gui.State.Sel.Sheet != nil && App.Gui.State.Sel.Sheet.name == sheet.name
 			})
 			if sheet := App.Gui.State.Sel.Sheet; sheet == nil {
 				havefullgui = true
@@ -122,10 +114,7 @@ func guiStartView() (s string) {
 		if App.Gui.State.Sel.Series == nil || App.Gui.State.Sel.Series == series {
 			for _, chapter := range series.Chapters {
 				if id := "chk" + itoa(int(time.Now().UnixNano())); App.Gui.State.Sel.Series == nil || App.Gui.State.Sel.Chapter == nil || App.Gui.State.Sel.Chapter == chapter {
-					numpages := 1
-					if chapter.SheetsPerPage != 0 {
-						numpages = len(chapter.sheets) / chapter.SheetsPerPage
-					}
+					numpages := len(chapter.SheetsPerPage)
 					fontsizecm, lineheight := App.Proj.Gen.PanelSvgText.FontSizeCmA4, App.Proj.Gen.PanelSvgText.PerLineDyCmA4
 					if chapter.GenPanelSvgText.FontSizeCmA4 > 0.01 {
 						fontsizecm = chapter.GenPanelSvgText.FontSizeCmA4
@@ -136,13 +125,9 @@ func guiStartView() (s string) {
 					title := "Default font size: " + ftoa(fontsizecm, 3) + "cm (" + ftoa((fontsizecm*10)/0.3528, 3) + "pt), line height: " + ftoa(lineheight, 3) + "cm (" + ftoa((lineheight*10)/0.3528, 3) + "pt)"
 					s += "<div title='" + title + "'><input class='collchk' id='" + id + "' type='checkbox' checked='checked'/><h3><label for='" + id + "'>" + series.Name + "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;" + chapter.Name + "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;(" + itoa(len(chapter.sheets)) + " sheet/s, " + itoa(numpages) + " page/s)</label></h3>"
 					s += "<div class='collchk'><table width='99%'>"
-					pgnr, pgprev := 0, 0
+					pgprev := 1
 					for i, sheet := range chapter.sheets {
-						if chapter.SheetsPerPage == 0 {
-							pgnr, pgprev = 1, 1
-						} else if (i % chapter.SheetsPerPage) == 0 {
-							pgnr++
-						}
+						pgnr := 1 + chapter.pgIdxOfSheet(i)
 						for svidx, sv := range sheet.versions {
 							s += "<tr><td valign='top'>"
 							if pgnr != pgprev {

@@ -610,11 +610,8 @@ func (me *ImgPanel) nextPanel(parent *Chapter) (foundSheet *SheetVer, foundPanel
 	for i, sheet := range parent.sheets {
 		if foundPanel != nil {
 			break
-		} else if parent.SheetsPerPage == 0 {
-			pgnr = 1
-		} else if (i % parent.SheetsPerPage) == 0 {
-			pgnr++
 		}
+		pgnr = 1 + parent.pgIdxOfSheet(i)
 		assert(len(sheet.versions) == 1)
 		for _, sv := range sheet.versions {
 			_ = sv.ensurePrep(false, false)

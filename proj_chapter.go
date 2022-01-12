@@ -23,18 +23,19 @@ type Series struct {
 }
 
 type Chapter struct {
-	Name            string
-	UrlName         string
-	UrlJumpName     string
-	Title           map[string]string
-	DescHtml        map[string]string
-	Author          string
-	Year            int
-	StoryUrls       []string
-	SheetsPerPage   int
-	StoryboardFile  string
-	GenPanelSvgText *PanelSvgTextGen
-	Priv            bool
+	Name             string
+	UrlName          string
+	UrlJumpName      string
+	Title            map[string]string
+	DescHtml         map[string]string
+	Author           string
+	Year             int
+	StoryUrls        []string
+	SheetsPerPage    []int
+	NumSheetsPerPage int
+	StoryboardFile   string
+	GenPanelSvgText  *PanelSvgTextGen
+	Priv             bool
 
 	author       *Author
 	defaultQuali int
@@ -124,11 +125,35 @@ func (me *Chapter) NumScans() (ret int) {
 	return
 }
 
-func (me *Chapter) IsSheetOnPage(pgNr int, sheetIdx int) (is bool) {
-	if is = len(me.sheets) > sheetIdx; is && me.SheetsPerPage > 0 {
-		is = (pgNr == (1 + (sheetIdx / me.SheetsPerPage)))
+func (me *Chapter) isSheetOnPgNr(pgNr int, sheetIdx int) (is bool) {
+	return pgNr == (1 + me.pgIdxOfSheet(sheetIdx))
+}
+
+func (me *Chapter) pgIdxOfSheet(sheetIdx int) int {
+	var shidx int
+	for i, numsheets := range me.SheetsPerPage {
+		if sheetIdx >= shidx && sheetIdx < (shidx+numsheets) {
+			return i
+		}
+		shidx += numsheets
 	}
-	return
+	panic(sheetIdx)
+}
+
+func (me *Chapter) ensureSheetsPerPage() {
+	if len(me.SheetsPerPage) == 0 {
+		if sum := 0; me.NumSheetsPerPage == 0 || me.NumSheetsPerPage > len(me.sheets) {
+			me.SheetsPerPage = []int{len(me.sheets)}
+		} else {
+			me.SheetsPerPage = make([]int, (len(me.sheets)%me.NumSheetsPerPage)+(len(me.sheets)/me.NumSheetsPerPage))
+			for i := 0; i < len(me.SheetsPerPage); i++ {
+				me.SheetsPerPage[i], sum = me.NumSheetsPerPage, sum+me.NumSheetsPerPage
+			}
+			for i := len(me.SheetsPerPage) - 1; sum > len(me.sheets); {
+				me.SheetsPerPage[i], sum = me.SheetsPerPage[i]-1, sum-1
+			}
+		}
+	}
 }
 
 func (me *Chapter) HasBgCol() bool {

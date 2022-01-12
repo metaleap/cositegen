@@ -142,7 +142,7 @@ func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sh
 				continue
 			}
 			for i, sheet := range chapter.sheets {
-				if pgNr > 0 && !chapter.IsSheetOnPage(pgNr, i) {
+				if pgNr > 0 && !chapter.isSheetOnPgNr(pgNr, i) {
 					continue
 				}
 				for _, sv := range sheet.versions {
@@ -371,6 +371,7 @@ func (me *Project) load() (numSheetVers int) {
 			work.Wait()
 
 			if len(chap.sheets) > 0 {
+				chap.ensureSheetsPerPage()
 				chap.versions = []int64{0}
 				for _, sheet := range chap.sheets {
 					for i, sheetver := range sheet.versions {

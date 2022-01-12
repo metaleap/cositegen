@@ -180,12 +180,8 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 							if me.bgCol && !chapter.HasBgCol() {
 								continue
 							}
-							if chapter.SheetsPerPage > 0 {
-								for i := 1; i <= (len(chapter.sheets) / chapter.SheetsPerPage); i++ {
-									numfileswritten += me.genPages(chapter, i, &totalsize)
-								}
-							} else {
-								numfileswritten += me.genPages(chapter, 0, &totalsize)
+							for i := range chapter.SheetsPerPage {
+								numfileswritten += me.genPages(chapter, 1+i, &totalsize)
 							}
 						}
 					}
@@ -398,6 +394,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 
 	if chapter == nil {
 		me.page.PageTitle = hEsc(me.textStr("HomeTitle"))
+		me.page.PageTitleTxt = hEsc(me.textStr("HomeTitleTxt"))
 		me.page.PageDesc = repl.Replace(hEsc(me.textStr("HomeDesc")))
 		me.page.PageDescTxt = me.page.PageDesc
 		me.page.PageCssClasses = App.Proj.Gen.ClsChapter + "n"
@@ -474,9 +471,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 					me.page.QualList = "<select disabled='disabled' title='" + hEsc(me.textStr("QualityHint")) + "' name='" + App.Proj.Gen.IdQualiList + "' id='" + App.Proj.Gen.IdQualiList + "'>" + me.page.QualList + "</select>"
 					me.page.HrefDirLtr = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Ltr.Name, me.lang, svdt, me.bgCol) + ".html"
 					me.page.HrefDirRtl = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Rtl.Name, me.lang, svdt, me.bgCol) + ".html"
-					if pageNr != 0 {
-						me.page.PageTitleTxt += " (" + itoa(pageNr) + "/" + itoa(len(chapter.sheets)/chapter.SheetsPerPage) + ")"
-					}
+					me.page.PageTitleTxt += " (" + itoa(pageNr) + "/" + itoa(len(chapter.SheetsPerPage)) + ")"
 					pagename := me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svdt, me.bgCol)
 					numFilesWritten += me.genPageExecAndWrite(pagename, chapter, totalSizeRec)
 					if chapter.UrlJumpName != "" && me.lang == App.Proj.Langs[0] &&
@@ -521,10 +516,7 @@ func (me *siteGen) prepHomePage() {
 			if len(chapter.sheets) == 0 {
 				s += "<b>" + hEsc(locStr(chapter.Title, me.lang)) + "</b>"
 			} else {
-				numpages := 1
-				if chapter.SheetsPerPage != 0 {
-					numpages = len(chapter.sheets) / chapter.SheetsPerPage
-				}
+				numpages := len(chapter.SheetsPerPage)
 				dt1, dt2 := chapter.DateRangeOfSheets()
 				sdt1, sdt2 := dt1.Format("Jan 2006"), dt2.Format("Jan 2006")
 				sdt := sdt1 + " - " + sdt2
@@ -605,7 +597,7 @@ func (me *siteGen) prepHomePage() {
 						title = "Print (1200dpi)"
 					}
 					s += "<li style='font-size: larger;'>" + hEsc(title)
-					for _, ext := range []string{"cbz", "pdf" /*, "epub"*/} {
+					for _, ext := range []string{"pdf", "cbz" /*, "epub"*/} {
 						if res == 0 && ext != "pdf" {
 							continue
 						}
@@ -683,61 +675,55 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 
 	var sheets []*Sheet
 	pageslist := func() (s string) {
-		istoplist, numpages := (sheets == nil), 1
-		switch chapter.SheetsPerPage {
-		case 0:
-			sheets = chapter.sheets
-		default:
-			numpages = len(chapter.sheets) / chapter.SheetsPerPage
-			var pgnr int
-			shownums := map[int]bool{1: true, numpages: true, pageNr: true}
-			if !istoplist {
-				for i := 1; i <= numpages; i++ {
-					shownums[i] = true
-				}
-			} else {
-				for i, want := 1, 4; numpages >= want && len(shownums) < want && i < numpages; i++ {
-					if len(shownums) < want && (pageNr+i) < numpages {
-						shownums[pageNr+i] = true
-					}
-					if len(shownums) < want && (pageNr-i) > 1 {
-						shownums[pageNr-i] = true
-					}
-				}
+		istoplist, numpages := (sheets == nil), len(chapter.SheetsPerPage)
+
+		shownums := map[int]bool{1: true, numpages: true, pageNr: true}
+		if !istoplist {
+			for i := 1; i <= numpages; i++ {
+				shownums[i] = true
 			}
-			pglast := -1
-			percc := App.Proj.percentTranslated(me.lang, nil, chapter, nil, -1)
-			for i := range chapter.sheets {
-				if 0 == (i % chapter.SheetsPerPage) {
-					pgnr++
-					did, name := false, me.namePage(chapter, quali.SizeHint, pgnr, viewMode, "", me.lang, svDt, me.bgCol)
-					if did = (pgnr == pageNr); did {
-						s += "<li><b><a href='./" + name + ".html'>" + itoa(pgnr) + "</a></b></li>"
-					} else if did = shownums[pgnr]; did {
-						if perc := App.Proj.percentTranslated(me.lang, nil, chapter, nil, pgnr); perc < 0.0 || perc >= 50 || percc <= 0.0 {
-							s += "<li>"
-						} else {
-							s += "<li class='nolang' title='" + me.lang + ": " + ftoa(perc, 1) + "%'>"
-						}
-						s += "<a href='./" + name + ".html'>" + itoa(pgnr) + "</a></li>"
-					}
-					if did {
-						pglast = pgnr
-					} else if pglast == pgnr-1 {
-						s += "<li class='" + App.Proj.Gen.APaging + "s'><span>...&nbsp;</span></li>"
-					}
+		} else {
+			for i, want := 1, 4; numpages >= want && len(shownums) < want && i < numpages; i++ {
+				if len(shownums) < want && (pageNr+i) < numpages {
+					shownums[pageNr+i] = true
 				}
-				if pgnr == pageNr && istoplist {
-					sheets = append(sheets, chapter.sheets[i])
+				if len(shownums) < want && (pageNr-i) > 1 {
+					shownums[pageNr-i] = true
 				}
 			}
 		}
+		pglast, shidx, percc := -1, 0, App.Proj.percentTranslated(me.lang, nil, chapter, nil, -1)
+		for pgnr := 1; pgnr <= len(chapter.SheetsPerPage); pgnr++ {
+			did, name := (pgnr == pageNr), me.namePage(chapter, quali.SizeHint, pgnr, viewMode, "", me.lang, svDt, me.bgCol)
+			if did {
+				s += "<li><b><a href='./" + name + ".html'>" + itoa(pgnr) + "</a></b></li>"
+			} else if did = shownums[pgnr]; did {
+				if perc := App.Proj.percentTranslated(me.lang, nil, chapter, nil, pgnr); perc < 0.0 || perc >= 50 || percc <= 0.0 {
+					s += "<li>"
+				} else {
+					s += "<li class='nolang' title='" + me.lang + ": " + ftoa(perc, 1) + "%'>"
+				}
+				s += "<a href='./" + name + ".html'>" + itoa(pgnr) + "</a></li>"
+			}
+			if did {
+				pglast = pgnr
+			} else if pglast == pgnr-1 {
+				s += "<li class='" + App.Proj.Gen.APaging + "s'><span>...&nbsp;</span></li>"
+			}
+
+			numsheets := chapter.SheetsPerPage[pgnr-1]
+			if pgnr == pageNr && istoplist {
+				sheets = append(sheets, chapter.sheets[shidx:shidx+numsheets]...)
+			}
+			shidx += numsheets
+		}
+
 		nextchap := chapter.NextAfter(true)
 		if pageNr == numpages && istoplist && nextchap != nil {
 			name := me.namePage(nextchap, quali.SizeHint, 1, viewMode, "", me.lang, 0, me.bgCol)
 			s += "<li class='" + App.Proj.Gen.APaging + App.Proj.Gen.ClsChapter + "'><a href='./" + name + ".html'>" + locStr(nextchap.Title, me.lang) + "</a></li>"
 		}
-		if s != "" {
+		if s = sIf(numpages == 1, "", s); s != "" {
 			var pg int
 			if pg = pageNr - 1; pg < 1 {
 				pg = 1

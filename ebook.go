@@ -277,7 +277,8 @@ func (me *BookDef) toSeries() *Series {
 		}
 		for _, newchap := range newchaps {
 			newchap.UrlName = newchap.Name
-			newchap.SheetsPerPage = 1
+			newchap.NumSheetsPerPage = 1
+			newchap.ensureSheetsPerPage()
 			newchap.parentSeries = ret
 			newchap.versions = []int64{0}
 			if len(newchap.Title) == 0 {
