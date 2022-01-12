@@ -420,7 +420,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 		var author string
 		if chapter.author != nil {
 			author = strings.Replace(
-				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", chapter.author.fullName(), 1),
+				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", chapter.author.String(false), 1),
 				"%YEAR%", sIf(chapter.Year == 0, "", ", "+itoa(chapter.Year)), 1)
 		}
 		desc := locStr(chapter.DescHtml, me.lang)
@@ -503,7 +503,7 @@ func (me *siteGen) prepHomePage() {
 		var author string
 		if series.author != nil {
 			author = strings.Replace(
-				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", series.author.fullName(), 1),
+				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", series.author.String(true), 1),
 				"%YEAR%", sIf(series.Year == 0, "", ", "+itoa(series.Year)), 1)
 		}
 		s += "<span class='" + App.Proj.Gen.ClsSeries + "' style='animation-direction: " + cssanimdirs[i%2] + "; background-image: url(\"./" + App.Proj.Gen.PicDirName + "/" + me.nameThumb(series) + ".png\");'><span><h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + "</h5><div class='" + App.Proj.Gen.ClsSeries + "'>" + locStr(series.DescHtml, me.lang) + author + "</div>"
@@ -540,8 +540,8 @@ func (me *siteGen) prepHomePage() {
 				s += "<a title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0, true) + ".html'>" + hEsc(locStr(chapter.Title, me.lang)) + "</a>"
 			}
 			if chapter.author != nil && chapter.author != series.author {
-				s += strings.Replace(
-					strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", chapter.author.fullName(), 1),
+				s += "<br/>" + strings.Replace(
+					strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", chapter.author.String(true), 1),
 					"%YEAR%", sIf(chapter.Year == 0, "", ", "+itoa(chapter.Year)), 1,
 				)
 			} else if chapter.Year != 0 {

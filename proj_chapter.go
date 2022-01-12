@@ -228,9 +228,17 @@ func (me *PanelSvgTextGen) mergeWithParent(base *PanelSvgTextGen) {
 	}
 }
 
-func (me *Author) fullName() (ret string) {
+func (me *Author) String(abbrev bool) (ret string) {
 	if me != nil {
-		ret = strings.Join(me.Name, " ")
+		name := me.Name
+		if abbrev {
+			name = make([]string, len(me.Name))
+			copy(name, me.Name)
+			for i := 0; i < len(name)-1; i++ {
+				name[i] = name[i][:1] + "."
+			}
+		}
+		ret = strings.Join(name, " ")
 	}
 	return
 }
