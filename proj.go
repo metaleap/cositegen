@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -269,9 +270,20 @@ func (me *Project) load() (numSheetVers int) {
 			if chap.Year == 0 {
 				chap.Year = series.Year
 			}
-			if len(chap.StoryUrls) == 0 {
+			if chap.StoryUrls.LinkHref == "" {
 				chap.StoryUrls = series.StoryUrls
 			}
+			if chap.StoryUrls.DisplayUrl == "" && chap.StoryUrls.LinkHref != "" {
+				chap.StoryUrls.DisplayUrl = chap.StoryUrls.LinkHref
+				urldatestr := "2021"
+				if len(chap.Name) > 4 && chap.Name[4] == '-' {
+					if _, err := strconv.Atoi(chap.Name[:4]); err == nil {
+						urldatestr = "20" + chap.Name[:4]
+					}
+				}
+				chap.StoryUrls.LinkHref = "web.archive.org/web/" + urldatestr + "/" + chap.StoryUrls.LinkHref
+			}
+
 			if chap.Author == "" {
 				chap.author = series.author
 			} else if chap.author = me.Authors[chap.Author]; chap.author == nil {

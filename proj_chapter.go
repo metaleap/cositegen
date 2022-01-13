@@ -6,6 +6,12 @@ import (
 	"time"
 )
 
+type StoryUrls struct {
+	LinkHref   string
+	DisplayUrl string
+	Alt        []string
+}
+
 type Series struct {
 	Name            string
 	UrlName         string
@@ -13,7 +19,7 @@ type Series struct {
 	DescHtml        map[string]string
 	Author          string
 	Year            int
-	StoryUrls       []string
+	StoryUrls       StoryUrls
 	Chapters        []*Chapter
 	Book            *BookDef
 	GenPanelSvgText *PanelSvgTextGen
@@ -27,10 +33,11 @@ type Chapter struct {
 	UrlName          string
 	UrlJumpName      string
 	Title            map[string]string
+	TitleOrig        string
 	DescHtml         map[string]string
 	Author           string
 	Year             int
-	StoryUrls        []string
+	StoryUrls        StoryUrls
 	SheetsPerPage    []int
 	NumSheetsPerPage int
 	StoryboardFile   string
@@ -238,7 +245,7 @@ func (me *Author) String(abbrev bool) (ret string) {
 				name[i] = name[i][:1] + "."
 			}
 		}
-		ret = strings.Join(name, " ")
+		ret = strings.Join(name, "&nbsp;")
 	}
 	return
 }

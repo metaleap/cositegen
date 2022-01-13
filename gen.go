@@ -421,12 +421,13 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 		if chapter.author != nil {
 			author = strings.Replace(
 				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", chapter.author.String(false), 1),
-				"%YEAR%", sIf(chapter.Year == 0, "", ", "+itoa(chapter.Year)), 1)
+				"%YEAR%", sIf(chapter.Year == 0, "", ",&nbsp;"+itoa(chapter.Year)), 1)
 		}
 		desc := locStr(chapter.DescHtml, me.lang)
-		if desc == "" && chapter.Year != 0 && len(chapter.StoryUrls) != 0 {
-			desc = "<pre>" + chapter.StoryUrls[0] + "</pre>"
-			desc = "Story: " + sIf(me.lang == App.Proj.Langs[0], "", "&quot;"+locStr(chapter.Title, App.Proj.Langs[0])+"&quot;, ") + desc
+		if desc == "" && chapter.Year != 0 && chapter.StoryUrls.LinkHref != "" {
+			desc = "<a target='_blank' rel='noreferrer' href='https://" + chapter.StoryUrls.LinkHref + "'><pre>" + sIf(chapter.StoryUrls.DisplayUrl != "", chapter.StoryUrls.DisplayUrl, chapter.StoryUrls.LinkHref) + "</pre></a>"
+			skiptitle := chapter.TitleOrig == "" && (me.lang == App.Proj.Langs[0] || locStr(chapter.Title, App.Proj.Langs[0]) == locStr(chapter.Title, me.lang))
+			desc = "Story: " + sIf(skiptitle, "", "&quot;"+sIf(chapter.TitleOrig != "", chapter.TitleOrig, locStr(chapter.Title, App.Proj.Langs[0]))+"&quot;, ") + desc
 		}
 		me.page.PageDesc = sIf(desc == "", locStr(series.DescHtml, me.lang), desc) + author
 		me.page.PageDescTxt = hEsc(sIf(desc == "", locStr(series.DescHtml, me.lang), desc))
