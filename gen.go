@@ -518,7 +518,7 @@ func (me *siteGen) prepHomePage() {
 				s += "<b>" + hEsc(locStr(chapter.Title, me.lang)) + "</b>"
 			} else {
 				numpages := len(chapter.SheetsPerPage)
-				dt1, dt2 := chapter.DateRangeOfSheets()
+				dt1, dt2 := chapter.dateRangeOfSheets(false)
 				sdt1, sdt2 := dt1.Format("Jan 2006"), dt2.Format("Jan 2006")
 				sdt := sdt1 + " - " + sdt2
 				if sdt1 == sdt2 {
@@ -533,11 +533,11 @@ func (me *siteGen) prepHomePage() {
 				if numpages <= 1 {
 					title = trim(title[1+strings.IndexByte(title, '/'):])
 				}
-				if me.lang != App.Proj.Langs[0] {
-					if perc := App.Proj.percentTranslated(me.lang, nil, chapter, nil, -1); perc >= 0.0 {
-						title += " (" + me.textStr("Transl") + ": " + itoa(int(perc)) + "%)"
-					}
-				}
+				// if me.lang != App.Proj.Langs[0] {
+				// 	if perc := App.Proj.percentTranslated(me.lang, nil, chapter, nil, -1); perc >= 0.0 {
+				// 		title += " (" + me.textStr("Transl") + ": " + itoa(int(perc)) + "%)"
+				// 	}
+				// }
 				s += "<a title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0, true) + ".html'>" + hEsc(locStr(chapter.Title, me.lang)) + "</a>"
 			}
 			if chapter.author != nil && chapter.author != series.author {
@@ -679,7 +679,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		istoplist, numpages := (sheets == nil), len(chapter.SheetsPerPage)
 
 		shownums := map[int]bool{1: true, numpages: true, pageNr: true}
-		if !istoplist {
+		if numpages <= 4 || !istoplist {
 			for i := 1; i <= numpages; i++ {
 				shownums[i] = true
 			}
@@ -709,7 +709,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			if did {
 				pglast = pgnr
 			} else if pglast == pgnr-1 {
-				s += "<li class='" + App.Proj.Gen.APaging + "s'><span>...&nbsp;</span></li>"
+				s += "<li class='" + App.Proj.Gen.APaging + "s'><span>&hellip;&nbsp;</span></li>"
 			}
 
 			numsheets := chapter.SheetsPerPage[pgnr-1]

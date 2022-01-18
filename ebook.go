@@ -85,10 +85,11 @@ type BookDef struct {
 	Title    map[string]string
 	Desc     map[string]string
 	Chapters []struct {
-		FromSeries        []string
-		Filter            BookFilter
-		ReChapterToMonths bool
-		SwapSheets        map[string]string
+		FromSeries           []string
+		Filter               BookFilter
+		ReChapterToMonths    bool
+		OrderChapsByScanDate bool
+		SwapSheets           map[string]string
 	}
 	CssTitle                string
 	CssToc                  string
@@ -270,10 +271,17 @@ func (me *BookDef) toSeries() *Series {
 				})
 				me.numSheets++
 			}
-			newchaps = append(newchaps, newchap)
+			if len(newchap.sheets) > 0 {
+				newchaps = append(newchaps, newchap)
+			}
 		}
 		if chapspec.ReChapterToMonths {
 			newchaps = me.reChapterToMonths(newchaps)
+		}
+		if chapspec.OrderChapsByScanDate {
+			sort.Slice(newchaps, func(i int, j int) bool {
+				return newchaps[i].sheets[0].versions[0].dateTimeUnixNano < newchaps[j].sheets[0].versions[0].dateTimeUnixNano
+			})
 		}
 		for _, newchap := range newchaps {
 			newchap.UrlName = newchap.Name
@@ -512,7 +520,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string) {
 		pgnrlast, chapcount = pgnr, chapcount+1
 	}
 
-	title, fullycal, hh := book.Title, true, iIf(me.config.TwoSheetsPerPage, h/2, h)
+	title, fullycal, hh := map[string]string{lang: "Stories"}, true, iIf(me.config.TwoSheetsPerPage, h/2, h)
 	textx, htoc, cc := hh/9, 50.0/float64(chapcount), 0
 	for _, chap := range book.Chapters {
 		if fullycal = chap.ReChapterToMonths; !fullycal {
@@ -520,7 +528,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string) {
 		}
 	}
 	if t := App.Proj.textStr(lang, "BookTocTitleCalendared"); fullycal && t != "" {
-		title = map[string]string{lang: t}
+		title[lang] = t
 	}
 	svg += `<text class="title" x="` + itoa(cb+textx) + `px" y="` + itoa(cb+(hh/5)) + `" dx="0" dy="0">` +
 		htmlEscdToXmlEsc(hEsc(locStr(title, lang))) + `</text>`
@@ -532,14 +540,19 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string) {
 			continue
 		}
 		svg += `<text class="toc" x="` + itoa(cb+(textx*2)) + `px" y="` + itoa(texty) + `%" dx="0" dy="0">` +
-			htmlEscdToXmlEsc(hEsc(locStr(chap.Title, lang)+"............"+App.Proj.textStr(lang, "BookTocPagePrefix")+sIf(pgnr < 10, "0", "")+itoa(pgnr))) + `</text>`
+			htmlEscdToXmlEsc(hEsc(App.Proj.textStr(lang, "BookTocPagePrefix")+sIf(pgnr < 10, "0", "")+itoa(pgnr)+"...."+locStr(chap.Title, lang))) + `</text>`
 		pgnrlast, cc = pgnr, cc+1
 	}
 
-	if len(book.Desc) != 0 {
-		svg += `<text class="desc" x="` + itoa(cb+textx) + `px" y="` + itoa(cb+(h-textx/2)) + `px" dx="0" dy="0">` +
-			htmlEscdToXmlEsc(hEsc(locStr(book.Desc, lang))) + `</text>`
+	bookdesc := book.Desc
+	if len(bookdesc) == 0 {
+		dtold, dtnew := series.dateRange()
+		bookdesc = map[string]string{lang: App.Proj.textStr(lang, "BookTocTitleCalendared") +
+			" " + time.Unix(0, dtold).Format("January 2006") + " - " +
+			time.Unix(0, dtnew).Format("January 2006")}
 	}
+	svg += `<text class="desc" x="` + itoa(cb+textx) + `px" y="` + itoa(cb+(h-textx/2)) + `px" dx="0" dy="0">` +
+		htmlEscdToXmlEsc(hEsc(locStr(bookdesc, lang))) + `</text>`
 	if fontinfo := App.Proj.textStr(lang, "BookFontInfo"); fontinfo != "" {
 		svg += `<text class="desc" x="444px" y="-444px" dx="0" dy="0" transform="rotate(90)">
 					<tspan style="font-size:0.5em">` + htmlEscdToXmlEsc(hEsc(fontinfo)) + `</tspan></text>`
@@ -665,7 +678,7 @@ func (me *BookBuild) genBookTitlePanelCutoutsPng(outFilePath string, size *Size,
 		faces[i], faces[j] = faces[j], faces[i]
 	})
 
-	for len(faces) < 16 {
+	for len(faces) < 32 {
 		faces = append(faces, faces...)
 	}
 

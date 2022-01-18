@@ -83,13 +83,16 @@ func (me *Series) numSheets() (ret int) {
 	return
 }
 
-func (me *Series) allSheetVersSortedByScanDate() (ret []*SheetVer) {
+func (me *Series) allSheetVersSortedByScanDate(skipPriv bool) (ret []*SheetVer) {
 	for _, chapter := range me.Chapters {
+		if skipPriv && chapter.Priv {
+			continue
+		}
 		for _, sheet := range chapter.sheets {
 			for _, sv := range sheet.versions {
 				var added bool
 				for i := range ret {
-					if added = ret[i].dateTimeUnixNano > sv.dateTimeUnixNano; added {
+					if added = (ret[i].dateTimeUnixNano > sv.dateTimeUnixNano); added {
 						ret = append(append(append(make([]*SheetVer, 0, len(ret)+1), ret[:i]...), sv), ret[i:]...)
 						break
 					}
@@ -97,6 +100,24 @@ func (me *Series) allSheetVersSortedByScanDate() (ret []*SheetVer) {
 				if !added {
 					ret = append(ret, sv)
 				}
+			}
+		}
+	}
+	if skipPriv && len(ret) == 0 {
+		ret = me.allSheetVersSortedByScanDate(false)
+	}
+	return
+}
+
+func (me *Series) dateRange() (dtOldest int64, dtNewest int64) {
+	for _, chap := range me.Chapters {
+		for _, sheet := range chap.sheets {
+			dt := sheet.versions[0].dateTimeUnixNano
+			if dtOldest == 0 || dt < dtOldest {
+				dtOldest = dt
+			}
+			if dtNewest == 0 || dt > dtNewest {
+				dtNewest = dt
 			}
 		}
 	}
@@ -189,7 +210,7 @@ func (me *Chapter) PercentColorized() float64 {
 	return 100.0 / (float64(numsv) / float64(numbg))
 }
 
-func (me *Chapter) DateRangeOfSheets() (time.Time, time.Time) {
+func (me *Chapter) dateRangeOfSheets(newestSheetVerOnly bool) (time.Time, time.Time) {
 	var dt1, dt2 int64
 	for _, sheet := range me.sheets {
 		for _, sv := range sheet.versions {
@@ -199,6 +220,9 @@ func (me *Chapter) DateRangeOfSheets() (time.Time, time.Time) {
 			}
 			if dt > dt2 || dt2 == 0 {
 				dt2 = dt
+			}
+			if newestSheetVerOnly {
+				break
 			}
 		}
 	}

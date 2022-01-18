@@ -106,7 +106,7 @@ func appPrepWork(fromGui bool) {
 				}
 			}
 			var thumbsrcfilenames FilePathsSortingByModTime
-			for _, sv := range series.allSheetVersSortedByScanDate() {
+			for _, sv := range series.allSheetVersSortedByScanDate(true) {
 				thumbsrcfilenames = append(thumbsrcfilenames, sv.data.bwSmallFilePath)
 			}
 			const maxthumbs = 22
@@ -168,7 +168,7 @@ func pngOptsLoop() {
 			}
 			if fileinfo, err := os.Lstat(fspath); err == nil && (!fileinfo.IsDir()) &&
 				(!fileIsSymlink(fileinfo)) && strings.HasSuffix(fspath, ".png") &&
-				!(strings.HasPrefix(fspath, ".build/") || strings.HasPrefix(fspath, ".chromium/") || strings.Contains(fspath, "/.pngtmp/sh.")) {
+				!(strings.HasPrefix(fspath, ".build/") || strings.HasPrefix(fspath, ".chromium/") || strings.Contains(fspath, "/.pngtmp/sh.") || strings.Contains(fspath, "/.pngtmp/")) {
 				matches, totalsize = append(matches, fspath), totalsize+uint64(fileinfo.Size())
 			}
 			return nil
