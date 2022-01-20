@@ -520,7 +520,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string) {
 		pgnrlast, chapcount = pgnr, chapcount+1
 	}
 
-	title, fullycal, hh := map[string]string{lang: "Stories"}, true, iIf(me.config.TwoSheetsPerPage, h/2, h)
+	fullycal, hh, title := true, iIf(me.config.TwoSheetsPerPage, h/2, h), map[string]string{lang: App.Proj.textStr(lang, "BookTocTitle")}
 	textx, htoc, cc := hh/9, 50.0/float64(chapcount), 0
 	for _, chap := range book.Chapters {
 		if fullycal = chap.ReChapterToMonths; !fullycal {
@@ -539,7 +539,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string) {
 		if pgnr == pgnrlast {
 			continue
 		}
-		svg += `<text class="toc" x="` + itoa(cb+(textx*2)) + `px" y="` + itoa(texty) + `%" dx="0" dy="0">` +
+		svg += `<text class="toc" x="` + itoa(cb+textx+textx/2) + `px" y="` + itoa(texty) + `%" dx="0" dy="0">` +
 			htmlEscdToXmlEsc(hEsc(App.Proj.textStr(lang, "BookTocPagePrefix")+sIf(pgnr < 10, "0", "")+itoa(pgnr)+"...."+locStr(chap.Title, lang))) + `</text>`
 		pgnrlast, cc = pgnr, cc+1
 	}
@@ -554,7 +554,7 @@ func (me *BookBuild) genBookTiTocPageSvg(outFilePath string, lang string) {
 	svg += `<text class="desc" x="` + itoa(cb+textx) + `px" y="` + itoa(cb+(h-textx/2)) + `px" dx="0" dy="0">` +
 		htmlEscdToXmlEsc(hEsc(locStr(bookdesc, lang))) + `</text>`
 	if fontinfo := App.Proj.textStr(lang, "BookFontInfo"); fontinfo != "" {
-		svg += `<text class="desc" x="444px" y="-444px" dx="0" dy="0" transform="rotate(90)">
+		svg += `<text class="desc" x="444px" y="-444px" dx="` + itoa(cb+(hh/5)) + `" dy="0" transform="rotate(90)">
 					<tspan style="font-size:0.5em">` + htmlEscdToXmlEsc(hEsc(fontinfo)) + `</tspan></text>`
 	}
 

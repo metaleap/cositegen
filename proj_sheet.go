@@ -495,7 +495,7 @@ func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang strin
 	s := "<svg viewbox='0 0 " + itoa(pw) + " " + itoa(ph) + "'>"
 	for tidx, pta := range panelareas {
 		rx, ry, rw, rh := pta.Rect.Min.X-panel.Rect.Min.X, pta.Rect.Min.Y-panel.Rect.Min.Y, pta.Rect.Dx(), pta.Rect.Dy()
-		borderandfill := pta.PointTo != nil
+		borderandfill := (pta.PointTo != nil)
 		if borderandfill {
 			rpx, rpy := pta.PointTo.X-panel.Rect.Min.X, pta.PointTo.Y-panel.Rect.Min.Y
 			mmh, cmh := int(me.data.PxCm*App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm), int(me.data.PxCm/2.0)
@@ -545,7 +545,7 @@ func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang strin
 			}
 			s += "' class='" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "' stroke-width='" + itoa(mmh) + "px'/>"
 		}
-		s += "<svg x='" + itoa(rx) + "' y='" + itoa(ry) + "'>" +
+		s += "<svg x='" + itoa(rx) + "' y='" + itoa(ry) + "' class='" + sIf(borderandfill, "ptbf", "") + "'>" +
 			me.genTextSvgForPanelArea(panelIdx, tidx, &pta, lang, forHtml, forEbook) + "</svg>"
 	}
 
