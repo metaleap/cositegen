@@ -998,7 +998,7 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 				pgnr, numpanels, numsheets, pages := -1, 0, 0, map[int]bool{}
 				for _, sheet := range chapter.sheets {
 					for _, sv := range sheet.versions {
-						if dtstr := time.Unix(0, sv.dateTimeUnixNano).Format("2006-01-02"); dtstr > nextolderdate && dtstr <= pubdate {
+						if dtstr := time.Unix(0, sv.dateTimeUnixNano).Format("2006-01-02"); dtstr > nextolderdate && dtstr < pubdate {
 							pg := me.sheetPgNrs[sv]
 							pages[pg] = true
 							npnl, _ := sv.panelCount()
