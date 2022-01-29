@@ -982,7 +982,6 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 		return
 	}
 	var xmls []string
-	printLn("ATOM")
 	for i, pubdate := range af.PubDates {
 		entryidx, nextolderdate := 0, "0000-00-00"
 		if i < len(af.PubDates)-1 {
@@ -998,7 +997,6 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 				}
 				if (pubdate == "2022-01-28") &&
 					(chapter.Name == "2112-parker-t-allan-2019-glitches") {
-					printLn(pubdate, nextolderdate)
 				}
 				pgnr, numpanels, numsheets, pages := -1, 0, 0, map[int]bool{}
 				for _, sheet := range chapter.sheets {
