@@ -702,7 +702,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				if perc := App.Proj.percentTranslated(me.lang, nil, chapter, nil, pgnr); perc < 0.0 || perc >= 50 || percc <= 0.0 {
 					s += "<li>"
 				} else {
-					s += "<li class='nolang' title='" + me.lang + ": " + ftoa(perc, 1) + "%'>"
+					s += "<li class='nolang' title='(English only)'>"
 				}
 				s += "<a href='./" + name + ".html'>" + itoa(pgnr) + "</a></li>"
 			}
