@@ -137,7 +137,7 @@ func appPrepWork(fromGui bool) {
 		App.Proj.allPrepsDone = true
 		return "for " + itoa(numwork) + "/" + itoa(numjobs) + " reprocessing jobs: \n\t\t" + strings.Join(didsomework, "\n\t\t") + "\n"
 	})
-	if fromGui {
+	if fromGui && os.Getenv("NOOPT") == "" {
 		pngOptsLoop()
 	}
 }
