@@ -166,7 +166,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 	timedLogged("SiteGen: generating markup files...", func() string {
 		numfileswritten := 0
 		var totalsize uint64
-		me.tmpl, err = template.New("foo").ParseFiles(siteTmplDirName + "/site.html")
+		me.tmpl, err = template.New("foobarbaz").ParseFiles(siteTmplDirName + "/site.html")
 		if err != nil {
 			panic(err)
 		}
