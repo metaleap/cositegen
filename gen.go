@@ -44,8 +44,6 @@ type PageGen struct {
 	PageDirAlt     string
 	DirCurTitle    string
 	DirAltTitle    string
-	DirCurDesc     string
-	DirAltDesc     string
 	LangsList      string
 	ViewerList     string
 	HrefViewAlt    string
@@ -533,11 +531,9 @@ func (me *siteGen) prepHomePage() {
 				if numpages <= 1 {
 					title = trim(title[1+strings.IndexByte(title, '/'):])
 				}
-				// if me.lang != App.Proj.Langs[0] {
-				// 	if perc := App.Proj.percentTranslated(me.lang, nil, chapter, nil, -1); perc >= 0.0 {
-				// 		title += " (" + me.textStr("Transl") + ": " + itoa(int(perc)) + "%)"
-				// 	}
-				// }
+				if App.Proj.percentTranslated(me.lang, series, chapter, nil, -1) < 50 {
+					title += " " + me.textStr("Untransl")
+				}
 				s += "<a title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0, true) + ".html'>" + hEsc(locStr(chapter.Title, me.lang)) + "</a>"
 			}
 			if chapter.author != nil && chapter.author != series.author {
@@ -571,8 +567,8 @@ func (me *siteGen) prepHomePage() {
 				s += "<li id='" + bb.name + "'><b style='font-size: xx-large'>" +
 					hEsc(locStr(bb.book.Title, me.lang)) + "</b> &bull; " +
 					hEsc(locStr(bb.config.Title, me.lang)) + " &bull; " +
-					hEsc(App.Proj.textStr(me.lang, "LangName")) + " &bull; " +
-					hEsc(locStr(App.Proj.dirMode(me.dirRtl).Desc, me.lang)) + " &bull; " +
+					hEsc(me.textStr("LangName")) + " &bull; " +
+					hEsc(locStr(App.Proj.dirMode(me.dirRtl).Title, me.lang)) + " &bull; " +
 					itoa(bb.book.numSheets) + " " + me.textStr("DownHint")
 				inclseries := map[*Series]bool{}
 				for _, chap := range bb.book.Chapters {
@@ -702,7 +698,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				if perc := App.Proj.percentTranslated(me.lang, nil, chapter, nil, pgnr); perc < 0.0 || perc >= 50 || percc <= 0.0 {
 					s += "<li>"
 				} else {
-					s += "<li class='nolang' title='(English only)'>"
+					s += "<li class='nolang' title='" + me.textStr("Untransl") + "'>"
 				}
 				s += "<a href='./" + name + ".html'>" + itoa(pgnr) + "</a></li>"
 			}
@@ -894,17 +890,10 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 
 func (me *siteGen) genPageExecAndWrite(name string, chapter *Chapter, totalSizeRec *uint64) (numFilesWritten int) {
 	me.page.LangsList = ""
-	for lidx, lang := range App.Proj.Langs {
+	for _, lang := range App.Proj.Langs {
 		title, imgsrcpath := lang, strings.Replace(App.Proj.Gen.ImgSrcLang, "%LANG%", lang, -1)
 		if langname := App.Proj.textStr(lang, "LangName"); langname != "" {
 			title = langname
-		}
-		if lidx != 0 {
-			title += " (" + App.Proj.textStr(lang, "Transl") + ": " + itoa(int(App.Proj.percentTranslated(lang, nil, nil, nil, -1))) + "%"
-			if chapter != nil {
-				title += ", \"" + locStr(chapter.Title, lang) + "\": " + itoa(int(App.Proj.percentTranslated(lang, nil, chapter, nil, -1))) + "%"
-			}
-			title += ")"
 		}
 		if lang == me.lang {
 			me.page.LangsList += "<span><div>"
@@ -934,11 +923,9 @@ func (me *siteGen) genPageExecAndWrite(name string, chapter *Chapter, totalSizeR
 	if me.dirRtl {
 		me.page.HrefDirCur, me.page.HrefDirAlt = me.page.HrefDirRtl, me.page.HrefDirLtr
 		me.page.DirCurTitle, me.page.DirAltTitle = locStr(App.Proj.DirModes.Rtl.Title, me.lang), locStr(App.Proj.DirModes.Ltr.Title, me.lang)
-		me.page.DirCurDesc, me.page.DirAltDesc = locStr(App.Proj.DirModes.Rtl.Desc, me.lang), locStr(App.Proj.DirModes.Ltr.Desc, me.lang)
 	} else {
 		me.page.HrefDirCur, me.page.HrefDirAlt = me.page.HrefDirLtr, me.page.HrefDirRtl
 		me.page.DirCurTitle, me.page.DirAltTitle = locStr(App.Proj.DirModes.Ltr.Title, me.lang), locStr(App.Proj.DirModes.Rtl.Title, me.lang)
-		me.page.DirCurDesc, me.page.DirAltDesc = locStr(App.Proj.DirModes.Ltr.Desc, me.lang), locStr(App.Proj.DirModes.Rtl.Desc, me.lang)
 	}
 
 	buf := bytes.NewBuffer(nil)

@@ -13,7 +13,6 @@ import (
 type DirMode struct {
 	Name  string
 	Title map[string]string
-	Desc  map[string]string
 }
 
 type Project struct {
