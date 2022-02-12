@@ -523,6 +523,7 @@ func (me *siteGen) prepHomePage() {
 					sdt = sdt1
 				}
 				title := strings.NewReplacer(
+					"%MINS%", itoa(len(chapter.sheets)/4)+"-"+itoa(1+(len(chapter.sheets)/4)),
 					"%NUMPGS%", itoa(numpages),
 					"%NUMPNL%", itoa(chapter.NumPanels()),
 					"%NUMSCN%", itoa(chapter.NumScans()),
