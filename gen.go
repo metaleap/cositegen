@@ -473,10 +473,9 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 					me.page.PageTitleTxt += " (" + itoa(pageNr) + "/" + itoa(len(chapter.SheetsPerPage)) + ")"
 					pagename := me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svdt, me.bgCol)
 					numFilesWritten += me.genPageExecAndWrite(pagename, chapter, totalSizeRec)
-					if chapter.UrlJumpName != "" && me.lang == App.Proj.Langs[0] &&
-						viewmode == viewModes[0] && qidx == 0 && pageNr <= 1 &&
-						(me.bgCol || !chapter.HasBgCol()) && !me.dirRtl {
-						fileLinkOrCopy(".build/"+pagename+".html", ".build/"+chapter.UrlJumpName+".html")
+					if chapter.UrlJumpName != "" && viewmode == viewModes[0] && qidx == 0 &&
+						pageNr <= 1 && (me.bgCol || !chapter.HasBgCol()) && !me.dirRtl {
+						fileLinkOrCopy(".build/"+pagename+".html", ".build/"+chapter.UrlJumpName+sIf(me.lang == App.Proj.Langs[0], "", "."+me.lang)+".html")
 						numFilesWritten++
 					}
 				}
