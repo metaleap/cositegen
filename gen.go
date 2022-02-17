@@ -475,8 +475,8 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 					numFilesWritten += me.genPageExecAndWrite(pagename, chapter, totalSizeRec)
 					if chapter.UrlJumpName != "" && viewmode == viewModes[0] && qidx == 0 &&
 						pageNr <= 1 && (me.bgCol || !chapter.HasBgCol()) && !me.dirRtl {
-						fileLinkOrCopy(".build/"+pagename+".html", ".build/"+chapter.UrlJumpName+sIf(me.lang == App.Proj.Langs[0], "", "."+me.lang)+".html")
 						numFilesWritten++
+						fileLinkOrCopy(".build/"+pagename+".html", ".build/"+chapter.UrlJumpName+sIf(me.lang == App.Proj.Langs[0], "", "."+me.lang)+".html")
 					}
 				}
 			}
