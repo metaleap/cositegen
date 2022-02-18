@@ -112,11 +112,12 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	didgraydistr := me.ensureGrayDistr(forceFullRedo || len(me.data.GrayDistr) == 0)
 	didbwsheet := me.ensureBwSheetPngs(forceFullRedo)
 	didpanels := me.ensurePanelsTree(me.data.PanelsTree == nil || forceFullRedo || didbwsheet)
-	_ = me.ensurePanelPics(forceFullRedo || didpanels)
+	didpanelpics := me.ensurePanelPics(forceFullRedo || didpanels)
 
-	if diddatajson := didgraydistr || didpanels; shouldsaveprojdata || diddatajson {
+	if shouldsaveprojdata = shouldsaveprojdata || didgraydistr || didpanels; shouldsaveprojdata {
 		App.Proj.save(false)
 	}
+	didWork = shouldsaveprojdata || didbwsheet || didgraydistr || didpanels || didpanelpics
 	return
 }
 

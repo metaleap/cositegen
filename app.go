@@ -97,6 +97,7 @@ func appPrepWork(fromGui bool) {
 							if !sv.prep.done {
 								didwork := sv.ensurePrep(true, false)
 								if sv.prep.done, numjobs = true, numjobs+1; didwork {
+									printLn(time.Now().Format("15:04:05") + "\t#" + itoa(1+numwork) + "\t" + sv.fileName)
 									numwork, didanywork, didsomework = numwork+1, true, append(didsomework, sv.fileName)
 								}
 							}

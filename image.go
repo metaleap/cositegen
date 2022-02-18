@@ -202,7 +202,7 @@ func imgGrayDistrs(srcImgData io.Reader, onFileDone func() error, numClusters in
 	return
 }
 
-// returns nil if srcImgData already consists entirely of fully black or fully white pixels
+// returns nil if srcImgData already consists entirely of fully-black&white-only pixels
 func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessThan uint8) []byte {
 	imgsrc, _, err := image.Decode(srcImgData)
 	if err != nil {
@@ -523,7 +523,7 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 				ret = append(ret, rect)
 			}
 			prev = sep[1]
-			if blackrect := image.Rect(area.Min.X, sep[0]+mm3, area.Max.X, sep[1]-mm3); ((sep[1] - sep[0]) > panelmin) && imgIsRectFullyOfColor(srcImg, blackrect, color.Gray{0}) {
+			if blackrect := image.Rect(area.Min.X, sep[0]+mm3, area.Max.X, sep[1]-mm3); ((sep[1] - sep[0]) > 2*panelmin) && imgIsRectFullyOfColor(srcImg, blackrect, color.Gray{0}) {
 				ret = append(ret, blackrect)
 			}
 		}
@@ -561,7 +561,7 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 				ret = append(ret, rect)
 			}
 			prev = sep[1]
-			if blackrect := image.Rect(sep[0]+mm3, area.Min.Y, sep[1]-mm3, area.Max.Y); ((sep[1] - sep[0]) > panelmin) && imgIsRectFullyOfColor(srcImg, blackrect, color.Gray{0}) {
+			if blackrect := image.Rect(sep[0]+mm3, area.Min.Y, sep[1]-mm3, area.Max.Y); ((sep[1] - sep[0]) > 2*panelmin) && imgIsRectFullyOfColor(srcImg, blackrect, color.Gray{0}) {
 				ret = append(ret, blackrect)
 			}
 		}
