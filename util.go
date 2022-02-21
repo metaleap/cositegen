@@ -30,7 +30,7 @@ func (me FilePathsSortingByFileSize) Len() int          { return len(me) }
 func (me FilePathsSortingByFileSize) Swap(i int, j int) { me[i], me[j] = me[j], me[i] }
 func (me FilePathsSortingByFileSize) Less(i int, j int) bool {
 	fi1, fi2 := fileStat(me[i]), fileStat(me[j])
-	return fi1 == nil || (fi2 != nil && fi1.Size() < fi2.Size())
+	return fi1 == nil || (fi2 != nil && fi1.Size() > fi2.Size())
 }
 
 type FilePathsSortingByModTime []string

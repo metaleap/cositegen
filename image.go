@@ -493,7 +493,7 @@ func (me ImgPanel) flattened() ImgPanel {
 
 func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 	panelmin := srcImg.Rect.Max.Y / panelMinDiv // ~1.9cm
-	mm3 := int(4.0 * (float64(srcImg.Rect.Max.Y) / 210.0))
+	brborder := int(4.0 * (float64(srcImg.Rect.Max.Y) / 210.0))
 
 	detectRows := func(area image.Rectangle) (ret []image.Rectangle) {
 		laststart, seps := -1, [][2]int{}
@@ -523,7 +523,7 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 				ret = append(ret, rect)
 			}
 			prev = sep[1]
-			if blackrect := image.Rect(area.Min.X, sep[0]+mm3, area.Max.X, sep[1]-mm3); ((sep[1] - sep[0]) > 2*panelmin) && imgIsRectFullyOfColor(srcImg, blackrect, color.Gray{0}) {
+			if blackrect := image.Rect(area.Min.X, sep[0]+brborder, area.Max.X, sep[1]-brborder); ((sep[1] - sep[0]) > 2*panelmin) && imgIsRectFullyOfColor(srcImg, blackrect, color.Gray{0}) {
 				ret = append(ret, blackrect)
 			}
 		}
@@ -561,7 +561,7 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 				ret = append(ret, rect)
 			}
 			prev = sep[1]
-			if blackrect := image.Rect(sep[0]+mm3, area.Min.Y, sep[1]-mm3, area.Max.Y); ((sep[1] - sep[0]) > 2*panelmin) && imgIsRectFullyOfColor(srcImg, blackrect, color.Gray{0}) {
+			if blackrect := image.Rect(sep[0]+brborder, area.Min.Y, sep[1]-brborder, area.Max.Y); ((sep[1] - sep[0]) > 2*panelmin) && imgIsRectFullyOfColor(srcImg, blackrect, color.Gray{0}) {
 				ret = append(ret, blackrect)
 			}
 		}
