@@ -545,7 +545,7 @@ func (me *siteGen) prepHomePage() {
 					picbgpos = chapter.Pic[2].(string)
 				}
 			}
-			picname := me.namePanelPic(chapter.sheets[int(picidxsheet)].versions[0], int(picidxpanel), App.Proj.Qualis[0].SizeHint)
+			picname := me.namePanelPic(chapter.sheets[int(picidxsheet)].versions[0], int(picidxpanel), App.Proj.Qualis[1].SizeHint)
 			s += "<a class='" + App.Proj.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + App.Proj.Gen.PicDirName + "/" + picname + ".png\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
 			s += "<div>" + hEsc(locStr(chapter.Title, me.lang)) + "</div>"
 			// if chapter.author != nil && chapter.author != series.author {
