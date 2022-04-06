@@ -250,6 +250,7 @@ func jsonLoad(eitherFileName string, orBytes []byte, intoPtr Any) {
 		data = fileRead(eitherFileName)
 	}
 	if err := json.Unmarshal(data, intoPtr); err != nil {
+		printLn(string(data))
 		panic(err)
 	}
 }

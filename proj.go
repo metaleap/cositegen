@@ -271,13 +271,14 @@ func (me *Project) load() (numSheetVers int) {
 			}
 			if chap.StoryUrls.DisplayUrl == "" && chap.StoryUrls.LinkHref != "" {
 				chap.StoryUrls.DisplayUrl = chap.StoryUrls.LinkHref
-				urldatestr := "2021"
-				if len(chap.Name) > 4 && chap.Name[4] == '-' {
-					if _, err := strconv.Atoi(chap.Name[:4]); err == nil {
-						urldatestr = "20" + chap.Name[:4]
+				if urldatestr := "2021"; !strings.HasPrefix(chap.StoryUrls.LinkHref, "archive.") {
+					if len(chap.Name) > 4 && chap.Name[4] == '-' {
+						if _, err := strconv.Atoi(chap.Name[:4]); err == nil {
+							urldatestr = "20" + chap.Name[:4]
+						}
 					}
+					chap.StoryUrls.LinkHref = "web.archive.org/web/" + urldatestr + "/" + chap.StoryUrls.LinkHref
 				}
-				chap.StoryUrls.LinkHref = "web.archive.org/web/" + urldatestr + "/" + chap.StoryUrls.LinkHref
 			}
 
 			if chap.Author == "" {

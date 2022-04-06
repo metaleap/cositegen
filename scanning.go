@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"html"
 	"os"
@@ -79,15 +78,12 @@ func scanDevicesDetection() {
 		scanDevices = nil
 		var sds []*ScanDevice
 		cmd := exec.Command("scanimage", "--formatted-device-list",
-			`{"Vendor": "%v", "Model": "%m", "Type": "%t", "Ident": "%d", "Nr": %i}`)
+			`,{"Vendor": "%v", "Model": "%m", "Type": "%t", "Ident": "%d", "Nr": %i}`)
 		data, err := cmd.CombinedOutput()
 		if err != nil {
 			panic(err.Error() + ": " + string(data))
 		}
-		dataprefix := []byte(`[{"Vendor": "sane-project.org", "Model": "sane-test", "Type": "sim", "Ident": "test", "Nr": -1},`)
-		if data = bytes.TrimSpace(data); len(data) == 0 {
-			dataprefix = dataprefix[:len(dataprefix)-1]
-		}
+		dataprefix := []byte(`[{"Vendor": "sane-project.org", "Model": "sane-test", "Type": "sim", "Ident": "test", "Nr": -1}`)
 		jsonLoad("", append(dataprefix, append(data, ']')...), &sds)
 
 		prefcat, prefdesc, prefspec := "  ", "        ", "    -"

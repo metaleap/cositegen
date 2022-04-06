@@ -473,7 +473,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 					me.page.PageTitleTxt += " (" + itoa(pageNr) + "/" + itoa(len(chapter.SheetsPerPage)) + ")"
 					pagename := me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svdt, me.bgCol)
 					numFilesWritten += me.genPageExecAndWrite(pagename, chapter, totalSizeRec)
-					if chapter.UrlJumpName != "" && viewmode == viewModes[0] && qidx == 0 &&
+					if chapter.UrlJumpName != "" && viewmode == viewModes[0] && qidx == 1 &&
 						pageNr <= 1 && (me.bgCol || !chapter.HasBgCol()) && !me.dirRtl {
 						fileLinkOrCopy(".build/"+pagename+".html", ".build/"+chapter.UrlJumpName+sIf(me.lang == App.Proj.Langs[0], "", "."+me.lang)+".html")
 						numFilesWritten++
@@ -485,10 +485,11 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 	return
 }
 
+const noice = true
+
 func (me *siteGen) prepHomePage() {
 	s := "<div class='" + App.Proj.Gen.ClsNonViewerPage + "'>"
-	cssanimdirs := []string{"alternate-reverse", "alternate"}
-	for i, series := range me.series {
+	for _, series := range me.series {
 		var gotsheets bool
 		for _, chapter := range series.Chapters {
 			if gotsheets = (len(chapter.sheets) > 0 && !chapter.Priv); gotsheets {
@@ -498,55 +499,66 @@ func (me *siteGen) prepHomePage() {
 		if series.Priv || len(series.Chapters) == 0 || !gotsheets {
 			continue
 		}
+
 		var author string
 		if series.author != nil {
 			author = strings.Replace(
 				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", series.author.String(true), 1),
 				"%YEAR%", sIf(series.Year == 0, "", ", "+itoa(series.Year)), 1)
 		}
-		s += "<span class='" + App.Proj.Gen.ClsSeries + "' style='animation-direction: " + cssanimdirs[i%2] + "; background-image: url(\"./" + App.Proj.Gen.PicDirName + "/" + me.nameThumb(series) + ".png\");'><span><h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + "</h5><div class='" + App.Proj.Gen.ClsSeries + "'>" + locStr(series.DescHtml, me.lang) + author + "</div>"
-		s += "<ul class='" + App.Proj.Gen.ClsSeries + "'>"
+		s += "<span class='" + App.Proj.Gen.ClsSeries + "'>"
+		s += "<h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + "</h5>"
+		s += "<div class='" + App.Proj.Gen.ClsSeries + "'>" + locStr(series.DescHtml, me.lang) + author + "</div>"
+		s += "<span>"
 		for _, chapter := range series.Chapters {
 			if chapter.Priv || len(chapter.sheets) == 0 {
 				continue
 			}
-			s += "<li class='" + App.Proj.Gen.ClsChapter + "'>"
-			if len(chapter.sheets) == 0 {
-				s += "<b>" + hEsc(locStr(chapter.Title, me.lang)) + "</b>"
-			} else {
-				numpages := len(chapter.SheetsPerPage)
-				dt1, dt2 := chapter.dateRangeOfSheets(false)
-				sdt1, sdt2 := dt1.Format("Jan 2006"), dt2.Format("Jan 2006")
-				sdt := sdt1 + " - " + sdt2
-				if sdt1 == sdt2 {
-					sdt = sdt1
+			numpages := len(chapter.SheetsPerPage)
+			dt1, dt2 := chapter.dateRangeOfSheets(false)
+			sdt1, sdt2 := dt1.Format("Jan 2006"), dt2.Format("Jan 2006")
+			sdt := sdt1 + " - " + sdt2
+			if sdt1 == sdt2 {
+				sdt = dt1.Format("January 2006")
+				if m := dt1.Month().String(); me.lang != App.Proj.Langs[0] {
+					sdt = strings.Replace(sdt, m, me.textStr("Month_"+m), 1)
 				}
-				title := strings.NewReplacer(
-					"%MINS%", itoa(len(chapter.sheets)/4)+"-"+itoa(1+(len(chapter.sheets)/4)),
-					"%NUMPGS%", itoa(numpages),
-					"%NUMPNL%", itoa(chapter.NumPanels()),
-					"%NUMSCN%", itoa(chapter.NumScans()),
-					"%DATEINFO%", sdt,
-				).Replace(me.textStr("ChapStats"))
-				if numpages <= 1 {
-					title = trim(title[1+strings.IndexByte(title, '/'):])
-				}
-				if App.Proj.percentTranslated(me.lang, series, chapter, nil, -1) < 50 {
-					title += " " + me.textStr("Untransl")
-				}
-				s += "<a title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0, true) + ".html'>" + hEsc(locStr(chapter.Title, me.lang)) + "</a>"
 			}
-			if chapter.author != nil && chapter.author != series.author {
-				s += "<br/>" + strings.Replace(
-					strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", chapter.author.String(true), 1),
-					"%YEAR%", sIf(chapter.Year == 0, "", ", "+itoa(chapter.Year)), 1,
-				)
-			} else if chapter.Year != 0 {
-				s += " (" + itoa(chapter.Year) + ")"
+			title := strings.NewReplacer(
+				"%MINS%", itoa(len(chapter.sheets)/4)+"-"+itoa(1+(len(chapter.sheets)/4)),
+				"%NUMPGS%", itoa(numpages),
+				"%NUMPNL%", itoa(chapter.NumPanels()),
+				"%NUMSCN%", itoa(chapter.NumScans()),
+				"%DATEINFO%", sdt,
+			).Replace(me.textStr("ChapStats"))
+			if numpages <= 1 {
+				title = trim(title[1+strings.IndexByte(title, '/'):])
 			}
-			s += "</li>"
+			if App.Proj.percentTranslated(me.lang, series, chapter, nil, -1) < 50 {
+				title += " " + me.textStr("Untransl")
+			}
+			picidxsheet, picidxpanel, picbgpos := 0.0, 0.0, ""
+			if chapter.Pic != nil && len(chapter.Pic) >= 2 {
+				picidxsheet, _ = chapter.Pic[0].(float64)
+				picidxpanel, _ = chapter.Pic[1].(float64)
+				if len(chapter.Pic) > 2 {
+					picbgpos = chapter.Pic[2].(string)
+				}
+			}
+			picname := me.namePanelPic(chapter.sheets[int(picidxsheet)].versions[0], int(picidxpanel), App.Proj.Qualis[0].SizeHint)
+			s += "<a class='" + App.Proj.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + App.Proj.Gen.PicDirName + "/" + picname + ".png\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
+			s += "<div>" + hEsc(locStr(chapter.Title, me.lang)) + "</div>"
+			// if chapter.author != nil && chapter.author != series.author {
+			// 	s += "<br/>" + strings.Replace(
+			// 		strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", chapter.author.String(true), 1),
+			// 		"%YEAR%", sIf(chapter.Year == 0, "", ", "+itoa(chapter.Year)), 1,
+			// 	)
+			// } else if chapter.Year != 0 {
+			// 	s += " (" + itoa(chapter.Year) + ")"
+			// }
+			s += "</a>"
 		}
-		s += "</ul></span><div></div></span>"
+		s += "</span></span>"
 	}
 	{
 		var bbs []string

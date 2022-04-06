@@ -43,6 +43,7 @@ type Chapter struct {
 	StoryboardFile   string
 	GenPanelSvgText  *PanelSvgTextGen
 	Priv             bool
+	Pic              []interface{}
 
 	author       *Author
 	defaultQuali int
