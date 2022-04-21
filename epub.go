@@ -20,7 +20,7 @@ func (me *BookBuild) genBookBuildEpub(outFilePath string, srcFilePaths []string,
 					<nav xmlns:epub="http://www.idpf.org/2007/ops" epub:type="toc" id="toc"><ol>`
 	for _, chap := range me.series.Chapters {
 		pgnr := me.genPrep.pgNrs[lang][chap]
-		xmlnav += `<li><a href="` + itoa0(pgnr, len(itoa(len(srcFilePaths)))) + `.xhtml">` +
+		xmlnav += `<li><a href="` + itoa0pref(pgnr, len(itoa(len(srcFilePaths)))) + `.xhtml">` +
 			locStr(chap.Title, lang) + `</a></li>`
 	}
 	xmlnav += `</ol></nav></body></html>`
@@ -42,9 +42,9 @@ func (me *BookBuild) genBookBuildEpub(outFilePath string, srcFilePaths []string,
 						<item href="nav.xhtml" id="nav" properties="nav" media-type="application/xhtml+xml"/>`
 	for i, srcfilepath := range srcFilePaths {
 		xmlopf += `<item id="p` + itoa(i) + `" media-type="image/png" href="` +
-			itoa0(i+1, len(itoa(len(srcFilePaths)))) + filepath.Ext(srcfilepath) + `"/>`
+			itoa0pref(i+1, len(itoa(len(srcFilePaths)))) + filepath.Ext(srcfilepath) + `"/>`
 		xmlopf += `<item id="h` + itoa(i) + `" media-type="application/xhtml+xml" href="` +
-			itoa0(i+1, len(itoa(len(srcFilePaths)))) + ".xhtml" + `"/>`
+			itoa0pref(i+1, len(itoa(len(srcFilePaths)))) + ".xhtml" + `"/>`
 	}
 	xmlopf += `</manifest><spine>`
 	for i := range srcFilePaths {
@@ -91,7 +91,7 @@ func (me *BookBuild) genBookBuildEpub(outFilePath string, srcFilePaths []string,
 		}
 	}
 	for i, srcfilepath := range srcFilePaths {
-		name := itoa0(i+1, len(itoa(len(srcFilePaths))))
+		name := itoa0pref(i+1, len(itoa(len(srcFilePaths))))
 		xmlpage := `<?xml version="1.0" encoding="UTF-8" ?>
 					<html xmlns="http://www.w3.org/1999/xhtml"><head>
 						<title>` + name + `</title>

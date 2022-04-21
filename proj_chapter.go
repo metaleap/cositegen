@@ -24,6 +24,7 @@ type Series struct {
 	Book            *BookDef
 	GenPanelSvgText *PanelSvgTextGen
 	Priv            bool
+	PgNavNoNextChap bool
 
 	author *Author
 }

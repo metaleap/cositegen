@@ -62,7 +62,7 @@ func ftoa(f float64, prec int) string {
 	return strconv.FormatFloat(f, 'f', prec, 64)
 }
 
-func itoa0(i int, digits int) string {
+func itoa0pref(i int, digits int) string {
 	s := itoa(i)
 	if len(s) >= digits {
 		return s
@@ -375,7 +375,7 @@ var xmlUnescRepl = strings.NewReplacer(
 
 func xmlUnesc(s string) string {
 	for k, v := range hEscs {
-		s = strings.Replace(s, v, string(k), -1)
+		s = strings.ReplaceAll(s, v, string(k))
 	}
 	return strings.Replace(xmlUnescRepl.Replace(s), "&amp;", "&", -1)
 }

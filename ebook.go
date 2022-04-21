@@ -400,7 +400,7 @@ func (me *BookBuild) genBookPrep(sg *siteGen, outDirPath string) {
 					sheetsvgfilepaths = append(sheetsvgfilepaths, svgfilepath)
 					me.genBookSheetSvg(sv, svgfilepath, dirrtl, lang)
 					if ((i % 2) != 0) || !me.config.TwoSheetsPerPage {
-						pagesvgfilename := "p" + itoa0(pgnr, 3) + sIf(dirrtl, "_rtl_", "_ltr_") + lang + ".svg"
+						pagesvgfilename := "p" + itoa0pref(pgnr, 3) + sIf(dirrtl, "_rtl_", "_ltr_") + lang + ".svg"
 						pagesvgfilepath := filepath.Join(me.genPrep.dirPath, pagesvgfilename)
 						pagesvgfilepaths = append(pagesvgfilepaths, pagesvgfilepath)
 						var doublearrow bool
@@ -483,7 +483,7 @@ func (me *BookBuild) genBookSheetPageSvg(outFilePath string, sheetImgFilePaths [
 	}
 
 	if pgy := itoa(cb + (config.PageSize.pxHeight() - int(float64(config.OffsetsMm.Small)*mm1))); !me.NoPageNumsOrArrows {
-		svg += `<text dx="0" dy="0" x="` + itoa(cb+int(float64(mmpgx)*mm1)) + `" y="` + pgy + `">` + itoa0(pgNr, 3) + `</text>`
+		svg += `<text dx="0" dy="0" x="` + itoa(cb+int(float64(mmpgx)*mm1)) + `" y="` + pgy + `">` + itoa0pref(pgNr, 3) + `</text>`
 		if doubleSpreadArrowIndicator { // ➪
 			svg += `<text dx="0" dy="0" x="` + itoa(cb+w/2) + `" y="` + pgy + `">&#10155;</text>`
 		}
@@ -862,7 +862,7 @@ func (me *BookBuild) genBookBuild(outDirPath string, lang string, dirRtl bool, r
 		for i := range chap.sheets {
 			if ((i % 2) != 0) || !me.config.TwoSheetsPerPage {
 				srcfilepaths = append(srcfilepaths, filepath.Join(me.genPrep.dirPath,
-					"p"+itoa0(pgnr, 3)+sIf(dirRtl, "_rtl_", "_ltr_")+lang+".svg"+"."+itoa(res)+".png"))
+					"p"+itoa0pref(pgnr, 3)+sIf(dirRtl, "_rtl_", "_ltr_")+lang+".svg"+"."+itoa(res)+".png"))
 				pgnr++
 			}
 		}
@@ -909,7 +909,7 @@ func (*BookBuild) genBookBuildCbz(outFilePath string, srcFilePaths []string, lan
 
 	zw := zip.NewWriter(outfile)
 	for i, srcfilepath := range srcFilePaths {
-		if fw, err := zw.Create(itoa0(i+1, len(itoa(len(srcFilePaths)))) + filepath.Ext(srcfilepath)); err != nil {
+		if fw, err := zw.Create(itoa0pref(i+1, len(itoa(len(srcFilePaths)))) + filepath.Ext(srcfilepath)); err != nil {
 			panic(err)
 		} else {
 			io.Copy(fw, bytes.NewReader(fileRead(srcfilepath)))

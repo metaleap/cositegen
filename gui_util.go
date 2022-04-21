@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/xml"
 	"fmt"
 	"html"
 	"strconv"
@@ -48,6 +49,24 @@ func init() {
 	}
 	hEscRepl = strings.NewReplacer(repl...)
 	preRepl = strings.NewReplacer("<pre>", "", "</pre>", "", "&quot;", "\"") // for automatic PageDesc
+}
+
+func xEsc(s string) string {
+	var sb strings.Builder
+	if err := xml.EscapeText(&sb, []byte(s)); err != nil {
+		panic(err)
+	}
+	s = sb.String()
+	for again := true; again; {
+		again = false
+		for _, r := range s {
+			if r >= 128 {
+				again, s = true, strings.ReplaceAll(s, string(r), "&#"+itoa(int(r))+";")
+				break
+			}
+		}
+	}
+	return s
 }
 
 func hEsc(s string) string {

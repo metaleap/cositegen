@@ -131,7 +131,6 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 			mu.Unlock()
 		}
 		numsvgs, numpngs, numsheets, numpanels, totalsize := me.genOrCopyPanelPics()
-		numpngs += me.copyHomeThumbsPngs()
 		qstats := make(map[*Chapter][]int64, len(chapterqstats))
 		for chapter, namesandsizes := range chapterqstats {
 			min, chq := int64(0), make([]int64, len(App.Proj.Qualis))
@@ -408,7 +407,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 
 	} else {
 		series := chapter.parentSeries
-		me.page.HrefHome += "#" + strings.ToLower(series.Name)
+		// me.page.HrefHome += "#" + strings.ToLower(series.Name)
 		chaptitlewords := strings.Split(hEsc(trim(locStr(chapter.Title, me.lang))), " ")
 		for i, word := range chaptitlewords {
 			chaptitlewords[i] = "<nobr>" + word + "</nobr>"
@@ -548,14 +547,6 @@ func (me *siteGen) prepHomePage() {
 			picname := me.namePanelPic(chapter.sheets[int(picidxsheet)].versions[0], int(picidxpanel), App.Proj.Qualis[1].SizeHint)
 			s += "<a class='" + App.Proj.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + App.Proj.Gen.PicDirName + "/" + picname + ".png\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
 			s += "<div>" + hEsc(locStr(chapter.Title, me.lang)) + "</div>"
-			// if chapter.author != nil && chapter.author != series.author {
-			// 	s += "<br/>" + strings.Replace(
-			// 		strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", chapter.author.String(true), 1),
-			// 		"%YEAR%", sIf(chapter.Year == 0, "", ", "+itoa(chapter.Year)), 1,
-			// 	)
-			// } else if chapter.Year != 0 {
-			// 	s += " (" + itoa(chapter.Year) + ")"
-			// }
 			s += "</a>"
 		}
 		s += "</span></span>"
@@ -728,7 +719,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		}
 
 		nextchap := chapter.NextAfter(true)
-		if pageNr == numpages && istoplist && nextchap != nil {
+		if pageNr == numpages && istoplist && nextchap != nil && !chapter.parentSeries.PgNavNoNextChap {
 			name := me.namePage(nextchap, quali.SizeHint, 1, viewMode, "", me.lang, 0, me.bgCol)
 			s += "<li class='" + App.Proj.Gen.APaging + App.Proj.Gen.ClsChapter + "'><a href='./" + name + ".html'>" + locStr(nextchap.Title, me.lang) + "</a></li>"
 		}
@@ -994,9 +985,6 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 				if chapter.Priv {
 					continue
 				}
-				if (pubdate == "2022-01-28") &&
-					(chapter.Name == "2112-parker-t-allan-2019-glitches") {
-				}
 				pgnr, numpanels, numsheets, pages := -1, 0, 0, map[int]bool{}
 				for _, sheet := range chapter.sheets {
 					for _, sv := range sheet.versions {
@@ -1020,9 +1008,9 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 					if entryidx++; tlatest == "" || tpub > tlatest {
 						tlatest = tpub
 					}
-					href := "http://" + App.Proj.SiteHost + "/" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, pgnr, "s", "", me.lang, 0, true) + ".html"
+					href := "http://" + App.Proj.SiteHost + "/" + me.namePage(chapter, App.Proj.Qualis[1].SizeHint, pgnr, "s", "", me.lang, 0, true) + ".html"
 					xml := `<entry><updated>` + tpub + `Z</updated>`
-					xml += `<title>` + hEsc(locStr(chapter.parentSeries.Title, me.lang)) + `: ` + hEsc(locStr(chapter.Title, me.lang)) + `</title>`
+					xml += `<title>` + xEsc(locStr(chapter.parentSeries.Title, me.lang)) + `: ` + xEsc(locStr(chapter.Title, me.lang)) + `</title>`
 					xml += `<id>` + href + `</id><link href="` + href + `"/>`
 					xml += `<author><name>` + App.Proj.SiteHost + `</name></author>`
 					xml += `<content type="text">` + strings.NewReplacer(
@@ -1067,26 +1055,8 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 	return
 }
 
-func (me *siteGen) copyHomeThumbsPngs() (numPngs uint32) {
-	for _, series := range App.Proj.Series {
-		if series.Priv {
-			continue
-		}
-		thumbfilename := me.nameThumb(series) + ".png"
-		if srcfilepath, dstfilepath := ".ccache/"+thumbfilename, ".build/"+App.Proj.Gen.PicDirName+"/"+thumbfilename; fileStat(srcfilepath) != nil {
-			numPngs++
-			fileLinkOrCopy(srcfilepath, dstfilepath)
-		}
-	}
-	return
-}
-
 func (siteGen) namePanelPic(sheetVer *SheetVer, pIdx int, qualiSizeHint int) string {
 	return sheetVer.DtStr() + sheetVer.id + itoa(pIdx) + "." + itoa(qualiSizeHint)
-}
-
-func (siteGen) nameThumb(series *Series) string {
-	return "_" + App.Proj.DirModes.Ltr.Name + "-" + App.Proj.DirModes.Rtl.Name + "-" + strings.ToLower(series.UrlName) + "." + itoa(App.Proj.NumSheetsInHomeBgs)
 }
 
 func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, viewMode string, dirMode string, langId string, svDt int64, bgCol bool) string {

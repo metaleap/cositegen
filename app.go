@@ -2,10 +2,8 @@ package main
 
 import (
 	"errors"
-	"image/color"
 	_ "image/png"
 	"io/fs"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -87,7 +85,6 @@ func appPrepWork(fromGui bool) {
 	timedLogged("Reprocessing...", func() string {
 		var numjobs, numwork int
 		for _, series := range App.Proj.Series {
-			var didanywork bool
 			for _, chapter := range series.Chapters {
 				for _, sheet := range chapter.sheets {
 					for _, sv := range sheet.versions {
@@ -97,41 +94,13 @@ func appPrepWork(fromGui bool) {
 								didwork := sv.ensurePrep(true, false)
 								if sv.prep.done, numjobs = true, numjobs+1; didwork {
 									printLn(time.Now().Format("15:04:05") + "\t#" + itoa(1+numwork) + "\t" + sv.fileName)
-									numwork, didanywork = numwork+1, true
+									numwork = numwork + 1
 								}
 							}
 							sv.prep.Unlock()
 						}
 					}
 				}
-			}
-			var thumbsrcfilenames FilePathsSortingByModTime
-			for _, sv := range series.allSheetVersSortedByScanDate(true) {
-				thumbsrcfilenames = append(thumbsrcfilenames, sv.data.bwSmallFilePath)
-			}
-			const maxthumbs = 22
-			if App.Proj.NumSheetsInHomeBgs > maxthumbs {
-				App.Proj.NumSheetsInHomeBgs = maxthumbs
-			}
-			thumbname := siteGen{}.nameThumb(series)
-			thumbfilepath, idxdot := ".ccache/"+thumbname+".png", 1+strings.LastIndexByte(thumbname, '.')
-			for i := 0; i < maxthumbs; i++ {
-				if i != App.Proj.NumSheetsInHomeBgs {
-					_ = os.Remove(".ccache/" + thumbname[:idxdot] + itoa(i) + ".png")
-				}
-			}
-			if didanywork || len(thumbsrcfilenames) == 0 || App.Proj.NumSheetsInHomeBgs == 0 {
-				_ = os.Remove(thumbfilepath)
-			}
-			if len(thumbsrcfilenames) > 0 && App.Proj.NumSheetsInHomeBgs > 0 &&
-				(didanywork || nil == fileStat(thumbfilepath)) {
-				if len(thumbsrcfilenames) > App.Proj.NumSheetsInHomeBgs {
-					thumbsrcfilenames = thumbsrcfilenames[len(thumbsrcfilenames)-App.Proj.NumSheetsInHomeBgs:]
-				}
-				rand.Shuffle(len(thumbsrcfilenames), func(i int, j int) {
-					thumbsrcfilenames[i], thumbsrcfilenames[j] = thumbsrcfilenames[j], thumbsrcfilenames[i]
-				})
-				fileWrite(thumbfilepath, imgStitchHorizontally(thumbsrcfilenames, 320, 44, color.NRGBA{0, 0, 0, 0}))
 			}
 		}
 		App.Proj.allPrepsDone = true
