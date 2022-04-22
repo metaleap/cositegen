@@ -24,7 +24,6 @@ type Series struct {
 	Book            *BookDef
 	GenPanelSvgText *PanelSvgTextGen
 	Priv            bool
-	PgNavNoNextChap bool
 
 	author *Author
 }
@@ -78,11 +77,32 @@ func (me *Series) At(i int) fmt.Stringer { return me.Chapters[i] }
 func (me *Series) Len() int              { return len(me.Chapters) }
 func (me *Series) String() string        { return me.Name }
 
+func (me *Series) numNonPrivChaptersWithSheets() (r int) {
+	for _, chap := range me.Chapters {
+		if len(chap.sheets) != 0 && !chap.Priv {
+			r++
+		}
+	}
+	return
+}
+
 func (me *Series) numSheets() (ret int) {
 	for _, chap := range me.Chapters {
 		ret += len(chap.sheets)
 	}
 	return
+}
+
+func (me *Series) hasScanYear(year int) bool {
+	for _, chap := range me.Chapters {
+		for _, sheet := range chap.sheets {
+			dt := time.Unix(0, sheet.versions[0].dateTimeUnixNano)
+			if dtyear := dt.Year(); dtyear == year {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (me *Series) allSheetVersSortedByScanDate(skipPriv bool) (ret []*SheetVer) {
@@ -128,11 +148,11 @@ func (me *Series) dateRange() (dtOldest int64, dtNewest int64) {
 
 func (me *Chapter) NextAfter(withSheetsOnly bool) *Chapter {
 	series := me.parentSeries
-	for now, i := false, 0; i < len(series.Chapters); i++ {
-		if now && (len(series.Chapters[i].sheets) > 0 || !withSheetsOnly) {
+	for ok, i := false, 0; i < len(series.Chapters); i++ {
+		if ok && (len(series.Chapters[i].sheets) > 0 || !withSheetsOnly) {
 			return series.Chapters[i]
 		}
-		now = (series.Chapters[i] == me)
+		ok = (series.Chapters[i] == me)
 	}
 	if series.Chapters[0] == me || (withSheetsOnly && 0 == len(series.Chapters[0].sheets)) {
 		return nil
@@ -151,6 +171,16 @@ func (me *Chapter) NumPanels() (ret int) {
 func (me *Chapter) NumScans() (ret int) {
 	for _, sheet := range me.sheets {
 		ret += len(sheet.versions)
+	}
+	return
+}
+
+func (me *Chapter) scanYearLatest() (r int) {
+	for _, sheet := range me.sheets {
+		dt := time.Unix(0, sheet.versions[0].dateTimeUnixNano)
+		if dtyear := dt.Year(); dtyear > r {
+			r = dtyear
+		}
 	}
 	return
 }
@@ -184,6 +214,10 @@ func (me *Chapter) ensureSheetsPerPage() {
 			}
 		}
 	}
+}
+
+func (me *Chapter) readDurationMinutes() int {
+	return len(me.sheets) / 4
 }
 
 func (me *Chapter) HasBgCol() bool {

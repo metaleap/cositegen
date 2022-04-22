@@ -358,7 +358,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 }
 
 func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) (numFilesWritten int) {
-	homename, repl := "index", strings.NewReplacer(
+	homename, repl := me.namePage(nil, 0, 0, "", "", "", 0, false), strings.NewReplacer(
 		"%LANG"+me.lang+"%", itoa(int(App.Proj.percentTranslated(me.lang, nil, nil, nil, -1))),
 	)
 	me.page = PageGen{
@@ -382,10 +382,6 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 	}
 	if me.dirRtl {
 		me.page.PageDirCur, me.page.PageDirAlt = "rtl", "ltr"
-		homename += "." + App.Proj.DirModes.Rtl.Name
-	}
-	if me.lang != App.Proj.Langs[0] {
-		homename += "." + me.lang
 	}
 	me.page.HrefHome = "./" + homename + ".html"
 
@@ -412,7 +408,8 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 		for i, word := range chaptitlewords {
 			chaptitlewords[i] = "<nobr>" + word + "</nobr>"
 		}
-		me.page.PageTitle = "<span>" + hEsc(locStr(series.Title, me.lang)) + ":</span> " + strings.Join(chaptitlewords, " ")
+		homelink := me.namePage(nil, 0, 0, "", "", "", 0, false) + ".html#" + series.Name + "_" + chapter.Name
+		me.page.PageTitle = "<a href='" + homelink + "'><span>" + hEsc(locStr(series.Title, me.lang)) + ":</span></a> " + strings.Join(chaptitlewords, " ")
 		me.page.PageTitleTxt = hEsc(locStr(series.Title, me.lang)) + ": " + hEsc(locStr(chapter.Title, me.lang))
 		var author string
 		if chapter.author != nil {
@@ -422,7 +419,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 		}
 		desc := locStr(chapter.DescHtml, me.lang)
 		if desc == "" && chapter.Year != 0 && chapter.StoryUrls.LinkHref != "" {
-			desc = "<a target='_blank' rel='noreferrer' href='https://" + chapter.StoryUrls.LinkHref + "'><pre>" + sIf(chapter.StoryUrls.DisplayUrl != "", chapter.StoryUrls.DisplayUrl, chapter.StoryUrls.LinkHref) + "</pre></a>"
+			desc = "<a target='_blank' rel='noreferrer' href='https://" + chapter.StoryUrls.LinkHref + "'><pre title='" + strings.Join(chapter.StoryUrls.Alt, "&#10;") + "'>" + sIf(chapter.StoryUrls.DisplayUrl != "", chapter.StoryUrls.DisplayUrl, chapter.StoryUrls.LinkHref) + "</pre></a>"
 			skiptitle := chapter.TitleOrig == "" && (me.lang == App.Proj.Langs[0] || locStr(chapter.Title, App.Proj.Langs[0]) == locStr(chapter.Title, me.lang))
 			desc = "Story: " + sIf(skiptitle, "", "&quot;"+sIf(chapter.TitleOrig != "", chapter.TitleOrig, locStr(chapter.Title, App.Proj.Langs[0]))+"&quot;, ") + desc
 		}
@@ -488,68 +485,80 @@ const noice = true
 
 func (me *siteGen) prepHomePage() {
 	s := "<div class='" + App.Proj.Gen.ClsNonViewerPage + "'>"
-	for _, series := range me.series {
-		var gotsheets bool
-		for _, chapter := range series.Chapters {
-			if gotsheets = (len(chapter.sheets) > 0 && !chapter.Priv); gotsheets {
-				break
-			}
-		}
-		if series.Priv || len(series.Chapters) == 0 || !gotsheets {
-			continue
-		}
-
-		var author string
-		if series.author != nil {
-			author = strings.Replace(
-				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", series.author.String(true), 1),
-				"%YEAR%", sIf(series.Year == 0, "", ", "+itoa(series.Year)), 1)
-		}
-		s += "<span class='" + App.Proj.Gen.ClsSeries + "'>"
-		s += "<h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + "</h5>"
-		s += "<div class='" + App.Proj.Gen.ClsSeries + "'>" + locStr(series.DescHtml, me.lang) + author + "</div>"
-		s += "<span>"
-		for _, chapter := range series.Chapters {
-			if chapter.Priv || len(chapter.sheets) == 0 {
+	for seryear := time.Now().Year(); seryear >= 2021; seryear-- {
+		for _, series := range me.series {
+			if !series.hasScanYear(seryear) {
 				continue
 			}
-			numpages := len(chapter.SheetsPerPage)
-			dt1, dt2 := chapter.dateRangeOfSheets(false)
-			sdt1, sdt2 := dt1.Format("Jan 2006"), dt2.Format("Jan 2006")
-			sdt := sdt1 + " - " + sdt2
-			if sdt1 == sdt2 {
-				sdt = dt1.Format("January 2006")
-				if m := dt1.Month().String(); me.lang != App.Proj.Langs[0] {
-					sdt = strings.Replace(sdt, m, me.textStr("Month_"+m), 1)
+			var gotsheets bool
+			for _, chapter := range series.Chapters {
+				if chapter.scanYearLatest() != seryear {
+					continue
+				}
+				if gotsheets = (len(chapter.sheets) > 0 && !chapter.Priv); gotsheets {
+					break
 				}
 			}
-			title := strings.NewReplacer(
-				"%MINS%", itoa(len(chapter.sheets)/4)+"-"+itoa(1+(len(chapter.sheets)/4)),
-				"%NUMPGS%", itoa(numpages),
-				"%NUMPNL%", itoa(chapter.NumPanels()),
-				"%NUMSCN%", itoa(chapter.NumScans()),
-				"%DATEINFO%", sdt,
-			).Replace(me.textStr("ChapStats"))
-			if numpages <= 1 {
-				title = trim(title[1+strings.IndexByte(title, '/'):])
+			if series.Priv || len(series.Chapters) == 0 || !gotsheets {
+				continue
 			}
-			if App.Proj.percentTranslated(me.lang, series, chapter, nil, -1) < 50 {
-				title += " " + me.textStr("Untransl")
+
+			var author string
+			if series.author != nil {
+				author = strings.Replace(
+					strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", series.author.String(true), 1),
+					"%YEAR%", sIf(series.Year == 0, "", ", "+itoa(series.Year)), 1)
 			}
-			picidxsheet, picidxpanel, picbgpos := 0.0, 0.0, ""
-			if chapter.Pic != nil && len(chapter.Pic) >= 2 {
-				picidxsheet, _ = chapter.Pic[0].(float64)
-				picidxpanel, _ = chapter.Pic[1].(float64)
-				if len(chapter.Pic) > 2 {
-					picbgpos = chapter.Pic[2].(string)
+			s += "<span class='" + App.Proj.Gen.ClsSeries + "'>"
+			s += "<h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + " (" + itoa(seryear) + ")</h5>"
+			s += "<div class='" + App.Proj.Gen.ClsSeries + "'>" + locStr(series.DescHtml, me.lang) + author + "</div>"
+			s += "<span>"
+			for _, chapter := range series.Chapters {
+				if chapter.Priv || len(chapter.sheets) == 0 || chapter.scanYearLatest() != seryear {
+					continue
 				}
+				numpages := len(chapter.SheetsPerPage)
+				dt1, dt2 := chapter.dateRangeOfSheets(false)
+				sdt1, sdt2 := dt1.Format("Jan 2006"), dt2.Format("Jan 2006")
+				sdt := sdt1 + " - " + sdt2
+				if sdt1 == sdt2 {
+					sdt = dt1.Format("January 2006")
+					if m := dt1.Month().String(); me.lang != App.Proj.Langs[0] {
+						sdt = strings.Replace(sdt, m, me.textStr("Month_"+m), 1)
+					}
+				}
+				chapmins := chapter.readDurationMinutes()
+				title := strings.NewReplacer(
+					"%MINS%", itoa(chapmins)+"-"+itoa(1+chapmins),
+					"%NUMPGS%", itoa(numpages),
+					"%NUMPNL%", itoa(chapter.NumPanels()),
+					"%NUMSCN%", itoa(chapter.NumScans()),
+					"%DATEINFO%", sdt,
+				).Replace(me.textStr("ChapStats"))
+				if numpages <= 1 {
+					title = trim(title[1+strings.IndexByte(title, '/'):])
+				}
+				if App.Proj.percentTranslated(me.lang, series, chapter, nil, -1) < 50 {
+					title += " " + me.textStr("Untransl")
+				}
+				picidxsheet, picidxpanel, picbgpos := 0.0, 0.0, ""
+				if chapter.Pic != nil && len(chapter.Pic) >= 2 {
+					picidxsheet, _ = chapter.Pic[0].(float64)
+					picidxpanel, _ = chapter.Pic[1].(float64)
+					if len(chapter.Pic) > 2 {
+						picbgpos = chapter.Pic[2].(string)
+					}
+				}
+				picname, chid := me.namePanelPic(chapter.sheets[int(picidxsheet)].versions[0], int(picidxpanel), App.Proj.Qualis[1].SizeHint), chapter.parentSeries.Name+"_"+chapter.Name
+				s += "<a name='" + chid + "' id='" + chid + "' class='" + App.Proj.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + App.Proj.Gen.PicDirName + "/" + picname + ".png\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
+				s += "<div>" + hEsc(locStr(chapter.Title, me.lang)) + "</div>"
+				s += "<span><span>" + itoa(chapmins) + "-" + itoa(1+chapmins) + "m</span><span>" +
+					sIf(chapter.Year == 0, "&nbsp;", "&copy;"+itoa(chapter.Year)) + "&nbsp;" + chapter.author.String(false) +
+					"</span></span>"
+				s += "</a>"
 			}
-			picname := me.namePanelPic(chapter.sheets[int(picidxsheet)].versions[0], int(picidxpanel), App.Proj.Qualis[1].SizeHint)
-			s += "<a class='" + App.Proj.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + App.Proj.Gen.PicDirName + "/" + picname + ".png\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
-			s += "<div>" + hEsc(locStr(chapter.Title, me.lang)) + "</div>"
-			s += "</a>"
+			s += "</span></span>"
 		}
-		s += "</span></span>"
 	}
 	{
 		var bbs []string
@@ -718,11 +727,6 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			shidx += numsheets
 		}
 
-		nextchap := chapter.NextAfter(true)
-		if pageNr == numpages && istoplist && nextchap != nil && !chapter.parentSeries.PgNavNoNextChap {
-			name := me.namePage(nextchap, quali.SizeHint, 1, viewMode, "", me.lang, 0, me.bgCol)
-			s += "<li class='" + App.Proj.Gen.APaging + App.Proj.Gen.ClsChapter + "'><a href='./" + name + ".html'>" + locStr(nextchap.Title, me.lang) + "</a></li>"
-		}
 		if s = sIf(numpages == 1, "", s); s != "" {
 			var pg int
 			if pg = pageNr - 1; pg < 1 {
@@ -732,27 +736,30 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			if pg = pageNr + 1; pg > numpages {
 				pg = numpages
 			}
-			nvis, nhref := "none", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svDt, me.bgCol)
+			nvis, nhref, nhome := "none", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svDt, me.bgCol), false
 			if pageNr > 1 && istoplist {
 				pvis = "visible"
 			}
 			if pageNr < numpages {
 				nvis = "inline-block"
-			} else if !istoplist && nextchap != nil {
-				nvis, nhref = "inline-block", me.namePage(nextchap, quali.SizeHint, 1, viewMode, "", me.lang, 0, me.bgCol)
+			} else if chapter.parentSeries.numNonPrivChaptersWithSheets() > 1 {
+				nvis, nhome, nhref = "inline-block", true, me.namePage(nil, 0, 0, "", "", "", 0, false)
 			}
-			ulid := App.Proj.Gen.APaging
-			if !istoplist {
+			phref, nhref = phref+".html", nhref+".html"
+			if nhome {
+				nhref += "#" + chapter.parentSeries.Name + "_" + chapter.Name
+			}
+			if ulid := App.Proj.Gen.APaging; !istoplist {
 				ulid += "b"
 				s = "<ul id='" + ulid + "'>" +
-					"<li><a style='display: " + nvis + "' href='./" + strings.ToLower(nhref) + ".html'>&rarr;</a></li>" +
+					"<li><a style='display: " + nvis + "' href='./" + strings.ToLower(nhref) + "'>&rarr;</a></li>" +
 					s +
 					"</ul>"
 			} else {
 				s = "<ul id='" + ulid + "'>" +
-					"<li><a style='visibility: " + pvis + "' href='./" + strings.ToLower(phref) + ".html'>&larr;</a></li>" +
+					"<li><a style='visibility: " + pvis + "' href='./" + strings.ToLower(phref) + "'>&larr;</a></li>" +
 					s +
-					"<li><a style='display: " + nvis + "' href='./" + strings.ToLower(nhref) + ".html'>&rarr;</a></li>" +
+					"<li><a style='display: " + nvis + "' href='./" + strings.ToLower(nhref) + "'>&rarr;</a></li>" +
 					"</ul>"
 			}
 		}
@@ -1063,10 +1070,16 @@ func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, vie
 	if pageNr < 1 {
 		pageNr = 1
 	}
+	if langId == "" {
+		langId = me.lang
+	}
 	if dirMode == "" {
 		if dirMode = App.Proj.DirModes.Ltr.Name; me.dirRtl {
 			dirMode = App.Proj.DirModes.Rtl.Name
 		}
+	}
+	if chapter == nil {
+		return "index" + sIf(dirMode == App.Proj.DirModes.Ltr.Name, "", "."+App.Proj.DirModes.Rtl.Name) + sIf(langId == App.Proj.Langs[0], "", ".de")
 	}
 	return strings.ToLower(chapter.parentSeries.UrlName + "-" + chapter.UrlName + "-" + itoa(pageNr) + sIf(bgCol && chapter.HasBgCol(), "col", "bw") + strconv.FormatInt(svDt, 36) + viewMode + itoa(qualiSizeHint) + "-" + dirMode + "." + langId)
 }
