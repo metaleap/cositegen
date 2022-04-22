@@ -554,7 +554,7 @@ func (me *siteGen) prepHomePage() {
 				picname, chid := me.namePanelPic(chapter.sheets[int(picidxsheet)].versions[0], int(picidxpanel), App.Proj.Qualis[1].SizeHint), chapter.parentSeries.Name+"_"+chapter.Name
 				s += "<a name='" + chid + "' id='" + chid + "' class='" + App.Proj.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + App.Proj.Gen.PicDirName + "/" + picname + ".png\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
 				s += "<div>" + hEsc(locStr(chapter.Title, me.lang)) + "</div>"
-				s += "<span><span>" + itoa(chapmins) + "-" + itoa(1+chapmins) + "m</span><span>" +
+				s += "<span><span>" + itoa(chapmins) + "-" + itoa(1+chapmins) + me.textStr("Mins") + "</span><span>" +
 					sIf(chapter.Year == 0, "&nbsp;", "&copy;"+itoa(chapter.Year)) + "&nbsp;" + chapter.author.String(false) +
 					"</span></span>"
 				s += "</a>"
@@ -826,15 +826,14 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 
 		} else {
 			allpanels[sv] = pidx
-			hqsrc, name := "", me.namePanelPic(sv, pidx, App.Proj.Qualis[0].SizeHint)
+			imgfilename := me.namePanelPic(sv, pidx, App.Proj.Qualis[0].SizeHint) + ".png"
+			imgfilenamelo := imgfilename
 			for i := qIdx; i > 0; i-- {
-				hqsrc = me.namePanelPic(sv, pidx, App.Proj.Qualis[i].SizeHint) + sIf(App.Proj.Qualis[i].SizeHint == 0, ".svg", ".png")
-				if fileinfo := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + hqsrc); fileinfo != nil && fileinfo.Size() > 0 {
+				filename := me.namePanelPic(sv, pidx, App.Proj.Qualis[i].SizeHint) + sIf(App.Proj.Qualis[i].SizeHint == 0, ".svg", ".png")
+				if fileinfo := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + filename); fileinfo != nil && fileinfo.Size() > 0 {
+					imgfilename = filename
 					break
 				}
-			}
-			if len(hqsrc) > 4 && hqsrc[:len(hqsrc)-4] == name {
-				hqsrc = ""
 			}
 
 			s += "<div id='" + firstpanel + App.Proj.Gen.ClsPanel + "p" + sv.id + itoa(pidx) + "' class='" + App.Proj.Gen.ClsPanel + "'"
@@ -843,9 +842,12 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			}
 			s += ">" + sv.genTextSvgForPanel(pidx, panel, me.lang, true, false)
 			me.sheetPgNrs[sv] = pageNr
-			s += "<img src='./" + App.Proj.Gen.PicDirName + "/" + name + ".png' class='" + App.Proj.Gen.ClsImgHq + "'"
-			if hqsrc != "" {
-				s += " " + App.Proj.Gen.ClsImgHq + "='" + hqsrc + "'"
+			s += "<img src='./" + App.Proj.Gen.PicDirName + "/" + imgfilename + "'"
+			if imgfilenamelo != imgfilename {
+				s += " lowsrc='./" + App.Proj.Gen.PicDirName + "/" + imgfilenamelo + "'"
+			}
+			if pidx == 0 {
+				s += " fetchpriority='high'"
 			}
 			if me.bgCol && sv.data.hasBgCol {
 				if bgsvg := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg.png"); bgsvg != nil {
@@ -1017,10 +1019,15 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 					if entryidx++; tlatest == "" || tpub > tlatest {
 						tlatest = tpub
 					}
-					href := "http://" + App.Proj.SiteHost + "/" + me.namePage(chapter, App.Proj.Qualis[1].SizeHint, pgnr, "s", "", me.lang, 0, true) + ".html"
 					xml := `<entry><updated>` + tpub + `Z</updated>`
 					xml += `<title>` + xEsc(locStr(chapter.parentSeries.Title, me.lang)) + `: ` + xEsc(locStr(chapter.Title, me.lang)) + `</title>`
-					xml += `<id>` + href + `</id><link href="` + href + `"/>`
+					pgname := me.namePage(chapter, App.Proj.Qualis[0].SizeHint, pgnr, "s", "", me.lang, 0, true)
+					xml += `<id>http://` + App.Proj.SiteHost + "/" + pgname + `.html</id>`
+					pgname = me.namePage(chapter, App.Proj.Qualis[1].SizeHint, pgnr, "s", "", me.lang, 0, true)
+					if chapter.UrlJumpName != "" {
+						pgname = chapter.UrlJumpName + sIf(me.lang == App.Proj.Langs[0], "", "."+me.lang)
+					}
+					xml += `<link href="http://` + App.Proj.SiteHost + "/" + pgname + `.html"/>`
 					xml += `<author><name>` + App.Proj.SiteHost + `</name></author>`
 					xml += `<content type="text">` + strings.NewReplacer(
 						"%NUMSVS%", itoa(numsheets),

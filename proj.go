@@ -62,7 +62,6 @@ type Project struct {
 		ClsSheetsView    string
 		ClsRowsView      string
 		ClsSheet         string
-		ClsImgHq         string
 		APaging          string
 		ImgSrcLang       string
 		PicDirName       string
