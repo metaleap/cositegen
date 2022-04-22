@@ -406,7 +406,9 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 		// me.page.HrefHome += "#" + strings.ToLower(series.Name)
 		chaptitlewords := strings.Split(hEsc(trim(locStr(chapter.Title, me.lang))), " ")
 		for i, word := range chaptitlewords {
-			chaptitlewords[i] = "<nobr>" + word + "</nobr>"
+			if len(word) < 16 {
+				chaptitlewords[i] = "<nobr>" + word + "</nobr>"
+			}
 		}
 		homelink := me.namePage(nil, 0, 0, "", "", "", 0, false) + ".html#" + series.Name + "_" + chapter.Name
 		me.page.PageTitle = "<a href='" + homelink + "'><span>" + hEsc(locStr(series.Title, me.lang)) + ":</span></a> " + strings.Join(chaptitlewords, " ")
