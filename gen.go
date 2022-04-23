@@ -739,7 +739,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				pg = numpages
 			}
 			nvis, nhref, nhome := "none", me.namePage(chapter, quali.SizeHint, pg, viewMode, "", me.lang, svDt, me.bgCol), false
-			if pageNr > 1 && istoplist {
+			if pageNr > 1 /*&& istoplist*/ {
 				pvis = "visible"
 			}
 			if pageNr < numpages {
@@ -751,19 +751,15 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			if nhome {
 				nhref += "#" + chapter.parentSeries.Name + "_" + chapter.Name
 			}
-			if ulid := App.Proj.Gen.APaging; !istoplist {
+			ulid := App.Proj.Gen.APaging
+			if !istoplist {
 				ulid += "b"
-				s = "<ul id='" + ulid + "'>" +
-					"<li><a style='display: " + nvis + "' href='./" + strings.ToLower(nhref) + "'>&rarr;</a></li>" +
-					s +
-					"</ul>"
-			} else {
-				s = "<ul id='" + ulid + "'>" +
-					"<li><a style='visibility: " + pvis + "' href='./" + strings.ToLower(phref) + "'>&larr;</a></li>" +
-					s +
-					"<li><a style='display: " + nvis + "' href='./" + strings.ToLower(nhref) + "'>&rarr;</a></li>" +
-					"</ul>"
 			}
+			s = "<ul id='" + ulid + "'>" +
+				"<li><a style='visibility: " + pvis + "' href='./" + strings.ToLower(phref) + "'>&larr;</a></li>" +
+				s +
+				"<li><a style='display: " + nvis + "' href='./" + strings.ToLower(nhref) + "'>&rarr;</a></li>" +
+				"</ul>"
 		}
 		return s
 	}

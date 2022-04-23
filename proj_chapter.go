@@ -217,7 +217,7 @@ func (me *Chapter) ensureSheetsPerPage() {
 }
 
 func (me *Chapter) readDurationMinutes() int {
-	return len(me.sheets) / 4
+	return len(me.sheets) / 2
 }
 
 func (me *Chapter) HasBgCol() bool {
