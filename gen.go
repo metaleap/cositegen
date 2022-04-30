@@ -572,7 +572,7 @@ func (me *siteGen) prepHomePage() {
 				bbs = append(bbs, name)
 			}
 		}
-		if len(bbs) > 0 {
+		if len(bbs) > 0 && App.Proj.Gen.HomepageAlbums {
 			sort.Strings(bbs)
 			s += "<span id='downloads' style='display: none;'><h5>Downloads</h5>"
 			s += "<span style='font-size: larger; display: block'>" + me.textStr("DownHtml") + "</span><ul>"
@@ -1036,25 +1036,27 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 			}
 		}
 	}
-	for _, bb := range App.Proj.BookBuilds {
-		if bb.Priv || bb.PubDate == "" {
-			continue
+	if App.Proj.AtomFile.Albums {
+		for _, bb := range App.Proj.BookBuilds {
+			if bb.Priv || bb.PubDate == "" {
+				continue
+			}
+			tpub := bb.PubDate + `T00:00:00`
+			if tlatest == "" || tpub > tlatest {
+				tlatest = tpub
+			}
+			href := "http://" + App.Proj.SiteHost + "/index" + sIf(me.lang == App.Proj.Langs[0], "", "."+me.lang) + ".html#" + bb.name
+			xml := `<entry><updated>` + tpub + `Z</updated>`
+			xml += `<title>Album: ` + hEsc(locStr(bb.book.Title, me.lang)) + `</title>`
+			xml += `<id>` + href + `</id><link href="` + href + `"/>`
+			xml += `<author><name>` + App.Proj.SiteHost + `</name></author>`
+			xml += `<content type="text">` + strings.NewReplacer(
+				"%NUMPGS%", itoa(bb.numPagesApprox()),
+				"%CBHREF%", href[3+strings.Index(href, "://"):],
+				"%CBNAME%", bb.name,
+			).Replace(locStr(af.ContentTxtAlbums, me.lang)) + `</content>`
+			xmls = append(xmls, xml+`</entry>`)
 		}
-		tpub := bb.PubDate + `T00:00:00`
-		if tlatest == "" || tpub > tlatest {
-			tlatest = tpub
-		}
-		href := "http://" + App.Proj.SiteHost + "/index" + sIf(me.lang == App.Proj.Langs[0], "", "."+me.lang) + ".html#" + bb.name
-		xml := `<entry><updated>` + tpub + `Z</updated>`
-		xml += `<title>Album: ` + hEsc(locStr(bb.book.Title, me.lang)) + `</title>`
-		xml += `<id>` + href + `</id><link href="` + href + `"/>`
-		xml += `<author><name>` + App.Proj.SiteHost + `</name></author>`
-		xml += `<content type="text">` + strings.NewReplacer(
-			"%NUMPGS%", itoa(bb.numPagesApprox()),
-			"%CBHREF%", href[3+strings.Index(href, "://"):],
-			"%CBNAME%", bb.name,
-		).Replace(locStr(af.ContentTxtAlbums, me.lang)) + `</content>`
-		xmls = append(xmls, xml+`</entry>`)
 	}
 	if len(xmls) > 0 && tlatest != "" {
 		filename := af.Name + "." + me.lang + ".atom"

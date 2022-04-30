@@ -33,6 +33,7 @@ type Project struct {
 	AtomFile struct {
 		PubDates         []string
 		Name             string
+		Albums           bool
 		ContentTxt       map[string]string
 		ContentTxtAlbums map[string]string
 	}
@@ -65,6 +66,7 @@ type Project struct {
 		APaging          string
 		ImgSrcLang       string
 		PicDirName       string
+		HomepageAlbums   bool
 		PanelSvgText     PanelSvgTextGen
 	}
 
