@@ -1018,10 +1018,9 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 					}
 					xml := `<entry><updated>` + tpub + `Z</updated>`
 					xml += `<title>` + xEsc(locStr(chapter.parentSeries.Title, me.lang)) + `: ` + xEsc(locStr(chapter.Title, me.lang)) + `</title>`
-					pgname := me.namePage(chapter, App.Proj.Qualis[0].SizeHint, pgnr, "s", "", me.lang, 0, true)
-					xml += `<id>http://` + App.Proj.SiteHost + "/" + pgname + `.html</id>`
-					pgname = me.namePage(chapter, App.Proj.Qualis[1].SizeHint, pgnr, "s", "", me.lang, 0, true)
-					if chapter.UrlJumpName != "" {
+					xml += "<id>info:" + contentHashStr([]byte(series.Name+"_"+chapter.Name+"_"+pubdate+"_"+"_"+me.lang)) + "</id>"
+					pgname := me.namePage(chapter, App.Proj.Qualis[1].SizeHint, pgnr, "s", "", me.lang, 0, true)
+					if chapter.UrlJumpName != "" && pgnr == 1 {
 						pgname = chapter.UrlJumpName + sIf(me.lang == App.Proj.Langs[0], "", "."+me.lang)
 					}
 					xml += `<link href="http://` + App.Proj.SiteHost + "/" + pgname + `.html"/>`
@@ -1061,7 +1060,7 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 	if len(xmls) > 0 && tlatest != "" {
 		filename := af.Name + "." + me.lang + ".atom"
 		s := `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="` + me.lang + `">`
-		s += `<updated>` + tlatest + `Z</updated><title>` + hEsc(App.Proj.SiteTitle) + `</title><link href="http://` + App.Proj.SiteHost + `"/><link rel="self" href="http://` + App.Proj.SiteHost + `/` + filename + `"/><id>http://` + App.Proj.SiteHost + "</id>"
+		s += `<updated>` + tlatest + `Z</updated><title>` + hEsc(App.Proj.SiteTitle) + `</title><link href="http://` + App.Proj.SiteHost + `"/><link rel="self" href="http://` + App.Proj.SiteHost + `/` + filename + `"/><id>http://` + App.Proj.SiteHost + "/</id>"
 		s += "\n" + strings.Join(xmls, "\n") + "\n</feed>"
 		*totalSizeRec = *totalSizeRec + uint64(len(s))
 		fileWrite(".build/"+af.Name+"."+me.lang+".atom", []byte(s))
