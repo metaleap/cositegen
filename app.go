@@ -203,9 +203,9 @@ func pngOpt(pngFilePath string) bool {
 		newfilehash := string(contentHashStr(filedata))
 		known_byid, known_bymeta := App.Proj.data.Sv.ById[curfilehash] != nil, App.Proj.data.Sv.IdsToFileMeta[curfilehash].FilePath != ""
 		_, known_bytexts := App.Proj.data.Sv.textRects[curfilehash]
-		crashit := (newfilehash != curfilehash) && (known_byid || known_bymeta || known_bytexts)
+		crashit := (newfilehash != curfilehash) &&
+			(known_byid || known_bymeta || known_bytexts)
 		if crashit {
-			go exec.Command("beepintime", "1ns").Run()
 			if known_byid {
 				App.Proj.data.Sv.ById[newfilehash] = App.Proj.data.Sv.ById[curfilehash]
 				delete(App.Proj.data.Sv.ById, curfilehash)
@@ -240,8 +240,11 @@ func pngOpt(pngFilePath string) bool {
 					fileWrite(svgfilepath, []byte(strings.ReplaceAll(string(svg), curfilehash, newfilehash)))
 				}
 			}
-			App.Proj.save(os.Getenv("NOGUI") != "")
-			panic("relinked hash from " + curfilehash + " to " + newfilehash + " — intentional crash, restart manually")
+			if os.Getenv("NOCRASH") == "" {
+				_ = exec.Command("beepintime", "1ns").Start()
+				App.Proj.save(os.Getenv("NOGUI") != "")
+				panic("relinked hash from " + curfilehash + " to " + newfilehash + " — intentional crash, restart manually")
+			}
 		} else if strings.HasSuffix(pngFilePath, "/bwsmall."+itoa(int(App.Proj.BwThresholds[0]))+"."+itoa(int(App.Proj.BwSmallWidth))+".png") {
 			if hashid := filepath.Base(filepath.Dir(pngFilePath)); App.Proj.data.Sv.ById != nil {
 				if svdata := App.Proj.data.Sv.ById[hashid]; svdata != nil && svdata.parentSheetVer != nil {
