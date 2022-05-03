@@ -552,7 +552,7 @@ func (me *siteGen) prepHomePage() {
 					}
 				}
 				picname, chid := me.namePanelPic(chapter.sheets[int(picidxsheet)].versions[0], int(picidxpanel), App.Proj.Qualis[1].SizeHint), chapter.parentSeries.Name+"_"+chapter.Name
-				s += "<a name='" + chid + "' id='" + chid + "' class='" + App.Proj.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + App.Proj.Gen.PicDirName + "/" + picname + ".png\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
+				s += "<a name='" + chid + "' id='" + chid + "' class='" + App.Proj.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[chapter.defaultQuali].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + sIf(os.Getenv("NOPICS") != "", "files/white.png", App.Proj.Gen.PicDirName+"/"+picname) + ".png\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
 				s += "<div>" + hEsc(locStr(chapter.Title, me.lang)) + "</div>"
 				s += "<span><span>" + itoa(chapmins) + "-" + itoa(1+chapmins) + me.textStr("Mins") + "</span><span>" +
 					sIf(chapter.Year == 0, "&nbsp;", "&copy;"+itoa(chapter.Year)) + "&nbsp;" + chapter.author.String(true) +
@@ -838,7 +838,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			}
 			s += ">" + sv.genTextSvgForPanel(pidx, panel, me.lang, true, false)
 			me.sheetPgNrs[sv] = pageNr
-			s += "<img src='./" + App.Proj.Gen.PicDirName + "/" + imgfilename + "'"
+			s += "<img src='./" + sIf(os.Getenv("NOPICS") != "", "files/white.png", App.Proj.Gen.PicDirName+"/"+imgfilename) + "'"
 			if imgfilenamelo != imgfilename {
 				s += " lowsrc='./" + App.Proj.Gen.PicDirName + "/" + imgfilenamelo + "'"
 			}
