@@ -180,26 +180,28 @@ func pngOpt(pngFilePath string) bool {
 		return false
 	}
 
-	cmd := exec.Command("pngbattle", pngFilePath)
-	if strings.Contains(pngFilePath, "/bg") {
-		cmd.Env = append(os.Environ(), "NO_RGBA_CHECK=1")
-	}
-	cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
-	if err := cmd.Start(); err != nil {
-		panic(err)
-	}
-	go cmd.Wait()
-	for ; cmd.ProcessState == nil; time.Sleep(time.Second) {
-		if App.Gui.Exiting {
-			_ = cmd.Process.Kill()
-			_ = exec.Command("killall", "zopflipng").Run()
-			_ = exec.Command("killall", "pngbattle").Run()
+	if os.Getenv("OPTFORCE") == "" {
+		cmd := exec.Command("pngbattle", pngFilePath)
+		if strings.Contains(pngFilePath, "/bg") {
+			cmd.Env = append(os.Environ(), "NO_RGBA_CHECK=1")
+		}
+		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
+		if err := cmd.Start(); err != nil {
+			panic(err)
+		}
+		go cmd.Wait()
+		for ; cmd.ProcessState == nil; time.Sleep(time.Second) {
+			if App.Gui.Exiting {
+				_ = cmd.Process.Kill()
+				_ = exec.Command("killall", "zopflipng").Run()
+				_ = exec.Command("killall", "pngbattle").Run()
+				return false
+			}
+		}
+		if !cmd.ProcessState.Success() {
+			printLn(cmd.ProcessState.String())
 			return false
 		}
-	}
-	if !cmd.ProcessState.Success() {
-		printLn(cmd.ProcessState.String())
-		return false
 	}
 	if filedata, err := os.ReadFile(pngFilePath); err == nil {
 		newfilehash := string(contentHashStr(filedata))

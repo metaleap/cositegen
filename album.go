@@ -1,11 +1,13 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"image"
 	"image/color"
 	"image/draw"
 	_ "image/png"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -87,7 +89,7 @@ func (me *AlbumBookGen) genSheetSvgsAndPngs(dirRtl bool) {
 				sheetsvgfilepath := me.sheetSvgPath(i, dirRtl, sIf(forPrint, "", lang))
 				me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, sIf(forPrint, "", lang))
 				sheetpngfilepath := sheetsvgfilepath + ".sh.png"
-				printLn(sheetpngfilepath)
+				printLn(filepath.Base(sheetpngfilepath), "...")
 				imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, 0, false, sIf(forPrint, "shp_", "shs_"))
 				if forPrint || os.Getenv("NOLANG") != "" {
 					break
@@ -160,8 +162,11 @@ func (me *AlbumBookGen) sheetSvgPath(idx int, dirRtl bool, lang string) string {
 
 func (me *AlbumBookGen) genAlbumFilesForScreen(dirRtl bool, lang string) {
 	pgw, pgh := albumBookScreenWidth, int(float64(albumBookScreenWidth)/(float64(me.MaxSheetWidth)/float64(me.MaxSheetHeight)))
+	var pgfilepaths []string
 
 	for i := range me.Sheets {
+		outfilepath := me.sheetSvgPath(i, dirRtl, lang) + ".pg.png"
+		printLn(filepath.Base(outfilepath), "...")
 		imgpg := image.NewNRGBA(image.Rect(0, 0, pgw, pgh))
 		for x := 0; x < pgw; x++ {
 			for y := 0; y < pgh; y++ {
@@ -184,7 +189,38 @@ func (me *AlbumBookGen) genAlbumFilesForScreen(dirRtl bool, lang string) {
 		if err = PngEncoder.Encode(&buf, imgpg); err != nil {
 			panic(err)
 		}
-		fileWrite(me.sheetSvgPath(i, dirRtl, lang)+".pg.png", buf.Bytes())
+		fileWrite(outfilepath, buf.Bytes())
+		pgfilepaths = append(pgfilepaths, outfilepath)
+	}
+
+	{
+		outfilepathcbz := me.OutDirPath + "/screen_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".cbz"
+		printLn(filepath.Base(outfilepathcbz), "...")
+		outfile, err := os.Create(outfilepathcbz)
+		if err != nil {
+			panic(err)
+		}
+		defer outfile.Close()
+		zw := zip.NewWriter(outfile)
+		for _, srcfilepath := range pgfilepaths {
+			if fw, err := zw.Create(filepath.Base(srcfilepath)); err != nil {
+				panic(err)
+			} else {
+				io.Copy(fw, bytes.NewReader(fileRead(srcfilepath)))
+			}
+		}
+		if err := zw.Close(); err != nil {
+			panic(err)
+		}
+		_ = outfile.Sync()
+	}
+
+	{
+		outfilepathpdf := me.OutDirPath + "/screen_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".pdf"
+		cmdArgs := []string{"--pillow-limit-break", "--nodate",
+			"--pagesize", "A5^T"}
+		cmdArgs = append(cmdArgs, pgfilepaths...)
+		osExec(true, nil, "img2pdf", append(cmdArgs, "-o", outfilepathpdf)...)
 	}
 }
 
