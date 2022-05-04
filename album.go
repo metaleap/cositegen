@@ -252,7 +252,7 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) {
 					}
 					text.toc tspan {
 						font-family:"Shark Heavy ABC";
-						font-size: 1cm;
+						font-size: 1.11cm;
 						font-weight: normal;
 					}
 				</style>
@@ -296,7 +296,19 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) {
 	dpadd()
 	{
 		svgpgstart()
-		svg += `<text class="toc" x="50%" y="50%"><tspan>Test 22</tspan></text>`
+		var tocs []int
+		for i, sv := range me.Sheets {
+			if len(tocs) == 0 || sv.parentSheet.parentChapter != me.Sheets[tocs[len(tocs)-1]].parentSheet.parentChapter {
+				tocs = append(tocs, i)
+			}
+		}
+		ypc := 10
+		for _, idx := range tocs {
+			sv := me.Sheets[idx]
+			pgnr := 5 + idx/2
+			svg += `<text class="toc" x="3cm" y="` + itoa(ypc) + `%"><tspan>` + itoa0pref(pgnr, 2) + "........" + locStr(sv.parentSheet.parentChapter.Title, lang) + `</tspan></text>`
+			ypc += 10
+		}
 		svg += "</svg>"
 	}
 	dpadd()
