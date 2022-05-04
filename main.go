@@ -12,12 +12,11 @@ const siteTmplDirName = "site"
 const siteTmplFileName = "site.html"
 
 var browserCmd = []string{"",
-	"--new-window",
-	// "--single-process",
+	"--new-window", // "--single-process",
 	"--user-data-dir=./.ccache/.chromium",
-	"--disk-cache-size=128",
 	"--disable-extensions",
-	"--allow-file-access-from-files"}
+	"--allow-file-access-from-files",
+}
 
 func main() {
 	App.StaticFilesDirPath = filepath.Join(os.Getenv("GOPATH"), "src/github.com/metaleap/cositegen/_static")

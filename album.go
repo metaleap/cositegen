@@ -15,8 +15,10 @@ import (
 )
 
 const (
-	albumBookScreenWidth  = 4096
-	albumBookScreenBorder = 123
+	albumBookScreenWidth      = 4096
+	albumBookScreenBorder     = 123
+	albumBookPrintBorderMmBig = 15
+	albumBookPrintBorderMmLil = 7
 )
 
 type AlbumBookGen struct {
@@ -252,8 +254,12 @@ func (me *AlbumBookGen) genAlbumFilesForPrint(dirRtl bool, lang string) {
 		sheetsvgfilepath0 := me.sheetSvgPath(i*2, dirRtl, lang)
 		sheetsvgfilepath1 := me.sheetSvgPath((i*2)+1, dirRtl, lang)
 		svg += `<text x="50%" y="97%"><tspan>` + itoa(i+1) + `</tspan></text>`
-		svg += `<image x="` + sIf(isoddpage, "15", "7") + `mm" y="15mm" width="188mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath0), brepl, []byte("zzz"), -1)) + `"/>`
-		svg += `<image x="` + sIf(isoddpage, "15", "7") + `mm" y="50%" width="188mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath1), brepl, []byte("zzz"), -1)) + `"/>`
+		topborder := albumBookPrintBorderMmBig
+		if me.Sheets[i*2].parentSheet.parentChapter.Name == "half-pagers" {
+			topborder = albumBookPrintBorderMmLil
+		}
+		svg += `<image x="` + itoa(iIf(isoddpage, albumBookPrintBorderMmBig, albumBookPrintBorderMmLil)) + `mm" y="` + itoa(topborder) + `mm" width="` + itoa(210-(albumBookPrintBorderMmBig+albumBookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath0), brepl, []byte("zzz"), -1)) + `"/>`
+		svg += `<image x="` + itoa(iIf(isoddpage, albumBookPrintBorderMmBig, albumBookPrintBorderMmLil)) + `mm" y="50%" width="` + itoa(210-(albumBookPrintBorderMmBig+albumBookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath1), brepl, []byte("zzz"), -1)) + `"/>`
 		svg += "</svg>"
 		isoddpage = !isoddpage
 	}
@@ -261,11 +267,9 @@ func (me *AlbumBookGen) genAlbumFilesForPrint(dirRtl bool, lang string) {
 
 	outfilepathsvg := me.TmpDirPath + "/print_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".svg"
 	fileWrite(outfilepathsvg, []byte(svg))
-
-	outfilepathpdf := me.OutDirPath + "/print_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".pdf"
-	printLn(osExec(false, nil, browserCmd[0],
-		"--headless", "--disable-gpu", "--print-to-pdf-no-header", "--print-to-pdf=\""+outfilepathpdf+"\"", outfilepathsvg))
-	//	chromium    test.pdf "mytest.svg"
-	// 	https://superuser.com/a/1455109
-
+	if os.Getenv("NOPDF") == "" {
+		outfilepathpdf := me.OutDirPath + "/print_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".pdf"
+		printLn(osExec(false, nil, browserCmd[0],
+			append(browserCmd[2:], "--headless", "--disable-gpu", "--print-to-pdf-no-header", "--print-to-pdf="+outfilepathpdf, outfilepathsvg)...))
+	}
 }
