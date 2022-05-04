@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/base64"
 	"image"
 	"image/color"
 	"image/draw"
@@ -70,8 +71,12 @@ func makeAlbumBook(flags map[string]struct{}) {
 	for _, dirrtl := range []bool{false, true} {
 		gen.genSheetSvgsAndPngs(dirrtl)
 		for _, lang := range App.Proj.Langs {
-			gen.genAlbumFilesForScreen(dirrtl, lang)
-			gen.genAlbumFilesForPrint(dirrtl, lang)
+			if os.Getenv("NOSCREEN") == "" {
+				gen.genAlbumFilesForScreen(dirrtl, lang)
+			}
+			if os.Getenv("NOPRINT") == "" {
+				gen.genAlbumFilesForPrint(dirrtl, lang)
+			}
 			if os.Getenv("NOLANG") != "" {
 				break
 			}
@@ -88,9 +93,11 @@ func (me *AlbumBookGen) genSheetSvgsAndPngs(dirRtl bool) {
 			for _, lang := range App.Proj.Langs {
 				sheetsvgfilepath := me.sheetSvgPath(i, dirRtl, sIf(forPrint, "", lang))
 				me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, sIf(forPrint, "", lang))
-				sheetpngfilepath := sheetsvgfilepath + ".sh.png"
-				printLn(filepath.Base(sheetpngfilepath), "...")
-				imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, 0, false, sIf(forPrint, "shp_", "shs_"))
+				if os.Getenv("NOSCREEN") == "" {
+					sheetpngfilepath := sheetsvgfilepath + ".sh.png"
+					printLn(filepath.Base(sheetpngfilepath), "...")
+					imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, 0, false, sIf(forPrint, "shp_", "shs_"))
+				}
 				if forPrint || os.Getenv("NOLANG") != "" {
 					break
 				}
@@ -136,16 +143,15 @@ func (me *AlbumBookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl boo
 		}
 		svg += `<g id="` + gid + `" clip-path="url(#c` + gid + `)" transform="translate(` + itoa(tx) + ` ` + itoa(py) + `)">`
 		svg += `<defs><clipPath id="c` + gid + `"><rect x="0" y="0"  width="` + itoa(pw) + `" height="` + itoa(ph) + `"></rect></clipPath></defs>`
-		if panelbgpngsrcfilepath := absPath(filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png")); fileStat(panelbgpngsrcfilepath) != nil {
+		if panelbgpngsrcfilepath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png"); fileStat(panelbgpngsrcfilepath) != nil {
 			svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
-                        xlink:href="` + panelbgpngsrcfilepath + `" />`
+						xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(fileRead(panelbgpngsrcfilepath)) + `" />`
 		} else {
 			svg += `<rect x="0" y="0" stroke="#000000" stroke-width="0" fill="#ffffff"
                         width="` + itoa(pw) + `" height="` + itoa(ph) + `"></rect>`
 		}
-		panelpngsrcfilepath := absPath(filepath.Join(sv.data.PicDirPath(App.Proj.Qualis[App.Proj.maxQualiIdx()].SizeHint), itoa(pidx)+".png"))
 		svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
-                    xlink:href="` + panelpngsrcfilepath + `" />`
+					xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(fileRead(filepath.Join(sv.data.PicDirPath(App.Proj.Qualis[App.Proj.maxQualiIdx()].SizeHint), itoa(pidx)+".png"))) + `" />`
 		if lang != "" {
 			svg += sv.genTextSvgForPanel(pidx, p, lang, false, true)
 		}
@@ -225,5 +231,41 @@ func (me *AlbumBookGen) genAlbumFilesForScreen(dirRtl bool, lang string) {
 }
 
 func (me *AlbumBookGen) genAlbumFilesForPrint(dirRtl bool, lang string) {
+	isoddpage, numpages, brepl := true, len(me.Sheets)/2, []byte("tspan.std")
+	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+				width="210mm" height="` + itoa(297*numpages) + `mm">
+				<style type="text/css">
+					@page {margin:0; padding:0;size: 210mm 297mm}
+					svg {margin:0; padding:0;}
+					@font-face { ` +
+		strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) +
+		`}
+					text, text > tspan { ` +
+		strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + `
+						font-size: 1em;
+						stroke-width: 0px !important;
+					}
+				</style>
+		`
+	for i := 0; i < numpages; i++ {
+		svg += `<svg x="0" y="` + itoa(i*297) + `mm" width="210mm" height="297mm">`
+		sheetsvgfilepath0 := me.sheetSvgPath(i*2, dirRtl, lang)
+		sheetsvgfilepath1 := me.sheetSvgPath((i*2)+1, dirRtl, lang)
+		svg += `<text x="50%" y="97%"><tspan>` + itoa(i+1) + `</tspan></text>`
+		svg += `<image x="` + sIf(isoddpage, "15", "7") + `mm" y="15mm" width="188mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath0), brepl, []byte("zzz"), -1)) + `"/>`
+		svg += `<image x="` + sIf(isoddpage, "15", "7") + `mm" y="50%" width="188mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath1), brepl, []byte("zzz"), -1)) + `"/>`
+		svg += "</svg>"
+		isoddpage = !isoddpage
+	}
+	svg += "</svg>"
+
+	outfilepathsvg := me.TmpDirPath + "/print_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".svg"
+	fileWrite(outfilepathsvg, []byte(svg))
+
+	outfilepathpdf := me.OutDirPath + "/print_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".pdf"
+	printLn(osExec(false, nil, browserCmd[0],
+		"--headless", "--disable-gpu", "--print-to-pdf-no-header", "--print-to-pdf=\""+outfilepathpdf+"\"", outfilepathsvg))
+	//	chromium    test.pdf "mytest.svg"
+	// 	https://superuser.com/a/1455109
 
 }
