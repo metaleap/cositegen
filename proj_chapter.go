@@ -93,13 +93,10 @@ func (me *Series) numSheets() (ret int) {
 	return
 }
 
-func (me *Series) hasScanYear(year int) bool {
+func (me *Series) scanYearHas(year int, latestSvOnly bool) bool {
 	for _, chap := range me.Chapters {
-		for _, sheet := range chap.sheets {
-			dt := time.Unix(0, sheet.versions[0].dateTimeUnixNano)
-			if dtyear := dt.Year(); dtyear == year {
-				return true
-			}
+		if chap.scanYearHas(year, latestSvOnly) {
+			return true
 		}
 	}
 	return false
@@ -183,6 +180,19 @@ func (me *Chapter) scanYearLatest() (r int) {
 		}
 	}
 	return
+}
+func (me *Chapter) scanYearHas(year int, latestSvOnly bool) bool {
+	for _, sheet := range me.sheets {
+		for _, sv := range sheet.versions {
+			if dt := time.Unix(0, sv.dateTimeUnixNano); dt.Year() == year {
+				return true
+			}
+			if latestSvOnly {
+				break
+			}
+		}
+	}
+	return false
 }
 
 func (me *Chapter) isSheetOnPgNr(pgNr int, sheetIdx int) (is bool) {

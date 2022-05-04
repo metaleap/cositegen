@@ -112,10 +112,10 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 		if reSize != 0 {
 			cmdargs = append(cmdargs, "-resize", itoa(reSize))
 		} else {
-			cmdargs = append(cmdargs,
-				"-units", "PixelsPerInch",
-				"-set", "units", "PixelsPerInch",
-				"-density", "1200")
+			// cmdargs = append(cmdargs,
+			// 	"-units", "PixelsPerInch",
+			// 	"-set", "units", "PixelsPerInch",
+			// 	"-density", "1200")
 		}
 		_ = osExec(true, nil, "convert", append(cmdargs, tmpfilepath)...)
 	}
@@ -351,6 +351,7 @@ func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, heig
 var svgTxtCounter int
 
 func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId string, lineX int, fontSizeCmA4 float64, perLineDyCmA4 float64, forHtml bool, forEbook bool) (s string) {
+	isstorytitle := (pta.SvgTextTspanStyleAttr == "_storytitle")
 	if svgRepl == nil {
 		repls := []string{
 			" ", "&nbsp;",
@@ -374,32 +375,22 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 	svgTxtCounter++
 
 	if forHtml {
-		hide := (pta.SvgTextTspanStyleAttr == "_storytitle")
-		s += sIf(hide, "<span style='display:none'>", "") +
+		s += sIf(isstorytitle, "<span style='display:none'>", "") +
 			`<use id='_t_` + itoa(svgTxtCounter) + `' xlink:href="t.` + me.parentSheet.parentChapter.parentSeries.Name + `.` + me.parentSheet.parentChapter.Name + `.` + langId + `.svg#` + me.id + `_` + itoa(pidx) + `t` + itoa(tidx+1) + `"/>` +
-			sIf(hide, "</span>", "")
+			sIf(isstorytitle, "</span>", "")
 	} else {
 		mozscale := me.parentSheet.parentChapter.GenPanelSvgText.MozScale > 0.01 && !forEbook
 		if mozscale {
 			s += `<svg class="mz" width="` + itoa(me.data.PanelsTree.Rect.Dx()) + `">`
 		}
 		s += "<text style='font-size: " + itoa(pxfont) + "px;' transform='" + trim(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
-		ts := "<tspan style='" + trim(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'>"
+		ts := "<tspan style='" + trim(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'" + sIf(isstorytitle || strings.Contains(pta.SvgTextTspanStyleAttr, "font-family"), "", " class='std'") + ">"
 		for _, ln := range strings.Split(svgRepl.Replace(hEsc(locStr(pta.Data, langId))), hEscs['\n']) {
 			if ln == "" {
 				ln = "&nbsp;"
 			}
 			ln += hEscs['\n']
 			ts += "<tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>" + ln + "</tspan>"
-			if tripleoffset := 0; !forHtml {
-				if forEbook {
-					tripleoffset = 2
-				}
-				if tripleoffset != 0 {
-					ts += "<tspan dy='" + itoa(-tripleoffset) + "' x='" + itoa(lineX-tripleoffset) + "'>" + ln + "</tspan>"
-					ts += "<tspan dy='" + itoa(tripleoffset+tripleoffset) + "' x='" + itoa(lineX+tripleoffset) + "'>" + ln + "</tspan>"
-				}
-			}
 		}
 		ts += "</tspan>"
 		s += ts /*+ "<title>" + ts + "</title>"*/ + "</text>"

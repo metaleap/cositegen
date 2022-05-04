@@ -489,7 +489,7 @@ func (me *siteGen) prepHomePage() {
 	s := "<div class='" + App.Proj.Gen.ClsNonViewerPage + "'>"
 	for seryear := time.Now().Year(); seryear >= 2021; seryear-- {
 		for _, series := range me.series {
-			if !series.hasScanYear(seryear) {
+			if !series.scanYearHas(seryear, true) {
 				continue
 			}
 			var gotsheets bool
