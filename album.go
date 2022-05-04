@@ -12,6 +12,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 )
@@ -68,13 +69,19 @@ func makeAlbumBook(flags map[string]struct{}) {
 			}
 		}
 	}
+	sort.SliceStable(gen.Sheets, func(i int, j int) bool {
+		return gen.Sheets[i].DtStr() < gen.Sheets[j].DtStr()
+	})
+	for _, sv := range gen.Sheets {
+		printLn(sv.fileName)
+	}
 	if len(gen.Sheets) == 0 {
 		panic("no scans found for: " + phrase)
 	}
 
 	for _, dirrtl := range []bool{false, true} {
-		gen.genSheetSvgsAndPngs(dirrtl)
 		for _, lang := range App.Proj.Langs {
+			gen.genSheetSvgsAndPngs(dirrtl, lang)
 			if os.Getenv("NOSCREEN") == "" {
 				gen.genScreenVersion(dirrtl, lang)
 			}
@@ -91,21 +98,14 @@ func makeAlbumBook(flags map[string]struct{}) {
 	}
 }
 
-func (me *AlbumBookGen) genSheetSvgsAndPngs(dirRtl bool) {
+func (me *AlbumBookGen) genSheetSvgsAndPngs(dirRtl bool, lang string) {
 	for i, sv := range me.Sheets {
-		for _, forPrint := range []bool{false, true} {
-			for _, lang := range App.Proj.Langs {
-				sheetsvgfilepath := me.sheetSvgPath(i, dirRtl, sIf(forPrint, "", lang))
-				me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, sIf(forPrint, "", lang))
-				if os.Getenv("NOSCREEN") == "" {
-					sheetpngfilepath := sheetsvgfilepath + ".sh.png"
-					printLn(filepath.Base(sheetpngfilepath), "...")
-					imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, 0, false, sIf(forPrint, "shp_", "shs_"))
-				}
-				if forPrint || os.Getenv("NOLANG") != "" {
-					break
-				}
-			}
+		sheetsvgfilepath := me.sheetSvgPath(i, dirRtl, lang)
+		me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, lang)
+		if os.Getenv("NOSCREEN") == "" {
+			sheetpngfilepath := sheetsvgfilepath + ".sh.png"
+			printLn(filepath.Base(sheetpngfilepath), "...")
+			imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, 0, false, "sh_")
 		}
 	}
 }
@@ -235,7 +235,7 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 }
 
 func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) {
-	isoddpage, pgidx, numpages, brepl := false, -1, 1+len(me.Sheets)/2, []byte("tspan.std")
+	isoddpage, pgidx, numpages, brepl := false, -1, 4+len(me.Sheets)/2, []byte("tspan.std")
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
 				width="210mm" height="` + itoa(297*numpages) + `mm">
 				<clipPath id="pgcp"><rect x="0" y="0" width="210mm" height="297mm" /></clipPath>
@@ -249,7 +249,11 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) {
 					text, text > tspan { ` +
 		strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + `
 						font-size: 1em;
-						stroke-width: 0px !important;
+					}
+					text.toc tspan {
+						font-family:"Shark Heavy ABC";
+						font-size: 1cm;
+						font-weight: normal;
 					}
 				</style>
 		`
@@ -261,13 +265,13 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) {
 	rand.Shuffle(len(dpbwfilepaths), func(i int, j int) {
 		dpbwfilepaths[i], dpbwfilepaths[j] = dpbwfilepaths[j], dpbwfilepaths[i]
 	})
-	svgpgstart := func() string {
+	svgpgstart := func() {
 		isoddpage = !isoddpage
 		pgidx++
-		return `<svg x="0" y="` + itoa(pgidx*297) + `mm" width="210mm" height="297mm" clip-path="url(#pgcp)">`
+		svg += `<svg x="0" y="` + itoa(pgidx*297) + `mm" width="210mm" height="297mm" clip-path="url(#pgcp)">`
 	}
 	dpadd := func() {
-		svg += svgpgstart()
+		svgpgstart()
 		x, y := -55, -20
 		for true {
 			if x > 210 {
@@ -289,11 +293,18 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) {
 		svg += "</svg>"
 	}
 	dpadd()
+	dpadd()
+	{
+		svgpgstart()
+		svg += `<text class="toc" x="50%" y="50%"><tspan>Test 22</tspan></text>`
+		svg += "</svg>"
+	}
+	dpadd()
 	for i := 0; i < len(me.Sheets)/2; i++ {
-		svg += svgpgstart()
+		svgpgstart()
 		sheetsvgfilepath0 := me.sheetSvgPath(i*2, dirRtl, lang)
 		sheetsvgfilepath1 := me.sheetSvgPath((i*2)+1, dirRtl, lang)
-		svg += `<text x="50%" y="97%"><tspan>` + itoa(i+1) + `</tspan></text>`
+		svg += `<text x="50%" y="97%"><tspan>` + itoa(pgidx+1) + `</tspan></text>`
 		topborder := albumBookPrintBorderMmBig
 		if me.Sheets[i*2].parentSheet.parentChapter.Name == "half-pagers" {
 			topborder = albumBookPrintBorderMmLil
