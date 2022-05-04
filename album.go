@@ -1,5 +1,12 @@
 package main
 
+/*
+B:	Breite	471,50 mm
+H:	Höhe	340,00 mm
+R:	Buchrücken	6,50 mm bei 48
+	20 mm Beschnittzugabe inkl.
+*/
+
 import (
 	"archive/zip"
 	"bytes"
@@ -236,6 +243,9 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 
 func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) {
 	isoddpage, pgidx, numpages, brepl := false, -1, 4+len(me.Sheets)/2, []byte("tspan.std")
+	for (numpages % 4) != 0 {
+		numpages++
+	}
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
 				width="210mm" height="` + itoa(297*numpages) + `mm">
 				<clipPath id="pgcp"><rect x="0" y="0" width="210mm" height="297mm" /></clipPath>
@@ -251,7 +261,7 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) {
 						font-size: 1em;
 					}
 					text.toc tspan {
-						font-family:"Shark Heavy ABC";
+						font-family: "Shark Heavy ABC";
 						font-size: 1.11cm;
 						font-weight: normal;
 					}
@@ -324,6 +334,10 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) {
 		svg += `<image x="` + itoa(iIf(isoddpage, albumBookPrintBorderMmBig, albumBookPrintBorderMmLil)) + `mm" y="` + itoa(topborder) + `mm" width="` + itoa(210-(albumBookPrintBorderMmBig+albumBookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath0), brepl, []byte("zzz"), -1)) + `"/>`
 		svg += `<image x="` + itoa(iIf(isoddpage, albumBookPrintBorderMmBig, albumBookPrintBorderMmLil)) + `mm" y="50%" width="` + itoa(210-(albumBookPrintBorderMmBig+albumBookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath1), brepl, []byte("zzz"), -1)) + `"/>`
 		svg += "</svg>"
+	}
+	dpadd()
+	for (1 + pgidx) < numpages {
+		dpadd()
 	}
 	svg += "</svg>"
 
