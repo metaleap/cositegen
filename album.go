@@ -9,9 +9,11 @@ import (
 	"image/draw"
 	_ "image/png"
 	"io"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const (
@@ -74,10 +76,10 @@ func makeAlbumBook(flags map[string]struct{}) {
 		gen.genSheetSvgsAndPngs(dirrtl)
 		for _, lang := range App.Proj.Langs {
 			if os.Getenv("NOSCREEN") == "" {
-				gen.genAlbumFilesForScreen(dirrtl, lang)
+				gen.genScreenVersion(dirrtl, lang)
 			}
 			if os.Getenv("NOPRINT") == "" {
-				gen.genAlbumFilesForPrint(dirrtl, lang)
+				gen.genPrintVersion(dirrtl, lang)
 			}
 			if os.Getenv("NOLANG") != "" {
 				break
@@ -144,7 +146,7 @@ func (me *AlbumBookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl boo
 			tx = w - pw - px
 		}
 		svg += `<g id="` + gid + `" clip-path="url(#c` + gid + `)" transform="translate(` + itoa(tx) + ` ` + itoa(py) + `)">`
-		svg += `<defs><clipPath id="c` + gid + `"><rect x="0" y="0"  width="` + itoa(pw) + `" height="` + itoa(ph) + `"></rect></clipPath></defs>`
+		svg += `<defs><clipPath id="c` + gid + `"><rect x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"></rect></clipPath></defs>`
 		if panelbgpngsrcfilepath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png"); fileStat(panelbgpngsrcfilepath) != nil {
 			svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
 						xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(fileRead(panelbgpngsrcfilepath)) + `" />`
@@ -168,7 +170,7 @@ func (me *AlbumBookGen) sheetSvgPath(idx int, dirRtl bool, lang string) string {
 	return me.TmpDirPath + "/" + sIf(dirRtl, "r", "l") + itoa0pref(idx, 3) + lang + ".svg"
 }
 
-func (me *AlbumBookGen) genAlbumFilesForScreen(dirRtl bool, lang string) {
+func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 	pgw, pgh := albumBookScreenWidth, int(float64(albumBookScreenWidth)/(float64(me.MaxSheetWidth)/float64(me.MaxSheetHeight)))
 	var pgfilepaths []string
 
@@ -232,10 +234,11 @@ func (me *AlbumBookGen) genAlbumFilesForScreen(dirRtl bool, lang string) {
 	}
 }
 
-func (me *AlbumBookGen) genAlbumFilesForPrint(dirRtl bool, lang string) {
-	isoddpage, numpages, brepl := true, len(me.Sheets)/2, []byte("tspan.std")
+func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) {
+	isoddpage, pgidx, numpages, brepl := false, -1, len(me.Sheets)/2, []byte("tspan.std")
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
 				width="210mm" height="` + itoa(297*numpages) + `mm">
+				<clipPath id="pgcp"><rect x="0" y="0" width="210mm" height="297mm" /></clipPath>
 				<style type="text/css">
 					@page {margin:0; padding:0;size: 210mm 297mm}
 					svg {margin:0; padding:0;}
@@ -249,8 +252,29 @@ func (me *AlbumBookGen) genAlbumFilesForPrint(dirRtl bool, lang string) {
 					}
 				</style>
 		`
-	for i := 0; i < numpages; i++ {
-		svg += `<svg x="0" y="` + itoa(i*297) + `mm" width="210mm" height="297mm">`
+	dpbwfilepaths := make([]string, len(me.Sheets))
+	for i, sv := range me.Sheets {
+		dpbwfilepaths[i] = absPath(sv.data.bwSmallFilePath)
+	}
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(dpbwfilepaths), func(i int, j int) {
+		dpbwfilepaths[i], dpbwfilepaths[j] = dpbwfilepaths[j], dpbwfilepaths[i]
+	})
+	svgpgstart := func() string {
+		isoddpage = !isoddpage
+		pgidx++
+		return `<svg x="0" y="` + itoa(pgidx*297) + `mm" width="210mm" height="297mm" clip-path="url(#pgcp)">`
+	}
+	dpadd := func() {
+		// x, y := -3, -2 // 6cm × 4cm
+		// for !(x > 21 && y > 30) {
+
+		// }
+		// svg += "</svg>"
+	}
+	dpadd()
+	for i := 0; i < len(me.Sheets)/2; i++ {
+		svg += svgpgstart()
 		sheetsvgfilepath0 := me.sheetSvgPath(i*2, dirRtl, lang)
 		sheetsvgfilepath1 := me.sheetSvgPath((i*2)+1, dirRtl, lang)
 		svg += `<text x="50%" y="97%"><tspan>` + itoa(i+1) + `</tspan></text>`
@@ -261,7 +285,6 @@ func (me *AlbumBookGen) genAlbumFilesForPrint(dirRtl bool, lang string) {
 		svg += `<image x="` + itoa(iIf(isoddpage, albumBookPrintBorderMmBig, albumBookPrintBorderMmLil)) + `mm" y="` + itoa(topborder) + `mm" width="` + itoa(210-(albumBookPrintBorderMmBig+albumBookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath0), brepl, []byte("zzz"), -1)) + `"/>`
 		svg += `<image x="` + itoa(iIf(isoddpage, albumBookPrintBorderMmBig, albumBookPrintBorderMmLil)) + `mm" y="50%" width="` + itoa(210-(albumBookPrintBorderMmBig+albumBookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath1), brepl, []byte("zzz"), -1)) + `"/>`
 		svg += "</svg>"
-		isoddpage = !isoddpage
 	}
 	svg += "</svg>"
 
@@ -269,7 +292,7 @@ func (me *AlbumBookGen) genAlbumFilesForPrint(dirRtl bool, lang string) {
 	fileWrite(outfilepathsvg, []byte(svg))
 	if os.Getenv("NOPDF") == "" {
 		outfilepathpdf := me.OutDirPath + "/print_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".pdf"
-		printLn(osExec(false, nil, browserCmd[0],
-			append(browserCmd[2:], "--headless", "--disable-gpu", "--print-to-pdf-no-header", "--print-to-pdf="+outfilepathpdf, outfilepathsvg)...))
+		osExec(false, nil, browserCmd[0],
+			append(browserCmd[2:], "--headless", "--disable-gpu", "--print-to-pdf-no-header", "--print-to-pdf="+outfilepathpdf, outfilepathsvg)...)
 	}
 }
