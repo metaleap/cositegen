@@ -235,13 +235,14 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 }
 
 func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) {
-	isoddpage, pgidx, numpages, brepl := false, -1, len(me.Sheets)/2, []byte("tspan.std")
+	isoddpage, pgidx, numpages, brepl := false, -1, 1+len(me.Sheets)/2, []byte("tspan.std")
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
 				width="210mm" height="` + itoa(297*numpages) + `mm">
 				<clipPath id="pgcp"><rect x="0" y="0" width="210mm" height="297mm" /></clipPath>
 				<style type="text/css">
 					@page {margin:0; padding:0;size: 210mm 297mm}
 					svg {margin:0; padding:0;}
+					image {transform-origin: center;transform-box: fill-box}
 					@font-face { ` +
 		strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) +
 		`}
@@ -252,7 +253,7 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) {
 					}
 				</style>
 		`
-	dpbwfilepaths := make([]string, len(me.Sheets))
+	dpbwidx, dpbwfilepaths := 0, make([]string, len(me.Sheets))
 	for i, sv := range me.Sheets {
 		dpbwfilepaths[i] = absPath(sv.data.bwSmallFilePath)
 	}
@@ -266,11 +267,26 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) {
 		return `<svg x="0" y="` + itoa(pgidx*297) + `mm" width="210mm" height="297mm" clip-path="url(#pgcp)">`
 	}
 	dpadd := func() {
-		// x, y := -3, -2 // 6cm × 4cm
-		// for !(x > 21 && y > 30) {
-
-		// }
-		// svg += "</svg>"
+		svg += svgpgstart()
+		x, y := -55, -20
+		for true {
+			if x > 210 {
+				x, y = -(11 + rand.Intn(22)), y+33
+			} else {
+				x += 46
+			}
+			if x > 210 && y > 297 {
+				break
+			}
+			if dpbwidx++; dpbwidx == len(dpbwfilepaths) {
+				dpbwidx = 0
+			}
+			even := ((dpbwidx % 2) == 0)
+			svg += `<image width="44mm" x="` + itoa(x+iIf(even, 0, 0)) + `mm" y="` + itoa(y) + `mm"
+						xlink:href="file://` + dpbwfilepaths[dpbwidx] + `"
+						opacity="0.44" transform="rotate(` + itoa(iIf(even, 2, -2)) + `)" />`
+		}
+		svg += "</svg>"
 	}
 	dpadd()
 	for i := 0; i < len(me.Sheets)/2; i++ {
