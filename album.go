@@ -240,35 +240,11 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 }
 
 func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) {
-	pgwmm, pghmm, isoddpage, pgidx, numpages, brepl := 210, 297, false, -1, 4+len(me.Sheets)/2, []byte("tspan.std")
+	svgh, pgwmm, pghmm, isoddpage, pgidx, numpages, brepl := 0, 210, 297, false, -1, 4+len(me.Sheets)/2, []byte("tspan.std")
 	for (numpages % 4) != 0 {
 		numpages++
 	}
-	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-				width="` + itoa(pgwmm) + `mm" height="` + itoa(pghmm*numpages) + `mm">
-				<clipPath id="pgcp"><rect x="0" y="0" width="` + itoa(pgwmm) + `mm" height="` + itoa(pghmm) + `mm" /></clipPath>
-				<style type="text/css">
-					@page { margin: 0; padding: 0; line-height: unset; size: ` + itoa(pgwmm) + `mm ` + itoa(pghmm) + `mm; }
-					* { margin: 0; padding: 0; line-height: unset; }
-					svg.pg { background-color: #ff0000; page-break-after: always; break-after: always;}
-					image { transform-origin: center; transform-box: fill-box; }
-					@font-face { ` +
-		strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) +
-		`}
-					text, text > tspan { ` +
-		strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + `
-						font-size: 1em;
-					}
-					text.toc tspan {
-						font-family: "Shark Heavy ABC";
-						font-size: 1.11cm;
-						font-weight: normal;
-						paint-order: stroke;
-						stroke: #ffffff;
-						stroke-width: 1mm;
-					}
-				</style>
-		`
+	svg := ""
 	dpbwidx, dpbwfilepaths := 0, make([]string, len(me.Sheets))
 	for i, sv := range me.Sheets {
 		dpbwfilepaths[i] = absPath(sv.data.bwSmallFilePath)
@@ -280,7 +256,9 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) {
 	svgpgstart := func() {
 		isoddpage = !isoddpage
 		pgidx++
-		svg += `<svg class="pg" x="0" y="` + itoa(pgidx*pghmm) + `.999mm" width="` + itoa(pgwmm) + `mm" height="` + itoa(pghmm-10) + `mm">`
+		y := float64(pgidx*pghmm) + (float64(1+pgidx) * 0.125)
+		svg += `<svg class="pg" x="0" y="` + ftoa(y, -1) + `mm" width="` + itoa(pgwmm) + `mm" height="` + itoa(pghmm) + `mm">`
+		svgh = int(y) + pghmm
 	}
 	dpadd := func(closeTag bool) {
 		svgpgstart()
@@ -343,7 +321,31 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) {
 	for (1 + pgidx) < numpages {
 		dpadd(true)
 	}
-	svg += "</svg>"
+
+	svg = `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+				width="` + itoa(pgwmm) + `mm" height="` + itoa(svgh) + `mm">
+				<style type="text/css">
+					@page { margin: 0; padding: 0; line-height: unset; size: ` + itoa(pgwmm) + `mm ` + itoa(pghmm) + `mm; }
+					* { margin: 0; padding: 0; line-height: unset; }
+					svg.pg { background-color: #ff0000; page-break-after: always; break-after: always;}
+					image { transform-origin: center; transform-box: fill-box; }
+					@font-face { ` +
+		strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) +
+		`}
+					text, text > tspan { ` +
+		strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + `
+						font-size: 1em;
+					}
+					text.toc tspan {
+						font-family: "Shark Heavy ABC";
+						font-size: 1.11cm;
+						font-weight: normal;
+						paint-order: stroke;
+						stroke: #ffffff;
+						stroke-width: 1mm;
+					}
+				</style>
+		` + svg + "</svg>"
 
 	outfilepathsvg := me.TmpDirPath + "/print_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".svg"
 	fileWrite(outfilepathsvg, []byte(svg))
