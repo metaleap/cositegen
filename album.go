@@ -1,12 +1,5 @@
 package main
 
-/*
-B:	Breite	471,50 mm
-H:	Höhe	340,00 mm
-R:	Buchrücken	6,50 mm bei 48
-	20 mm Beschnittzugabe inkl.
-*/
-
 import (
 	"archive/zip"
 	"bytes"
@@ -91,6 +84,9 @@ func makeAlbumBook(flags map[string]struct{}) {
 			}
 			if os.Getenv("NOPRINT") == "" {
 				gen.genPrintVersion(dirrtl, lang)
+				if title := os.Getenv("TITLE"); title != "" {
+					gen.genPrintCover(title)
+				}
 			}
 			if os.Getenv("NOLANG") != "" {
 				break
@@ -355,4 +351,27 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) {
 		osExec(false, nil, browserCmd[0],
 			append(browserCmd[2:], "--headless", "--disable-gpu", "--print-to-pdf-no-header", "--print-to-pdf="+outfilepathpdf, outfilepathsvg)...)
 	}
+}
+
+func (me *AlbumBookGen) genPrintCover(title string) {
+	/*
+	   36		471.5mm (6.5mm, 20mm, 340mm)
+	   52		473mm (8mm)
+	   68		474.5mm (9.5mm)
+	   88		476mm (11mm)
+	   108		477mm (12.5mm)
+	   132		479mm (14mm)
+	   156		480.5mm (15.5mm)
+	   180		482mm (17mm)
+	   204		483.5mm (18.5mm)
+	   228		485mm (20mm)
+	*/
+}
+
+func (me *AlbumBookGen) gatherFaces() (ret []*image.Gray) {
+	// for _ , sv := range me.Sheets{
+	// 	var svimg *image.Gray
+
+	// }
+	return
 }
