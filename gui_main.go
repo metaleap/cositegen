@@ -43,9 +43,6 @@ func guiMain(r *http.Request, notice string) []byte {
 
 	var numseries, numchapters, numsheets int
 	for _, series := range App.Proj.Series {
-		if series.Book != nil {
-			continue
-		}
 		numseries++
 		for _, chapter := range series.Chapters {
 			numchapters, numsheets = numchapters+1, numsheets+len(chapter.sheets)
@@ -108,9 +105,6 @@ func guiMain(r *http.Request, notice string) []byte {
 
 func guiStartView() (s string) {
 	for _, series := range App.Proj.Series {
-		if series.Book != nil {
-			continue
-		}
 		if App.Gui.State.Sel.Series == nil || App.Gui.State.Sel.Series == series {
 			for _, chapter := range series.Chapters {
 				if id := "chk" + itoa(int(time.Now().UnixNano())); App.Gui.State.Sel.Series == nil || App.Gui.State.Sel.Chapter == nil || App.Gui.State.Sel.Chapter == chapter {

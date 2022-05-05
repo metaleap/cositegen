@@ -21,7 +21,6 @@ type Series struct {
 	Year            int
 	StoryUrls       StoryUrls
 	Chapters        []*Chapter
-	Book            *BookDef
 	GenPanelSvgText *PanelSvgTextGen
 	Priv            bool
 

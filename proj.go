@@ -16,26 +16,21 @@ type DirMode struct {
 }
 
 type Project struct {
-	SiteTitle   string
-	SiteHost    string
-	SiteDesc    map[string]string
-	Series      []*Series
-	Authors     map[string]*Author
-	BookDefs    map[string]*BookDef
-	BookConfigs map[string]*BookConfig
-	BookBuilds  map[string]*BookBuild
-	Langs       []string
-	Qualis      []struct {
+	SiteTitle string
+	SiteHost  string
+	SiteDesc  map[string]string
+	Series    []*Series
+	Authors   map[string]*Author
+	Langs     []string
+	Qualis    []struct {
 		Name             string
 		SizeHint         int
 		ExcludeInSiteGen bool
 	}
 	AtomFile struct {
-		PubDates         []string
-		Name             string
-		Albums           bool
-		ContentTxt       map[string]string
-		ContentTxtAlbums map[string]string
+		PubDates   []string
+		Name       string
+		ContentTxt map[string]string
 	}
 	MaxImagePanelTextAreas int
 	BwThresholds           []uint8
@@ -66,7 +61,6 @@ type Project struct {
 		APaging          string
 		ImgSrcLang       string
 		PicDirName       string
-		HomepageAlbums   bool
 		PanelSvgText     PanelSvgTextGen
 	}
 
@@ -131,7 +125,7 @@ func (me *Project) textStr(lang string, key string) (s string) {
 
 func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sheetVer *SheetVer, pgNr int) float64 {
 	numtotal, numtrans, allseries := 0, 0, me.Series
-	if ser != nil && ser.Book != nil {
+	if ser != nil {
 		allseries = []*Series{ser}
 	}
 	for _, series := range allseries {
@@ -208,41 +202,6 @@ func (me *Project) load() (numSheetVers int) {
 
 	if me.Authors == nil {
 		me.Authors = map[string]*Author{}
-	}
-	if me.BookDefs == nil {
-		me.BookDefs = map[string]*BookDef{}
-	}
-	if me.BookBuilds == nil {
-		me.BookBuilds = map[string]*BookBuild{}
-	}
-	if me.BookConfigs == nil {
-		me.BookConfigs = map[string]*BookConfig{}
-	}
-	for name, bookdef := range me.BookDefs {
-		bookdef.name = name
-		if len(bookdef.Title) == 0 {
-			bookdef.Title = map[string]string{me.Langs[0]: name}
-		}
-	}
-	for name, bookconfig := range me.BookConfigs {
-		if len(bookconfig.Title) == 0 {
-			bookconfig.Title = map[string]string{me.Langs[0]: name}
-		}
-	}
-	for name, bb := range me.BookBuilds {
-		bb.name = name
-		if bb.Config != "" {
-			bb.config = *me.BookConfigs[bb.Config]
-		}
-		if bb.Book != "" {
-			bb.book = *me.BookDefs[bb.Book]
-		}
-		if bb.UxSizeHints == nil {
-			bb.UxSizeHints = map[int]string{}
-		}
-	}
-	for _, bb := range me.BookBuilds {
-		bb.mergeOverrides()
 	}
 
 	for _, series := range me.Series {
@@ -428,8 +387,5 @@ func (me *Project) load() (numSheetVers int) {
 		}
 	}
 
-	for _, bb := range me.BookBuilds {
-		bb.series = bb.book.toSeries()
-	}
 	return
 }

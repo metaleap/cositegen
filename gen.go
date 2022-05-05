@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -19,7 +18,6 @@ var viewModes = []string{"s", "r"}
 type siteGen struct {
 	tmpl       *template.Template
 	series     []*Series
-	genBooks   map[string]*BookBuild
 	page       PageGen
 	lang       string
 	bgCol      bool
@@ -69,27 +67,6 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 	var err error
 	tstart := time.Now()
 	me.series = App.Proj.Series
-	if len(flags) != 0 {
-		me.genBooks = map[string]*BookBuild{}
-		for k := range flags {
-			var bbs []*BookBuild
-			if bb := App.Proj.BookBuilds[k]; bb != nil {
-				bbs = append(bbs, bb)
-			} else {
-				for _, bb := range App.Proj.BookBuilds {
-					if bb.Book == k {
-						bbs = append(bbs, bb)
-					}
-				}
-			}
-			if len(bbs) == 0 {
-				panic("Found none of the specified books.")
-			}
-			for _, bb := range bbs {
-				me.genBooks[bb.name] = bb
-			}
-		}
-	}
 	me.sheetPgNrs = map[*SheetVer]int{}
 	printLn("SiteGen started. When done, result will open in new window.")
 	if fromGui {
@@ -197,45 +174,16 @@ func (me siteGen) genSite(fromGui bool, flags map[string]struct{}) {
 		return "for " + itoa(numfileswritten) + " files (~" + strSize64(int64(totalsize)) + ")"
 	})
 
-	if len(me.genBooks) != 0 {
-		timedLogged("SiteGen: generating cbz/pdf files...", func() string {
-			mkDir(".books")
-			for name, bb := range me.genBooks {
-				dirpath := ".books/" + name
-				rmDir(dirpath)
-				mkDir(dirpath)
-				bb.genBookPrep(&me, dirpath)
-
-				for lidx, lang := range App.Proj.Langs {
-					if lidx != 0 && bb.NoLangs {
-						continue
-					}
-					for _, dirrtl := range []bool{false, true} {
-						if dirrtl && bb.NoRtl {
-							continue
-						}
-						for _, res := range bb.PxWidths {
-							bb.genBookBuild(dirpath, lang, dirrtl, res)
-						}
-					}
-				}
-			}
-			return "for files written to .books/*/"
-		})
-	}
-
 	printLn("SiteGen: " + App.Proj.SiteHost + " DONE after " + time.Now().Sub(tstart).String())
-	if len(me.genBooks) == 0 {
-		cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=file://"+os.Getenv("PWD")+"/.build/index.html")...)
-		if err := cmd.Start(); err != nil {
-			printLn("[ERR]\tcmd.Start of " + cmd.String() + ":\t" + err.Error())
-		} else {
-			go func() {
-				if err := cmd.Wait(); err != nil {
-					printLn("[ERR]\tcmd.Wait of " + cmd.String() + ":\t" + err.Error())
-				}
-			}()
-		}
+	cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=file://"+os.Getenv("PWD")+"/.build/index.html")...)
+	if err := cmd.Start(); err != nil {
+		printLn("[ERR]\tcmd.Start of " + cmd.String() + ":\t" + err.Error())
+	} else {
+		go func() {
+			if err := cmd.Wait(); err != nil {
+				printLn("[ERR]\tcmd.Wait of " + cmd.String() + ":\t" + err.Error())
+			}
+		}()
 	}
 }
 
@@ -560,80 +508,6 @@ func (me *siteGen) prepHomePage() {
 				s += "</a>"
 			}
 			s += "</span></span>"
-		}
-	}
-	{
-		var bbs []string
-		for name, bb := range App.Proj.BookBuilds {
-			if bb.Priv || bb.PubDate == "" {
-				continue
-			}
-			if dirStat(".books/"+name) != nil || fileStat(".books/"+name+".json") != nil {
-				bbs = append(bbs, name)
-			}
-		}
-		if len(bbs) > 0 && App.Proj.Gen.HomepageAlbums {
-			sort.Strings(bbs)
-			s += "<span id='downloads' style='display: none;'><h5>Downloads</h5>"
-			s += "<span style='font-size: larger; display: block'>" + me.textStr("DownHtml") + "</span><ul>"
-			for i := len(bbs) - 1; i >= 0; i-- {
-				bb := App.Proj.BookBuilds[bbs[i]]
-				s += "<li id='" + bb.name + "'><b style='font-size: xx-large'>" +
-					hEsc(locStr(bb.book.Title, me.lang)) + "</b> &bull; " +
-					hEsc(locStr(bb.config.Title, me.lang)) + " &bull; " +
-					hEsc(me.textStr("LangName")) + " &bull; " +
-					hEsc(locStr(App.Proj.dirMode(me.dirRtl).Title, me.lang)) + " &bull; " +
-					itoa(bb.book.numSheets) + " " + me.textStr("DownHint")
-				inclseries := map[*Series]bool{}
-				for _, chap := range bb.book.Chapters {
-					for _, seriesname := range chap.FromSeries {
-						inclseries[App.Proj.seriesByName(seriesname)] = true
-					}
-				}
-				for series := range inclseries {
-					s += " <a href='#" + series.Name + "'>" + hEsc(locStr(series.Title, me.lang)) + "</a> &amp;"
-				}
-				s = s[:len(s)-len(" &amp;")] + strings.Replace(hEsc(me.textStr("DownHintNumPgs")),
-					"%NUMPGS%", itoa(bb.numPagesApprox()), 1)
-				s += "<ul>"
-				for _, res := range bb.PxWidths {
-					name, title := bb.id(me.lang, me.dirRtl, res), "~"+itoa(res)+"px"
-					for _, quali := range App.Proj.Qualis {
-						if quali.SizeHint == res {
-							title = quali.Name + " (" + title + ")"
-							break
-						}
-					}
-					if res == 0 {
-						title = "Print (1200dpi)"
-					}
-					s += "<li style='font-size: larger;'>" + hEsc(title)
-					for _, ext := range []string{"pdf", "cbz" /*, "epub"*/} {
-						if res == 0 && ext != "pdf" {
-							continue
-						}
-						filename := name + "." + ext
-						if sizehint := bb.UxSizeHints[res]; sizehint == "" {
-							if filestat := fileStat(".books/" + bb.name + "/" + filename); filestat != nil {
-								bb.UxSizeHints[res] = strSize64(filestat.Size())
-							}
-						}
-						s += " &mdash; <a target='_blank' class='grdlh' rel='noreferrer' href='" + bb.name + "." + ext + "?" + name + "'>" + ext + "</a>"
-					}
-					if sizehint := bb.UxSizeHints[res]; sizehint != "" {
-						if idx := strings.IndexByte(sizehint, '.'); idx > 0 && strings.HasSuffix(sizehint, "MB") {
-							sizehint = sizehint[:idx] + "MB"
-						}
-						s += " &mdash; ~" + sizehint
-					}
-					if res == 0 {
-						s += "; plus <a target='_blank' rel='noreferrer' class='grdlh' href='" + bb.name + ".png?" + bb.name + ".cover" + "'>Cover</a>"
-					}
-					s += "</li>"
-				}
-				s += "</ul></li>"
-			}
-			s += "</ul><div></div></span>"
 		}
 	}
 	s += "</div>"
@@ -1033,28 +907,6 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 					xmls = append(xmls, xml+`</entry>`)
 				}
 			}
-		}
-	}
-	if App.Proj.AtomFile.Albums {
-		for _, bb := range App.Proj.BookBuilds {
-			if bb.Priv || bb.PubDate == "" {
-				continue
-			}
-			tpub := bb.PubDate + `T00:00:00`
-			if tlatest == "" || tpub > tlatest {
-				tlatest = tpub
-			}
-			href := "http://" + App.Proj.SiteHost + "/index" + sIf(me.lang == App.Proj.Langs[0], "", "."+me.lang) + ".html#" + bb.name
-			xml := `<entry><updated>` + tpub + `Z</updated>`
-			xml += `<title>Album: ` + hEsc(locStr(bb.book.Title, me.lang)) + `</title>`
-			xml += `<id>` + href + `</id><link href="` + href + `"/>`
-			xml += `<author><name>` + App.Proj.SiteHost + `</name></author>`
-			xml += `<content type="text">` + strings.NewReplacer(
-				"%NUMPGS%", itoa(bb.numPagesApprox()),
-				"%CBHREF%", href[3+strings.Index(href, "://"):],
-				"%CBNAME%", bb.name,
-			).Replace(locStr(af.ContentTxtAlbums, me.lang)) + `</content>`
-			xmls = append(xmls, xml+`</entry>`)
 		}
 	}
 	if len(xmls) > 0 && tlatest != "" {
