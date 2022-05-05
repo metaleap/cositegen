@@ -178,12 +178,7 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 		outfilepath := me.sheetSvgPath(i, dirRtl, lang) + ".pg.png"
 		printLn(filepath.Base(outfilepath), "...")
 		imgpg := image.NewNRGBA(image.Rect(0, 0, pgw, pgh))
-		for x := 0; x < pgw; x++ {
-			for y := 0; y < pgh; y++ {
-				imgpg.Set(x, y, color.NRGBA{R: 255, G: 255, B: 255, A: 255})
-			}
-		}
-
+		imgFill(imgpg, imgpg.Bounds(), color.NRGBA{R: 255, G: 255, B: 255, A: 255})
 		imgsh, _, err := image.Decode(bytes.NewReader(fileRead(me.sheetSvgPath(i, dirRtl, lang) + ".sh.png")))
 		if err != nil {
 			panic(err)
@@ -373,19 +368,14 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 	outfilepathsvg := me.TmpDirPath + "/printcover.svg"
 	printLn(outfilepathsvg, "...")
 
-	type FaceFile struct {
-		absFilePath string
-		width       int
-		height      int
-	}
-	var faces []FaceFile
+	var faces []string
 	for _, sv := range me.Sheets {
 		var svimg *image.Gray
 		var pidx int
 		var buf bytes.Buffer
 		sv.data.PanelsTree.iter(func(p *ImgPanel) {
 			for i, area := range sv.panelFaceAreas(pidx) {
-				facefilepath := ".ccache/.pngtmp/" + sv.id + itoa0pref(pidx, 2) + itoa0pref(i, 2) + ".png"
+				rect, facefilepath := area.Rect, ".ccache/.pngtmp/face_"+sv.id+itoa0pref(pidx, 2)+itoa0pref(i, 2)+".png"
 				if fileStat(facefilepath) == nil {
 					if svimg == nil {
 						if img, err := png.Decode(bytes.NewReader(fileRead(sv.data.bwFilePath))); err != nil {
@@ -394,13 +384,24 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 							svimg = img.(*image.Gray)
 						}
 					}
+					imgface := svimg.SubImage(rect).(*image.Gray)
+					wh := iIf(rect.Dx() > rect.Dy(), rect.Dx(), rect.Dy())
+					imgsq := image.NewGray(image.Rect(0, 0, wh, wh))
+					imgFill(imgsq, imgsq.Bounds(), color.Gray{255})
+					fx, fy := 0, 0
+					if diff := rect.Dy() - rect.Dx(); diff > 0 {
+						fx = diff / 2
+					} else if diff := rect.Dx() - rect.Dy(); diff > 0 {
+						fy = diff / 2
+					}
+					draw.Draw(imgsq, image.Rect(fx, fy, fx+rect.Dx(), fy+rect.Dy()), imgface, imgface.Bounds().Min, draw.Over)
 					buf.Reset()
-					if err := PngEncoder.Encode(&buf, svimg.SubImage(area.Rect)); err != nil {
+					if err := PngEncoder.Encode(&buf, imgsq); err != nil {
 						panic(err)
 					}
 					fileWrite(facefilepath, buf.Bytes())
 				}
-				faces = append(faces, FaceFile{absPath(facefilepath), area.Rect.Dx(), area.Rect.Dy()})
+				faces = append(faces, absPath(facefilepath))
 			}
 			pidx++
 		})
@@ -428,21 +429,31 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 			fill: #ffffff;
 		}
 	</style>`
-	fw, fx, fy, fidx := 22.0, -11.0, -22.0, 0
-	for {
-		if fx > svgw {
-			fx, fy = -11.0, fy+44.0
-		} else {
-			fx += fw
+	fwh, fpad, fx, fy, fidx := 33.0, 7.77, -7.77, -7.77, 0
+	for first := true; true; first = false {
+		if fy > (svgh + fwh) {
+			fy, fx = -7.77, fx+fwh+fpad
+		} else if !first {
+			fy += fwh + fpad
 		}
-		if fx > svgw && fy > svgh {
+		if fx > (svgw+fwh) && fy > (svgh+fwh) {
 			break
 		}
-		svg += `<image x="` + ftoa(fx, -1) + `mm" y="` + ftoa(fy, -1) + `mm" width="` + ftoa(fw, -1) + `mm"
-					xlink:href="file://` + faces[fidx].absFilePath + `" />`
-		if fidx++; fidx == len(faces) {
+		svg += `<image x="` + ftoa(fx, -1) + `mm" y="` + ftoa(fy, -1) + `mm"
+					width="` + ftoa(fwh, -1) + `mm"  height="` + ftoa(fwh, -1) + `mm"
+					xlink:href="file://` + faces[fidx] + `" />`
+		if fidx++; fidx >= len(faces) {
 			fidx = 0
 		}
+	}
+	svg += `<defs><linearGradient id="lg">
+				<stop offset="0%" style="stop-color:rgb(0,0,0);stop-opacity:0.0"/>
+				<stop offset="50%" style="stop-color:rgb(0,0,0);stop-opacity:1.0"/>
+				<stop offset="100%" style="stop-color:rgb(0,0,0);stop-opacity:0.0"/>
+			</linearGradient></defs>
+			<rect fill="url(#lg)" width="123mm" height="200%" y="-123mm" x="` + ftoa((svgw*0.5)-(123.0*0.5), -1) + `mm" />`
+	if true { // red debug rect: 8mm wide, center
+		svg += `<rect fill="#ff0000" width="8mm" height="200%" y="-123mm" x="` + ftoa((svgw*0.5)-(8.0*0.5), -1) + `mm"/>`
 	}
 	svg += "</svg>"
 
