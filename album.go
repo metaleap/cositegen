@@ -186,7 +186,7 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 				<style type="text/css">
 					text.toc tspan {
 					font-family: "Shark Heavy ABC";
-					font-size: 22.22em;
+					font-size: 4.11em;
 					font-weight: normal;
 					paint-order: stroke;
 					stroke: #ffffff;
@@ -367,7 +367,7 @@ func (me *AlbumBookGen) tocSvg(lang string, percentStep int, forPrint bool) (s s
 			tocs = append(tocs, i)
 		}
 	}
-	ypc := 22
+	ypc := 11
 	for _, idx := range tocs {
 		sv := me.Sheets[idx]
 		pgnr := iIf(forPrint, 5, 2) + idx/iIf(forPrint, 2, 1)
