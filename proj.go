@@ -89,9 +89,9 @@ func (me *Project) hasSvgQuali() bool {
 	return false
 }
 
-func (me *Project) maxQualiIdx() (r int) {
+func (me *Project) maxQualiIdx(siteGenOnly bool) (r int) {
 	for i, quali := range me.Qualis {
-		if quali.SizeHint > me.Qualis[r].SizeHint {
+		if quali.SizeHint > me.Qualis[r].SizeHint && ((!siteGenOnly) || !quali.ExcludeInSiteGen) {
 			r = i
 		}
 	}

@@ -133,7 +133,7 @@ func (me *AlbumBookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl boo
 				}
             </style>`
 
-	pidx, qidx := 0, iIf(os.Getenv("LORES") == "", App.Proj.maxQualiIdx(), 0)
+	pidx, qidx := 0, iIf(os.Getenv("LORES") == "", App.Proj.maxQualiIdx(false), 0)
 
 	sv.data.PanelsTree.iter(func(p *ImgPanel) {
 		px, py, pw, ph := p.Rect.Min.X-rectinner.Min.X, p.Rect.Min.Y-rectinner.Min.Y, p.Rect.Dx(), p.Rect.Dy()
