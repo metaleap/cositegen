@@ -107,7 +107,7 @@ func (me *AlbumBookGen) genSheetSvgsAndPngs(dirRtl bool, lang string) {
 		if os.Getenv("NOSCREEN") == "" {
 			sheetpngfilepath := sheetsvgfilepath + ".sh.png"
 			printLn(sheetpngfilepath, "...")
-			imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, 0, false, "sh_")
+			imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, iIf(os.Getenv("LORES") == "", 0, albumBookScreenWidth/4), false, sIf(os.Getenv("LORES") == "", "sh_", "sh_lq_"))
 		}
 	}
 }
@@ -169,13 +169,38 @@ func (me *AlbumBookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl boo
 }
 
 func (me *AlbumBookGen) sheetSvgPath(idx int, dirRtl bool, lang string) string {
-	return me.TmpDirPath + "/" + sIf(dirRtl, "r", "l") + itoa0pref(idx, 3) + lang + ".svg"
+	return me.TmpDirPath + "/" + sIf(dirRtl, "r", "l") + itoa0pref(idx, 3) + lang + sIf(os.Getenv("LORES") == "", "", "_lq") + ".svg"
 }
 
 func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 	pgw, pgh := albumBookScreenWidth, int(float64(albumBookScreenWidth)/(float64(me.MaxSheetWidth)/float64(me.MaxSheetHeight)))
-	var pgfilepaths []string
+	if os.Getenv("LORES") != "" {
+		pgw, pgh = pgw/4, pgh/4
+	}
 
+	tocfilepathsvg := me.TmpDirPath + "/0toc." + lang + sIf(os.Getenv("LORES") == "", "", "_lq") + ".svg"
+	tocfilepathpng := tocfilepathsvg + ".png"
+	{
+		svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+				width="` + itoa(pgw) + `" height="` + itoa(pgh) + `">
+				<style type="text/css">
+					text.toc tspan {
+					font-family: "Shark Heavy ABC";
+					font-size: 22.22em;
+					font-weight: normal;
+					paint-order: stroke;
+					stroke: #ffffff;
+					stroke-width: 1mm;
+				}
+				</style>
+			`
+		svg += me.tocSvg(lang, 10, false) + "</svg>"
+		fileWrite(tocfilepathsvg, []byte(svg))
+		printLn(tocfilepathpng, "...")
+		imgAnyToPng(tocfilepathsvg, tocfilepathpng, 0, false, sIf(os.Getenv("LORES") == "", "toc_", "toc_lq_"))
+	}
+
+	pgfilepaths := []string{tocfilepathpng}
 	for i := range me.Sheets {
 		outfilepath := me.sheetSvgPath(i, dirRtl, lang) + ".pg.png"
 		printLn(outfilepath, "...")
@@ -222,7 +247,7 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 		_ = outfile.Sync()
 	}
 
-	{
+	if os.Getenv("NOPDF") == "" {
 		outfilepathpdf := me.OutDirPath + "/screen_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".pdf"
 		printLn(outfilepathpdf, "...")
 		cmdArgs := []string{"--pillow-limit-break", "--nodate",
@@ -281,20 +306,7 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) (numPages int)
 	dpadd(true)
 	{
 		dpadd(false)
-		var tocs []int
-		for i, sv := range me.Sheets {
-			if len(tocs) == 0 || sv.parentSheet.parentChapter != me.Sheets[tocs[len(tocs)-1]].parentSheet.parentChapter {
-				tocs = append(tocs, i)
-			}
-		}
-		ypc := 10
-		for _, idx := range tocs {
-			sv := me.Sheets[idx]
-			pgnr := 5 + idx/2
-			svg += `<text class="toc" x="3cm" y="` + itoa(ypc) + `%"><tspan>` + itoa0pref(pgnr, 2) + "........" + locStr(sv.parentSheet.parentChapter.Title, lang) + `</tspan></text>`
-			ypc += 10
-		}
-		svg += "</svg>"
+		svg += me.tocSvg(lang, 10, true) + "</svg>"
 	}
 	dpadd(true)
 	for i := 0; i < len(me.Sheets)/2; i++ {
@@ -344,6 +356,23 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) (numPages int)
 	fileWrite(outfilepathsvg, []byte(svg))
 	if os.Getenv("NOPDF") == "" {
 		me.printSvgToPdf(outfilepathsvg, me.OutDirPath+"/print_"+lang+sIf(dirRtl, "_rtl", "_ltr")+".pdf")
+	}
+	return
+}
+
+func (me *AlbumBookGen) tocSvg(lang string, percentStep int, forPrint bool) (s string) {
+	var tocs []int
+	for i, sv := range me.Sheets {
+		if len(tocs) == 0 || sv.parentSheet.parentChapter != me.Sheets[tocs[len(tocs)-1]].parentSheet.parentChapter {
+			tocs = append(tocs, i)
+		}
+	}
+	ypc := 22
+	for _, idx := range tocs {
+		sv := me.Sheets[idx]
+		pgnr := iIf(forPrint, 5, 2) + idx/iIf(forPrint, 2, 1)
+		s += `<text class="toc" x="5%" y="` + itoa(ypc) + `%"><tspan>` + itoa0pref(pgnr, 2) + "........" + locStr(sv.parentSheet.parentChapter.Title, lang) + `</tspan></text>`
+		ypc += percentStep
 	}
 	return
 }
