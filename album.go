@@ -259,7 +259,7 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) (numPages int)
 	dpadd := func(closeTag bool) {
 		svgpgstart()
 		x, y := -55, -20
-		for true {
+		for {
 			if x > pgwmm {
 				x, y = -(11 + rand.Intn(22)), y+33
 			} else {
@@ -373,20 +373,34 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 	outfilepathsvg := me.TmpDirPath + "/printcover.svg"
 	printLn(outfilepathsvg, "...")
 
-	var faces []*image.Gray
+	type FaceFile struct {
+		absFilePath string
+		width       int
+		height      int
+	}
+	var faces []FaceFile
 	for _, sv := range me.Sheets {
 		var svimg *image.Gray
 		var pidx int
+		var buf bytes.Buffer
 		sv.data.PanelsTree.iter(func(p *ImgPanel) {
-			for _, area := range sv.panelFaceAreas(pidx) {
-				if svimg == nil {
-					if img, err := png.Decode(bytes.NewReader(fileRead(sv.data.bwFilePath))); err != nil {
-						panic(err)
-					} else {
-						svimg = img.(*image.Gray)
+			for i, area := range sv.panelFaceAreas(pidx) {
+				facefilepath := ".ccache/.pngtmp/" + sv.id + itoa0pref(pidx, 2) + itoa0pref(i, 2) + ".png"
+				if fileStat(facefilepath) == nil {
+					if svimg == nil {
+						if img, err := png.Decode(bytes.NewReader(fileRead(sv.data.bwFilePath))); err != nil {
+							panic(err)
+						} else {
+							svimg = img.(*image.Gray)
+						}
 					}
+					buf.Reset()
+					if err := PngEncoder.Encode(&buf, svimg.SubImage(area.Rect)); err != nil {
+						panic(err)
+					}
+					fileWrite(facefilepath, buf.Bytes())
 				}
-				faces = append(faces, svimg.SubImage(area.Rect).(*image.Gray))
+				faces = append(faces, FaceFile{absPath(facefilepath), area.Rect.Dx(), area.Rect.Dy()})
 			}
 			pidx++
 		})
@@ -413,16 +427,23 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 			font-weight: normal;
 			fill: #ffffff;
 		}
-	</style><defs>`
-	var buf bytes.Buffer
-	for i, face := range faces {
-		buf.Reset()
-		if err := PngEncoder.Encode(&buf, face); err != nil {
-			panic(err)
+	</style>`
+	fw, fx, fy, fidx := 22.0, -11.0, -22.0, 0
+	for {
+		if fx > svgw {
+			fx, fy = -11.0, fy+44.0
+		} else {
+			fx += fw
 		}
-		svg += `<image id="f` + itoa(i) + `" width="22mm" xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(buf.Bytes()) + `" />`
+		if fx > svgw && fy > svgh {
+			break
+		}
+		svg += `<image x="` + ftoa(fx, -1) + `mm" y="` + ftoa(fy, -1) + `mm" width="` + ftoa(fw, -1) + `mm"
+					xlink:href="file://` + faces[fidx].absFilePath + `" />`
+		if fidx++; fidx == len(faces) {
+			fidx = 0
+		}
 	}
-	svg += "</defs>"
 	svg += "</svg>"
 
 	fileWrite(outfilepathsvg, []byte(svg))
