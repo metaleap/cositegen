@@ -76,6 +76,7 @@ func makeAlbumBook(flags map[string]struct{}) {
 		panic("no scans found for: " + phrase)
 	}
 
+	var coverdone bool
 	for _, dirrtl := range []bool{false, true} {
 		for _, lang := range App.Proj.Langs {
 			gen.genSheetSvgsAndPngs(dirrtl, lang)
@@ -84,8 +85,9 @@ func makeAlbumBook(flags map[string]struct{}) {
 			}
 			if os.Getenv("NOPRINT") == "" {
 				numpages := gen.genPrintVersion(dirrtl, lang)
-				if title := os.Getenv("TITLE"); title != "" {
-					gen.genPrintCover(title, numpages)
+				if title := os.Getenv("TITLE"); title != "" && !coverdone {
+					coverdone = true
+					go gen.genPrintCover(title, numpages)
 				}
 			}
 			if os.Getenv("NOLANG") != "" {
@@ -104,7 +106,7 @@ func (me *AlbumBookGen) genSheetSvgsAndPngs(dirRtl bool, lang string) {
 		me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, lang)
 		if os.Getenv("NOSCREEN") == "" {
 			sheetpngfilepath := sheetsvgfilepath + ".sh.png"
-			printLn(filepath.Base(sheetpngfilepath), "...")
+			printLn(sheetpngfilepath, "...")
 			imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, 0, false, "sh_")
 		}
 	}
@@ -176,7 +178,7 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 
 	for i := range me.Sheets {
 		outfilepath := me.sheetSvgPath(i, dirRtl, lang) + ".pg.png"
-		printLn(filepath.Base(outfilepath), "...")
+		printLn(outfilepath, "...")
 		imgpg := image.NewNRGBA(image.Rect(0, 0, pgw, pgh))
 		imgFill(imgpg, imgpg.Bounds(), color.NRGBA{R: 255, G: 255, B: 255, A: 255})
 		imgsh, _, err := image.Decode(bytes.NewReader(fileRead(me.sheetSvgPath(i, dirRtl, lang) + ".sh.png")))
@@ -200,7 +202,7 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 
 	{
 		outfilepathcbz := me.OutDirPath + "/screen_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".cbz"
-		printLn(filepath.Base(outfilepathcbz), "...")
+		printLn(outfilepathcbz, "...")
 		outfile, err := os.Create(outfilepathcbz)
 		if err != nil {
 			panic(err)
@@ -222,7 +224,7 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 
 	{
 		outfilepathpdf := me.OutDirPath + "/screen_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".pdf"
-		printLn(filepath.Base(outfilepathpdf), "...")
+		printLn(outfilepathpdf, "...")
 		cmdArgs := []string{"--pillow-limit-break", "--nodate",
 			"--pagesize", "A5^T"}
 		cmdArgs = append(cmdArgs, pgfilepaths...)
@@ -341,9 +343,7 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) (numPages int)
 	outfilepathsvg := me.TmpDirPath + "/print_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".svg"
 	fileWrite(outfilepathsvg, []byte(svg))
 	if os.Getenv("NOPDF") == "" {
-		outfilepathpdf := me.OutDirPath + "/print_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".pdf"
-		printLn(filepath.Base(outfilepathpdf), "...")
-		me.printSvgToPdf(outfilepathsvg, outfilepathpdf)
+		me.printSvgToPdf(outfilepathsvg, me.OutDirPath+"/print_"+lang+sIf(dirRtl, "_rtl", "_ltr")+".pdf")
 	}
 	return
 }
@@ -418,17 +418,19 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 		}
 	}
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-	width="` + ftoa(svgw, -1) + `mm" height="` + ftoa(svgh, -1) + `mm">
-	<style type="text/css">
-		@page { margin: 0; padding: 0; line-height: unset; size: ` + ftoa(svgw, -1) + `mm ` + ftoa(svgh, -1) + `mm; }
-		* { margin: 0; padding: 0; line-height: unset; }
-		text, text > tspan {
-			font-family: "Shark Heavy ABC";
-			font-size: 1.11cm;
-			font-weight: normal;
-			fill: #ffffff;
-		}
-	</style>`
+				width="` + ftoa(svgw-1, -1) + `mm" height="` + ftoa(svgh-1, -1) + `mm">
+				<style type="text/css">
+					@page { margin: 0; padding: 0; line-height: unset; size: ` + ftoa(svgw, -1) + `mm ` + ftoa(svgh, -1) + `mm; }
+					* { margin: 0; padding: 0; line-height: unset; }
+					text, text > tspan {
+						font-family: "Shark Heavy ABC";
+						font-size: 8.88mm;
+						font-weight: normal;
+						fill: #ffffff;
+						writing-mode: vertical-lr;
+						letter-spacing: -0.01em;
+					}
+				</style>`
 	fwh, fpad, fx, fy, fidx := 33.0, 7.77, -7.77, -7.77, 0
 	for first := true; true; first = false {
 		if fy > (svgh + fwh) {
@@ -452,20 +454,20 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 				<stop offset="100%" style="stop-color:rgb(0,0,0);stop-opacity:0.0"/>
 			</linearGradient></defs>
 			<rect fill="url(#lg)" width="123mm" height="200%" y="-123mm" x="` + ftoa((svgw*0.5)-(123.0*0.5), -1) + `mm" />`
-	if true { // red debug rect: 8mm wide, center
-		svg += `<rect fill="#ff0000" width="8mm" height="200%" y="-123mm" x="` + ftoa((svgw*0.5)-(8.0*0.5), -1) + `mm"/>`
+	if false { // red debug rect: 6mm wide, center
+		svg += `<rect fill="#ff0000" width="6mm" height="200%" y="-123mm" x="` + ftoa((svgw*0.5)-(6.0*0.5), -1) + `mm"/>`
 	}
+	svg += `<text x="` + ftoa(0.5+(svgw*0.5), -1) + `mm" y="` + ftoa(svgh/3.0, -1) + `mm"><tspan>` + title + `</tspan></text>`
 	svg += "</svg>"
 
 	fileWrite(outfilepathsvg, []byte(svg))
 	if os.Getenv("NOPDF") == "" {
-		outfilepathpdf := me.OutDirPath + "/printcover.pdf"
-		printLn(filepath.Base(outfilepathpdf), "...")
-		me.printSvgToPdf(outfilepathsvg, outfilepathpdf)
+		me.printSvgToPdf(outfilepathsvg, me.OutDirPath+"/printcover.pdf")
 	}
 }
 
 func (*AlbumBookGen) printSvgToPdf(svgFilePath string, pdfOutFilePath string) {
+	printLn(pdfOutFilePath, "...")
 	osExec(false, nil, browserCmd[0], append(browserCmd[2:],
 		"--headless", "--disable-gpu", "--print-to-pdf-no-header",
 		"--print-to-pdf="+pdfOutFilePath, svgFilePath)...)
