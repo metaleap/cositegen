@@ -186,7 +186,7 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 				<style type="text/css">
 					text.toc tspan {
 					font-family: "Shark Heavy ABC";
-					font-size: 4.11em;
+					font-size: ` + sIf(os.Getenv("LORES") == "", "16", "4") + `em;
 					font-weight: normal;
 					paint-order: stroke;
 					stroke: #ffffff;
