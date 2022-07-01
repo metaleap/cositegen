@@ -11,7 +11,6 @@ import (
 	"io"
 	"math/rand"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -35,7 +34,6 @@ type AlbumBookGen struct {
 }
 
 func makeAlbumBook(flags map[string]bool) {
-	defer exec.Command("beepintime", "1ns").Start()
 	phrase := strings.Join(os.Args[2:], " ")
 	gen := AlbumBookGen{
 		Phrase:     phrase,
@@ -74,6 +72,19 @@ func makeAlbumBook(flags map[string]bool) {
 			}
 		}
 	}
+	repls := map[string]string{"41NCSGP": "57SCBVF"}
+	for i := 0; i < len(gen.Sheets); i++ {
+		if repl := repls[gen.Sheets[i].parentSheet.name]; repl != "" {
+			for j, svr := range gen.Sheets {
+				if svr.parentSheet.name == repl {
+					gen.Sheets[i] = svr
+					gen.Sheets = append(gen.Sheets[:j], gen.Sheets[j+1:]...)
+					i = -1
+					break
+				}
+			}
+		}
+	}
 	sort.SliceStable(gen.Sheets, func(i int, j int) bool {
 		return gen.Sheets[i].DtStr() < gen.Sheets[j].DtStr()
 	})
@@ -89,7 +100,10 @@ func makeAlbumBook(flags map[string]bool) {
 				gen.genScreenVersion(dirrtl, lang)
 			}
 			if os.Getenv("NOPRINT") == "" {
-				numpages := gen.genPrintVersion(dirrtl, lang)
+				numpages := atoi(os.Getenv("ONLYCOV"), 0, 999)
+				if numpages == 0 {
+					numpages = gen.genPrintVersion(dirrtl, lang)
+				}
 				if title := os.Getenv("TITLE"); title != "" && !coverdone {
 					coverdone = true
 					gen.genPrintCover(title, numpages)
@@ -472,27 +486,29 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 
 	const spinemm = 22
 	spinex := (svgw * 0.5) - (float64(spinemm) * 0.5)
-	areawidth, areaheight := spinex-marginmm, svgh-marginmm-marginmm
-	facesperrow, facespercol := 3, 0
-	for numfaces := -1; numfaces < len(faces); facesperrow++ {
-		facespercol = int(float64(facesperrow) * (areaheight / areawidth))
+	areawidth, areaheight := spinex-marginmm, svgh-(marginmm*2.0)
+	facesperrow, facespercol := 0, 3
+	for numfaces := -1; numfaces < len(faces); {
+		facespercol++
+		facesperrow = int(float64(facespercol) / (areaheight / areawidth))
 		numfaces = 2 * facesperrow * facespercol
-		printLn(facesperrow, facespercol, numfaces, "vs.", len(faces))
 	}
-	fpad := 5.55
-	fwh := (areawidth / float64(facesperrow)) - fpad
-	fy0 := marginmm + (0.5 * (areaheight - (float64(facespercol) * (fwh + fpad))))
-	fx, fy, fidx := marginmm+(fpad*0.5), fy0, 0
+	fpad, fwh, fy0 := (areawidth/float64(facesperrow))/9.0, 0.0, 0.0
+	for i := 0.0; fy0 < marginmm; i += 1.11 {
+		fwh = ((areawidth / float64(facesperrow)) - fpad) - i
+		fy0 = (0.5 * fpad) + (0.5 * (svgh - (float64(facespercol) * (fwh + fpad))))
+	}
+	fx, fy, fidx := marginmm+(fpad*0.77), fy0, 0
 	for first, doneincol := true, 0; true; first = false {
-		if doneincol == facespercol {
+		if doneincol >= facespercol {
 			doneincol, fy, fx = 0, fy0, fx+fwh+fpad
-			if center := (svgw * 0.5); fx < center && (fx+fwh+fpad) > center {
-				fx = spinex + float64(spinemm) + (fpad * 0.5)
+			if center := (svgw * 0.5); fx <= center && (fx+fwh+fpad) >= center {
+				fx = spinex + float64(spinemm) + (fpad * 0.77)
 			}
 		} else if !first {
 			fy += fwh + fpad
 		}
-		if fx >= (svgw - marginmm) {
+		if (fx + fwh + fpad) > (svgw - marginmm) {
 			break
 		}
 		svg += `<image x="` + ftoa(fx, -1) + `mm" y="` + ftoa(fy, -1) + `mm"
