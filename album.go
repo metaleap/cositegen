@@ -496,14 +496,16 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 	fpad, fwh, fy0 := (areawidth/float64(facesperrow))/9.0, 0.0, 0.0
 	for i := 0.0; fy0 < marginmm; i += 1.11 {
 		fwh = ((areawidth / float64(facesperrow)) - fpad) - i
-		fy0 = (0.5 * fpad) + (0.5 * (svgh - (float64(facespercol) * (fwh + fpad))))
+		facesheight := svgh - (float64(facespercol) * (fwh + fpad))
+		fy0 = (0.5 * fpad) + (0.5 * facesheight)
 	}
-	fx, fy, fidx := marginmm+(fpad*0.77), fy0, 0
+	faceswidth := float64(facesperrow) * (fwh + fpad)
+	fx, fy, fidx := marginmm+(0.5*fpad)+(0.5*(areawidth-faceswidth)), fy0, 0
 	for first, doneincol := true, 0; true; first = false {
 		if doneincol >= facespercol {
 			doneincol, fy, fx = 0, fy0, fx+fwh+fpad
 			if center := (svgw * 0.5); fx <= center && (fx+fwh+fpad) >= center {
-				fx = spinex + float64(spinemm) + (fpad * 0.77)
+				fx = spinex + float64(spinemm) + (0.33 * fpad) + (0.5 * (areawidth - faceswidth))
 			}
 		} else if !first {
 			fy += fwh + fpad
