@@ -7,10 +7,12 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"image/png"
+	// _ "image/jpeg"
+	_ "image/png"
 	"io"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -33,7 +35,8 @@ type AlbumBookGen struct {
 	MaxSheetHeight int
 }
 
-func makeAlbumBook(flags map[string]struct{}) {
+func makeAlbumBook(flags map[string]bool) {
+	defer exec.Command("beepintime", "1ns").Start()
 	phrase := strings.Join(os.Args[2:], " ")
 	gen := AlbumBookGen{
 		Phrase:     phrase,
@@ -45,25 +48,28 @@ func makeAlbumBook(flags map[string]struct{}) {
 	mkDir(gen.TmpDirPath)
 	mkDir(gen.OutDirPath)
 
+	var year int
 	for k := range flags {
-		y := atoi(k, 0, 99999)
-		for _, series := range App.Proj.Series {
-			for _, chap := range series.Chapters {
-				if chap.Name == k || chap.UrlName == k ||
-					series.Name == k || series.UrlName == k ||
-					(y > 0 && chap.scanYearHas(y, true)) {
-					for _, sheet := range chap.sheets {
-						sv := sheet.versions[0]
-						gen.Sheets = append(gen.Sheets, sv)
+		if y := atoi(k, 0, 9999); y > 2020 && y < 2929 {
+			year = y
+		}
+	}
+	for _, series := range App.Proj.Series {
+		for _, chap := range series.Chapters {
+			if (flags[chap.Name] || flags[chap.UrlName] ||
+				flags[series.Name] || flags[series.UrlName]) &&
+				(year == 0 || chap.scanYearHas(year, true)) {
+				for _, sheet := range chap.sheets {
+					sv := sheet.versions[0]
+					gen.Sheets = append(gen.Sheets, sv)
 
-						rect := sv.data.pxBounds()
-						w, h := rect.Dx(), rect.Dy()
-						if w > gen.MaxSheetWidth {
-							gen.MaxSheetWidth = w
-						}
-						if h > gen.MaxSheetHeight {
-							gen.MaxSheetHeight = h
-						}
+					rect := sv.data.pxBounds()
+					w, h := rect.Dx(), rect.Dy()
+					if w > gen.MaxSheetWidth {
+						gen.MaxSheetWidth = w
+					}
+					if h > gen.MaxSheetHeight {
+						gen.MaxSheetHeight = h
 					}
 				}
 			}
@@ -87,7 +93,7 @@ func makeAlbumBook(flags map[string]struct{}) {
 				numpages := gen.genPrintVersion(dirrtl, lang)
 				if title := os.Getenv("TITLE"); title != "" && !coverdone {
 					coverdone = true
-					go gen.genPrintCover(title, numpages)
+					gen.genPrintCover(title, numpages)
 				}
 			}
 			if os.Getenv("NOLANG") != "" {
@@ -178,10 +184,12 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 		pgw, pgh = pgw/4, pgh/4
 	}
 
-	tocfilepathsvg := me.TmpDirPath + "/0toc." + lang + sIf(os.Getenv("LORES") == "", "", "_lq") + ".svg"
-	tocfilepathpng := tocfilepathsvg + ".png"
-	{
-		svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+	pgfilepaths := []string{}
+	if os.Getenv("NOTOC") == "" {
+		tocfilepathsvg := me.TmpDirPath + "/0toc." + lang + sIf(os.Getenv("LORES") == "", "", "_lq") + ".svg"
+		tocfilepathpng := tocfilepathsvg + ".png"
+		{
+			svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
 				width="` + itoa(pgw) + `" height="` + itoa(pgh) + `">
 				<style type="text/css">
 					text.toc tspan {
@@ -194,13 +202,14 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 				}
 				</style>
 			`
-		svg += me.tocSvg(lang, 10, false) + "</svg>"
-		fileWrite(tocfilepathsvg, []byte(svg))
-		printLn(tocfilepathpng, "...")
-		imgAnyToPng(tocfilepathsvg, tocfilepathpng, 0, false, sIf(os.Getenv("LORES") == "", "toc_", "toc_lq_"))
+			svg += me.tocSvg(lang, 10, false) + "</svg>"
+			fileWrite(tocfilepathsvg, []byte(svg))
+			printLn(tocfilepathpng, "...")
+			imgAnyToPng(tocfilepathsvg, tocfilepathpng, 0, false, sIf(os.Getenv("LORES") == "", "toc_", "toc_lq_"))
+		}
+		pgfilepaths = append(pgfilepaths, tocfilepathpng)
 	}
 
-	pgfilepaths := []string{tocfilepathpng}
 	for i := range me.Sheets {
 		outfilepath := me.sheetSvgPath(i, dirRtl, lang) + ".pg.png"
 		printLn(outfilepath, "...")
@@ -259,7 +268,7 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 
 func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 	svgh, pgwmm, pghmm, isoddpage, pgidx, brepl := 0, 210, 297, false, -1, []byte("tspan.std")
-	for numPages = 4 + len(me.Sheets)/2; (numPages % 4) != 0; {
+	for numPages = iIf(os.Getenv("NOTOC") == "", 4, 2) + len(me.Sheets)/2; (numPages % 4) != 0; {
 		numPages++
 	}
 	svg := ""
@@ -296,7 +305,7 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) (numPages int)
 			even := ((dpbwidx % 2) == 0)
 			svg += `<image width="44mm" x="` + itoa(x+iIf(even, 0, 0)) + `mm" y="` + itoa(y) + `mm"
 						xlink:href="file://` + dpbwfilepaths[dpbwidx] + `"
-						opacity="` + sIf(closeTag, "0.44", "0.22") + `" transform="rotate(` + itoa(iIf(even, 2, -2)) + `)" />`
+						opacity="` + sIf(closeTag, "0.33", "0.22") + `" transform="rotate(` + itoa(iIf(even, 2, -2)) + `)" />`
 		}
 		if closeTag {
 			svg += "</svg>"
@@ -304,11 +313,11 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) (numPages int)
 	}
 	dpadd(true)
 	dpadd(true)
-	{
+	if os.Getenv("NOTOC") == "" {
 		dpadd(false)
 		svg += me.tocSvg(lang, 10, true) + "</svg>"
+		dpadd(true)
 	}
-	dpadd(true)
 	for i := 0; i < len(me.Sheets)/2; i++ {
 		svgpgstart()
 		sheetsvgfilepath0 := me.sheetSvgPath(i*2, dirRtl, lang)
@@ -378,9 +387,10 @@ func (me *AlbumBookGen) tocSvg(lang string, percentStep int, forPrint bool) (s s
 }
 
 func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
+	marginmm := 20.0
 	knownsizes := []struct {
-		n int
-		f float64
+		numPgs int
+		mm     float64
 	}{
 		{0, 471.5},
 		{52, 473},
@@ -407,7 +417,7 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 				rect, facefilepath := area.Rect, ".ccache/.pngtmp/face_"+sv.id+itoa0pref(pidx, 2)+itoa0pref(i, 2)+".png"
 				if fileStat(facefilepath) == nil {
 					if svimg == nil {
-						if img, err := png.Decode(bytes.NewReader(fileRead(sv.data.bwFilePath))); err != nil {
+						if img, _, err := image.Decode(bytes.NewReader(fileRead(sv.data.bwFilePath))); err != nil {
 							panic(err)
 						} else {
 							svimg = img.(*image.Gray)
@@ -440,10 +450,10 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 		faces[i], faces[j] = faces[j], faces[i]
 	})
 
-	svgw, svgh := knownsizes[0].f, 340.0
+	svgw, svgh := knownsizes[0].mm, 340.0
 	for _, knownsize := range knownsizes[1:] {
-		if numPages >= knownsize.n {
-			svgw = knownsize.f
+		if numPages >= knownsize.numPgs {
+			svgw = knownsize.mm
 		}
 	}
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -460,14 +470,27 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 						letter-spacing: -0.01em;
 					}
 				</style>`
-	fwh, fpad, fx, fy, fidx := 33.0, 7.77, -7.77, -7.77, 0
+
+	const facesperrow = 7
+	const spinemm = 20
+	spinex := (svgw * 0.5) - (float64(spinemm) * 0.5)
+	areawidth := spinex - marginmm
+	fpad := 5.55
+	fwh := (areawidth / float64(facesperrow)) - fpad
+	fx, fy, fidx := marginmm+(fpad*0.5), -fpad, 0
+	for fx > 0 {
+		fx -= (fwh + fpad)
+	}
 	for first := true; true; first = false {
-		if fy > (svgh + fwh) {
-			fy, fx = -7.77, fx+fwh+fpad
+		if fy >= svgh {
+			fy, fx = -fpad, fx+fwh+fpad
+			if center := (svgw * 0.5); fx < center && (fx+fwh+fpad) > center {
+				fx = spinex + float64(spinemm) + (fpad * 0.5)
+			}
 		} else if !first {
 			fy += fwh + fpad
 		}
-		if fx > (svgw+fwh) && fy > (svgh+fwh) {
+		if fx >= svgw && fy >= svgh {
 			break
 		}
 		svg += `<image x="` + ftoa(fx, -1) + `mm" y="` + ftoa(fy, -1) + `mm"
@@ -477,15 +500,13 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 			fidx = 0
 		}
 	}
-	svg += `<defs><linearGradient id="lg">
-				<stop offset="0%" style="stop-color:rgb(0,0,0);stop-opacity:0.0"/>
-				<stop offset="50%" style="stop-color:rgb(0,0,0);stop-opacity:1.0"/>
-				<stop offset="100%" style="stop-color:rgb(0,0,0);stop-opacity:0.0"/>
-			</linearGradient></defs>
-			<rect fill="url(#lg)" width="123mm" height="200%" y="-123mm" x="` + ftoa((svgw*0.5)-(123.0*0.5), -1) + `mm" />`
-	if false { // red debug rect: 6mm wide, center
-		svg += `<rect fill="#ff0000" width="6mm" height="200%" y="-123mm" x="` + ftoa((svgw*0.5)-(6.0*0.5), -1) + `mm"/>`
+	if os.Getenv("COVDBG") != "" { // debug rects (grey) for margins
+		svg += `<rect opacity="0.5" fill="#cccccc" width="` + ftoa(svgw, -1) + `mm" height="` + ftoa(marginmm, -1) + `mm" y="0" x="0" />
+				<rect opacity="0.5" fill="#cccccc" width="` + ftoa(marginmm, -1) + `mm" height="` + ftoa(svgh, -1) + `mm" y="0" x="0" />
+				<rect opacity="0.5" fill="#cccccc" width="` + ftoa(svgw, -1) + `mm" height="` + ftoa(marginmm, -1) + `mm" y="` + ftoa(svgh-marginmm, -1) + `mm" x="0" />
+				<rect opacity="0.5" fill="#cccccc" width="` + ftoa(marginmm, -1) + `mm" height="` + ftoa(svgh, -1) + `mm" y="0" x="` + ftoa(svgw-marginmm, -1) + `mm" />`
 	}
+	svg += `<rect fill="#000000" width="` + itoa(spinemm) + `mm" height="200%" y="-123mm" x="` + ftoa(spinex, -1) + `mm" />`
 	svg += `<text x="` + ftoa(0.5+(svgw*0.5), -1) + `mm" y="` + ftoa(svgh/3.0, -1) + `mm"><tspan>` + title + `</tspan></text>`
 	svg += "</svg>"
 

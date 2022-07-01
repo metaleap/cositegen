@@ -45,7 +45,6 @@ type Chapter struct {
 	Pic              []interface{}
 
 	author       *Author
-	defaultQuali int
 	sheets       []*Sheet
 	parentSeries *Series
 	versions     []int64

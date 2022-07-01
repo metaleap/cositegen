@@ -28,9 +28,9 @@ func main() {
 
 	if len(os.Args) > 1 {
 		appPrepWork(false)
-		args := map[string]struct{}{}
+		args := map[string]bool{}
 		for _, arg := range os.Args[2:] {
-			args[arg] = struct{}{}
+			args[arg] = true
 		}
 		if msg := appMainAction(false, os.Args[1], args); msg != "" {
 			printLn(msg)

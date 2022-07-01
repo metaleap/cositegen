@@ -54,16 +54,16 @@ func appOnExit() {
 	App.Proj.save(false)
 }
 
-func appMainAction(fromGui bool, name string, args map[string]struct{}) string {
+func appMainAction(fromGui bool, name string, args map[string]bool) string {
 	if appMainActions[name] {
 		return "Action '" + name + "' already in progress and not yet done."
 	}
 	appMainActions[name] = true
 
-	var action func(map[string]struct{})
+	var action func(map[string]bool)
 	switch name {
 	case "gen":
-		action = func(flags map[string]struct{}) { siteGen{}.genSite(fromGui, flags) }
+		action = func(flags map[string]bool) { siteGen{}.genSite(fromGui, flags) }
 	case "book", "album":
 		action = makeAlbumBook
 	default:
