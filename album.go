@@ -7,7 +7,6 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	// _ "image/jpeg"
 	_ "image/png"
 	"io"
 	"math/rand"
@@ -387,7 +386,7 @@ func (me *AlbumBookGen) tocSvg(lang string, percentStep int, forPrint bool) (s s
 }
 
 func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
-	marginmm := 20.0
+	marginmm := 22.0
 	knownsizes := []struct {
 		numPgs int
 		mm     float64
@@ -471,26 +470,29 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 					}
 				</style>`
 
-	const facesperrow = 7
-	const spinemm = 20
+	const spinemm = 22
 	spinex := (svgw * 0.5) - (float64(spinemm) * 0.5)
-	areawidth := spinex - marginmm
+	areawidth, areaheight := spinex-marginmm, svgh-marginmm-marginmm
+	facesperrow, facespercol := 3, 0
+	for numfaces := -1; numfaces < len(faces); facesperrow++ {
+		facespercol = int(float64(facesperrow) * (areaheight / areawidth))
+		numfaces = 2 * facesperrow * facespercol
+		printLn(facesperrow, facespercol, numfaces, "vs.", len(faces))
+	}
 	fpad := 5.55
 	fwh := (areawidth / float64(facesperrow)) - fpad
-	fx, fy, fidx := marginmm+(fpad*0.5), -fpad, 0
-	for fx > 0 {
-		fx -= (fwh + fpad)
-	}
-	for first := true; true; first = false {
-		if fy >= svgh {
-			fy, fx = -fpad, fx+fwh+fpad
+	fy0 := marginmm + (0.5 * (areaheight - (float64(facespercol) * (fwh + fpad))))
+	fx, fy, fidx := marginmm+(fpad*0.5), fy0, 0
+	for first, doneincol := true, 0; true; first = false {
+		if doneincol == facespercol {
+			doneincol, fy, fx = 0, fy0, fx+fwh+fpad
 			if center := (svgw * 0.5); fx < center && (fx+fwh+fpad) > center {
 				fx = spinex + float64(spinemm) + (fpad * 0.5)
 			}
 		} else if !first {
 			fy += fwh + fpad
 		}
-		if fx >= svgw && fy >= svgh {
+		if fx >= (svgw - marginmm) {
 			break
 		}
 		svg += `<image x="` + ftoa(fx, -1) + `mm" y="` + ftoa(fy, -1) + `mm"
@@ -499,6 +501,7 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 		if fidx++; fidx >= len(faces) {
 			fidx = 0
 		}
+		doneincol++
 	}
 	if os.Getenv("COVDBG") != "" { // debug rects (grey) for margins
 		svg += `<rect opacity="0.5" fill="#cccccc" width="` + ftoa(svgw, -1) + `mm" height="` + ftoa(marginmm, -1) + `mm" y="0" x="0" />

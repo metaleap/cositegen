@@ -500,7 +500,7 @@ func (me *siteGen) prepHomePage() {
 					}
 				}
 				picname, chid := me.namePanelPic(chapter.sheets[int(picidxsheet)].versions[0], int(picidxpanel), App.Proj.Qualis[App.Proj.maxQualiIdx(true)].SizeHint), chapter.parentSeries.Name+"_"+chapter.Name
-				s += "<a name='" + chid + "' id='" + chid + "' class='" + App.Proj.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[1].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + sIf(os.Getenv("NOPICS") != "", "files/white.png", App.Proj.Gen.PicDirName+"/"+picname) + ".png\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
+				s += "<a name='" + chid + "' id='" + chid + "' class='" + App.Proj.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[App.Proj.defaultQualiIdx].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + sIf(os.Getenv("NOPICS") != "", "files/white.png", App.Proj.Gen.PicDirName+"/"+picname) + ".png\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
 				s += "<div>" + hEsc(locStr(chapter.Title, me.lang)) + "</div>"
 				s += "<span><span>" + itoa(chapmins) + "-" + itoa(1+chapmins) + me.textStr("Mins") + "</span><span>" +
 					sIf(chapter.Year == 0, "&nbsp;", "&copy;"+itoa(chapter.Year)) + "&nbsp;" + chapter.author.String(true) +
@@ -893,7 +893,7 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 					xml := `<entry><updated>` + tpub + `Z</updated>`
 					xml += `<title>` + xEsc(locStr(chapter.parentSeries.Title, me.lang)) + `: ` + xEsc(locStr(chapter.Title, me.lang)) + `</title>`
 					xml += "<id>info:" + contentHashStr([]byte(series.Name+"_"+chapter.Name+"_"+pubdate+"_"+"_"+me.lang)) + "</id>"
-					pgname := me.namePage(chapter, App.Proj.Qualis[1].SizeHint, pgnr, "s", "", me.lang, 0, true)
+					pgname := me.namePage(chapter, App.Proj.Qualis[App.Proj.defaultQualiIdx].SizeHint, pgnr, "s", "", me.lang, 0, true)
 					if chapter.UrlJumpName != "" && pgnr == 1 {
 						pgname = chapter.UrlJumpName + sIf(me.lang == App.Proj.Langs[0], "", "."+me.lang)
 					}

@@ -23,9 +23,10 @@ type Project struct {
 	Authors   map[string]*Author
 	Langs     []string
 	Qualis    []struct {
-		Name             string
-		SizeHint         int
-		ExcludeInSiteGen bool
+		Name               string
+		SizeHint           int
+		ExcludeInSiteGen   bool
+		HomeAndFeedDefault bool
 	}
 	AtomFile struct {
 		PubDates   []string
@@ -64,8 +65,9 @@ type Project struct {
 		PanelSvgText     PanelSvgTextGen
 	}
 
-	allPrepsDone bool
-	data         struct {
+	defaultQualiIdx int
+	allPrepsDone    bool
+	data            struct {
 		Sv struct {
 			fileNamesToIds map[string]string
 			IdsToFileMeta  map[string]FileInfo
@@ -194,9 +196,12 @@ func (me *Project) load() (numSheetVers int) {
 	if me.data.PngOpt == nil {
 		me.data.PngOpt = map[string][]string{}
 	}
-	for i := range me.Qualis {
-		if me.Qualis[i].Name = trim(me.Qualis[i].Name); me.Qualis[i].Name == "" {
-			me.Qualis[i].Name = itoa(me.Qualis[i].SizeHint)
+	for i, q := range me.Qualis {
+		if q.Name = trim(q.Name); q.Name == "" {
+			q.Name = itoa(q.SizeHint)
+		}
+		if me.Qualis[i] = q; q.HomeAndFeedDefault {
+			me.defaultQualiIdx = i
 		}
 	}
 
