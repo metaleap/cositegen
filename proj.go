@@ -32,10 +32,12 @@ type Project struct {
 		Title    string
 		RepoName string
 		Year     int
-		Series   string
+		Series   []string
 		PubDate  string
 	}
-	AtomFile struct {
+	AlbumBookRepoPathPrefix string
+	AlbumBookRepoPathInfix  string
+	AtomFile                struct {
 		PubDates        []string
 		Name            string
 		ContentTxt      map[string]string

@@ -460,7 +460,7 @@ func (me *siteGen) prepHomePage() {
 					"%YEAR%", sIf(series.Year == 0, "", ", "+itoa(series.Year)), 1)
 			}
 			s += "<span class='" + App.Proj.Gen.ClsSeries + "'>"
-			s += "<h5 id='" + strings.ToLower(series.Name) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + " (" + itoa(seryear) + ")</h5>"
+			s += "<h5 id='" + strings.ToLower(series.Name) + "_" + itoa(seryear) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + " (" + itoa(seryear) + ")</h5>"
 			s += "<div class='" + App.Proj.Gen.ClsSeries + "'>" + locStr(series.DescHtml, me.lang) + author + "</div>"
 			s += "<span>"
 			for _, chapter := range series.Chapters {
@@ -510,6 +510,25 @@ func (me *siteGen) prepHomePage() {
 			s += "</span></span>"
 		}
 	}
+	s += "<h5 id='albums' class='" + App.Proj.Gen.ClsSeries + "'>Downloads</h5>"
+	s += "<span><ul>"
+	albumlink := func(repo string, pref string, ext string) string {
+		return App.Proj.AlbumBookRepoPathPrefix + repo + App.Proj.AlbumBookRepoPathInfix + sIf(pref == "", "printcover", pref+me.lang+`_`+sIf(me.dirRtl, "rtl", "ltr")) + ext
+	}
+	for _, albumpub := range App.Proj.AlbumBookPubs {
+		s += "<li id='album_" + albumpub.RepoName + "'><b style='font-size: xx-large'>" + albumpub.Title + "</b><ul>"
+		s += "</li>"
+		s += `<li>Screen, 4K: <a target="_blank" rel=“noopener noreferrer“ href="` + albumlink(albumpub.RepoName, "screen_", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + albumlink(albumpub.RepoName, "screen_", ".cbz") + `">CBZ</a></li>`
+		s += `<li>Print, ~1700dpi: <a target="_blank" rel=“noopener noreferrer“ href="` + albumlink(albumpub.RepoName, "print_", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + albumlink(albumpub.RepoName, "", ".pdf") + `">Cover</a></li>`
+		s += "<li>" + me.textStr("AlbumContents")
+		for _, series := range albumpub.Series {
+			if ser := App.Proj.seriesByName(series); ser != nil {
+				s += "&nbsp;<a href='#" + ser.Name + "_" + itoa(albumpub.Year) + "'>" + hEsc(locStr(ser.Title, me.lang)) + "</a>&nbsp;"
+			}
+		}
+		s += "</ul></li>"
+	}
+	s += "</ul></span>"
 	s += "</div>"
 	me.page.PageContent = s
 }
@@ -912,8 +931,8 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 	for _, albumpub := range App.Proj.AlbumBookPubs {
 		xml := "<entry><updated>" + albumpub.PubDate + "T11:22:44Z</updated>"
 		xml += `<title>Album: ` + xEsc(albumpub.Title) + `</title>`
-		xml += "<id>info:" + contentHashStr([]byte(albumpub.Series+"_"+albumpub.RepoName+"_"+albumpub.PubDate+"_"+"_"+me.lang)) + "</id>"
-		xml += `<link href="http://` + App.Proj.SiteHost + "/" + me.namePage(nil, 0, 0, "", "", "", 0, false) + `.html#` + albumpub.RepoName + `"/>`
+		xml += "<id>info:" + contentHashStr([]byte(strings.Join(albumpub.Series, "+")+"_"+albumpub.RepoName+"_"+albumpub.PubDate+"_"+"_"+me.lang)) + "</id>"
+		xml += `<link href="http://` + App.Proj.SiteHost + "/" + me.namePage(nil, 0, 0, "", "", "", 0, false) + `.html#album_` + albumpub.RepoName + `"/>`
 		xml += `<author><name>` + App.Proj.SiteHost + `</name></author>`
 		xml += `<content type="text">` + strings.NewReplacer(
 			"%REPONAME%", albumpub.RepoName,
