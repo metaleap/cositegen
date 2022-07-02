@@ -909,6 +909,17 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 			}
 		}
 	}
+	for _, albumpub := range App.Proj.AlbumBookPubs {
+		xml := "<entry><updated>" + albumpub.PubDate + "T11:22:44Z</updated>"
+		xml += `<title>Album: ` + xEsc(albumpub.Title) + `</title>`
+		xml += "<id>info:" + contentHashStr([]byte(albumpub.Series+"_"+albumpub.RepoName+"_"+albumpub.PubDate+"_"+"_"+me.lang)) + "</id>"
+		xml += `<link href="http://` + App.Proj.SiteHost + "/" + me.namePage(nil, 0, 0, "", "", "", 0, false) + `.html#` + albumpub.RepoName + `"/>`
+		xml += `<author><name>` + App.Proj.SiteHost + `</name></author>`
+		xml += `<content type="text">` + strings.NewReplacer(
+			"%REPONAME%", albumpub.RepoName,
+		).Replace(locStr(af.ContentTxtAlbum, me.lang)) + `</content>`
+		xmls = append(xmls, xml+`</entry>`)
+	}
 	if len(xmls) > 0 && tlatest != "" {
 		filename := af.Name + "." + me.lang + ".atom"
 		s := `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="` + me.lang + `">`

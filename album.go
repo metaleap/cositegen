@@ -18,8 +18,9 @@ import (
 )
 
 const (
-	albumBookScreenWidth      = 4096
-	albumBookScreenBorder     = 123
+	albumBookScreenWidth      = 3744
+	albumBookScreenBorder     = 44
+	albumBookScreenLoResDiv   = 4
 	albumBookPrintBorderMmBig = 15
 	albumBookPrintBorderMmLil = 7
 )
@@ -72,22 +73,21 @@ func makeAlbumBook(flags map[string]bool) {
 			}
 		}
 	}
-	repls := map[string]string{"41NCSGP": "57SCBVF"}
+	sort.SliceStable(gen.Sheets, func(i int, j int) bool {
+		return gen.Sheets[i].DtStr() < gen.Sheets[j].DtStr()
+	})
 	for i := 0; i < len(gen.Sheets); i++ {
-		if repl := repls[gen.Sheets[i].parentSheet.name]; repl != "" {
+		if repl := os.Getenv("REPL_" + gen.Sheets[i].parentSheet.name); repl != "" {
 			for j, svr := range gen.Sheets {
 				if svr.parentSheet.name == repl {
-					gen.Sheets[i] = svr
 					gen.Sheets = append(gen.Sheets[:j], gen.Sheets[j+1:]...)
+					gen.Sheets[i] = svr
 					i = -1
 					break
 				}
 			}
 		}
 	}
-	sort.SliceStable(gen.Sheets, func(i int, j int) bool {
-		return gen.Sheets[i].DtStr() < gen.Sheets[j].DtStr()
-	})
 	if len(gen.Sheets) == 0 {
 		panic("no scans found for: " + phrase)
 	}
@@ -126,7 +126,7 @@ func (me *AlbumBookGen) genSheetSvgsAndPngs(dirRtl bool, lang string) {
 		if os.Getenv("NOSCREEN") == "" {
 			sheetpngfilepath := sheetsvgfilepath + ".sh.png"
 			printLn(sheetpngfilepath, "...")
-			imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, iIf(os.Getenv("LORES") == "", 0, albumBookScreenWidth/4), false, sIf(os.Getenv("LORES") == "", "sh_", "sh_lq_"))
+			imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, iIf(os.Getenv("LORES") == "", 0, albumBookScreenWidth/albumBookScreenLoResDiv), false, sIf(os.Getenv("LORES") == "", "sh_", "sh_lq_"))
 		}
 	}
 }
@@ -192,9 +192,9 @@ func (me *AlbumBookGen) sheetSvgPath(idx int, dirRtl bool, lang string) string {
 }
 
 func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
-	pgw, pgh := albumBookScreenWidth, int(float64(albumBookScreenWidth)/(float64(me.MaxSheetWidth)/float64(me.MaxSheetHeight)))
+	border, pgw, pgh := albumBookScreenBorder, albumBookScreenWidth, int(float64(albumBookScreenWidth)/(float64(me.MaxSheetWidth)/float64(me.MaxSheetHeight)))
 	if os.Getenv("LORES") != "" {
-		pgw, pgh = pgw/4, pgh/4
+		pgw, pgh, border = pgw/albumBookScreenLoResDiv, pgh/albumBookScreenLoResDiv, border/albumBookScreenLoResDiv
 	}
 
 	pgfilepaths := []string{}
@@ -224,30 +224,40 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 	}
 
 	for i := range me.Sheets {
+		shfilepath := me.sheetSvgPath(i, dirRtl, lang) + ".sh.png"
 		outfilepath := me.sheetSvgPath(i, dirRtl, lang) + ".pg.png"
 		printLn(outfilepath, "...")
-		imgpg := image.NewNRGBA(image.Rect(0, 0, pgw, pgh))
-		imgFill(imgpg, imgpg.Bounds(), color.NRGBA{R: 255, G: 255, B: 255, A: 255})
-		imgsh, _, err := image.Decode(bytes.NewReader(fileRead(me.sheetSvgPath(i, dirRtl, lang) + ".sh.png")))
-		if err != nil {
-			panic(err)
+		tmpfilepath := ".ccache/.pngtmp/pgsh_" + itoa(border) + "_" + itoa(pgw) + "_" + contentHashStr(fileRead(shfilepath)) + ".png"
+		if fileStat(tmpfilepath) == nil {
+			imgpg := image.NewNRGBA(image.Rect(0, 0, pgw, pgh))
+			imgFill(imgpg, imgpg.Bounds(), color.NRGBA{R: 255, G: 255, B: 255, A: 255})
+			imgsh, _, err := image.Decode(bytes.NewReader(fileRead(shfilepath)))
+			if err != nil {
+				panic(err)
+			}
+			shw := pgw - (2 * border)
+			shh := int(float64(shw) / (float64(imgsh.Bounds().Dx()) / float64(imgsh.Bounds().Dy())))
+			if pghb := pgh - (2 * border); shh > pghb {
+				f := float64(shh) / float64(pghb)
+				shw, shh = int(float64(shw)/f), pghb
+			}
+			if shw > pgw || shh > shw {
+				printLn(shw, ">", pgw, shw > pgw, "\t\t", shh, ">", shw, shh > shw)
+				panic("NEWBUG")
+			}
+			shx, shy := (pgw-shw)/2, (pgh-shh)/2
+			ImgScaler.Scale(imgpg, image.Rect(shx, shy, shx+shw, shy+shh), imgsh, imgsh.Bounds(), draw.Over, nil)
+			var buf bytes.Buffer
+			if err = PngEncoder.Encode(&buf, imgpg); err != nil {
+				panic(err)
+			}
+			fileWrite(tmpfilepath, buf.Bytes())
 		}
-		shw := pgw - (2 * albumBookScreenBorder)
-		shh := int(float64(shw) / (float64(imgsh.Bounds().Dx()) / float64(imgsh.Bounds().Dy())))
-		if shw > pgw || shh > pgh || shh > shw {
-			panic("NEWBUG")
-		}
-		shx, shy := (pgw-shw)/2, (pgh-shh)/2
-		ImgScaler.Scale(imgpg, image.Rect(shx, shy, shx+shw, shy+shh), imgsh, imgsh.Bounds(), draw.Over, nil)
-		var buf bytes.Buffer
-		if err = PngEncoder.Encode(&buf, imgpg); err != nil {
-			panic(err)
-		}
-		fileWrite(outfilepath, buf.Bytes())
+		fileLink(tmpfilepath, outfilepath)
 		pgfilepaths = append(pgfilepaths, outfilepath)
 	}
 
-	{
+	if os.Getenv("NOCBZ") == "" {
 		outfilepathcbz := me.OutDirPath + "/screen_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".cbz"
 		printLn(outfilepathcbz, "...")
 		outfile, err := os.Create(outfilepathcbz)
@@ -470,7 +480,7 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 		}
 	}
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-				width="` + ftoa(svgw-1, -1) + `mm" height="` + ftoa(svgh-1, -1) + `mm">
+				width="` + ftoa(svgw-1, -1) + `mm" height="` + ftoa(svgh-1, -1) + `mm" style="background-color: #ffffff">
 				<style type="text/css">
 					@page { margin: 0; padding: 0; line-height: unset; size: ` + ftoa(svgw, -1) + `mm ` + ftoa(svgh, -1) + `mm; }
 					* { margin: 0; padding: 0; line-height: unset; }
@@ -486,6 +496,9 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 
 	const spinemm = 22
 	spinex := (svgw * 0.5) - (float64(spinemm) * 0.5)
+	svg += `<rect fill="#000000" width="` + itoa(spinemm) + `mm" height="100%" y="0mm" x="` + ftoa(spinex, -1) + `mm" />`
+	svg += `<text x="` + ftoa(0.5+(svgw*0.5), -1) + `mm" y="` + ftoa(svgh/3.0, -1) + `mm"><tspan>` + title + `</tspan></text>`
+
 	areawidth, areaheight := spinex-marginmm, svgh-(marginmm*2.0)
 	facesperrow, facespercol := 0, 3
 	for numfaces := -1; numfaces < len(faces); {
@@ -527,8 +540,6 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 				<rect opacity="0.5" fill="#cccccc" width="` + ftoa(svgw, -1) + `mm" height="` + ftoa(marginmm, -1) + `mm" y="` + ftoa(svgh-marginmm, -1) + `mm" x="0" />
 				<rect opacity="0.5" fill="#cccccc" width="` + ftoa(marginmm, -1) + `mm" height="` + ftoa(svgh, -1) + `mm" y="0" x="` + ftoa(svgw-marginmm, -1) + `mm" />`
 	}
-	svg += `<rect fill="#000000" width="` + itoa(spinemm) + `mm" height="200%" y="-123mm" x="` + ftoa(spinex, -1) + `mm" />`
-	svg += `<text x="` + ftoa(0.5+(svgw*0.5), -1) + `mm" y="` + ftoa(svgh/3.0, -1) + `mm"><tspan>` + title + `</tspan></text>`
 	svg += "</svg>"
 
 	fileWrite(outfilepathsvg, []byte(svg))
