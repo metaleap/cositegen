@@ -32,6 +32,8 @@ type AlbumBookGen struct {
 	OutDirPath     string
 	MaxSheetWidth  int
 	MaxSheetHeight int
+
+	facesFilePaths []string
 }
 
 func makeAlbumBook(flags map[string]bool) {
@@ -448,49 +450,51 @@ func (me *AlbumBookGen) tocSvg(lang string, pgW int, pgH int) (s string) {
 }
 
 func (me *AlbumBookGen) facesPicPaths() []string {
-	var faces []string
-	for _, sv := range me.Sheets {
-		var svimg *image.Gray
-		var pidx int
-		var buf bytes.Buffer
-		sv.data.PanelsTree.iter(func(p *ImgPanel) {
-			for i, area := range sv.panelFaceAreas(pidx) {
-				rect, facefilepath := area.Rect, ".ccache/.pngtmp/face_"+sv.id+itoa0pref(pidx, 2)+itoa0pref(i, 2)+".png"
-				if fileStat(facefilepath) == nil {
-					if svimg == nil {
-						if img, _, err := image.Decode(bytes.NewReader(fileRead(sv.data.bwFilePath))); err != nil {
-							panic(err)
-						} else {
-							svimg = img.(*image.Gray)
+	if me.facesFilePaths == nil {
+		me.facesFilePaths = make([]string, 0, len(me.Sheets))
+		for _, sv := range me.Sheets {
+			var svimg *image.Gray
+			var pidx int
+			var buf bytes.Buffer
+			sv.data.PanelsTree.iter(func(p *ImgPanel) {
+				for i, area := range sv.panelFaceAreas(pidx) {
+					rect, facefilepath := area.Rect, ".ccache/.pngtmp/face_"+sv.id+itoa0pref(pidx, 2)+itoa0pref(i, 2)+".png"
+					if fileStat(facefilepath) == nil {
+						if svimg == nil {
+							if img, _, err := image.Decode(bytes.NewReader(fileRead(sv.data.bwFilePath))); err != nil {
+								panic(err)
+							} else {
+								svimg = img.(*image.Gray)
+							}
 						}
+						imgface := svimg.SubImage(rect).(*image.Gray)
+						wh := iIf(rect.Dx() > rect.Dy(), rect.Dx(), rect.Dy())
+						imgsq := image.NewGray(image.Rect(0, 0, wh, wh))
+						imgFill(imgsq, imgsq.Bounds(), color.Gray{255})
+						fx, fy := 0, 0
+						if diff := rect.Dy() - rect.Dx(); diff > 0 {
+							fx = diff / 2
+						} else if diff := rect.Dx() - rect.Dy(); diff > 0 {
+							fy = diff / 2
+						}
+						draw.Draw(imgsq, image.Rect(fx, fy, fx+rect.Dx(), fy+rect.Dy()), imgface, imgface.Bounds().Min, draw.Over)
+						buf.Reset()
+						if err := PngEncoder.Encode(&buf, imgsq); err != nil {
+							panic(err)
+						}
+						fileWrite(facefilepath, buf.Bytes())
 					}
-					imgface := svimg.SubImage(rect).(*image.Gray)
-					wh := iIf(rect.Dx() > rect.Dy(), rect.Dx(), rect.Dy())
-					imgsq := image.NewGray(image.Rect(0, 0, wh, wh))
-					imgFill(imgsq, imgsq.Bounds(), color.Gray{255})
-					fx, fy := 0, 0
-					if diff := rect.Dy() - rect.Dx(); diff > 0 {
-						fx = diff / 2
-					} else if diff := rect.Dx() - rect.Dy(); diff > 0 {
-						fy = diff / 2
-					}
-					draw.Draw(imgsq, image.Rect(fx, fy, fx+rect.Dx(), fy+rect.Dy()), imgface, imgface.Bounds().Min, draw.Over)
-					buf.Reset()
-					if err := PngEncoder.Encode(&buf, imgsq); err != nil {
-						panic(err)
-					}
-					fileWrite(facefilepath, buf.Bytes())
+					me.facesFilePaths = append(me.facesFilePaths, absPath(facefilepath))
 				}
-				faces = append(faces, absPath(facefilepath))
-			}
-			pidx++
+				pidx++
+			})
+		}
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(me.facesFilePaths), func(i int, j int) {
+			me.facesFilePaths[i], me.facesFilePaths[j] = me.facesFilePaths[j], me.facesFilePaths[i]
 		})
 	}
-	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(faces), func(i int, j int) {
-		faces[i], faces[j] = faces[j], faces[i]
-	})
-	return faces
+	return me.facesFilePaths
 }
 
 func (me *AlbumBookGen) facesDistr(numFaces int, w float64, h float64, double bool) (perRow int, perCol int) {
