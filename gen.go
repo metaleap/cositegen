@@ -518,8 +518,8 @@ func (me *siteGen) prepHomePage() {
 	for _, albumpub := range App.Proj.AlbumBookPubs {
 		s += "<li id='album_" + albumpub.RepoName + "'><b style='font-size: xx-large'>" + albumpub.Title + "</b><ul>"
 		s += "</li>"
-		s += `<li>Screen, 4K: <a target="_blank" rel=“noopener noreferrer“ href="` + albumlink(albumpub.RepoName, "screen_", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + albumlink(albumpub.RepoName, "screen_", ".cbz") + `">CBZ</a></li>`
-		s += `<li>Print, ~1700dpi: <a target="_blank" rel=“noopener noreferrer“ href="` + albumlink(albumpub.RepoName, "print_", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + albumlink(albumpub.RepoName, "", ".pdf") + `">Cover</a></li>`
+		s += `<li>Screen 4K &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + albumlink(albumpub.RepoName, "screen_", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + albumlink(albumpub.RepoName, "screen_", ".cbz") + `">CBZ</a></li>`
+		s += `<li>Print ~1700dpi &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + albumlink(albumpub.RepoName, "print_", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + albumlink(albumpub.RepoName, "", ".pdf") + `">Cover</a></li>`
 		s += "<li>" + me.textStr("AlbumContents")
 		for _, series := range albumpub.Series {
 			if ser := App.Proj.seriesByName(series); ser != nil {

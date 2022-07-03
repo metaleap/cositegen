@@ -198,7 +198,7 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 	}
 
 	pgfilepaths := []string{}
-	if os.Getenv("NOTOC") == "" {
+	{
 		tocfilepathsvg := me.TmpDirPath + "/0toc." + lang + sIf(os.Getenv("LORES") == "", "", "_lq") + ".svg"
 		tocfilepathpng := tocfilepathsvg + ".png"
 		{
@@ -206,16 +206,28 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 				width="` + itoa(pgw) + `" height="` + itoa(pgh) + `">
 				<style type="text/css">
 					text.toc tspan {
-					font-family: "Shark Heavy ABC";
-					font-size: ` + sIf(os.Getenv("LORES") == "", "16", "4") + `em;
-					font-weight: normal;
-					paint-order: stroke;
-					stroke: #ffffff;
-					stroke-width: 1mm;
-				}
+						font-family: "Shark Heavy ABC";
+						font-size: ` + sIf(os.Getenv("LORES") == "", "12", "3") + `em;
+						font-weight: normal;
+						paint-order: stroke;
+						stroke: #ffffff;
+						stroke-width: ` + sIf(os.Getenv("LORES") == "", "4", "1") + `mm;
+					}
+					text.toctitle tspan {
+						font-family: "Shark Heavy ABC";
+						font-weight: normal;
+						font-size: ` + sIf(os.Getenv("LORES") == "", "20", "5") + `em;
+						paint-order: stroke;
+						stroke: #000000;
+						stroke-width: ` + sIf(os.Getenv("LORES") == "", "8", "2") + `mm;
+						fill: #ffffff;
+					}
+					image {
+						opacity: 0.22;
+					}
 				</style>
 			`
-			svg += me.tocSvg(lang, 10, false) + "</svg>"
+			svg += me.tocSvg(lang, pgw, pgh) + "</svg>"
 			fileWrite(tocfilepathsvg, []byte(svg))
 			printLn(tocfilepathpng, "...")
 			imgAnyToPng(tocfilepathsvg, tocfilepathpng, 0, false, sIf(os.Getenv("LORES") == "", "toc_", "toc_lq_"))
@@ -241,10 +253,6 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 				f := float64(shh) / float64(pghb)
 				shw, shh = int(float64(shw)/f), pghb
 			}
-			if shw > pgw || shh > shw {
-				printLn(shw, ">", pgw, shw > pgw, "\t\t", shh, ">", shw, shh > shw)
-				panic("NEWBUG")
-			}
 			shx, shy := (pgw-shw)/2, (pgh-shh)/2
 			ImgScaler.Scale(imgpg, image.Rect(shx, shy, shx+shw, shy+shh), imgsh, imgsh.Bounds(), draw.Over, nil)
 			var buf bytes.Buffer
@@ -252,6 +260,9 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 				panic(err)
 			}
 			fileWrite(tmpfilepath, buf.Bytes())
+			if os.Getenv("LORES") == "" {
+				_ = osExec(false, nil, "pngbattle", tmpfilepath)
+			}
 		}
 		fileLink(tmpfilepath, outfilepath)
 		pgfilepaths = append(pgfilepaths, outfilepath)
@@ -338,7 +349,7 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) (numPages int)
 	dpadd(true)
 	if os.Getenv("NOTOC") == "" {
 		dpadd(false)
-		svg += me.tocSvg(lang, 10, true) + "</svg>"
+		svg += me.tocSvg(lang, 0, 0) + "</svg>"
 		dpadd(true)
 	}
 	for i := 0; i < len(me.Sheets)/2; i++ {
@@ -351,7 +362,7 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) (numPages int)
 			topborder = albumBookPrintBorderMmLil
 		}
 		svg += `<image x="` + itoa(iIf(isoddpage, albumBookPrintBorderMmBig, albumBookPrintBorderMmLil)) + `mm" y="` + itoa(topborder) + `mm" width="` + itoa(pgwmm-(albumBookPrintBorderMmBig+albumBookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath0), brepl, []byte("zzz"), -1)) + `"/>`
-		svg += `<image x="` + itoa(iIf(isoddpage, albumBookPrintBorderMmBig, albumBookPrintBorderMmLil)) + `mm" y="50%" width="` + itoa(pgwmm-(albumBookPrintBorderMmBig+albumBookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath1), brepl, []byte("zzz"), -1)) + `"/>`
+		svg += `<image x="` + itoa(iIf(isoddpage, albumBookPrintBorderMmBig, albumBookPrintBorderMmLil)) + `mm" y="` + itoa(iIf(strings.HasPrefix(me.Sheets[i*2].parentSheet.name, "01FROGF"), 47, 50)) + `%" width="` + itoa(pgwmm-(albumBookPrintBorderMmBig+albumBookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath1), brepl, []byte("zzz"), -1)) + `"/>`
 		svg += "</svg>"
 	}
 	dpadd(true)
@@ -381,6 +392,15 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) (numPages int)
 						stroke: #ffffff;
 						stroke-width: 1mm;
 					}
+					text.toctitle tspan {
+						font-family: "Shark Heavy ABC";
+						font-weight: normal;
+						font-size: 3.88cm;
+						paint-order: stroke;
+						stroke: #000000;
+						stroke-width: 2.22mm;
+						fill: #ffffff;
+					}
 				</style>
 		` + svg + "</svg>"
 
@@ -392,44 +412,40 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) (numPages int)
 	return
 }
 
-func (me *AlbumBookGen) tocSvg(lang string, percentStep int, forPrint bool) (s string) {
+func (me *AlbumBookGen) tocSvg(lang string, pgW int, pgH int) (s string) {
 	var tocs []int
 	for i, sv := range me.Sheets {
 		if len(tocs) == 0 || sv.parentSheet.parentChapter != me.Sheets[tocs[len(tocs)-1]].parentSheet.parentChapter {
 			tocs = append(tocs, i)
 		}
 	}
-	ypc := 11
-	for _, idx := range tocs {
-		sv := me.Sheets[idx]
-		pgnr := iIf(forPrint, 5, 2) + idx/iIf(forPrint, 2, 1)
-		s += `<text class="toc" x="5%" y="` + itoa(ypc) + `%"><tspan>` + itoa0pref(pgnr, 2) + "........" + locStr(sv.parentSheet.parentChapter.Title, lang) + `</tspan></text>`
-		ypc += percentStep
+
+	isforprint := (pgW == 0) && (pgH == 0)
+	if !isforprint {
+		s += `<g x="0" y="0">`
+		faces := me.facesPicPaths()
+		fperrow, fpercol := me.facesDistr(len(faces), float64(pgW), float64(pgH), false)
+		s += me.facesDraw(faces, fperrow, fpercol, float64(pgW), float64(pgH), float64(pgW), float64(pgH), 0.0, 12.34, "px")
+		s += `</g>`
 	}
+
+	hastoclist := os.Getenv("NOTOC") == "" && len(tocs) > 1
+	s += `<g x="0" y="0">`
+	s += `<text class="toctitle" x="` + ftoa(fIf(isforprint, 6.88, 34.56), -1) + `%" y="` + ftoa(fIf(hastoclist, 12.34, 54.32), -1) + `%"><tspan>` + os.Getenv("TITLE") + `</tspan></text>`
+	if hastoclist {
+		ypc, pstep := 22.0, (94.0-22.0)/float64(len(tocs)-1)
+		for _, idx := range tocs {
+			sv := me.Sheets[idx]
+			pgnr := iIf(isforprint, 5, 2) + idx/iIf(isforprint, 2, 1)
+			s += `<text class="toc" x="5%" y="` + ftoa(ypc, -1) + `%"><tspan>` + itoa0pref(pgnr, 2) + "........" + locStr(sv.parentSheet.parentChapter.Title, lang) + `</tspan></text>`
+			ypc += pstep
+		}
+	}
+	s += `</g>`
 	return
 }
 
-func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
-	marginmm := 22.0
-	knownsizes := []struct {
-		numPgs int
-		mm     float64
-	}{
-		{0, 471.5},
-		{52, 473},
-		{68, 474.5},
-		{88, 476},
-		{108, 477},
-		{132, 479},
-		{156, 480.5},
-		{180, 482},
-		{204, 483.5},
-		{228, 485},
-	}
-
-	outfilepathsvg := me.TmpDirPath + "/printcover.svg"
-	printLn(outfilepathsvg, "...")
-
+func (me *AlbumBookGen) facesPicPaths() []string {
 	var faces []string
 	for _, sv := range me.Sheets {
 		var svimg *image.Gray
@@ -472,7 +488,73 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 	rand.Shuffle(len(faces), func(i int, j int) {
 		faces[i], faces[j] = faces[j], faces[i]
 	})
+	return faces
+}
 
+func (me *AlbumBookGen) facesDistr(numFaces int, w float64, h float64, double bool) (perRow int, perCol int) {
+	perRow, perCol = 0, 3
+	for numfaces := -1; numfaces < numFaces; {
+		perCol++
+		perRow = int(float64(perCol) / (h / w))
+		numfaces = iIf(double, 2, 1) * perRow * perCol
+	}
+	return
+}
+
+func (me *AlbumBookGen) facesDraw(faces []string, perRow int, perCol int, areaWidth float64, areaHeight float64, svgWidth float64, svgHeight float64, spine float64, margin float64, svgUnit string) (svg string) {
+	fpad, fwh, fy0 := (areaWidth/float64(perRow))/9.0, 0.0, 0.0
+	for i := 0.0; fy0 < margin; i += 1.11 {
+		fwh = ((areaWidth / float64(perRow)) - fpad) - i
+		facesheight := svgHeight - (float64(perCol) * (fwh + fpad))
+		fy0 = (0.5 * fpad) + (0.5 * facesheight)
+	}
+	faceswidth := float64(perRow) * (fwh + fpad)
+	fx, fy, fidx := margin+(0.5*fpad)+(0.5*(areaWidth-faceswidth)), fy0, 0
+	for first, doneincol := true, 0; true; first = false {
+		if doneincol >= perCol {
+			doneincol, fy, fx = 0, fy0, fx+fwh+fpad
+			if center := (svgWidth * 0.5); fx <= center && (fx+fwh+fpad) >= center && spine > 0.01 {
+				fx = spine + (0.33 * fpad) + (0.5 * (areaWidth - faceswidth))
+			}
+		} else if !first {
+			fy += fwh + fpad
+		}
+		if (fx + fwh + fpad) > (svgWidth - margin) {
+			break
+		}
+		svg += `<image x="` + ftoa(fx, -1) + svgUnit + `" y="` + ftoa(fy, -1) + svgUnit + `"
+					width="` + ftoa(fwh, -1) + svgUnit + `"  height="` + ftoa(fwh, -1) + svgUnit + `"
+					xlink:href="file://` + faces[fidx] + `" />`
+		if fidx++; fidx >= len(faces) {
+			fidx = 0
+		}
+		doneincol++
+	}
+	return
+}
+
+func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
+	marginmm := 22.0
+	knownsizes := []struct {
+		numPgs int
+		mm     float64
+	}{
+		{0, 471.5},
+		{52, 473},
+		{68, 474.5},
+		{88, 476},
+		{108, 477},
+		{132, 479},
+		{156, 480.5},
+		{180, 482},
+		{204, 483.5},
+		{228, 485},
+	}
+
+	outfilepathsvg := me.TmpDirPath + "/printcover.svg"
+	printLn(outfilepathsvg, "...")
+
+	faces := me.facesPicPaths()
 	svgw, svgh := knownsizes[0].mm, 340.0
 	for _, knownsize := range knownsizes[1:] {
 		if numPages >= knownsize.numPgs {
@@ -500,40 +582,8 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 	svg += `<text x="` + ftoa(0.5+(svgw*0.5), -1) + `mm" y="` + ftoa(svgh/3.0, -1) + `mm"><tspan>` + title + `</tspan></text>`
 
 	areawidth, areaheight := spinex-marginmm, svgh-(marginmm*2.0)
-	facesperrow, facespercol := 0, 3
-	for numfaces := -1; numfaces < len(faces); {
-		facespercol++
-		facesperrow = int(float64(facespercol) / (areaheight / areawidth))
-		numfaces = 2 * facesperrow * facespercol
-	}
-	fpad, fwh, fy0 := (areawidth/float64(facesperrow))/9.0, 0.0, 0.0
-	for i := 0.0; fy0 < marginmm; i += 1.11 {
-		fwh = ((areawidth / float64(facesperrow)) - fpad) - i
-		facesheight := svgh - (float64(facespercol) * (fwh + fpad))
-		fy0 = (0.5 * fpad) + (0.5 * facesheight)
-	}
-	faceswidth := float64(facesperrow) * (fwh + fpad)
-	fx, fy, fidx := marginmm+(0.5*fpad)+(0.5*(areawidth-faceswidth)), fy0, 0
-	for first, doneincol := true, 0; true; first = false {
-		if doneincol >= facespercol {
-			doneincol, fy, fx = 0, fy0, fx+fwh+fpad
-			if center := (svgw * 0.5); fx <= center && (fx+fwh+fpad) >= center {
-				fx = spinex + float64(spinemm) + (0.33 * fpad) + (0.5 * (areawidth - faceswidth))
-			}
-		} else if !first {
-			fy += fwh + fpad
-		}
-		if (fx + fwh + fpad) > (svgw - marginmm) {
-			break
-		}
-		svg += `<image x="` + ftoa(fx, -1) + `mm" y="` + ftoa(fy, -1) + `mm"
-					width="` + ftoa(fwh, -1) + `mm"  height="` + ftoa(fwh, -1) + `mm"
-					xlink:href="file://` + faces[fidx] + `" />`
-		if fidx++; fidx >= len(faces) {
-			fidx = 0
-		}
-		doneincol++
-	}
+	fperrow, fpercol := me.facesDistr(len(faces), areawidth, areaheight, true)
+	svg += me.facesDraw(faces, fperrow, fpercol, areawidth, areaheight, svgw, svgh, spinex+float64(spinemm), marginmm, "mm")
 	if os.Getenv("COVDBG") != "" { // debug rects (grey) for margins
 		svg += `<rect opacity="0.5" fill="#cccccc" width="` + ftoa(svgw, -1) + `mm" height="` + ftoa(marginmm, -1) + `mm" y="0" x="0" />
 				<rect opacity="0.5" fill="#cccccc" width="` + ftoa(marginmm, -1) + `mm" height="` + ftoa(svgh, -1) + `mm" y="0" x="0" />
