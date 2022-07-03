@@ -212,6 +212,7 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 						paint-order: stroke;
 						stroke: #ffffff;
 						stroke-width: ` + sIf(os.Getenv("LORES") == "", "4", "1") + `mm;
+						white-space: pre;
 					}
 					text.toctitle tspan {
 						font-family: "Shark Heavy ABC";
@@ -391,6 +392,7 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) (numPages int)
 						paint-order: stroke;
 						stroke: #ffffff;
 						stroke-width: 1mm;
+						white-space: pre;
 					}
 					text.toctitle tspan {
 						font-family: "Shark Heavy ABC";
@@ -437,7 +439,7 @@ func (me *AlbumBookGen) tocSvg(lang string, pgW int, pgH int) (s string) {
 		for _, idx := range tocs {
 			sv := me.Sheets[idx]
 			pgnr := iIf(isforprint, 5, 2) + idx/iIf(isforprint, 2, 1)
-			s += `<text class="toc" x="5%" y="` + ftoa(ypc, -1) + `%"><tspan>` + itoa0pref(pgnr, 2) + "........" + locStr(sv.parentSheet.parentChapter.Title, lang) + `</tspan></text>`
+			s += `<text class="toc" x="5%" y="` + ftoa(ypc, -1) + `%"><tspan>` + itoa0pref(pgnr, 2) + "&#009;&#009;&#009;&#009;" + locStr(sv.parentSheet.parentChapter.Title, lang) + `</tspan></text>`
 			ypc += pstep
 		}
 	}
