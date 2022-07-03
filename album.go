@@ -28,7 +28,7 @@ const (
 type AlbumBookGen struct {
 	Sheets         []*SheetVer
 	Phrase         string
-	TmpDirPath     string
+	ShmDirPath     string
 	OutDirPath     string
 	MaxSheetWidth  int
 	MaxSheetHeight int
@@ -40,12 +40,12 @@ func makeAlbumBook(flags map[string]bool) {
 	phrase := strings.Join(os.Args[2:], " ")
 	gen := AlbumBookGen{
 		Phrase:     phrase,
-		TmpDirPath: "/dev/shm/" + phrase,
+		ShmDirPath: "/dev/shm/" + phrase,
 		OutDirPath: ".books/" + phrase,
 	}
-	rmDir(gen.TmpDirPath)
+	rmDir(gen.ShmDirPath)
 	rmDir(gen.OutDirPath)
-	mkDir(gen.TmpDirPath)
+	mkDir(gen.ShmDirPath)
 	mkDir(gen.OutDirPath)
 
 	var year int
@@ -190,7 +190,7 @@ func (me *AlbumBookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl boo
 }
 
 func (me *AlbumBookGen) sheetSvgPath(idx int, dirRtl bool, lang string) string {
-	return me.TmpDirPath + "/" + sIf(dirRtl, "r", "l") + itoa0pref(idx, 3) + lang + sIf(os.Getenv("LORES") == "", "", "_lq") + ".svg"
+	return me.ShmDirPath + "/" + sIf(dirRtl, "r", "l") + itoa0pref(idx, 3) + lang + sIf(os.Getenv("LORES") == "", "", "_lq") + ".svg"
 }
 
 func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
@@ -201,9 +201,9 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 
 	pgfilepaths := []string{}
 	{
-		tocfilepathsvg := me.TmpDirPath + "/0toc." + lang + sIf(os.Getenv("LORES") == "", "", "_lq") + ".svg"
+		tocfilepathsvg := me.ShmDirPath + "/0toc." + lang + sIf(os.Getenv("LORES") == "", "", "_lq") + ".svg"
 		tocfilepathpng := tocfilepathsvg + ".png"
-		{
+		if fileStat(tocfilepathpng) == nil {
 			svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
 				width="` + itoa(pgw) + `" height="` + itoa(pgh) + `">
 				<style type="text/css">
@@ -408,7 +408,7 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) (numPages int)
 				</style>
 		` + svg + "</svg>"
 
-	outfilepathsvg := me.TmpDirPath + "/print_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".svg"
+	outfilepathsvg := me.ShmDirPath + "/print_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".svg"
 	fileWrite(outfilepathsvg, []byte(svg))
 	if os.Getenv("NOPDF") == "" {
 		me.printSvgToPdf(outfilepathsvg, me.OutDirPath+"/print_"+lang+sIf(dirRtl, "_rtl", "_ltr")+".pdf")
@@ -557,7 +557,7 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 		{228, 485},
 	}
 
-	outfilepathsvg := me.TmpDirPath + "/printcover.svg"
+	outfilepathsvg := me.ShmDirPath + "/printcover.svg"
 	printLn(outfilepathsvg, "...")
 
 	faces := me.facesPicPaths()
