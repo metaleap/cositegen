@@ -225,6 +225,11 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 						stroke-width: ` + sIf(os.Getenv("LORES") == "", "8", "2") + `mm;
 						fill: #ffffff;
 					}
+					text.tocsub tspan {
+						font-family: "Annie Use Your Telescope";
+						font-size: ` + sIf(os.Getenv("LORES") == "", "5.88", "1.44") + `em;
+						font-weight: bold;
+					}
 					image {
 						opacity: 0.22;
 					}
@@ -399,11 +404,18 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) (numPages int)
 					text.toctitle tspan {
 						font-family: "Shark Heavy ABC";
 						font-weight: normal;
-						font-size: 3.88cm;
+						font-size: 2.88cm;
 						paint-order: stroke;
 						stroke: #000000;
-						stroke-width: 2.22mm;
+						stroke-width: 2.88mm;
 						fill: #ffffff;
+					}
+					text.tocsub tspan {
+						font-family: "Annie Use Your Telescope";
+						font-size: 1.44em;
+						font-weight: bold;
+						stroke-width: 0.088em;
+						stroke: #ffffff;
 					}
 				</style>
 		` + svg + "</svg>"
@@ -435,13 +447,27 @@ func (me *AlbumBookGen) tocSvg(lang string, pgW int, pgH int) (s string) {
 
 	hastoclist := os.Getenv("NOTOC") == "" && len(tocs) > 1
 	s += `<g x="0" y="0">`
-	s += `<text class="toctitle" x="` + ftoa(fIf(isforprint, 6.88, 34.56), -1) + `%" y="` + ftoa(fIf(hastoclist, 12.34, 54.32), -1) + `%"><tspan>` + os.Getenv("TITLE") + `</tspan></text>`
+	s += `<text class="toctitle" x="` + ftoa(fIf(isforprint, 18.18, 34.56), -1) + `%" y="` + ftoa(fIf(hastoclist, 12.34, 54.32), -1) + `%"><tspan>` + os.Getenv("TITLE") + `</tspan></text>`
 	if hastoclist {
 		ypc, pstep := 22.0, (94.0-22.0)/float64(len(tocs)-1)
 		for _, idx := range tocs {
 			sv := me.Sheets[idx]
+			chap := sv.parentSheet.parentChapter
 			pgnr := iIf(isforprint, 5, 2) + idx/iIf(isforprint, 2, 1)
-			s += `<text class="toc" x="5%" y="` + ftoa(ypc, -1) + `%"><tspan>` + itoa0pref(pgnr, 2) + "&#009;&#009;&#009;&#009;" + locStr(sv.parentSheet.parentChapter.Title, lang) + `</tspan></text>`
+			s += `<text class="toc" x="8.88%" y="` + ftoa(ypc, -1) + `%"><tspan>` + itoa0pref(pgnr, 2) + "&#009;&#009;&#009;&#009;" + locStr(chap.Title, lang) + `</tspan></text>`
+			if chap.author != nil {
+				subtext, titleorig := "Story: ", chap.TitleOrig
+				if chap.TitleOrig == locStr(chap.Title, lang) {
+					titleorig = ""
+				} else if titleorig == "" && lang != App.Proj.Langs[0] {
+					titleorig = locStr(chap.Title, App.Proj.Langs[0])
+				}
+				if titleorig != "" {
+					subtext += "&quot;" + xEsc(titleorig) + "&quot;, "
+				}
+				subtext += xEsc("©") + itoa(chap.Year) + " " + chap.author.String(false, false)
+				s += `<text class="tocsub" x="22%" y="` + ftoa(ypc+2.22, -1) + `%"><tspan>` + subtext + `</tspan></text>`
+			}
 			ypc += pstep
 		}
 	}

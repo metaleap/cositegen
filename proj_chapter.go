@@ -303,7 +303,7 @@ func (me *PanelSvgTextGen) mergeWithParent(base *PanelSvgTextGen) {
 	}
 }
 
-func (me *Author) String(abbrev bool) (ret string) {
+func (me *Author) String(abbrev bool, forHtml bool) (ret string) {
 	if me != nil {
 		name := me.Name
 		if abbrev {
@@ -313,7 +313,7 @@ func (me *Author) String(abbrev bool) (ret string) {
 				name[i] = name[i][:1] + "."
 			}
 		}
-		ret = strings.Join(name, "&nbsp;")
+		ret = strings.Join(name, sIf(forHtml, "&nbsp;", " "))
 	}
 	return
 }
