@@ -1,6 +1,4 @@
-package main
-
-// SHARED TYPES: keep in sync with ../sb*/types.go and ../proj_storyboarding.go
+package cositegen_sb_shared
 
 type Storyboard []Page
 

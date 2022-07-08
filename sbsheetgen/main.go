@@ -9,6 +9,8 @@ import (
 	"image/png"
 	"os"
 	"time"
+
+	. "github.com/metaleap/cositegen/sb_shared"
 )
 
 const dpi1200 float64 = 47.2424242424

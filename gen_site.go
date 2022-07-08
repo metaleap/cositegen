@@ -131,10 +131,10 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 				if qidx > 0 {
 					pref = strings.Repeat(" ", len(pref))
 				}
-				printLn("\t\t" + pref + "\t\t" + App.Proj.Qualis[qidx].Name + "(" + itoa(App.Proj.Qualis[qidx].SizeHint) + ") => " + strSize64(size))
+				printLn("\t\t" + pref + "\t\t" + App.Proj.Qualis[qidx].Name + "(" + itoa(App.Proj.Qualis[qidx].SizeHint) + ") => " + strSize(uint64(size)))
 			}
 		}
-		return "for " + itoa(int(numpngs)) + " PNGs & " + itoa(int(numsvgs)) + " SVGs (" + strSize(int(totalsize)) + ") from " + itoa(int(numpanels)) + " panels in " + itoa(int(numsheets)) + " sheets, max panel pic size: " + strSize(int(me.maxPicSize))
+		return "for " + itoa(int(numpngs)) + " PNGs & " + itoa(int(numsvgs)) + " SVGs (" + strSize(totalsize) + ") from " + itoa(int(numpanels)) + " panels in " + itoa(int(numsheets)) + " sheets, max panel pic size: " + strSize(uint64(me.maxPicSize))
 	})
 
 	timedLogged("SiteGen: generating markup files...", func() string {
@@ -171,7 +171,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 				}
 			}
 		}
-		return "for " + itoa(numfileswritten) + " files (~" + strSize64(int64(totalsize)) + ")"
+		return "for " + itoa(numfileswritten) + " files (~" + strSize(totalsize) + ")"
 	})
 
 	printLn("SiteGen: " + App.Proj.SiteHost + " DONE after " + time.Now().Sub(tstart).String())
@@ -411,7 +411,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 						if q.Name == qname {
 							me.page.QualList += " selected='selected'"
 						}
-						me.page.QualList += ">" + q.Name + " (" + strSize64(qsizes[i]) + ")</option>"
+						me.page.QualList += ">" + q.Name + " (" + strSize(uint64(qsizes[i])) + ")</option>"
 					}
 					me.page.QualList = "<select disabled='disabled' title='" + hEsc(me.textStr("QualityHint")) + "' name='" + App.Proj.Gen.IdQualiList + "' id='" + App.Proj.Gen.IdQualiList + "'>" + me.page.QualList + "</select>"
 					me.page.HrefDirLtr = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Ltr.Name, me.lang, svdt, me.bgCol) + ".html"

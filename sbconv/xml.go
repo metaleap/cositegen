@@ -4,6 +4,8 @@ import (
 	"math"
 	"strconv"
 	"strings"
+
+	. "github.com/metaleap/cositegen/sb_shared"
 )
 
 func xmlOuters(s string, start string, end string) (ret []string) {
@@ -57,22 +59,22 @@ func cmFromSvgStr(attrVal string, normalize bool) float64 {
 	}
 }
 
-func (me *SizeAndPos) setSizeAndPosFrom(xml string) {
-	me.CmW = cmFromSvgStr(xmlAttr(xml, "svg:width"), true)
-	me.CmH = cmFromSvgStr(xmlAttr(xml, "svg:height"), true)
-	me.CmX = cmFromSvgStr(xmlAttr(xml, "svg:x"), true)
-	me.CmY = cmFromSvgStr(xmlAttr(xml, "svg:y"), true)
+func setSizeAndPosFrom(it *SizeAndPos, xml string) {
+	it.CmW = cmFromSvgStr(xmlAttr(xml, "svg:width"), true)
+	it.CmH = cmFromSvgStr(xmlAttr(xml, "svg:height"), true)
+	it.CmX = cmFromSvgStr(xmlAttr(xml, "svg:x"), true)
+	it.CmY = cmFromSvgStr(xmlAttr(xml, "svg:y"), true)
 }
 
 var xmlRepl = strings.NewReplacer("&apos;", "'")
 
-func (me *Object) setParasFrom(xml string) {
-	me.Paras = nil
+func objSetParasFrom(it *Object, xml string) {
+	it.Paras = nil
 	for _, xmlpara := range xmlOuters(xml, "<text:p>", "</text:p>") {
 		var para string
 		for _, xmlspan := range xmlOuters(xmlpara, "<text:span>", "</text:span>") {
 			para += xmlInner(xmlspan)
 		}
-		me.Paras = append(me.Paras, xmlRepl.Replace(strings.TrimSpace(para)))
+		it.Paras = append(it.Paras, xmlRepl.Replace(strings.TrimSpace(para)))
 	}
 }

@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	. "github.com/metaleap/cositegen/sb_shared"
 )
 
 const a5factor = 0.297 / 0.210
@@ -54,14 +56,14 @@ func convert(srcFilePath string) {
 				continue
 			}
 			var balloon Object
-			balloon.setSizeAndPosFrom(xmlframe)
-			balloon.setParasFrom(xmlframe)
+			setSizeAndPosFrom(&balloon.SizeAndPos, xmlframe)
+			objSetParasFrom(&balloon, xmlframe)
 			page.Balloons = append(page.Balloons, balloon)
 		}
 		for _, xmlshape := range xmlOuters(xmlpage, "<draw:custom-shape>", "</draw:custom-shape>") {
 			var panel Object
-			panel.setSizeAndPosFrom(xmlshape)
-			panel.setParasFrom(xmlshape)
+			setSizeAndPosFrom(&panel.SizeAndPos, xmlshape)
+			objSetParasFrom(&panel, xmlshape)
 			page.Panels = append(page.Panels, panel)
 		}
 		sb = append(sb, page)
@@ -69,7 +71,7 @@ func convert(srcFilePath string) {
 
 	jsonfilepath := srcFilePath[:len(srcFilePath)-len(".fodp")] + ".json"
 	_ = os.Remove(jsonfilepath)
-	if err := os.WriteFile(jsonfilepath, sb.toJson(), os.ModePerm); err != nil {
+	if err := os.WriteFile(jsonfilepath, sbToJson(sb), os.ModePerm); err != nil {
 		panic(err)
 	}
 
@@ -78,7 +80,7 @@ func convert(srcFilePath string) {
 		pdffilepath := srcFilePath[:len(srcFilePath)-len(".fodp")] + "." + pgsize + ".pdf"
 		_ = os.Remove(htmlfilepath)
 		_ = os.Remove(pdffilepath)
-		if err := os.WriteFile(htmlfilepath, sb.toHtml(srcFilePath, pgsize == "A5"), os.ModePerm); err != nil {
+		if err := os.WriteFile(htmlfilepath, sbToHtml(sb, srcFilePath, pgsize == "A5"), os.ModePerm); err != nil {
 			panic(err)
 		}
 		html2pdf, err := exec.Command("wkhtmltopdf",
@@ -96,15 +98,15 @@ func convert(srcFilePath string) {
 	}
 }
 
-func (me Storyboard) toJson() []byte {
-	data, err := json.MarshalIndent(me, "", "  ")
+func sbToJson(it Storyboard) []byte {
+	data, err := json.MarshalIndent(it, "", "  ")
 	if err != nil {
 		panic(err)
 	}
 	return data
 }
 
-func (me Storyboard) toHtml(srcFilePath string, isA5 bool) []byte {
+func sbToHtml(it Storyboard, srcFilePath string, isA5 bool) []byte {
 	const scale = 2.0
 	title, zoom := srcFilePath, 116
 	if isA5 {
@@ -197,13 +199,13 @@ func (me Storyboard) toHtml(srcFilePath string, isA5 bool) []byte {
 					white-space: nowrap;
 				}
 			</style></head><body>`
-	for _, page := range me {
+	for _, page := range it {
 		if len(page.Panels) == 0 && len(page.Balloons) == 0 {
 			continue
 		}
 		s += `<h1>` + title + ` &mdash; ` + page.Name + `</h1><div title="` + page.Name + `" class="page box">`
 		for _, p := range page.Panels {
-			s += p.toHtml("panel", 123, isA5)
+			s += objToHtml(&p, "panel", 123, isA5)
 		}
 		for idx, b := range page.Balloons {
 			var prior *Object
@@ -218,7 +220,7 @@ func (me Storyboard) toHtml(srcFilePath string, isA5 bool) []byte {
 			if prior != nil {
 				b.Paras = prior.Paras
 			}
-			s += b.toHtml("balloon", 1, isA5)
+			s += objToHtml(&b, "balloon", 1, isA5)
 		}
 		s += `</div>`
 	}
@@ -226,16 +228,16 @@ func (me Storyboard) toHtml(srcFilePath string, isA5 bool) []byte {
 	return []byte(s)
 }
 
-func (me *Object) toHtml(cssClsExtra string, repeatParas int, isA5 bool) (s string) {
-	cmw, cmh := me.CmW, me.CmH
+func objToHtml(it *Object, cssClsExtra string, repeatParas int, isA5 bool) (s string) {
+	cmw, cmh := it.CmW, it.CmH
 	if isA5 {
 		cmw, cmh = cmw/a5factor, cmh/a5factor
 	}
 	strcm := ftoa(cmw, 1) + `&bull;` + ftoa(cmh, 1)
 
-	s += `<div title="(` + strcm + "')\n" + strings.Join(me.Paras, "\n") + `" class="obj box ` + cssClsExtra + `" style="left: ` + ftoa(me.CmX, 9) + `cm; top: ` + ftoa(me.CmY, 9) + `cm; width: ` + ftoa(me.CmW, 9) + `cm; height: ` + ftoa(me.CmH, 9) + `cm"><div>`
+	s += `<div title="(` + strcm + "')\n" + strings.Join(it.Paras, "\n") + `" class="obj box ` + cssClsExtra + `" style="left: ` + ftoa(it.CmX, 9) + `cm; top: ` + ftoa(it.CmY, 9) + `cm; width: ` + ftoa(it.CmW, 9) + `cm; height: ` + ftoa(it.CmH, 9) + `cm"><div>`
 	for i := 0; i < repeatParas; i++ {
-		for j, para := range me.Paras {
+		for j, para := range it.Paras {
 			para = "<span>" + para + "</span>"
 			if j == 0 {
 				para = `<sup><small>` + strcm + `&nbsp;</small></sup>` + para

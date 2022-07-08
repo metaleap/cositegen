@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	. "github.com/metaleap/cositegen/sb_shared"
 )
 
 type ChapterStoryboardPage struct {
@@ -29,25 +31,6 @@ func (me *Chapter) loadStoryboard() {
 }
 
 func (me *Chapter) loadStoryboardJson() {
-	// BEGIN SHARED TYPES: keep in sync with ../sb*/types.go
-	type SizeAndPos struct {
-		CmW float64
-		CmH float64
-		CmX float64
-		CmY float64
-	}
-	type Object struct {
-		SizeAndPos
-		Paras []string
-	}
-	type Page struct {
-		Name     string
-		Balloons []Object
-		Panels   []Object
-	}
-	type Storyboard []Page
-	// END SHARED TYPES
-
 	var sb Storyboard
 	jsonLoad(me.StoryboardFile, nil, &sb)
 

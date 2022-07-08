@@ -103,26 +103,13 @@ func strNumericSuffix(s string) string {
 	return s[idx:]
 }
 
-func strSize(size int) string {
-	return strSize64(int64(size))
-}
-
-func strSize64(size int64) string {
+func strSize(size uint64) string {
 	if size >= 999999 {
 		return ftoa(float64(size)*(1.0/1048576.0), 1) + "MB"
 	} else if size > 999 {
 		return itoa(1+int(float64(size)*(1.0/1024.0))) + "KB"
 	}
 	return fmt.Sprintf("%dB", size)
-}
-
-func strToUuidLike(s string) string {
-	str := make([]byte, 0, 2*len(s))
-	for _, b := range []byte(s) {
-		str = append(str, strconv.FormatInt(int64(b), 16)...)
-	}
-	str[8], str[13], str[18], str[23] = '-', '-', '-', '-' // // 8-4-4-4-12
-	return strings.ToUpper(string(str[:36]))
 }
 
 func mkDir(dirPath string) {
