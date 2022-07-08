@@ -64,8 +64,8 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 	switch name {
 	case "gen":
 		action = func(flags map[string]bool) { siteGen{}.genSite(fromGui, flags) }
-	case "book", "album":
-		action = makeAlbumBook
+	case "book":
+		action = makeBook
 	default:
 		s := "Unknown action: '" + name + "', try one of these:"
 		for name, desc := range AppMainActions {

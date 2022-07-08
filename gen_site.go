@@ -510,20 +510,20 @@ func (me *siteGen) prepHomePage() {
 			s += "</span></span>"
 		}
 	}
-	s += "<h5 id='albums' class='" + App.Proj.Gen.ClsSeries + "'>Downloads</h5>"
+	s += "<h5 id='books' class='" + App.Proj.Gen.ClsSeries + "'>Downloads</h5>"
 	s += "<span><ul>"
-	albumlink := func(repo string, pref string, ext string) string {
-		return App.Proj.AlbumBookRepoPathPrefix + repo + App.Proj.AlbumBookRepoPathInfix + sIf(pref == "", "printcover", pref+me.lang+`_`+sIf(me.dirRtl, "rtl", "ltr")) + ext
+	booklink := func(repo string, pref string, ext string) string {
+		return App.Proj.BookRepoPathPrefix + repo + App.Proj.BookRepoPathInfix + sIf(pref == "", "printcover", pref+me.lang+`_`+sIf(me.dirRtl, "rtl", "ltr")) + ext
 	}
-	for _, albumpub := range App.Proj.AlbumBookPubs {
-		s += "<li id='album_" + albumpub.RepoName + "'><b style='font-size: xx-large'>" + albumpub.Title + "</b><ul>"
+	for _, bookpub := range App.Proj.BookPubs {
+		s += "<li id='book_" + bookpub.RepoName + "'><b style='font-size: xx-large'>" + bookpub.Title + "</b><ul>"
 		s += "</li>"
-		s += `<li>Screen 4K &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + albumlink(albumpub.RepoName, "screen_", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + albumlink(albumpub.RepoName, "screen_", ".cbz") + `">CBZ</a></li>`
-		s += `<li>Print ~1700dpi &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + albumlink(albumpub.RepoName, "print_", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + albumlink(albumpub.RepoName, "", ".pdf") + `">Cover</a></li>`
-		s += "<li>" + me.textStr("AlbumContents")
-		for _, series := range albumpub.Series {
+		s += `<li>Screen 4K &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen_", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen_", ".cbz") + `">CBZ</a></li>`
+		s += `<li>Print ~1700dpi &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "print_", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "", ".pdf") + `">Cover</a></li>`
+		s += "<li>" + me.textStr("BookContents")
+		for _, series := range bookpub.Series {
 			if ser := App.Proj.seriesByName(series); ser != nil {
-				s += "&nbsp;<a href='#" + ser.Name + "_" + itoa(albumpub.Year) + "'>" + hEsc(locStr(ser.Title, me.lang)) + "</a>&nbsp;"
+				s += "&nbsp;<a href='#" + ser.Name + "_" + itoa(bookpub.Year) + "'>" + hEsc(locStr(ser.Title, me.lang)) + "</a>&nbsp;"
 			}
 		}
 		s += "</ul></li>"
@@ -928,15 +928,15 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 			}
 		}
 	}
-	for _, albumpub := range App.Proj.AlbumBookPubs {
-		xml := "<entry><updated>" + albumpub.PubDate + "T11:22:44Z</updated>"
-		xml += `<title>Album: ` + xEsc(albumpub.Title) + `</title>`
-		xml += "<id>info:" + contentHashStr([]byte(strings.Join(albumpub.Series, "+")+"_"+albumpub.RepoName+"_"+albumpub.PubDate+"_"+"_"+me.lang)) + "</id>"
-		xml += `<link href="http://` + App.Proj.SiteHost + "/" + me.namePage(nil, 0, 0, "", "", "", 0, false) + `.html#album_` + albumpub.RepoName + `"/>`
+	for _, bookpub := range App.Proj.BookPubs {
+		xml := "<entry><updated>" + bookpub.PubDate + "T11:22:44Z</updated>"
+		xml += `<title>Album: ` + xEsc(bookpub.Title) + `</title>`
+		xml += "<id>info:" + contentHashStr([]byte(strings.Join(bookpub.Series, "+")+"_"+bookpub.RepoName+"_"+bookpub.PubDate+"_"+"_"+me.lang)) + "</id>"
+		xml += `<link href="http://` + App.Proj.SiteHost + "/" + me.namePage(nil, 0, 0, "", "", "", 0, false) + `.html#book_` + bookpub.RepoName + `"/>`
 		xml += `<author><name>` + App.Proj.SiteHost + `</name></author>`
 		xml += `<content type="text">` + strings.NewReplacer(
-			"%REPONAME%", albumpub.RepoName,
-		).Replace(locStr(af.ContentTxtAlbum, me.lang)) + `</content>`
+			"%REPONAME%", bookpub.RepoName,
+		).Replace(locStr(af.ContentTxtBook, me.lang)) + `</content>`
 		xmls = append(xmls, xml+`</entry>`)
 	}
 	if len(xmls) > 0 && tlatest != "" {

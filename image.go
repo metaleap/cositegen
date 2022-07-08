@@ -124,13 +124,13 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 	}
 }
 
-func imgDownsized(srcImgData io.Reader, onFileDone func() error, maxWidth int, transparent bool) []byte {
+func imgDownsized(srcImgData io.Reader, onDecoded func() error, maxWidth int, transparent bool) []byte {
 	imgsrc, _, err := image.Decode(srcImgData)
+	if onDecoded != nil {
+		_ = onDecoded() // allow early file-closing for the caller
+	}
 	if err != nil {
 		panic(err)
-	}
-	if onFileDone != nil {
-		_ = onFileDone()
 	}
 
 	origwidth, origheight := imgsrc.Bounds().Max.X, imgsrc.Bounds().Max.Y
@@ -172,13 +172,13 @@ func imgFill(img draw.Image, r image.Rectangle, c color.Color) {
 	}
 }
 
-func imgGrayDistrs(srcImgData io.Reader, onFileDone func() error, numClusters int) (r []int) {
+func imgGrayDistrs(srcImgData io.Reader, onDecoded func() error, numClusters int) (r []int) {
 	imgsrc, _, err := image.Decode(srcImgData)
+	if onDecoded != nil {
+		_ = onDecoded() // allow early file-closing for the caller
+	}
 	if err != nil {
 		panic(err)
-	}
-	if onFileDone != nil {
-		_ = onFileDone()
 	}
 
 	r = make([]int, numClusters)
@@ -203,13 +203,13 @@ func imgGrayDistrs(srcImgData io.Reader, onFileDone func() error, numClusters in
 }
 
 // returns nil if srcImgData already consists entirely of fully-black&white-only pixels
-func imgToMonochrome(srcImgData io.Reader, onFileDone func() error, blackIfLessThan uint8) []byte {
+func imgToMonochrome(srcImgData io.Reader, onDecoded func() error, blackIfLessThan uint8) []byte {
 	imgsrc, _, err := image.Decode(srcImgData)
+	if onDecoded != nil {
+		_ = onDecoded() // allow early file-closing for the caller
+	}
 	if err != nil {
 		panic(err)
-	}
-	if onFileDone != nil {
-		_ = onFileDone()
 	}
 
 	allbw, imggray := true, image.NewGray(image.Rect(0, 0, imgsrc.Bounds().Max.X, imgsrc.Bounds().Max.Y))
@@ -451,13 +451,13 @@ func imgStitchHorizontally(fileNames []string, height int, gapWidth int, gapColo
 	return buf.Bytes()
 }
 
-func imgPanels(srcImgData io.Reader, onFileDone func() error) ImgPanel {
+func imgPanels(srcImgData io.Reader, onDecoded func() error) ImgPanel {
 	imgsrc, _, err := image.Decode(srcImgData)
+	if onDecoded != nil {
+		_ = onDecoded() // allow early file-closing for the caller
+	}
 	if err != nil {
 		panic(err)
-	}
-	if onFileDone != nil {
-		_ = onFileDone()
 	}
 	ret := ImgPanel{Rect: imgsrc.Bounds()}
 	ret.detectSubPanels(imgsrc.(*image.Gray))

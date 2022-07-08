@@ -28,20 +28,20 @@ type Project struct {
 		ExcludeInSiteGen   bool
 		HomeAndFeedDefault bool
 	}
-	AlbumBookPubs []struct {
+	BookPubs []struct {
 		Title    string
 		RepoName string
 		Year     int
 		Series   []string
 		PubDate  string
 	}
-	AlbumBookRepoPathPrefix string
-	AlbumBookRepoPathInfix  string
-	AtomFile                struct {
-		PubDates        []string
-		Name            string
-		ContentTxt      map[string]string
-		ContentTxtAlbum map[string]string
+	BookRepoPathPrefix string
+	BookRepoPathInfix  string
+	AtomFile           struct {
+		PubDates       []string
+		Name           string
+		ContentTxt     map[string]string
+		ContentTxtBook map[string]string
 	}
 	MaxImagePanelTextAreas int
 	BwThresholds           []uint8

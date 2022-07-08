@@ -18,14 +18,14 @@ import (
 )
 
 const (
-	albumBookScreenWidth      = 3744
-	albumBookScreenBorder     = 44
-	albumBookScreenLoResDiv   = 4
-	albumBookPrintBorderMmBig = 15
-	albumBookPrintBorderMmLil = 7
+	bookScreenWidth      = 3744
+	bookScreenBorder     = 44
+	bookScreenLoResDiv   = 4
+	bookPrintBorderMmBig = 15
+	bookPrintBorderMmLil = 7
 )
 
-type AlbumBookGen struct {
+type BookGen struct {
 	Sheets         []*SheetVer
 	Phrase         string
 	ShmDirPath     string
@@ -36,9 +36,9 @@ type AlbumBookGen struct {
 	facesFilePaths []string
 }
 
-func makeAlbumBook(flags map[string]bool) {
+func makeBook(flags map[string]bool) {
 	phrase := strings.Join(os.Args[2:], " ")
-	gen := AlbumBookGen{
+	gen := BookGen{
 		Phrase:     phrase,
 		ShmDirPath: "/dev/shm/" + phrase,
 		OutDirPath: ".books/" + phrase,
@@ -121,19 +121,19 @@ func makeAlbumBook(flags map[string]bool) {
 	}
 }
 
-func (me *AlbumBookGen) genSheetSvgsAndPngs(dirRtl bool, lang string) {
+func (me *BookGen) genSheetSvgsAndPngs(dirRtl bool, lang string) {
 	for i, sv := range me.Sheets {
 		sheetsvgfilepath := me.sheetSvgPath(i, dirRtl, lang)
 		me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, lang)
 		if os.Getenv("NOSCREEN") == "" {
 			sheetpngfilepath := sheetsvgfilepath + ".sh.png"
 			printLn(sheetpngfilepath, "...")
-			imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, iIf(os.Getenv("LORES") == "", 0, albumBookScreenWidth/albumBookScreenLoResDiv), false, sIf(os.Getenv("LORES") == "", "sh_", "sh_lq_"))
+			imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, iIf(os.Getenv("LORES") == "", 0, bookScreenWidth/bookScreenLoResDiv), false, sIf(os.Getenv("LORES") == "", "sh_", "sh_lq_"))
 		}
 	}
 }
 
-func (me *AlbumBookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string) {
+func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string) {
 	rectinner := sv.data.pxBounds()
 	w, h := rectinner.Dx(), rectinner.Dy()
 
@@ -189,14 +189,14 @@ func (me *AlbumBookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl boo
 	fileWrite(outFilePath, []byte(svg))
 }
 
-func (me *AlbumBookGen) sheetSvgPath(idx int, dirRtl bool, lang string) string {
+func (me *BookGen) sheetSvgPath(idx int, dirRtl bool, lang string) string {
 	return me.ShmDirPath + "/" + sIf(dirRtl, "r", "l") + itoa0pref(idx, 3) + lang + sIf(os.Getenv("LORES") == "", "", "_lq") + ".svg"
 }
 
-func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
-	border, pgw, pgh := albumBookScreenBorder, albumBookScreenWidth, int(float64(albumBookScreenWidth)/(float64(me.MaxSheetWidth)/float64(me.MaxSheetHeight)))
+func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
+	border, pgw, pgh := bookScreenBorder, bookScreenWidth, int(float64(bookScreenWidth)/(float64(me.MaxSheetWidth)/float64(me.MaxSheetHeight)))
 	if os.Getenv("LORES") != "" {
-		pgw, pgh, border = pgw/albumBookScreenLoResDiv, pgh/albumBookScreenLoResDiv, border/albumBookScreenLoResDiv
+		pgw, pgh, border = pgw/bookScreenLoResDiv, pgh/bookScreenLoResDiv, border/bookScreenLoResDiv
 	}
 
 	pgfilepaths := []string{}
@@ -308,7 +308,7 @@ func (me *AlbumBookGen) genScreenVersion(dirRtl bool, lang string) {
 	}
 }
 
-func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
+func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 	svgh, pgwmm, pghmm, isoddpage, pgidx, brepl := 0, 210, 297, false, -1, []byte("tspan.std")
 	for numPages = iIf(os.Getenv("NOTOC") == "", 4, 2) + len(me.Sheets)/2; (numPages % 4) != 0; {
 		numPages++
@@ -365,12 +365,12 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) (numPages int)
 		sheetsvgfilepath0 := me.sheetSvgPath(i*2, dirRtl, lang)
 		sheetsvgfilepath1 := me.sheetSvgPath((i*2)+1, dirRtl, lang)
 		svg += `<text x="50%" y="97%"><tspan>` + itoa(pgidx+1) + `</tspan></text>`
-		topborder := albumBookPrintBorderMmBig
+		topborder := bookPrintBorderMmBig
 		if me.Sheets[i*2].parentSheet.parentChapter.Name == "half-pagers" {
-			topborder = albumBookPrintBorderMmLil
+			topborder = bookPrintBorderMmLil
 		}
-		svg += `<image x="` + itoa(iIf(isoddpage, albumBookPrintBorderMmBig, albumBookPrintBorderMmLil)) + `mm" y="` + itoa(topborder) + `mm" width="` + itoa(pgwmm-(albumBookPrintBorderMmBig+albumBookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath0), brepl, []byte("zzz"), -1)) + `"/>`
-		svg += `<image x="` + itoa(iIf(isoddpage, albumBookPrintBorderMmBig, albumBookPrintBorderMmLil)) + `mm" y="` + itoa(iIf(strings.HasPrefix(me.Sheets[i*2].parentSheet.name, "01FROGF"), 47, 50)) + `%" width="` + itoa(pgwmm-(albumBookPrintBorderMmBig+albumBookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath1), brepl, []byte("zzz"), -1)) + `"/>`
+		svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(topborder) + `mm" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath0), brepl, []byte("zzz"), -1)) + `"/>`
+		svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(iIf(strings.HasPrefix(me.Sheets[i*2].parentSheet.name, "01FROGF"), 47, 50)) + `%" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath1), brepl, []byte("zzz"), -1)) + `"/>`
 		svg += "</svg>"
 	}
 	dpadd(true)
@@ -428,7 +428,7 @@ func (me *AlbumBookGen) genPrintVersion(dirRtl bool, lang string) (numPages int)
 	return
 }
 
-func (me *AlbumBookGen) tocSvg(lang string, pgW int, pgH int) (s string) {
+func (me *BookGen) tocSvg(lang string, pgW int, pgH int) (s string) {
 	var tocs []int
 	for i, sv := range me.Sheets {
 		if len(tocs) == 0 || sv.parentSheet.parentChapter != me.Sheets[tocs[len(tocs)-1]].parentSheet.parentChapter {
@@ -475,7 +475,7 @@ func (me *AlbumBookGen) tocSvg(lang string, pgW int, pgH int) (s string) {
 	return
 }
 
-func (me *AlbumBookGen) facesPicPaths() []string {
+func (me *BookGen) facesPicPaths() []string {
 	if me.facesFilePaths == nil {
 		me.facesFilePaths = make([]string, 0, len(me.Sheets))
 		for _, sv := range me.Sheets {
@@ -523,7 +523,7 @@ func (me *AlbumBookGen) facesPicPaths() []string {
 	return me.facesFilePaths
 }
 
-func (me *AlbumBookGen) facesDistr(numFaces int, w float64, h float64, double bool) (perRow int, perCol int) {
+func (me *BookGen) facesDistr(numFaces int, w float64, h float64, double bool) (perRow int, perCol int) {
 	perRow, perCol = 0, 3
 	for numfaces := -1; numfaces < numFaces; {
 		perCol++
@@ -533,7 +533,7 @@ func (me *AlbumBookGen) facesDistr(numFaces int, w float64, h float64, double bo
 	return
 }
 
-func (me *AlbumBookGen) facesDraw(faces []string, perRow int, perCol int, areaWidth float64, areaHeight float64, svgWidth float64, svgHeight float64, spine float64, margin float64, svgUnit string) (svg string) {
+func (me *BookGen) facesDraw(faces []string, perRow int, perCol int, areaWidth float64, areaHeight float64, svgWidth float64, svgHeight float64, spine float64, margin float64, svgUnit string) (svg string) {
 	fpad, fwh, fy0 := (areaWidth/float64(perRow))/9.0, 0.0, 0.0
 	for i := 0.0; fy0 < margin; i += 1.11 {
 		fwh = ((areaWidth / float64(perRow)) - fpad) - i
@@ -565,7 +565,7 @@ func (me *AlbumBookGen) facesDraw(faces []string, perRow int, perCol int, areaWi
 	return
 }
 
-func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
+func (me *BookGen) genPrintCover(title string, numPages int) {
 	marginmm := 22.0
 	knownsizes := []struct {
 		numPgs int
@@ -630,7 +630,7 @@ func (me *AlbumBookGen) genPrintCover(title string, numPages int) {
 	}
 }
 
-func (*AlbumBookGen) printSvgToPdf(svgFilePath string, pdfOutFilePath string) {
+func (*BookGen) printSvgToPdf(svgFilePath string, pdfOutFilePath string) {
 	printLn(pdfOutFilePath, "...")
 	osExec(false, nil, browserCmd[0], append(browserCmd[2:],
 		"--headless", "--disable-gpu", "--print-to-pdf-no-header",
