@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"strconv"
 	"strings"
 )
@@ -42,22 +43,25 @@ func xmlInner(s string) string {
 	return s[:strings.IndexByte(s, '<')]
 }
 
-func cmFromSvgStr(attrVal string) float64 {
+func cmFromSvgStr(attrVal string, normalize bool) float64 {
 	if !strings.HasSuffix(attrVal, "cm") {
 		panic(attrVal)
 	}
 	if f, err := strconv.ParseFloat(attrVal[:len(attrVal)-len("cm")], 64); err != nil {
 		panic(err)
 	} else {
+		if normalize {
+			f = 0.1 * math.Ceil(f*10.0)
+		}
 		return f
 	}
 }
 
 func (me *SizeAndPos) setSizeAndPosFrom(xml string) {
-	me.CmW = cmFromSvgStr(xmlAttr(xml, "svg:width"))
-	me.CmH = cmFromSvgStr(xmlAttr(xml, "svg:height"))
-	me.CmX = cmFromSvgStr(xmlAttr(xml, "svg:x"))
-	me.CmY = cmFromSvgStr(xmlAttr(xml, "svg:y"))
+	me.CmW = cmFromSvgStr(xmlAttr(xml, "svg:width"), true)
+	me.CmH = cmFromSvgStr(xmlAttr(xml, "svg:height"), true)
+	me.CmX = cmFromSvgStr(xmlAttr(xml, "svg:x"), true)
+	me.CmY = cmFromSvgStr(xmlAttr(xml, "svg:y"), true)
 }
 
 var xmlRepl = strings.NewReplacer("&apos;", "'")

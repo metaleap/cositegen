@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+const a5factor = 0.297 / 0.210
+
 var itoa = strconv.Itoa
 
 func ftoa(f float64, prec int) string {
@@ -66,30 +68,31 @@ func convert(srcFilePath string) {
 	}
 
 	jsonfilepath := srcFilePath[:len(srcFilePath)-len(".fodp")] + ".json"
-	htmlfilepath := srcFilePath[:len(srcFilePath)-len(".fodp")] + ".html"
-	pdffilepath := srcFilePath[:len(srcFilePath)-len(".fodp")] + ".pdf"
 	_ = os.Remove(jsonfilepath)
-	_ = os.Remove(htmlfilepath)
-	_ = os.Remove(pdffilepath)
-
 	if err := os.WriteFile(jsonfilepath, sb.toJson(), os.ModePerm); err != nil {
 		panic(err)
 	}
-	if err := os.WriteFile(htmlfilepath, sb.toHtml(srcFilePath), os.ModePerm); err != nil {
-		panic(err)
-	}
 
-	html2pdf, err := exec.Command("wkhtmltopdf",
-		"--orientation", "Landscape",
-		"--page-size", "A4",
-		"--log-level", "error",
-		"--grayscale", htmlfilepath, srcFilePath[:len(srcFilePath)-len(".fodp")]+".pdf",
-	).CombinedOutput()
-	if h2p := strings.TrimSpace(string(html2pdf)); h2p != "" {
-		println(h2p)
-	}
-	if err != nil {
-		panic(err)
+	for _, pgsize := range []string{"A4", "A5"} {
+		htmlfilepath := srcFilePath[:len(srcFilePath)-len(".fodp")] + "." + pgsize + ".html"
+		pdffilepath := srcFilePath[:len(srcFilePath)-len(".fodp")] + "." + pgsize + ".pdf"
+		_ = os.Remove(htmlfilepath)
+		_ = os.Remove(pdffilepath)
+		if err := os.WriteFile(htmlfilepath, sb.toHtml(srcFilePath, pgsize == "A5"), os.ModePerm); err != nil {
+			panic(err)
+		}
+		html2pdf, err := exec.Command("wkhtmltopdf",
+			"--orientation", "Landscape",
+			"--page-size", pgsize,
+			"--log-level", "error",
+			"--grayscale", htmlfilepath, pdffilepath,
+		).CombinedOutput()
+		if h2p := strings.TrimSpace(string(html2pdf)); h2p != "" {
+			println(h2p)
+		}
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -101,9 +104,12 @@ func (me Storyboard) toJson() []byte {
 	return data
 }
 
-func (me Storyboard) toHtml(srcFilePath string) []byte {
+func (me Storyboard) toHtml(srcFilePath string, isA5 bool) []byte {
 	const scale = 2.0
-	title := srcFilePath
+	title, zoom := srcFilePath, 116
+	if isA5 {
+		zoom = 80
+	}
 	for idx := strings.IndexByte(title, '/'); idx >= 0 && idx < strings.LastIndexByte(title, '/'); idx = strings.IndexByte(title, '/') {
 		title = title[idx+1:]
 	}
@@ -111,7 +117,8 @@ func (me Storyboard) toHtml(srcFilePath string) []byte {
 			<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
 			<title>` + title + `</title><style type="text/css">
 				body {
-					padding: 0 2cm;
+					zoom: ` + itoa(zoom) + `%;
+					padding: 0 0cm;
 					margin: 0px;
 				}
 				.box {
@@ -135,7 +142,7 @@ func (me Storyboard) toHtml(srcFilePath string) []byte {
 					max-height: 21cm;
 					min-height: 21cm;
 					border: 0px none #000 !important;
-					margin-bottom: 2cm;
+					margin-bottom: 0cm;
 				}
 				.obj {
 					position: absolute;
@@ -167,6 +174,12 @@ func (me Storyboard) toHtml(srcFilePath string) []byte {
 				.balloon {
 					border-radius: 1em;
 				}
+				.balloon p span {
+					font-size: 0.88em;
+				}
+				.balloon p {
+					line-height: 0.77em;
+				}
 				hr {
 					opacity: 0.22;
 					margin: 1em 0;
@@ -179,7 +192,7 @@ func (me Storyboard) toHtml(srcFilePath string) []byte {
 				}
 				h1 {
 					font-family: sans;
-					margin-top: 2cm;
+					margin-top: 0cm;
 					padding: 0;
 					white-space: nowrap;
 				}
@@ -190,10 +203,22 @@ func (me Storyboard) toHtml(srcFilePath string) []byte {
 		}
 		s += `<h1>` + title + ` &mdash; ` + page.Name + `</h1><div title="` + page.Name + `" class="page box">`
 		for _, p := range page.Panels {
-			s += p.toHtml("panel", 123)
+			s += p.toHtml("panel", 123, isA5)
 		}
-		for _, b := range page.Balloons {
-			s += b.toHtml("balloon", 1)
+		for idx, b := range page.Balloons {
+			var prior *Object
+			for _, bp := range page.Balloons[:idx] {
+				if bp.CmH == b.CmH && bp.CmY == b.CmY &&
+					bp.CmX >= b.CmX && bp.CmW <= b.CmW &&
+					(bp.CmX+bp.CmW) <= (b.CmX+b.CmW) {
+					prior = &bp
+					break
+				}
+			}
+			if prior != nil {
+				b.Paras = prior.Paras
+			}
+			s += b.toHtml("balloon", 1, isA5)
 		}
 		s += `</div>`
 	}
@@ -201,11 +226,17 @@ func (me Storyboard) toHtml(srcFilePath string) []byte {
 	return []byte(s)
 }
 
-func (me *Object) toHtml(cssClsExtra string, repeatParas int) (s string) {
-	strcm := ftoa(me.CmW, 1) + `&bull;` + ftoa(me.CmH, 1)
+func (me *Object) toHtml(cssClsExtra string, repeatParas int, isA5 bool) (s string) {
+	cmw, cmh := me.CmW, me.CmH
+	if isA5 {
+		cmw, cmh = cmw/a5factor, cmh/a5factor
+	}
+	strcm := ftoa(cmw, 1) + `&bull;` + ftoa(cmh, 1)
+
 	s += `<div title="(` + strcm + "')\n" + strings.Join(me.Paras, "\n") + `" class="obj box ` + cssClsExtra + `" style="left: ` + ftoa(me.CmX, 9) + `cm; top: ` + ftoa(me.CmY, 9) + `cm; width: ` + ftoa(me.CmW, 9) + `cm; height: ` + ftoa(me.CmH, 9) + `cm"><div>`
 	for i := 0; i < repeatParas; i++ {
 		for j, para := range me.Paras {
+			para = "<span>" + para + "</span>"
 			if j == 0 {
 				para = `<sup><small>` + strcm + `&nbsp;</small></sup>` + para
 			}
