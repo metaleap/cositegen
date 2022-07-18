@@ -78,7 +78,7 @@ func makeBook(flags map[string]bool) {
 	sort.SliceStable(gen.Sheets, func(i int, j int) bool {
 		return gen.Sheets[i].DtStr() < gen.Sheets[j].DtStr()
 	})
-	for i := 0; i < len(gen.Sheets); i++ {
+	for i := 0; i < len(gen.Sheets); i++ { // eg REPL_41NCSGP=57SCBVF
 		if repl := os.Getenv("REPL_" + gen.Sheets[i].parentSheet.name); repl != "" {
 			for j, svr := range gen.Sheets {
 				if svr.parentSheet.name == repl {
@@ -133,6 +133,8 @@ func (me *BookGen) genSheetSvgsAndPngs(dirRtl bool, lang string) {
 	}
 }
 
+const bookCssTspanStd = "stroke: #000000 !important; stroke-width: 11px !important;"
+
 func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string) {
 	rectinner := sv.data.pxBounds()
 	w, h := rectinner.Dx(), rectinner.Dy()
@@ -149,8 +151,7 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 		strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + `
 				}
 				g > svg > svg > text > tspan.std {
-					stroke: #000000 !important;
-					stroke-width: 11px !important;
+					` + bookCssTspanStd + `
 				}
             </style>`
 
@@ -309,7 +310,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 }
 
 func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
-	svgh, pgwmm, pghmm, isoddpage, pgidx, brepl := 0, 210, 297, false, -1, []byte("tspan.std")
+	svgh, pgwmm, pghmm, isoddpage, pgidx, brepl := 0, 210, 297, false, -1, []byte(bookCssTspanStd)
 	for numPages = iIf(os.Getenv("NOTOC") == "", 4, 2) + len(me.Sheets)/2; (numPages % 4) != 0; {
 		numPages++
 	}
@@ -347,7 +348,7 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 			even := ((dpbwidx % 2) == 0)
 			svg += `<image width="44mm" x="` + itoa(x+iIf(even, 0, 0)) + `mm" y="` + itoa(y) + `mm"
 						xlink:href="file://` + dpbwfilepaths[dpbwidx] + `"
-						opacity="` + sIf(closeTag, "0.33", "0.22") + `" transform="rotate(` + itoa(iIf(even, 2, -2)) + `)" />`
+						opacity="` + sIf(closeTag, "0.22", "0.11") + `" transform="rotate(` + itoa(iIf(even, 2, -2)) + `)" />`
 		}
 		if closeTag {
 			svg += "</svg>"
@@ -369,8 +370,9 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 		if me.Sheets[i*2].parentSheet.parentChapter.Name == "half-pagers" {
 			topborder = bookPrintBorderMmLil
 		}
-		svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(topborder) + `mm" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath0), brepl, []byte("zzz"), -1)) + `"/>`
-		svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(iIf(strings.HasPrefix(me.Sheets[i*2].parentSheet.name, "01FROGF"), 47, 50)) + `%" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath1), brepl, []byte("zzz"), -1)) + `"/>`
+		const repl = "font-weight: normal !important;"
+		svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(topborder) + `mm" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath0), brepl, []byte(repl), -1)) + `"/>`
+		svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(iIf(strings.HasPrefix(me.Sheets[i*2].parentSheet.name, "01FROGF"), 47, 50)) + `%" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath1), brepl, []byte(repl), -1)) + `"/>`
 		svg += "</svg>"
 	}
 	dpadd(true)
