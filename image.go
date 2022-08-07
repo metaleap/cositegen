@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-forks/gopnm"
+	pnm "github.com/go-forks/gopnm"
 	"golang.org/x/image/draw"
 )
 
