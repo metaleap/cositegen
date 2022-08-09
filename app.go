@@ -249,7 +249,7 @@ func pngOpt(pngFilePath string) bool {
 				App.Proj.save(os.Getenv("NOGUI") != "")
 				panic("relinked hash from " + curfilehash + " to " + newfilehash + " — intentional crash, restart manually")
 			}
-		} else if strings.HasSuffix(pngFilePath, "/bwsmall."+itoa(int(App.Proj.BwThresholds[0]))+"."+itoa(int(App.Proj.BwSmallWidth))+".png") {
+		} else if strings.Contains(pngFilePath, "/bwsmall.") && strings.HasSuffix(pngFilePath, "."+itoa(int(App.Proj.BwSmallWidth))+".png") {
 			if hashid := filepath.Base(filepath.Dir(pngFilePath)); App.Proj.data.Sv.ById != nil {
 				if svdata := App.Proj.data.Sv.ById[hashid]; svdata != nil && svdata.parentSheetVer != nil {
 					_ = os.Remove(filepath.Join(svdata.dirPath, strings.TrimSuffix(

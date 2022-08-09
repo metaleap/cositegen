@@ -23,6 +23,7 @@ type Series struct {
 	Chapters        []*Chapter
 	GenPanelSvgText *PanelSvgTextGen
 	Priv            bool
+	BwThreshold     uint8
 
 	author *Author
 }
@@ -43,6 +44,7 @@ type Chapter struct {
 	GenPanelSvgText  *PanelSvgTextGen
 	Priv             bool
 	Pic              []interface{}
+	BwThreshold      uint8
 
 	author       *Author
 	sheets       []*Sheet
@@ -82,6 +84,13 @@ func (me *Series) numNonPrivChaptersWithSheets() (r int) {
 		}
 	}
 	return
+}
+
+func (me *Series) bwThreshold() uint8 {
+	if me.BwThreshold != 0 {
+		return me.BwThreshold
+	}
+	return App.Proj.BwThresholds[0]
 }
 
 func (me *Series) numSheets() (ret int) {
@@ -139,6 +148,13 @@ func (me *Series) dateRange() (dtOldest int64, dtNewest int64) {
 		}
 	}
 	return
+}
+
+func (me *Chapter) bwThreshold() uint8 {
+	if me.BwThreshold != 0 {
+		return me.BwThreshold
+	}
+	return me.parentSeries.bwThreshold()
 }
 
 func (me *Chapter) NextAfter(withSheetsOnly bool) *Chapter {

@@ -345,11 +345,21 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		s += "<option value='url(\"/" + bgfilename + "\")'>Colorized</option>"
 	}
 	s += "</select> version at black-threshold of <select onchange='$.fsimg.src=this.value;'>"
-	for i, bwt := range App.Proj.BwThresholds {
+	bwthresholds, idx, svbwt := App.Proj.BwThresholds, -1, sv.bwThreshold()
+	for i, bwt := range bwthresholds {
+		if bwt == svbwt {
+			idx = i
+			break
+		}
+	}
+	if idx < 0 {
+		bwthresholds = append([]uint8{svbwt}, bwthresholds...)
+	} else {
+		bwthresholds = append(append([]uint8{svbwt}, bwthresholds[:idx]...), bwthresholds[idx+1:]...)
+	}
+	for i, bwt := range bwthresholds {
 		href := "/" + sv.fileName + "/" + itoa(int(bwt))
-		if i == 0 {
-			href = "/" + bwsrc
-		} else if fv("srcpx") != sv.data.bwFilePath {
+		if i != 0 && fv("srcpx") != sv.data.bwFilePath {
 			break
 		}
 		s += "<option value='" + href + "' style='background-image: url(\"" + href + "\");'>&lt; " + itoa(int(bwt)) + " (" + sIf(i == 0, "current", "preview") + ")" + "</option>"

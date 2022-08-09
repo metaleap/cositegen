@@ -28,6 +28,7 @@ type Sheet struct {
 func (me *Sheet) At(i int) fmt.Stringer { return me.versions[i] }
 func (me *Sheet) Len() int              { return len(me.versions) }
 func (me *Sheet) String() string        { return me.name }
+func (me *Sheet) bwThreshold() uint8    { return me.parentChapter.bwThreshold() }
 
 func (me *Sheet) versionNoOlderThanOrLatest(dt int64) *SheetVer {
 	if dt > 0 {
@@ -54,7 +55,7 @@ type SheetVerData struct {
 }
 
 func (me *SheetVerData) PicDirPath(quali int) string {
-	return filepath.Join(me.dirPath, "__panels__"+itoa(int(App.Proj.BwThresholds[0]))+"_"+ftoa(App.Proj.PanelBorderCm, -1)+"_"+itoa(quali))
+	return filepath.Join(me.dirPath, "__panels__"+itoa(int(me.parentSheetVer.bwThreshold()))+"_"+ftoa(App.Proj.PanelBorderCm, -1)+"_"+itoa(quali))
 }
 
 type SheetVer struct {
@@ -68,6 +69,8 @@ type SheetVer struct {
 		done bool
 	}
 }
+
+func (me *SheetVer) bwThreshold() uint8 { return me.parentSheet.bwThreshold() }
 
 func (me *SheetVer) DtName() string {
 	return strconv.FormatInt(me.dateTimeUnixNano, 10)
@@ -105,8 +108,8 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 		App.Proj.data.Sv.ById[me.id] = me.data
 	}
 	me.data.dirPath = ".ccache/" + svCacheDirNamePrefix + me.id
-	me.data.bwFilePath = filepath.Join(me.data.dirPath, "bw."+itoa(int(App.Proj.BwThresholds[0]))+".png")
-	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(App.Proj.BwThresholds[0]))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
+	me.data.bwFilePath = filepath.Join(me.data.dirPath, "bw."+itoa(int(me.bwThreshold()))+".png")
+	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(me.bwThreshold()))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
 	mkDir(me.data.dirPath)
 
 	didgraydistr := me.ensureGrayDistr(forceFullRedo || len(me.data.GrayDistr) == 0)
@@ -123,19 +126,21 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 
 func (me *SheetVer) ensureBwSheetPngs(force bool) (didWork bool) {
 	var exist1, exist2 bool
-	for fname, bptr := range map[string]*bool{me.data.bwFilePath: &exist1, me.data.bwSmallFilePath: &exist2} {
-		*bptr = (fileStat(fname) != nil)
+	for fname, boolptr := range map[string]*bool{me.data.bwFilePath: &exist1, me.data.bwSmallFilePath: &exist2} {
+		*boolptr = (fileStat(fname) != nil)
 	}
 
 	if didWork = force || !(exist1 && exist2); didWork {
-		rmDir(me.data.dirPath) // because BwThreshold might have been changed and..
-		mkDir(me.data.dirPath) // ..thus everything in this dir needs re-gen'ing
-		if file, err := os.Open(me.fileName); err != nil {
-			panic(err)
-		} else if data := imgToMonochrome(file, file.Close, uint8(App.Proj.BwThresholds[0])); data != nil {
-			fileWrite(me.data.bwFilePath, data)
-		} else if err = os.Symlink("../../../"+me.fileName, me.data.bwFilePath); err != nil {
-			panic(err)
+		if force || !exist1 {
+			rmDir(me.data.dirPath) // because BwThreshold might have been changed and..
+			mkDir(me.data.dirPath) // ..thus everything in this dir needs re-gen'ing
+			if file, err := os.Open(me.fileName); err != nil {
+				panic(err)
+			} else if data := imgToMonochrome(file, file.Close, me.bwThreshold()); data != nil {
+				fileWrite(me.data.bwFilePath, data)
+			} else if err = os.Symlink("../../../"+me.fileName, me.data.bwFilePath); err != nil {
+				panic(err)
+			}
 		}
 		if file, err := os.Open(me.data.bwFilePath); err != nil {
 			panic(err)
@@ -208,11 +213,11 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 
 					tmpfilepath := "/dev/shm/" + me.id + "_bg" + itoa(pidx) + ".svg"
 					fileWrite(tmpfilepath, []byte(s))
-					out, err := exec.Command("convert", tmpfilepath, "-resize", itoa(int(100.0*App.Proj.PanelBgScale))+"%", dstfilepath).CombinedOutput()
+					out, errprog := exec.Command("convert", tmpfilepath, "-resize", itoa(int(100.0*App.Proj.PanelBgScale))+"%", dstfilepath).CombinedOutput()
 					_ = os.Remove(tmpfilepath)
-					if s := trim(string(out)); err != nil {
+					if s := trim(string(out)); errprog != nil {
 						_ = os.Remove(dstfilepath)
-						panic(err.Error() + ">>>>" + s + "<<<<")
+						panic(errprog.Error() + ">>>>" + s + "<<<<")
 					} else if len(s) != 0 {
 						_ = os.Remove(dstfilepath)
 						panic(s)
@@ -236,7 +241,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 	for _, fileinfo := range diritems {
 		if rm, name := force, fileinfo.Name(); fileinfo.IsDir() && strings.HasPrefix(name, "__panels__") {
 			if got, qstr := false, name[strings.LastIndexByte(name, '_')+1:]; (!rm) && qstr != "" {
-				if q, err := strconv.ParseUint(qstr, 10, 64); err == nil {
+				if q, errparse := strconv.ParseUint(qstr, 10, 64); errparse == nil {
 					for _, quali := range App.Proj.Qualis {
 						got = (quali.SizeHint == int(q)) || got
 					}
