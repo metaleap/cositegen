@@ -302,7 +302,7 @@ func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 }
 
 func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s string) {
-	sv.ensurePrep(false, false)
+	_ = sv.ensurePrep(false, false)
 	numpanels, maxpanelwidth, bwsrc := 0, 0, fv("srcpx")
 	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
 		numpanels++

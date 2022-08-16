@@ -113,25 +113,25 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	mkDir(me.data.dirPath)
 
 	didgraydistr := me.ensureGrayDistr(forceFullRedo || len(me.data.GrayDistr) == 0)
-	didbwsheet := me.ensureBwSheetPngs(forceFullRedo)
-	didpanels := me.ensurePanelsTree(me.data.PanelsTree == nil || forceFullRedo || didbwsheet)
+	didbw, didbwsmall := me.ensureBwSheetPngs(forceFullRedo)
+	didpanels := me.ensurePanelsTree(me.data.PanelsTree == nil || forceFullRedo || didbw)
 	didpanelpics := me.ensurePanelPics(forceFullRedo || didpanels)
 
 	if shouldsaveprojdata = shouldsaveprojdata || didgraydistr || didpanels; shouldsaveprojdata {
 		App.Proj.save(false)
 	}
-	didWork = shouldsaveprojdata || didbwsheet || didgraydistr || didpanels || didpanelpics
+	didWork = shouldsaveprojdata || didbw || didbwsmall || didgraydistr || didpanels || didpanelpics
 	return
 }
 
-func (me *SheetVer) ensureBwSheetPngs(force bool) (didWork bool) {
+func (me *SheetVer) ensureBwSheetPngs(force bool) (didBw bool, didBwSmall bool) {
 	var exist1, exist2 bool
 	for fname, boolptr := range map[string]*bool{me.data.bwFilePath: &exist1, me.data.bwSmallFilePath: &exist2} {
 		*boolptr = (fileStat(fname) != nil)
 	}
 
-	if didWork = force || !(exist1 && exist2); didWork {
-		if force || !exist1 {
+	if didBwSmall = force || !(exist1 && exist2); didBwSmall {
+		if didBw = force || !exist1; didBw {
 			rmDir(me.data.dirPath) // because BwThreshold might have been changed and..
 			mkDir(me.data.dirPath) // ..thus everything in this dir needs re-gen'ing
 			if file, err := os.Open(me.fileName); err != nil {
@@ -151,7 +151,7 @@ func (me *SheetVer) ensureBwSheetPngs(force bool) (didWork bool) {
 		}
 	}
 
-	if symlinkpath := filepath.Join(filepath.Dir(me.fileName), "bw."+filepath.Base(me.fileName)); didWork || fileStat(symlinkpath) == nil {
+	if symlinkpath := filepath.Join(filepath.Dir(me.fileName), "bw."+filepath.Base(me.fileName)); didBw || fileStat(symlinkpath) == nil {
 		_ = os.Remove(symlinkpath)
 		fileLink(me.data.bwFilePath, symlinkpath)
 	}

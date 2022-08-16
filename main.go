@@ -22,6 +22,9 @@ func main() {
 	if err := os.Setenv("FASTZOP", "1"); err != nil {
 		panic(err)
 	}
+	if err := os.Setenv("ZOPFAST", "1"); err != nil {
+		panic(err)
+	}
 	App.StaticFilesDirPath = filepath.Join(os.Getenv("GOPATH"), "src/github.com/metaleap/cositegen/_static")
 	appDetectBrowser()
 	timedLogged("Loading project (cx.json  &  txt.json  &  .ccache/data.json)...", func() string {

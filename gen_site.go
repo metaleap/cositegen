@@ -252,7 +252,7 @@ func (me *siteGen) genOrCopyPanelPics() (numSvgs uint32, numPngs uint32, numShee
 }
 
 func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs uint32, numPanels uint32, totalSize uint64) {
-	sv.ensurePrep(false, false)
+	_ = sv.ensurePrep(false, false)
 	atomic.StoreUint32(&numPngs, 0)
 	atomic.StoreUint32(&numSvgs, 0)
 	atomic.StoreUint64(&totalSize, 0)
@@ -767,7 +767,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				}
 			}
 		}
-		sheetver.ensurePrep(false, false)
+		_ = sheetver.ensurePrep(false, false)
 		pidx = 0
 		if viewMode != "r" {
 			me.page.PageContent += "<div id='" + sheetver.id + "' class='" + App.Proj.Gen.ClsSheet + "'>"
