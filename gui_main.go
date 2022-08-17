@@ -153,7 +153,7 @@ func guiStartView() (s string) {
 								s += "</small>"
 							}
 							if sv.data != nil && sv.data.PanelsTree != nil {
-								s += "<small>&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(sv.data.PanelsTree.Rect.Max.X) + "&times;" + itoa(sv.data.PanelsTree.Rect.Max.Y) + "</b>px (" + ftoa(sv.data.PxCm, 1) + "px/cm)</small>"
+								s += "<small>&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(sv.data.PanelsTree.Rect.Max.X) + "&times;" + itoa(sv.data.PanelsTree.Rect.Max.Y) + "</b>px (" + ftoa(sv.data.PxCm, 1) + "px/cm)&nbsp;&horbar;&nbsp;&nbsp;" + itoa(int(sv.data.ColDarkestLightest[0])) + "-" + itoa(int(sv.data.ColDarkestLightest[1])) + "</small>"
 							}
 							s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;from <b>" + time.Unix(0, sv.dateTimeUnixNano).Format("02 Jan 2006") + "</b></small>"
 							s += "</h4>" + guiHtmlGrayDistrs(sv.grayDistrs()) + "</td></tr>"

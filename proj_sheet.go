@@ -48,10 +48,11 @@ type SheetVerData struct {
 	bwSmallFilePath string
 	hasBgCol        bool
 
-	PxCm       float64
-	FontFactor float64   `json:",omitempty"`
-	GrayDistr  []int     `json:",omitempty"`
-	PanelsTree *ImgPanel `json:",omitempty"`
+	PxCm               float64
+	FontFactor         float64   `json:",omitempty"`
+	GrayDistr          []int     `json:",omitempty"`
+	ColDarkestLightest []uint8   `json:",omitempty"`
+	PanelsTree         *ImgPanel `json:",omitempty"`
 }
 
 func (me *SheetVerData) PicDirPath(qualiSizeHint int) string {
@@ -137,7 +138,7 @@ func (me *SheetVer) ensureBwSheetPngs(force bool) (didBw bool, didBwSmall bool) 
 			mkDir(me.data.dirPath) // ..thus everything in this dir needs re-gen'ing
 			if file, err := os.Open(me.fileName); err != nil {
 				panic(err)
-			} else if data := imgToMonochrome(file, file.Close, me.bwThreshold()); data != nil {
+			} else if data := imgToMonochrome(file, file.Close, me.bwThreshold(), me.DtStr() > "20220808"); data != nil {
 				fileWrite(me.data.bwFilePath, data)
 			} else if err = os.Symlink("../../../"+me.fileName, me.data.bwFilePath); err != nil {
 				panic(err)
@@ -310,11 +311,11 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 }
 
 func (me *SheetVer) ensureGrayDistr(force bool) bool {
-	if force || len(me.data.GrayDistr) != App.Proj.NumColorDistrClusters {
+	if force || len(me.data.GrayDistr) != App.Proj.NumColorDistrClusters || len(me.data.ColDarkestLightest) != 2 {
 		if file, err := os.Open(me.fileName); err != nil {
 			panic(err)
 		} else {
-			me.data.GrayDistr = imgGrayDistrs(file, file.Close, App.Proj.NumColorDistrClusters)
+			me.data.GrayDistr, me.data.ColDarkestLightest = imgGrayDistrs(file, file.Close, App.Proj.NumColorDistrClusters)
 		}
 		return true
 	}

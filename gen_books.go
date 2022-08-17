@@ -618,7 +618,7 @@ func (me *BookGen) genPrintCover(title string, numPages int) {
 	areawidth, areaheight := spinex-marginmm, svgh-(marginmm*2.0)
 	fperrow, fpercol := me.facesDistr(len(faces), areawidth, areaheight, true)
 	svg += me.facesDraw(faces, fperrow, fpercol, areawidth, areaheight, svgw, svgh, spinex+float64(spinemm), marginmm, "mm")
-	if os.Getenv("COVDBG") != "" { // debug rects (grey) for margins
+	if os.Getenv("COVDBG") != "" { // debug rects (gray) for margins
 		svg += `<rect opacity="0.5" fill="#cccccc" width="` + ftoa(svgw, -1) + `mm" height="` + ftoa(marginmm, -1) + `mm" y="0" x="0" />
 				<rect opacity="0.5" fill="#cccccc" width="` + ftoa(marginmm, -1) + `mm" height="` + ftoa(svgh, -1) + `mm" y="0" x="0" />
 				<rect opacity="0.5" fill="#cccccc" width="` + ftoa(svgw, -1) + `mm" height="` + ftoa(marginmm, -1) + `mm" y="` + ftoa(svgh-marginmm, -1) + `mm" x="0" />
