@@ -49,6 +49,7 @@ type SheetVerData struct {
 	hasBgCol        bool
 
 	PxCm               float64
+	BwThreshold        uint8     `json:",omitempty"`
 	FontFactor         float64   `json:",omitempty"`
 	GrayDistr          []int     `json:",omitempty"`
 	ColDarkestLightest []uint8   `json:",omitempty"`
@@ -71,7 +72,12 @@ type SheetVer struct {
 	}
 }
 
-func (me *SheetVer) bwThreshold() uint8 { return me.parentSheet.bwThreshold() }
+func (me *SheetVer) bwThreshold() uint8 {
+	if me.data.BwThreshold != 0 {
+		return me.data.BwThreshold
+	}
+	return me.parentSheet.bwThreshold()
+}
 
 func (me *SheetVer) DtName() string {
 	return strconv.FormatInt(me.dateTimeUnixNano, 10)
@@ -138,10 +144,8 @@ func (me *SheetVer) ensureBwSheetPngs(force bool) (didBw bool, didBwSmall bool) 
 			mkDir(me.data.dirPath) // ..thus everything in this dir needs re-gen'ing
 			if file, err := os.Open(me.fileName); err != nil {
 				panic(err)
-			} else if data := imgToMonochrome(file, file.Close, me.bwThreshold(), me.DtStr() > "20220808"); data != nil {
-				fileWrite(me.data.bwFilePath, data)
-			} else if err = os.Symlink("../../../"+me.fileName, me.data.bwFilePath); err != nil {
-				panic(err)
+			} else {
+				fileWrite(me.data.bwFilePath, imgToMonochrome(file, file.Close, me.bwThreshold()))
 			}
 		}
 		if file, err := os.Open(me.data.bwFilePath); err != nil {

@@ -60,6 +60,7 @@ type ScanOption struct {
 	Description []string
 	FormatInfo  string
 	IsToggle    bool
+	IsButton    bool
 	Inactive    bool
 }
 
@@ -118,7 +119,7 @@ func scanDevicesDetection() {
 					idx := strings.IndexFunc(ln, func(r rune) bool {
 						return !(r == '-' || (r >= 'a' && r <= 'z'))
 					})
-					opt.Name = strings.TrimLeft(ln, "-")
+					opt.Name, opt.IsButton = strings.TrimLeft(ln, "-"), cat == "Buttons:"
 					if idx > 0 {
 						opt.Name = strings.TrimLeft(ln[:idx], "-")
 						opt.FormatInfo = trim(ln[idx:])
@@ -160,7 +161,15 @@ func scanJobDo() {
 		)...)
 		cmd.Stdout, cmd.Stderr = os.Stdout, os.Stderr
 		for name, val := range sj.Opts {
-			cmd.Args = append(cmd.Args, "--"+name+"="+val)
+			var isBtn bool
+			for _, opt := range sj.Dev.Options {
+				if opt.Name == name {
+					isBtn = opt.IsButton
+				}
+			}
+			if (!isBtn) || val == "yes" {
+				cmd.Args = append(cmd.Args, "--"+name+sIf(isBtn, "", "="+val))
+			}
 		}
 		printLn("\n\n\nSCANNING via command:\n" + strings.Join(cmd.Args, " ") + "\n\n")
 		if err := cmd.Start(); err != nil {
@@ -185,7 +194,7 @@ func scanJobDo() {
 		if err != nil {
 			panic(pngfilename + ": " + err.Error())
 		}
-		imgPnmToPng(pnmfile, pngfile, true)
+		imgPnmToPng(pnmfile, pngfile, true, 0, 0, 345, 44)
 		_ = os.Remove(pnmfilename)
 		return "for " + pngfilename
 	})

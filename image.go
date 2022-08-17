@@ -18,15 +18,14 @@ import (
 var PngEncoder = png.Encoder{CompressionLevel: png.BestCompression}
 var ImgScaler draw.Interpolator = draw.CatmullRom
 
-func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide bool) {
+func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide bool, snipTop int, snipRight int, snipBottom int, snipLeft int) {
 	srcimg, err := pnm.Decode(srcImgData)
 	if err != nil {
 		panic(err)
 	}
 	_ = srcImgData.Close()
 
-	dstbounds := srcimg.(*image.Gray).Bounds() // the cast as an assert, not as a need
-	if ensureWide && dstbounds.Max.X < dstbounds.Max.Y {
+	if dstbounds := srcimg.(*image.Gray).Bounds(); ensureWide && dstbounds.Max.X < dstbounds.Max.Y {
 		dstbounds.Max.X, dstbounds.Max.Y = dstbounds.Max.Y, dstbounds.Max.X
 		dstimg, srcbounds := image.NewGray(dstbounds), srcimg.Bounds()
 		for dstx := 0; dstx < dstbounds.Max.X; dstx++ {
@@ -36,6 +35,9 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 			}
 		}
 		srcimg = dstimg
+	}
+	if snipTop > 0 || snipBottom > 0 || snipLeft > 0 || snipRight > 0 {
+		srcimg = srcimg.(*image.Gray).SubImage(image.Rect(snipLeft, snipTop, srcimg.Bounds().Max.X-snipRight, srcimg.Bounds().Max.Y-snipBottom))
 	}
 	if err := PngEncoder.Encode(dstImgFile, srcimg); err != nil {
 		panic(err)
@@ -90,8 +92,7 @@ func imgDownsized(srcImgData io.Reader, onDecoded func() error, maxWidth int, tr
 		img := image.NewNRGBA(imgsrc.Bounds())
 		for x := 0; x < imgsrc.Bounds().Max.X; x++ {
 			for y := 0; y < imgsrc.Bounds().Max.Y; y++ {
-				gray := imgsrc.(*image.Gray).GrayAt(x, y)
-				img.SetNRGBA(x, y, color.NRGBA{0, 0, 0, 255 - gray.Y})
+				img.SetNRGBA(x, y, color.NRGBA{0, 0, 0, 255 - imgsrc.(*image.Gray).GrayAt(x, y).Y})
 			}
 		}
 		imgsrc = img
@@ -156,8 +157,8 @@ func imgGrayDistrs(srcImgData io.Reader, onDecoded func() error, numClusters int
 	return
 }
 
-// returns nil if srcImgData already consists entirely of fully-black&white-only pixels
-func imgToMonochrome(srcImgData io.Reader, onDecoded func() error, blackIfLessThan uint8, snipLeftAndBottomEdges bool) []byte {
+// returns BW-thresholded by blackIfLessThan, or unthresholded grayscale if blackIfLessThan==0.
+func imgToMonochrome(srcImgData io.Reader, onDecoded func() error, blackIfLessThan uint8) []byte {
 	srcimg, _, err := image.Decode(srcImgData)
 	if onDecoded != nil {
 		_ = onDecoded() // allow early file-closing for the caller
@@ -166,8 +167,7 @@ func imgToMonochrome(srcImgData io.Reader, onDecoded func() error, blackIfLessTh
 		panic(err)
 	}
 
-	// grayscale first (not B&W)
-	allbw, imggray := true, image.NewGray(image.Rect(0, 0, srcimg.Bounds().Max.X, srcimg.Bounds().Max.Y))
+	imggray := image.NewGray(image.Rect(0, 0, srcimg.Bounds().Max.X, srcimg.Bounds().Max.Y))
 	for px := 0; px < srcimg.Bounds().Max.X; px++ {
 		for py := 0; py < srcimg.Bounds().Max.Y; py++ {
 			var colbw uint8
@@ -182,53 +182,7 @@ func imgToMonochrome(srcImgData io.Reader, onDecoded func() error, blackIfLessTh
 			default:
 				panic(colsrc)
 			}
-			if !(colbw == 255 || colbw == 0) {
-				allbw = false
-			}
-			imggray.Set(px, py, color.Gray{Y: colbw})
-		}
-	}
-
-	if threshold, img := 96, imggray; snipLeftAndBottomEdges {
-		minwidth, minheight := img.Rect.Max.X, img.Rect.Max.Y
-		for y := img.Rect.Max.Y - 1; y >= 0 && minheight == img.Rect.Max.Y; y-- {
-			rowbrightsum := 0
-			for x := 0; x < img.Rect.Max.X; x++ {
-				rowbrightsum += int(img.GrayAt(x, y).Y)
-			}
-			if rowbright := (rowbrightsum / img.Rect.Max.X); rowbright < threshold {
-				minheight = y
-			}
-		}
-		for x := 0; x < img.Rect.Max.X && minwidth == img.Rect.Max.X; x++ {
-			colbrightsum := 0
-			for y := 0; y < minheight; y++ {
-				colbrightsum += int(img.GrayAt(x, y).Y)
-			}
-			if colbright := (colbrightsum / minheight); colbright < threshold {
-				minwidth = img.Rect.Max.X - x
-			}
-		}
-		dstw, dsth := minwidth, minheight
-		imgdst := image.NewGray(image.Rect(0, 0, dstw, dsth))
-		imgDrawRect(imgdst, imgdst.Rect, 472, 0)
-		ddx, ddy, dsx := (dstw-minwidth)/2, (dsth-minheight)/2, (img.Rect.Max.X - minwidth)
-		for x := 0; x < minwidth; x++ {
-			for y := 0; y < minheight; y++ {
-				col := img.GrayAt(dsx+x, y)
-				imgdst.SetGray(x+ddx, y+ddy, col)
-			}
-		}
-		imgDrawRect(imgdst, imgdst.Rect, 44, 0)
-		imggray = imgdst
-	} else if allbw {
-		return nil
-	}
-
-	for px := 0; px < imggray.Bounds().Max.X; px++ {
-		for py := 0; py < imggray.Bounds().Max.Y; py++ {
-			colbw := imggray.GrayAt(px, py).Y
-			// make black&white-only
+			// threshold
 			if blackIfLessThan > 0 {
 				if colbw < blackIfLessThan {
 					colbw = 0
@@ -236,6 +190,7 @@ func imgToMonochrome(srcImgData io.Reader, onDecoded func() error, blackIfLessTh
 					colbw = 255
 				}
 			}
+
 			imggray.Set(px, py, color.Gray{Y: colbw})
 		}
 	}

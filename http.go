@@ -52,14 +52,9 @@ func httpServeDynPng(httpResp http.ResponseWriter, httpReq *http.Request) {
 	pngdata, _ = os.ReadFile(tmpfilename)
 
 	if len(pngdata) == 0 {
-		idx, is202208orlater := strings.Index(httpReq.URL.Path, ".png/"), false
+		idx := strings.Index(httpReq.URL.Path, ".png/")
 		urlpath, urlargstr := httpReq.URL.Path[:idx+len(".png")], httpReq.URL.Path[idx+len(".png/"):]
 		filename := filepath.Join("." /*looks redundant but isnt!*/, urlpath)
-		if split := strings.Split(filename, "."); len(split) > 2 {
-			if scandatepart := split[len(split)-2]; len(scandatepart) == 8 && scandatepart[0] == '2' {
-				is202208orlater = (scandatepart > "20220808")
-			}
-		}
 		file, err := os.Open(filename)
 		if err != nil {
 			panic(err)
@@ -78,7 +73,7 @@ func httpServeDynPng(httpResp http.ResponseWriter, httpReq *http.Request) {
 		}
 
 		w := 0
-		pngdata = imgToMonochrome(file, file.Close, t, is202208orlater)
+		pngdata = imgToMonochrome(file, file.Close, t)
 		if len(args) > 1 {
 			if qw := args[1]; qw != "" {
 				if ui, err := strconv.ParseUint(qw, 0, 64); err != nil {
