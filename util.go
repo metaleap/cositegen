@@ -77,6 +77,10 @@ func fIf(b bool, fThen float64, fElse float64) float64 {
 	return fElse
 }
 
+func bIf(b bool, bThen bool, bElse bool) bool {
+	return (b && bThen) || ((!b) && bElse)
+}
+
 func iIf(b bool, iThen int, iElse int) int {
 	if b {
 		return iThen

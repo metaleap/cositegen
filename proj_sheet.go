@@ -54,8 +54,8 @@ type SheetVerData struct {
 	PanelsTree *ImgPanel `json:",omitempty"`
 }
 
-func (me *SheetVerData) PicDirPath(quali int) string {
-	return filepath.Join(me.dirPath, "__panels__"+itoa(int(me.parentSheetVer.bwThreshold()))+"_"+ftoa(App.Proj.PanelBorderCm, -1)+"_"+itoa(quali))
+func (me *SheetVerData) PicDirPath(qualiSizeHint int) string {
+	return filepath.Join(me.dirPath, "__panels__"+itoa(int(me.parentSheetVer.bwThreshold()))+"_"+ftoa(App.Proj.PanelBorderCm, -1)+"_"+itoa(qualiSizeHint))
 }
 
 type SheetVer struct {
@@ -112,6 +112,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(me.bwThreshold()))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
 	mkDir(me.data.dirPath)
 
+	// the 4 major prep steps
 	didgraydistr := me.ensureGrayDistr(forceFullRedo || len(me.data.GrayDistr) == 0)
 	didbw, didbwsmall := me.ensureBwSheetPngs(forceFullRedo)
 	didpanels := me.ensurePanelsTree(me.data.PanelsTree == nil || forceFullRedo || didbw)
@@ -234,9 +235,13 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 	for _, quali := range App.Proj.Qualis {
 		force = force || (nil == dirStat(me.data.PicDirPath(quali.SizeHint)))
 	}
-	for pidx, pngdir := 0, me.data.PicDirPath(App.Proj.Qualis[0].SizeHint); pidx < numpanels && !force; pidx++ {
-		force = (nil == fileStat(filepath.Join(pngdir, itoa(pidx)+".png"))) ||
-			(App.Proj.hasSvgQuali() && (nil == fileStat(filepath.Join(me.data.PicDirPath(0), itoa(pidx)+".svg"))))
+	for qidx := 0; qidx < len(App.Proj.Qualis) && !force; qidx++ {
+		quali := App.Proj.Qualis[qidx]
+		for pidx, pngdir := 0, me.data.PicDirPath(quali.SizeHint); pidx < numpanels && !force; pidx++ {
+			force = bIf(quali.SizeHint == 0,
+				nil == fileStat(filepath.Join(me.data.PicDirPath(0), itoa(pidx)+".svg")),
+				nil == fileStat(filepath.Join(pngdir, itoa(pidx)+".png")))
+		}
 	}
 	for _, fileinfo := range diritems {
 		if rm, name := force, fileinfo.Name(); fileinfo.IsDir() && strings.HasPrefix(name, "__panels__") {
