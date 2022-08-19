@@ -10,6 +10,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"text/template"
+	"text/template/parse"
 	"time"
 )
 
@@ -49,9 +50,6 @@ type PageGen struct {
 	QualList       string
 	PagesList      string
 	PageContent    string
-	HintDirHtml    string
-	VerHint        string
-	LegalHtml      string
 	HrefHome       string
 	HrefDirLtr     string
 	HrefDirRtl     string
@@ -140,7 +138,10 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 	timedLogged("SiteGen: generating markup files...", func() string {
 		numfileswritten := 0
 		var totalsize uint64
-		me.tmpl, err = template.New("foobarbaz").ParseFiles(siteTmplDirName + "/site.html")
+		me.tmpl = template.New("site.html")
+		me.tmpl.Funcs(template.FuncMap{"__": me.textStr})
+		me.tmpl, err = me.tmpl.ParseFiles(siteTmplDirName + "/site.html")
+		me.tmpl.Mode = parse.SkipFuncCheck
 		if err != nil {
 			panic(err)
 		}
@@ -315,9 +316,6 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 		SiteHost:     App.Proj.SiteHost,
 		SiteDesc:     repl.Replace(hEsc(locStr(App.Proj.SiteDesc, me.lang))),
 		PageLang:     me.lang,
-		HintDirHtml:  strings.Replace(hEsc(me.textStr("HintDir")), " ", "&nbsp;", -1),
-		VerHint:      me.textStr("VerHint"),
-		LegalHtml:    me.textStr("LegalHtml"),
 		HrefFeed:     "./" + App.Proj.AtomFile.Name + "." + me.lang + ".atom",
 		PageDirCur:   "ltr",
 		PageDirAlt:   "rtl",
