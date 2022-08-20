@@ -26,16 +26,18 @@ func NewTreeView(data any, showRoot bool) *tview.TreeView {
 	if !showRoot {
 		treeview.SetTopLevel(1)
 	}
-	treenode := NewTreeNode(data)
+	treenode := newTreeNode(data, nil)
 	treeview.SetRoot(treenode).SetCurrentNode(treenode)
+	treenode.Expand()
 	return treeview
 }
 
-func NewTreeNode(data any) *tview.TreeNode {
-	datanode := NewDataNode(data)
+func newTreeNode(data any, parent DataNode) *tview.TreeNode {
+	datanode := newDataNode(data, parent)
 	treenode := tview.NewTreeNode(datanode.String())
 	for _, sub := range datanode.Subs() {
-		treenode.AddChild(NewTreeNode(sub))
+		treenode.AddChild(newTreeNode(sub, datanode))
 	}
+	treenode.Collapse()
 	return treenode
 }
