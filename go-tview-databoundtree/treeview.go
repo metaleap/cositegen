@@ -38,6 +38,6 @@ func newTreeNode(data any, parent DataNode) *tview.TreeNode {
 	for _, sub := range datanode.Subs() {
 		treenode.AddChild(newTreeNode(sub, datanode))
 	}
-	treenode.Collapse()
+	// treenode.Collapse()
 	return treenode
 }
