@@ -10,11 +10,15 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	tui "github.com/metaleap/cositegen/go-tview-reflectreeview"
 )
 
 var appMainActions = map[string]bool{}
 var AppMainActions = A{
-	"sitegen": "Re-generate site",
+	"gen":  "Re-generate site",
+	"book": "Generate book",
+	"cfg":  "Edit cx.json",
 }
 
 var App struct {
@@ -66,6 +70,12 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 		action = func(flags map[string]bool) { siteGen{}.genSite(fromGui, flags) }
 	case "book":
 		action = makeBook
+	case "cfg":
+		action = func(flags map[string]bool) {
+			if err := tui.Main(false, &App.Proj, true); err != nil {
+				panic(err)
+			}
+		}
 	default:
 		s := "Unknown action: '" + name + "', try one of these:"
 		for name, desc := range AppMainActions {
