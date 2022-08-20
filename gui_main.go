@@ -17,13 +17,13 @@ func fV(r *http.Request) func(string) string {
 
 func guiMain(r *http.Request, notice string) []byte {
 	fv, dirpref, s := fV(r), "", "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><link rel='stylesheet' type='text/css' href='/main.css'/><style type='text/css'>"
-	for k := range App.Proj.Gen.PanelSvgText.AppendToFiles {
+	for k := range App.Proj.Sheets.Panel.SvgText.AppendToFiles {
 		if idx := strings.LastIndexByte(k, '/'); idx > 0 {
 			dirpref = k[:idx]
 			break
 		}
 	}
-	for csssel, csslines := range App.Proj.Gen.PanelSvgText.Css {
+	for csssel, csslines := range App.Proj.Sheets.Panel.SvgText.Css {
 		if csssel == "" {
 			csssel = "div.panel .panelrect svg text"
 		}
@@ -31,7 +31,7 @@ func guiMain(r *http.Request, notice string) []byte {
 			s += csssel + "{" + strings.Replace(strings.Join(csslines, ";"), "./", dirpref+"/", -1) + "}"
 		}
 	}
-	s += "</style><script type='text/javascript' language='javascript'>const $ = window, numImagePanelTextAreas = " + itoa(App.Proj.MaxImagePanelTextAreas) + ";</script><script src='/main.js' type='text/javascript' language='javascript'></script>"
+	s += "</style><script type='text/javascript' language='javascript'>const $ = window, numImagePanelTextAreas = " + itoa(App.Proj.Sheets.Panel.MaxNumTextAreas) + ";</script><script src='/main.js' type='text/javascript' language='javascript'></script>"
 	s += "</head><body><form method='POST' action='/' id='main_form' novalidate='novalidate'>" + guiHtmlInput("hidden", "main_focus_id", fv("main_focus_id"), nil)
 	if notice != "" {
 		s += "<div class='notice'>" + hEsc(notice) + "</div>"
@@ -109,7 +109,7 @@ func guiStartView() (s string) {
 			for _, chapter := range series.Chapters {
 				if id := "chk" + itoa(int(time.Now().UnixNano())); App.Gui.State.Sel.Series == nil || App.Gui.State.Sel.Chapter == nil || App.Gui.State.Sel.Chapter == chapter {
 					numpages := len(chapter.SheetsPerPage)
-					fontsizecm, lineheight := App.Proj.Gen.PanelSvgText.FontSizeCmA4, App.Proj.Gen.PanelSvgText.PerLineDyCmA4
+					fontsizecm, lineheight := App.Proj.Sheets.Panel.SvgText.FontSizeCmA4, App.Proj.Sheets.Panel.SvgText.PerLineDyCmA4
 					if chapter.GenPanelSvgText.FontSizeCmA4 > 0.01 {
 						fontsizecm = chapter.GenPanelSvgText.FontSizeCmA4
 					}
@@ -313,7 +313,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	if bwsrc != sv.data.bwSmallFilePath && bwsrc != sv.data.bwFilePath {
 		bwsrc = sv.data.bwSmallFilePath
 	}
-	fontSizeCmA4, perLineDyCmA4 := App.Proj.Gen.PanelSvgText.FontSizeCmA4, App.Proj.Gen.PanelSvgText.PerLineDyCmA4
+	fontSizeCmA4, perLineDyCmA4 := App.Proj.Sheets.Panel.SvgText.FontSizeCmA4, App.Proj.Sheets.Panel.SvgText.PerLineDyCmA4
 	if sv.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4 > 0.01 {
 		fontSizeCmA4 = sv.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4
 	}
@@ -325,7 +325,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		perLineDyCmA4 *= sv.data.FontFactor
 	}
 	s = `<script type="text/javascript" language="javascript">const svgTxtFontSizeCmA4 = ` + ftoa(fontSizeCmA4, 8) + `, svgTxtPerLineDyCmA4 = ` + ftoa(perLineDyCmA4, 8) + `;</script><h3>Full Sheet:&nbsp;`
-	if sw, bw := sv.data.PanelsTree.Rect.Max.X, int(App.Proj.BwSmallWidth); sw > bw {
+	if sw, bw := sv.data.PanelsTree.Rect.Max.X, int(App.Proj.Sheets.Bw.SmallWidth); sw > bw {
 		s += guiHtmlList("srcpx", "", true, 2, func(i int) (string, string, bool) {
 			if i == 1 {
 				return sv.data.bwFilePath, itoa(sw) + "px", bwsrc == sv.data.bwFilePath
@@ -345,7 +345,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		s += "<option value='url(\"/" + bgfilename + "\")'>Colorized</option>"
 	}
 	s += "</select> version at black-threshold of <select onchange='$.fsimg.src=this.value;'>"
-	bwthresholds, idx, svbwt := App.Proj.BwThresholds, -1, sv.bwThreshold()
+	bwthresholds, idx, svbwt := App.Proj.Sheets.Bw.Thresholds, -1, sv.bwThreshold()
 	for i, bwt := range bwthresholds {
 		if bwt == svbwt {
 			idx = i
@@ -464,12 +464,12 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	s += "<li>Default to "
 	numtextrects := fv("numtextrects")
 	if ui, err := strconv.ParseUint(numtextrects, 10, 64); err != nil {
-		numtextrects = itoa(intLim(sv.maxNumTextAreas(), 1, App.Proj.MaxImagePanelTextAreas))
+		numtextrects = itoa(intLim(sv.maxNumTextAreas(), 1, App.Proj.Sheets.Panel.MaxNumTextAreas))
 	} else {
-		numtextrects = itoa(intLim(int(ui), 1, App.Proj.MaxImagePanelTextAreas))
+		numtextrects = itoa(intLim(int(ui), 1, App.Proj.Sheets.Panel.MaxNumTextAreas))
 	}
-	s += guiHtmlInput("number", "numtextrects", numtextrects, A{"min": "1", "max": itoa(App.Proj.MaxImagePanelTextAreas), "onchange": "doPostBack('numtextrects')"})
-	s += "/" + itoa(App.Proj.MaxImagePanelTextAreas) + " text-rect editor/s</li></ul>"
+	s += guiHtmlInput("number", "numtextrects", numtextrects, A{"min": "1", "max": itoa(App.Proj.Sheets.Panel.MaxNumTextAreas), "onchange": "doPostBack('numtextrects')"})
+	s += "/" + itoa(App.Proj.Sheets.Panel.MaxNumTextAreas) + " text-rect editor/s</li></ul>"
 	if wmax := 480; maxpanelwidth > wmax {
 		zoomdiv = float64(wmax) / float64(maxpanelwidth)
 		zoom = int(100.0 * zoomdiv)
@@ -489,7 +489,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 			if fv("main_focus_id") == pid+"save" {
 				cfgdisplay = "block"
 			}
-			for i := 0; i < App.Proj.MaxImagePanelTextAreas; i++ {
+			for i := 0; i < App.Proj.Sheets.Panel.MaxNumTextAreas; i++ {
 				area := ImgPanelArea{Data: A{}}
 				for _, lang := range App.Proj.Langs {
 					tid := pid + "t" + itoa(i) + lang
@@ -545,7 +545,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		for _, lang := range App.Proj.Langs {
 			langs = append(langs, lang)
 		}
-		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Dx()) + ", " + itoa(panel.Rect.Dy()) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + ftoa(sv.data.PxCm, 8) + ", '" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "', " + ftoa(App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm, 8) + ", " + toJsonStr(App.Proj.Gen.PanelSvgText.TspanSubTagStyles) + ");"
+		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Dx()) + ", " + itoa(panel.Rect.Dy()) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + ftoa(sv.data.PxCm, 8) + ", '" + App.Proj.Sheets.Panel.SvgText.ClsBoxPoly + "', " + ftoa(App.Proj.Sheets.Panel.SvgText.BoxPolyStrokeWidthCm, 8) + ", " + toJsonStr(App.Proj.Sheets.Panel.SvgText.TspanSubTagStyles) + ");"
 		btnhtml := guiHtmlButton(pid+"save", "Save changes (all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 
 		numpanelareas := len(sv.panelAreas(pidx))
@@ -568,7 +568,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		s += "<div class='panelcfg' id='" + pid + "cfg' style='text-align: center;display:" + cfgdisplay + ";'>"
 		s += "<div>" + btnhtml + "</div>"
 		panelareas := sv.panelAreas(pidx)
-		for i, ntr := 0, atoi(numtextrects, 1, App.Proj.MaxImagePanelTextAreas); i < App.Proj.MaxImagePanelTextAreas; i++ {
+		for i, ntr := 0, atoi(numtextrects, 1, App.Proj.Sheets.Panel.MaxNumTextAreas); i < App.Proj.Sheets.Panel.MaxNumTextAreas; i++ {
 			area, styledisplay := ImgPanelArea{Data: A{}}, "none"
 			if i < ntr {
 				styledisplay = "inline"
@@ -583,7 +583,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang, area.Data[lang], A{
 					"placeholder": lang,
 					"onfocus":     jsrefr, "onblur": jsrefr, "onchange": jsrefr, "onkeydown": jsrefr, "onkeyup": jsrefr, "onkeypress": jsrefr,
-					"style": "background-image: url(\"/" + path.Join("site", strings.Replace(App.Proj.Gen.ImgSrcLang, "%LANG%", lang, -1)) + "\");" + strings.Join(App.Proj.Gen.PanelSvgText.Css[""], ";"),
+					"style": "background-image: url(\"/" + path.Join("site", strings.Replace(App.Proj.Site.Gen.ImgSrcLang, "%LANG%", lang, -1)) + "\");" + strings.Join(App.Proj.Sheets.Panel.SvgText.Css[""], ";"),
 					"class": "panelcfgtext col" + itoa(i%8)}) + "</div>"
 			}
 

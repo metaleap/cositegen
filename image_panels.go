@@ -211,7 +211,7 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 			"&lt;b&gt;", "<tspan style='font-weight: bolder'>",
 			"&lt;u&gt;", "<tspan style='text-decoration: underline'>",
 		}
-		for tagname, style := range App.Proj.Gen.PanelSvgText.TspanSubTagStyles {
+		for tagname, style := range App.Proj.Sheets.Panel.SvgText.TspanSubTagStyles {
 			repls = append(repls,
 				"&lt;"+tagname+"&gt;", "<tspan style='"+style+"'>",
 				"&lt;/"+tagname+"&gt;", "</tspan>",

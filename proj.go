@@ -16,63 +16,74 @@ type DirMode struct {
 }
 
 type Project struct {
-	SiteTitle string
-	SiteHost  string
-	SiteDesc  map[string]string
-	Series    []*Series
-	Authors   map[string]*Author
-	Langs     []string
-	Qualis    []struct {
+	Langs  []string
+	Qualis []struct {
 		Name               string
 		SizeHint           int
 		ExcludeInSiteGen   bool
 		HomeAndFeedDefault bool
 	}
-	BookPubs []struct {
-		Title    string
-		RepoName string
-		Year     int
-		Series   []string
-		PubDate  string
-	}
-	BookRepoPathPrefix string
-	BookRepoPathInfix  string
-	AtomFile           struct {
-		PubDates       []string
-		Name           string
-		ContentTxt     map[string]string
-		ContentTxtBook map[string]string
-	}
-	MaxImagePanelTextAreas int
-	BwThresholds           []uint8
-	BwSmallWidth           uint16
-	PanelBorderCm          float64
-	PanelBgScale           float64
-	PanelBgBlur            int
-	PageContentTexts       map[string]map[string]string
-	NumSheetsInHomeBgs     int
-	NumColorDistrClusters  int
-	DirModes               struct {
+	DirModes struct {
 		Ltr DirMode
 		Rtl DirMode
 	}
-	Gen struct {
-		IdQualiList      string
-		ClsViewerPage    string
-		ClsNonViewerPage string
-		ClsSeries        string
-		ClsChapter       string
-		ClsPanelCol      string
-		ClsPanelRow      string
-		ClsPanel         string
-		ClsViewer        string
-		ClsSheetsView    string
-		ClsRowsView      string
-		ClsSheet         string
-		APaging          string
-		ImgSrcLang       string
-		PicDirName       string
-		PanelSvgText     PanelSvgTextGen
+	Authors map[string]*Author
+	Series  []*Series
+	Books   struct {
+		RepoPath struct {
+			Prefix string
+			Infix  string
+		}
+		Pubs []struct {
+			Title    string
+			RepoName string
+			Year     int
+			Series   []string
+			PubDate  string
+		}
+	}
+	Site struct {
+		Title string
+		Host  string
+		Desc  map[string]string
+		Feed  struct {
+			Name           string
+			PubDates       []string
+			ContentTxt     map[string]string
+			ContentTxtBook map[string]string
+		}
+		Texts map[string]map[string]string
+		Gen   struct {
+			IdQualiList      string
+			ClsViewerPage    string
+			ClsNonViewerPage string
+			ClsSeries        string
+			ClsChapter       string
+			ClsPanelCol      string
+			ClsPanelRow      string
+			ClsPanel         string
+			ClsViewer        string
+			ClsSheetsView    string
+			ClsRowsView      string
+			ClsSheet         string
+			APaging          string
+			ImgSrcLang       string
+			PicDirName       string
+		}
+	}
+	Sheets struct {
+		Bw struct {
+			SmallWidth       uint16
+			Thresholds       []uint8
+			NumDistrClusters int
+		}
+		Panel struct {
+			MaxNumTextAreas int
+			BorderCm        float64
+			BgScale         float64
+			BgBlur          int
+			SvgText         PanelSvgTextGen
+		}
 	}
 
 	defaultQualiIdx int
@@ -127,8 +138,8 @@ func (me *Project) dirMode(rtl bool) *DirMode {
 }
 
 func (me *Project) textStr(lang string, key string) (s string) {
-	if s = me.PageContentTexts[lang][key]; s == "" {
-		if s = me.PageContentTexts[me.Langs[0]][key]; s == "" {
+	if s = me.Site.Texts[lang][key]; s == "" {
+		if s = me.Site.Texts[me.Langs[0]][key]; s == "" {
 			s = key
 		}
 	}
@@ -183,8 +194,8 @@ func (me *Project) save(texts bool) {
 
 func (me *Project) load() (numSheetVers int) {
 	jsonLoad("cx.json", nil, me) // exits early if no such file, before creating work dirs:
-	if me.SiteTitle == "" {
-		me.SiteTitle = me.SiteHost
+	if me.Site.Title == "" {
+		me.Site.Title = me.Site.Host
 	}
 	mkDir(".ccache")
 	var dtdatajson time.Time
@@ -221,9 +232,9 @@ func (me *Project) load() (numSheetVers int) {
 
 	for _, series := range me.Series {
 		if series.GenPanelSvgText == nil {
-			series.GenPanelSvgText = &me.Gen.PanelSvgText
+			series.GenPanelSvgText = &me.Sheets.Panel.SvgText
 		} else {
-			series.GenPanelSvgText.mergeWithParent(&me.Gen.PanelSvgText)
+			series.GenPanelSvgText.mergeWithParent(&me.Sheets.Panel.SvgText)
 		}
 		if series.Author != "" {
 			if series.author = me.Authors[series.Author]; series.author == nil {

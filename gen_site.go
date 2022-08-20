@@ -76,11 +76,11 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 	}
 	rmDir(".build")
 	mkDir(".build")
-	mkDir(".build/" + App.Proj.Gen.PicDirName)
+	mkDir(".build/" + App.Proj.Site.Gen.PicDirName)
 
 	timedLogged("SiteGen: copying static files to .build...", func() string {
-		if App.Proj.Gen.PanelSvgText.AppendToFiles == nil {
-			App.Proj.Gen.PanelSvgText.AppendToFiles = map[string]bool{}
+		if App.Proj.Sheets.Panel.SvgText.AppendToFiles == nil {
+			App.Proj.Sheets.Panel.SvgText.AppendToFiles = map[string]bool{}
 		}
 		numfilescopied := me.copyStaticFiles("")
 		return "for " + itoa(numfilescopied) + " files"
@@ -161,7 +161,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 						}
 					}
 				}
-				if App.Proj.AtomFile.Name != "" {
+				if App.Proj.Site.Feed.Name != "" {
 					numfileswritten += me.genAtomXml(&totalsize)
 				}
 				for _, series := range me.series {
@@ -175,7 +175,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 		return "for " + itoa(numfileswritten) + " files (~" + strSize(totalsize) + ")"
 	})
 
-	printLn("SiteGen: " + App.Proj.SiteHost + " DONE after " + time.Now().Sub(tstart).String())
+	printLn("SiteGen: " + App.Proj.Site.Host + " DONE after " + time.Now().Sub(tstart).String())
 	cmd := exec.Command(browserCmd[0], append(browserCmd[1:], "--app=file://"+os.Getenv("PWD")+"/.build/index.html")...)
 	if err := cmd.Start(); err != nil {
 		printLn("[ERR]\tcmd.Start of " + cmd.String() + ":\t" + err.Error())
@@ -202,16 +202,16 @@ func (me *siteGen) copyStaticFiles(relDirPath string) (numFilesWritten int) {
 				numFilesWritten += me.copyStaticFiles(relpath)
 			} else if fn != siteTmplFileName {
 				data := fileRead(filepath.Join(srcdirpath, fn))
-				if App.Proj.Gen.PanelSvgText.AppendToFiles[relpath] {
-					for csssel, csslines := range App.Proj.Gen.PanelSvgText.Css {
+				if App.Proj.Sheets.Panel.SvgText.AppendToFiles[relpath] {
+					for csssel, csslines := range App.Proj.Sheets.Panel.SvgText.Css {
 						if csssel != "" && csssel != "@font-face" {
 							if csslines == nil {
-								csslines = App.Proj.Gen.PanelSvgText.Css[""]
+								csslines = App.Proj.Sheets.Panel.SvgText.Css[""]
 							}
 							data = append([]byte(csssel+"{"+strings.Join(csslines, ";")+"}\n"), data...)
 						}
 					}
-					if cssff := App.Proj.Gen.PanelSvgText.Css["@font-face"]; len(cssff) != 0 {
+					if cssff := App.Proj.Sheets.Panel.SvgText.Css["@font-face"]; len(cssff) != 0 {
 						data = append([]byte("@font-face{"+strings.Join(cssff, ";")+"}\n"), data...)
 					}
 				}
@@ -277,7 +277,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 						swap = fs > max && !atomic.CompareAndSwapUint32(&me.maxPicSize, max, fs)
 					}
 					atomic.AddUint64(&totalSize, uint64(fileinfo.Size()))
-					dstpath := filepath.Join(".build/"+App.Proj.Gen.PicDirName+"/", me.namePanelPic(sv, pidx, quali.SizeHint)+fext)
+					dstpath := filepath.Join(".build/"+App.Proj.Site.Gen.PicDirName+"/", me.namePanelPic(sv, pidx, quali.SizeHint)+fext)
 					fileLinkOrCopy(srcpath, dstpath)
 					if me.onPicSize != nil {
 						me.onPicSize(sv.parentSheet.parentChapter, sv.id+itoa(pidx), qidx, fileinfo.Size())
@@ -292,7 +292,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 			if srcpath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png"); sv.data.hasBgCol {
 				if fileinfo := fileStat(srcpath); fileinfo != nil {
 					atomic.AddUint64(&totalSize, uint64(fileinfo.Size()))
-					dstpath := filepath.Join(".build/" + App.Proj.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg.png")
+					dstpath := filepath.Join(".build/" + App.Proj.Site.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg.png")
 					fileLinkOrCopy(srcpath, dstpath)
 					atomic.AddUint32(&numPngs, 1)
 				}
@@ -311,12 +311,12 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 		"%LANG"+me.lang+"%", itoa(int(App.Proj.percentTranslated(me.lang, nil, nil, nil, -1))),
 	)
 	me.page = PageGen{
-		SiteTitle:    App.Proj.SiteTitle,
-		SiteTitleEsc: hEsc(App.Proj.SiteTitle),
-		SiteHost:     App.Proj.SiteHost,
-		SiteDesc:     repl.Replace(hEsc(locStr(App.Proj.SiteDesc, me.lang))),
+		SiteTitle:    App.Proj.Site.Title,
+		SiteTitleEsc: hEsc(App.Proj.Site.Title),
+		SiteHost:     App.Proj.Site.Host,
+		SiteDesc:     repl.Replace(hEsc(locStr(App.Proj.Site.Desc, me.lang))),
 		PageLang:     me.lang,
-		HrefFeed:     "./" + App.Proj.AtomFile.Name + "." + me.lang + ".atom",
+		HrefFeed:     "./" + App.Proj.Site.Feed.Name + "." + me.lang + ".atom",
 		PageDirCur:   "ltr",
 		PageDirAlt:   "rtl",
 	}
@@ -336,7 +336,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 		me.page.PageTitleTxt = hEsc(me.textStr("HomeTitleTxt"))
 		me.page.PageDesc = repl.Replace(hEsc(me.textStr("HomeDesc")))
 		me.page.PageDescTxt = me.page.PageDesc
-		me.page.PageCssClasses = App.Proj.Gen.ClsChapter + "n"
+		me.page.PageCssClasses = App.Proj.Site.Gen.ClsChapter + "n"
 		if me.lang == App.Proj.Langs[0] {
 			me.page.HrefDirLtr = "./index.html"
 			me.page.HrefDirRtl = "./index." + App.Proj.DirModes.Rtl.Name + ".html"
@@ -378,7 +378,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 				continue
 			}
 			for _, viewmode := range viewModes {
-				me.page.PageCssClasses = App.Proj.Gen.ClsChapter + viewmode
+				me.page.PageCssClasses = App.Proj.Site.Gen.ClsChapter + viewmode
 				for _, svdt := range chapter.versions {
 					qname, qsizes, allpanels := quali.Name, map[int]int64{}, me.prepSheetPage(qidx, viewmode, chapter, svdt, pageNr)
 					me.page.QualList = ""
@@ -386,11 +386,11 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 						var totalimgsize int64
 						for sv, maxpidx := range allpanels {
 							for pidx := 0; pidx <= maxpidx; pidx++ {
-								if bgfile := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg.png"); bgfile != nil && me.bgCol {
+								if bgfile := fileStat(".build/" + App.Proj.Site.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg.png"); bgfile != nil && me.bgCol {
 									totalimgsize += bgfile.Size()
 								}
 								name := me.namePanelPic(sv, pidx, q.SizeHint)
-								if fileinfo := fileStat(strings.ToLower(".build/" + App.Proj.Gen.PicDirName + "/" + name + sIf(q.SizeHint == 0, ".svg", ".png"))); fileinfo != nil {
+								if fileinfo := fileStat(strings.ToLower(".build/" + App.Proj.Site.Gen.PicDirName + "/" + name + sIf(q.SizeHint == 0, ".svg", ".png"))); fileinfo != nil {
 									totalimgsize += fileinfo.Size()
 								}
 							}
@@ -411,7 +411,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 						}
 						me.page.QualList += ">" + q.Name + " (" + strSize(uint64(qsizes[i])) + ")</option>"
 					}
-					me.page.QualList = "<select disabled='disabled' title='" + hEsc(me.textStr("QualityHint")) + "' name='" + App.Proj.Gen.IdQualiList + "' id='" + App.Proj.Gen.IdQualiList + "'>" + me.page.QualList + "</select>"
+					me.page.QualList = "<select disabled='disabled' title='" + hEsc(me.textStr("QualityHint")) + "' name='" + App.Proj.Site.Gen.IdQualiList + "' id='" + App.Proj.Site.Gen.IdQualiList + "'>" + me.page.QualList + "</select>"
 					me.page.HrefDirLtr = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Ltr.Name, me.lang, svdt, me.bgCol) + ".html"
 					me.page.HrefDirRtl = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Rtl.Name, me.lang, svdt, me.bgCol) + ".html"
 					me.page.PageTitleTxt += " (" + itoa(pageNr) + "/" + itoa(len(chapter.SheetsPerPage)) + ")"
@@ -432,7 +432,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 const noice = true
 
 func (me *siteGen) prepHomePage() {
-	s := "<div class='" + App.Proj.Gen.ClsNonViewerPage + "'>"
+	s := "<div class='" + App.Proj.Site.Gen.ClsNonViewerPage + "'>"
 	for seryear := time.Now().Year(); seryear >= 2021; seryear-- {
 		for _, series := range me.series {
 			if !series.scanYearHas(seryear, true) {
@@ -457,9 +457,9 @@ func (me *siteGen) prepHomePage() {
 					strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", series.author.String(true, true), 1),
 					"%YEAR%", sIf(series.Year == 0, "", ", "+itoa(series.Year)), 1)
 			}
-			s += "<span class='" + App.Proj.Gen.ClsSeries + "'>"
-			s += "<h5 id='" + strings.ToLower(series.Name) + "_" + itoa(seryear) + "' class='" + App.Proj.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + " (" + itoa(seryear) + ")</h5>"
-			s += "<div class='" + App.Proj.Gen.ClsSeries + "'>" + locStr(series.DescHtml, me.lang) + author + "</div>"
+			s += "<span class='" + App.Proj.Site.Gen.ClsSeries + "'>"
+			s += "<h5 id='" + strings.ToLower(series.Name) + "_" + itoa(seryear) + "' class='" + App.Proj.Site.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + " (" + itoa(seryear) + ")</h5>"
+			s += "<div class='" + App.Proj.Site.Gen.ClsSeries + "'>" + locStr(series.DescHtml, me.lang) + author + "</div>"
 			s += "<span>"
 			for _, chapter := range series.Chapters {
 				if chapter.Priv || len(chapter.sheets) == 0 || chapter.scanYearLatest() != seryear {
@@ -498,7 +498,7 @@ func (me *siteGen) prepHomePage() {
 					}
 				}
 				picname, chid := me.namePanelPic(chapter.sheets[int(picidxsheet)].versions[0], int(picidxpanel), App.Proj.Qualis[App.Proj.maxQualiIdx(true)].SizeHint), chapter.parentSeries.Name+"_"+chapter.Name
-				s += "<a name='" + chid + "' id='" + chid + "' class='" + App.Proj.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[App.Proj.defaultQualiIdx].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + sIf(os.Getenv("NOPICS") != "", "files/white.png", App.Proj.Gen.PicDirName+"/"+picname) + ".png\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
+				s += "<a name='" + chid + "' id='" + chid + "' class='" + App.Proj.Site.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[App.Proj.defaultQualiIdx].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + sIf(os.Getenv("NOPICS") != "", "files/white.png", App.Proj.Site.Gen.PicDirName+"/"+picname) + ".png\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
 				s += "<div>" + hEsc(locStr(chapter.Title, me.lang)) + "</div>"
 				s += "<span><span>" + itoa(chapmins) + "-" + itoa(1+chapmins) + me.textStr("Mins") + "</span><span>" +
 					sIf(chapter.Year == 0, "&nbsp;", "&copy;"+itoa(chapter.Year)) + "&nbsp;" + chapter.author.String(true, true) +
@@ -508,12 +508,12 @@ func (me *siteGen) prepHomePage() {
 			s += "</span></span>"
 		}
 	}
-	s += "<h5 id='books' class='" + App.Proj.Gen.ClsSeries + "'>Downloads</h5>"
+	s += "<h5 id='books' class='" + App.Proj.Site.Gen.ClsSeries + "'>Downloads</h5>"
 	s += "<span><ul>"
 	booklink := func(repo string, pref string, ext string) string {
-		return App.Proj.BookRepoPathPrefix + repo + App.Proj.BookRepoPathInfix + sIf(pref == "", "printcover", pref+me.lang+`_`+sIf(me.dirRtl, "rtl", "ltr")) + ext
+		return App.Proj.Books.RepoPath.Prefix + repo + App.Proj.Books.RepoPath.Infix + sIf(pref == "", "printcover", pref+me.lang+`_`+sIf(me.dirRtl, "rtl", "ltr")) + ext
 	}
-	for _, bookpub := range App.Proj.BookPubs {
+	for _, bookpub := range App.Proj.Books.Pubs {
 		s += "<li id='book_" + bookpub.RepoName + "'><b style='font-size: xx-large'>" + bookpub.Title + "</b><ul>"
 		s += "</li>"
 		s += `<li>Screen 4K &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen_", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen_", ".cbz") + `">CBZ</a></li>`
@@ -548,7 +548,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			text += me.textStr("VerOlder")
 		}
 		if me.lang != App.Proj.Langs[0] {
-			for k, v := range App.Proj.PageContentTexts[me.lang] {
+			for k, v := range App.Proj.Site.Texts[me.lang] {
 				if strings.HasPrefix(k, "Month_") {
 					text = strings.Replace(text, k[len("Month_"):], v, -1)
 				}
@@ -610,7 +610,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			if did {
 				pglast = pgnr
 			} else if pglast == pgnr-1 {
-				s += "<li class='" + App.Proj.Gen.APaging + "s'><span>&hellip;&nbsp;</span></li>"
+				s += "<li class='" + App.Proj.Site.Gen.APaging + "s'><span>&hellip;&nbsp;</span></li>"
 			}
 
 			numsheets := chapter.SheetsPerPage[pgnr-1]
@@ -642,7 +642,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			if nhome {
 				nhref += "#" + chapter.parentSeries.Name + "_" + chapter.Name
 			}
-			ulid := App.Proj.Gen.APaging
+			ulid := App.Proj.Site.Gen.APaging
 			if !istoplist {
 				ulid += "b"
 			}
@@ -654,7 +654,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		}
 		return s
 	}
-	me.page.PagesList, me.page.PageContent = pageslist(), "<div class='"+App.Proj.Gen.ClsViewerPage+"'>"
+	me.page.PagesList, me.page.PageContent = pageslist(), "<div class='"+App.Proj.Site.Gen.ClsViewerPage+"'>"
 
 	me.page.ViewerList = ""
 	for _, viewmode := range viewModes {
@@ -667,7 +667,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			me.page.ViewerList += "<b>&nbsp;</b>"
 		} else {
 			me.page.HrefViewAlt = "./" + n + ".html"
-			me.page.ViewerList += "<a class='" + App.Proj.Gen.ClsPanel + "l' href='" + me.page.HrefViewAlt + "'>&nbsp;</a>"
+			me.page.ViewerList += "<a class='" + App.Proj.Site.Gen.ClsPanel + "l' href='" + me.page.HrefViewAlt + "'>&nbsp;</a>"
 		}
 		me.page.ViewerList += "</div>"
 	}
@@ -683,11 +683,11 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				if viewMode == "r" && istop {
 					s += "<td>"
 				}
-				s += "<div id='" + firstrow + App.Proj.Gen.ClsPanel + "r" + sv.id + itoa(i) + "' class='" + App.Proj.Gen.ClsPanelRow
+				s += "<div id='" + firstrow + App.Proj.Site.Gen.ClsPanel + "r" + sv.id + itoa(i) + "' class='" + App.Proj.Site.Gen.ClsPanelRow
 				if firstrow = ""; istop && viewMode == "r" {
-					s += " " + App.Proj.Gen.ClsPanelRow + "t"
+					s += " " + App.Proj.Site.Gen.ClsPanelRow + "t"
 				} else if istop {
-					s += "' onfocus='" + App.Proj.Gen.ClsPanel + "f(this)' tabindex='0"
+					s += "' onfocus='" + App.Proj.Site.Gen.ClsPanel + "f(this)' tabindex='0"
 				}
 				s += "'>" + iter(sv, sr, false) + "</div>"
 				if viewMode == "r" && istop {
@@ -701,7 +701,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			}
 			for i := range panel.SubCols {
 				sc := &panel.SubCols[i]
-				s += "<div class='" + App.Proj.Gen.ClsPanelCol + "'"
+				s += "<div class='" + App.Proj.Site.Gen.ClsPanelCol + "'"
 				pw, sw := sc.Rect.Dx(), panel.Rect.Dx()
 				pp := 100.0 / (float64(sw) / float64(pw))
 				s += " style='width: " + ftoa(pp, 8) + "%'"
@@ -717,29 +717,29 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			imgfilenamelo := imgfilename
 			for i := qIdx; i > 0; i-- {
 				filename := me.namePanelPic(sv, pidx, App.Proj.Qualis[i].SizeHint) + sIf(App.Proj.Qualis[i].SizeHint == 0, ".svg", ".png")
-				if fileinfo := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + filename); fileinfo != nil && fileinfo.Size() > 0 {
+				if fileinfo := fileStat(".build/" + App.Proj.Site.Gen.PicDirName + "/" + filename); fileinfo != nil && fileinfo.Size() > 0 {
 					imgfilename = filename
 					break
 				}
 			}
 
-			s += "<div id='" + firstpanel + App.Proj.Gen.ClsPanel + "p" + sv.id + itoa(pidx) + "' class='" + App.Proj.Gen.ClsPanel + "'"
+			s += "<div id='" + firstpanel + App.Proj.Site.Gen.ClsPanel + "p" + sv.id + itoa(pidx) + "' class='" + App.Proj.Site.Gen.ClsPanel + "'"
 			if firstpanel = ""; viewMode == "r" {
-				s += " tabindex='0' onfocus='" + App.Proj.Gen.ClsPanel + "f(this)'"
+				s += " tabindex='0' onfocus='" + App.Proj.Site.Gen.ClsPanel + "f(this)'"
 			}
 			s += ">" + sv.genTextSvgForPanel(pidx, panel, me.lang, true, false)
 			me.sheetPgNrs[sv] = pageNr
-			s += "<img src='./" + sIf(os.Getenv("NOPICS") != "", "files/white.png", App.Proj.Gen.PicDirName+"/"+imgfilename) + "'"
+			s += "<img src='./" + sIf(os.Getenv("NOPICS") != "", "files/white.png", App.Proj.Site.Gen.PicDirName+"/"+imgfilename) + "'"
 			if imgfilenamelo != imgfilename {
-				s += " lowsrc='./" + App.Proj.Gen.PicDirName + "/" + imgfilenamelo + "'"
+				s += " lowsrc='./" + App.Proj.Site.Gen.PicDirName + "/" + imgfilenamelo + "'"
 			}
 			if isfirstpanelonpage {
 				isfirstpanelonpage = false
 				s += " fetchpriority='high'"
 			}
 			if me.bgCol && sv.data.hasBgCol {
-				if bgsvg := fileStat(".build/" + App.Proj.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg.png"); bgsvg != nil {
-					s += " style='background-image:url(\"./" + App.Proj.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg.png\");'"
+				if bgsvg := fileStat(".build/" + App.Proj.Site.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg.png"); bgsvg != nil {
+					s += " style='background-image:url(\"./" + App.Proj.Site.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg.png\");'"
 				}
 			}
 			s += "/>"
@@ -748,11 +748,11 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		}
 		return
 	}
-	cls := App.Proj.Gen.ClsSheetsView
+	cls := App.Proj.Site.Gen.ClsSheetsView
 	if viewMode == "r" {
-		cls = App.Proj.Gen.ClsRowsView
+		cls = App.Proj.Site.Gen.ClsRowsView
 	}
-	me.page.PageContent += "<div class='" + App.Proj.Gen.ClsViewer + " " + cls + "'>"
+	me.page.PageContent += "<div class='" + App.Proj.Site.Gen.ClsViewer + " " + cls + "'>"
 	if viewMode == "r" {
 		me.page.PageContent += "<table><tr>"
 	}
@@ -768,7 +768,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		_ = sheetver.ensurePrep(false, false)
 		pidx = 0
 		if viewMode != "r" {
-			me.page.PageContent += "<div id='" + sheetver.id + "' class='" + App.Proj.Gen.ClsSheet + "'>"
+			me.page.PageContent += "<div id='" + sheetver.id + "' class='" + App.Proj.Site.Gen.ClsSheet + "'>"
 		}
 		me.page.PageContent += iter(sheetver, sheetver.data.PanelsTree, true)
 		if viewMode != "r" {
@@ -793,7 +793,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 func (me *siteGen) genPageExecAndWrite(name string, chapter *Chapter, totalSizeRec *uint64) (numFilesWritten int) {
 	me.page.LangsList = ""
 	for _, lang := range App.Proj.Langs {
-		title, imgsrcpath := lang, strings.Replace(App.Proj.Gen.ImgSrcLang, "%LANG%", lang, -1)
+		title, imgsrcpath := lang, strings.Replace(App.Proj.Site.Gen.ImgSrcLang, "%LANG%", lang, -1)
 		if langname := App.Proj.textStr(lang, "LangName"); langname != "" {
 			title = langname
 		}
@@ -815,7 +815,7 @@ func (me *siteGen) genPageExecAndWrite(name string, chapter *Chapter, totalSizeR
 					href = "index" + dirmode
 				}
 			}
-			me.page.LangsList += "<a class='" + App.Proj.Gen.ClsPanel + "l' href='./" + href + ".html'><img alt='" + hEsc(title) + "' title='" + hEsc(title) + "' src='" + imgsrcpath + "'/></a>"
+			me.page.LangsList += "<a class='" + App.Proj.Site.Gen.ClsPanel + "l' href='./" + href + ".html'><img alt='" + hEsc(title) + "' title='" + hEsc(title) + "' src='" + imgsrcpath + "'/></a>"
 			me.page.LangsList += "</div>"
 		}
 	}
@@ -866,7 +866,7 @@ func (me *siteGen) genSvgTextsFile(chapter *Chapter) string {
 }
 
 func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
-	af, tlatest := App.Proj.AtomFile, ""
+	af, tlatest := App.Proj.Site.Feed, ""
 	if len(af.PubDates) == 0 {
 		return
 	}
@@ -914,8 +914,8 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 					if chapter.UrlJumpName != "" && pgnr == 1 {
 						pgname = chapter.UrlJumpName + sIf(me.lang == App.Proj.Langs[0], "", "."+me.lang)
 					}
-					xml += `<link href="http://` + App.Proj.SiteHost + "/" + pgname + `.html"/>`
-					xml += `<author><name>` + App.Proj.SiteHost + `</name></author>`
+					xml += `<link href="http://` + App.Proj.Site.Host + "/" + pgname + `.html"/>`
+					xml += `<author><name>` + App.Proj.Site.Host + `</name></author>`
 					xml += `<content type="text">` + strings.NewReplacer(
 						"%NUMSVS%", itoa(numsheets),
 						"%NUMPNL%", itoa(numpanels),
@@ -926,12 +926,12 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 			}
 		}
 	}
-	for _, bookpub := range App.Proj.BookPubs {
+	for _, bookpub := range App.Proj.Books.Pubs {
 		xml := "<entry><updated>" + bookpub.PubDate + "T11:22:44Z</updated>"
 		xml += `<title>Album: ` + xEsc(bookpub.Title) + `</title>`
 		xml += "<id>info:" + contentHashStr([]byte(strings.Join(bookpub.Series, "+")+"_"+bookpub.RepoName+"_"+bookpub.PubDate+"_"+"_"+me.lang)) + "</id>"
-		xml += `<link href="http://` + App.Proj.SiteHost + "/" + me.namePage(nil, 0, 0, "", "", "", 0, false) + `.html#book_` + bookpub.RepoName + `"/>`
-		xml += `<author><name>` + App.Proj.SiteHost + `</name></author>`
+		xml += `<link href="http://` + App.Proj.Site.Host + "/" + me.namePage(nil, 0, 0, "", "", "", 0, false) + `.html#book_` + bookpub.RepoName + `"/>`
+		xml += `<author><name>` + App.Proj.Site.Host + `</name></author>`
 		xml += `<content type="text">` + strings.NewReplacer(
 			"%REPONAME%", bookpub.RepoName,
 		).Replace(locStr(af.ContentTxtBook, me.lang)) + `</content>`
@@ -940,7 +940,7 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 	if len(xmls) > 0 && tlatest != "" {
 		filename := af.Name + "." + me.lang + ".atom"
 		s := `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="` + me.lang + `">`
-		s += `<updated>` + tlatest + `Z</updated><title>` + hEsc(App.Proj.SiteTitle) + `</title><link href="http://` + App.Proj.SiteHost + `"/><link rel="self" href="http://` + App.Proj.SiteHost + `/` + filename + `"/><id>http://` + App.Proj.SiteHost + "/</id>"
+		s += `<updated>` + tlatest + `Z</updated><title>` + hEsc(App.Proj.Site.Title) + `</title><link href="http://` + App.Proj.Site.Host + `"/><link rel="self" href="http://` + App.Proj.Site.Host + `/` + filename + `"/><id>http://` + App.Proj.Site.Host + "/</id>"
 		s += "\n" + strings.Join(xmls, "\n") + "\n</feed>"
 		*totalSizeRec = *totalSizeRec + uint64(len(s))
 		fileWrite(".build/"+af.Name+"."+me.lang+".atom", []byte(s))

@@ -145,10 +145,10 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
             <style type="text/css">
                 polygon { stroke: black; fill: white; }
                 @font-face { ` +
-		strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) +
+		strings.Replace(strings.Join(App.Proj.Sheets.Panel.SvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) +
 		` 		}
                 g > svg > svg > text, g > svg > svg > text > tspan { ` +
-		strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + `
+		strings.Join(App.Proj.Sheets.Panel.SvgText.Css[""], "; ") + `
 				}
 				g > svg > svg > text > tspan.std {
 					` + bookCssTspanStd + `
@@ -388,10 +388,10 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 					svg.pg { page-break-after: always; break-after: always;}
 					image { transform-origin: center; transform-box: fill-box; }
 					@font-face { ` +
-		strings.Replace(strings.Join(App.Proj.Gen.PanelSvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) +
+		strings.Replace(strings.Join(App.Proj.Sheets.Panel.SvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) +
 		`}
 					text, text > tspan { ` +
-		strings.Join(App.Proj.Gen.PanelSvgText.Css[""], "; ") + `
+		strings.Join(App.Proj.Sheets.Panel.SvgText.Css[""], "; ") + `
 						font-size: 1em;
 					}
 					text.toc tspan {

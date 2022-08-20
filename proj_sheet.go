@@ -57,7 +57,7 @@ type SheetVerData struct {
 }
 
 func (me *SheetVerData) PicDirPath(qualiSizeHint int) string {
-	return filepath.Join(me.dirPath, "__panels__"+itoa(int(me.parentSheetVer.bwThreshold()))+"_"+ftoa(App.Proj.PanelBorderCm, -1)+"_"+itoa(qualiSizeHint))
+	return filepath.Join(me.dirPath, "__panels__"+itoa(int(me.parentSheetVer.bwThreshold()))+"_"+ftoa(App.Proj.Sheets.Panel.BorderCm, -1)+"_"+itoa(qualiSizeHint))
 }
 
 type SheetVer struct {
@@ -116,7 +116,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	}
 	me.data.dirPath = ".ccache/" + svCacheDirNamePrefix + me.id
 	me.data.bwFilePath = filepath.Join(me.data.dirPath, "bw."+itoa(int(me.bwThreshold()))+".png")
-	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(me.bwThreshold()))+"."+itoa(int(App.Proj.BwSmallWidth))+".png")
+	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(me.bwThreshold()))+"."+itoa(int(App.Proj.Sheets.Bw.SmallWidth))+".png")
 	mkDir(me.data.dirPath)
 
 	// the 4 major prep steps
@@ -150,7 +150,7 @@ func (me *SheetVer) ensureBwSheetPngs(force bool) (didBw bool, didBwSmall bool) 
 		}
 		if file, err := os.Open(me.data.bwFilePath); err != nil {
 			panic(err)
-		} else if data := imgDownsized(file, file.Close, int(App.Proj.BwSmallWidth), true); data != nil {
+		} else if data := imgDownsized(file, file.Close, int(App.Proj.Sheets.Bw.SmallWidth), true); data != nil {
 			fileWrite(me.data.bwSmallFilePath, data)
 		} else if err = os.Symlink(filepath.Base(me.data.bwFilePath), me.data.bwSmallFilePath); err != nil {
 			panic(err)
@@ -198,7 +198,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 					}
 				}
 				if s != "" {
-					srcwidth := App.Proj.BwSmallWidth
+					srcwidth := App.Proj.Sheets.Bw.SmallWidth
 					if idx := strings.Index(bgsvgsrc, `width="`); idx > 0 {
 						strw := bgsvgsrc[idx+len(`width="`):]
 						strw = strw[:strings.IndexByte(strw, '"')]
@@ -212,14 +212,14 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 					pw, ph := int(float64(p.Rect.Dx())*scale), int(float64(p.Rect.Dy())*scale)
 					s = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 						<svg width="` + itoa(pw) + `" height="` + itoa(ph) + `" viewbox="0 0 ` + itoa(pw) + ` ` + itoa(ph) + `" xmlns="http://www.w3.org/2000/svg">` +
-						sIf(App.Proj.PanelBgBlur == 0, "",
-							`<filter id="leblur"><feGaussianBlur in="SourceGraphic" stdDeviation="`+itoa(App.Proj.PanelBgBlur)+`" /></filter>
+						sIf(App.Proj.Sheets.Panel.BgBlur == 0, "",
+							`<filter id="leblur"><feGaussianBlur in="SourceGraphic" stdDeviation="`+itoa(App.Proj.Sheets.Panel.BgBlur)+`" /></filter>
 							<style type="text/css">path { filter: url(#leblur); }</style>`) +
 						s + "</svg>"
 
 					tmpfilepath := "/dev/shm/" + me.id + "_bg" + itoa(pidx) + ".svg"
 					fileWrite(tmpfilepath, []byte(s))
-					out, errprog := exec.Command("convert", tmpfilepath, "-resize", itoa(int(100.0*App.Proj.PanelBgScale))+"%", dstfilepath).CombinedOutput()
+					out, errprog := exec.Command("convert", tmpfilepath, "-resize", itoa(int(100.0*App.Proj.Sheets.Panel.BgScale))+"%", dstfilepath).CombinedOutput()
 					_ = os.Remove(tmpfilepath)
 					if s := trim(string(out)); errprog != nil {
 						_ = os.Remove(dstfilepath)
@@ -296,7 +296,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 				w, h := int(width), int(height)
 				px1cm := me.data.PxCm / (float64(sw) / float64(quali.SizeHint))
 				var wassamesize bool
-				pngdata := imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, int(px1cm*App.Proj.PanelBorderCm), true, &wassamesize)
+				pngdata := imgSubRectPng(imgsrc.(*image.Gray), panel.Rect, &w, &h, int(px1cm*App.Proj.Sheets.Panel.BorderCm), true, &wassamesize)
 				fileWrite(filepath.Join(me.data.PicDirPath(quali.SizeHint), itoa(pidx)+".png"), pngdata)
 				if wassamesize {
 					break
@@ -304,7 +304,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 			}
 			if App.Proj.hasSvgQuali() {
 				fileWrite(filepath.Join(me.data.PicDirPath(0), itoa(pidx)+".svg"),
-					imgSubRectSvg(imgsrc.(*image.Gray), panel.Rect, int(me.data.PxCm*App.Proj.PanelBorderCm)))
+					imgSubRectSvg(imgsrc.(*image.Gray), panel.Rect, int(me.data.PxCm*App.Proj.Sheets.Panel.BorderCm)))
 			}
 		}(pidx)
 		pidx++
@@ -315,11 +315,11 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 }
 
 func (me *SheetVer) ensureGrayDistr(force bool) bool {
-	if force || len(me.data.GrayDistr) != App.Proj.NumColorDistrClusters || len(me.data.ColDarkestLightest) != 2 {
+	if force || len(me.data.GrayDistr) != App.Proj.Sheets.Bw.NumDistrClusters || len(me.data.ColDarkestLightest) != 2 {
 		if file, err := os.Open(me.fileName); err != nil {
 			panic(err)
 		} else {
-			me.data.GrayDistr, me.data.ColDarkestLightest = imgGrayDistrs(file, file.Close, App.Proj.NumColorDistrClusters)
+			me.data.GrayDistr, me.data.ColDarkestLightest = imgGrayDistrs(file, file.Close, App.Proj.Sheets.Bw.NumDistrClusters)
 		}
 		return true
 	}
@@ -383,7 +383,7 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 		_ = os.Remove(bgtmplsvgfilepath)
 	}
 
-	scale := float64(App.Proj.BwSmallWidth) / float64(me.data.PanelsTree.Rect.Max.X)
+	scale := float64(App.Proj.Sheets.Bw.SmallWidth) / float64(me.data.PanelsTree.Rect.Max.X)
 	if pw, ph := int(scale*float64(me.data.PanelsTree.Rect.Max.X)), int(scale*float64(me.data.PanelsTree.Rect.Max.Y)); did || nil == fileStat(bgtmplsvgfilepath) {
 		svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 		<svg inkscape:version="1.1 (c68e22c387, 2021-05-23)"
@@ -514,7 +514,7 @@ func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang strin
 		borderandfill := (pta.PointTo != nil)
 		if borderandfill {
 			rpx, rpy := pta.PointTo.X-panel.Rect.Min.X, pta.PointTo.Y-panel.Rect.Min.Y
-			mmh, cmh := int(me.data.PxCm*App.Proj.Gen.PanelSvgText.BoxPolyStrokeWidthCm), int(me.data.PxCm/2.0)
+			mmh, cmh := int(me.data.PxCm*App.Proj.Sheets.Panel.SvgText.BoxPolyStrokeWidthCm), int(me.data.PxCm/2.0)
 			pl, pr, pt, pb := (rx + mmh), ((rx + rw) - mmh), (ry + mmh), ((ry + rh) - mmh)
 			poly := [][2]int{{pl, pt}, {pr, pt}, {pr, pb}, {pl, pb}}
 			ins := func(idx int, pts ...[2]int) {
@@ -559,7 +559,7 @@ func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang strin
 			for _, pt := range poly {
 				s += itoa(pt[0]) + "," + itoa(pt[1]) + " "
 			}
-			s += "' class='" + App.Proj.Gen.PanelSvgText.ClsBoxPoly + "' stroke-width='" + itoa(mmh) + "px'/>"
+			s += "' class='" + App.Proj.Sheets.Panel.SvgText.ClsBoxPoly + "' stroke-width='" + itoa(mmh) + "px'/>"
 		}
 		s += "<svg x='" + itoa(rx) + "' y='" + itoa(ry) + "' class='" + sIf(borderandfill, "ptbf", "") + "'>" +
 			me.genTextSvgForPanelArea(panelIdx, tidx, &pta, lang, forHtml, forEbook) + "</svg>"
@@ -572,9 +572,9 @@ func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang strin
 func (me *SheetVer) genTextSvgForPanelArea(pidx int, tidx int, pta *ImgPanelArea, lang string, forHtml bool, forEbook bool) string {
 	linex := 0.0
 	if pta.PointTo != nil {
-		linex = me.data.PxCm * App.Proj.Gen.PanelSvgText.BoxPolyDxCmA4
+		linex = me.data.PxCm * App.Proj.Sheets.Panel.SvgText.BoxPolyDxCmA4
 	}
-	fontSizeCmA4, perLineDyCmA4 := App.Proj.Gen.PanelSvgText.FontSizeCmA4, App.Proj.Gen.PanelSvgText.PerLineDyCmA4
+	fontSizeCmA4, perLineDyCmA4 := App.Proj.Sheets.Panel.SvgText.FontSizeCmA4, App.Proj.Sheets.Panel.SvgText.PerLineDyCmA4
 	if me.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4 > 0.01 { // !=0 in float
 		fontSizeCmA4 = me.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4
 	}

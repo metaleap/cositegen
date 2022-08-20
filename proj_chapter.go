@@ -90,7 +90,7 @@ func (me *Series) bwThreshold() uint8 {
 	if me.BwThreshold != 0 {
 		return me.BwThreshold
 	}
-	return App.Proj.BwThresholds[0]
+	return App.Proj.Sheets.Bw.Thresholds[0]
 }
 
 func (me *Series) numSheets() (ret int) {
