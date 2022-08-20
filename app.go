@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	tui "github.com/metaleap/cositegen/go-tview-reflectreeview"
+	tui "github.com/metaleap/cositegen/go-tview-databoundtree"
 )
 
 var appMainActions = map[string]bool{}
@@ -72,7 +72,7 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 		action = makeBook
 	case "cfg":
 		action = func(flags map[string]bool) {
-			if err := tui.Main(false, &App.Proj, true); err != nil {
+			if err := tui.Main(false, 'q', &App.Proj, true); err != nil {
 				panic(err)
 			}
 		}
