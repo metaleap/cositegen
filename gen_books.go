@@ -37,7 +37,7 @@ type BookGen struct {
 }
 
 func makeBook(flags map[string]bool) {
-	phrase := strings.Join(os.Args[2:], " ")
+	phrase := strings.Join(os.Args[2:], "-")
 	gen := BookGen{
 		Phrase:     phrase,
 		ShmDirPath: "/dev/shm/" + phrase,
@@ -122,13 +122,14 @@ func makeBook(flags map[string]bool) {
 }
 
 func (me *BookGen) genSheetSvgsAndPngs(dirRtl bool, lang string) {
+	lores := (os.Getenv("LORES") != "")
 	for i, sv := range me.Sheets {
 		sheetsvgfilepath := me.sheetSvgPath(i, dirRtl, lang)
 		me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, lang)
 		if os.Getenv("NOSCREEN") == "" {
 			sheetpngfilepath := sheetsvgfilepath + ".sh.png"
 			printLn(sheetpngfilepath, "...")
-			imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, iIf(os.Getenv("LORES") == "", 0, bookScreenWidth/bookScreenLoResDiv), false, sIf(os.Getenv("LORES") == "", "sh_", "sh_lq_"))
+			imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, iIf(!lores, 0, bookScreenWidth/bookScreenLoResDiv), false, sIf(!lores, "sh_", "sh_lq_"))
 		}
 	}
 }
@@ -136,7 +137,8 @@ func (me *BookGen) genSheetSvgsAndPngs(dirRtl bool, lang string) {
 const bookCssTspanStd = "stroke: #000000 !important; stroke-width: 11px !important;"
 
 func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string) {
-	rectinner := sv.data.pxBounds()
+	rectinner, lores := sv.data.pxBounds(), (os.Getenv("LORES") != "")
+
 	w, h := rectinner.Dx(), rectinner.Dy()
 
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
@@ -155,7 +157,7 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 				}
             </style>`
 
-	pidx, qidx := 0, iIf(os.Getenv("LORES") == "", App.Proj.maxQualiIdx(false), 0)
+	pidx, qidx := 0, iIf(!lores, App.Proj.maxQualiIdx(false), 0)
 
 	sv.data.PanelsTree.iter(func(p *ImgPanel) {
 		px, py, pw, ph := p.Rect.Min.X-rectinner.Min.X, p.Rect.Min.Y-rectinner.Min.Y, p.Rect.Dx(), p.Rect.Dy()
@@ -195,14 +197,14 @@ func (me *BookGen) sheetSvgPath(idx int, dirRtl bool, lang string) string {
 }
 
 func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
-	border, pgw, pgh := bookScreenBorder, bookScreenWidth, int(float64(bookScreenWidth)/(float64(me.MaxSheetWidth)/float64(me.MaxSheetHeight)))
-	if os.Getenv("LORES") != "" {
+	border, pgw, pgh, lores := bookScreenBorder, bookScreenWidth, int(float64(bookScreenWidth)/(float64(me.MaxSheetWidth)/float64(me.MaxSheetHeight))), (os.Getenv("LORES") != "")
+	if lores {
 		pgw, pgh, border = pgw/bookScreenLoResDiv, pgh/bookScreenLoResDiv, border/bookScreenLoResDiv
 	}
 
 	pgfilepaths := []string{}
 	{
-		tocfilepathsvg := me.ShmDirPath + "/0toc." + lang + sIf(os.Getenv("LORES") == "", "", "_lq") + ".svg"
+		tocfilepathsvg := me.ShmDirPath + "/0toc." + lang + sIf(!lores, "", "_lq") + ".svg"
 		tocfilepathpng := tocfilepathsvg + ".png"
 		if fileStat(tocfilepathpng) == nil {
 			svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -210,25 +212,25 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 				<style type="text/css">
 					text.toc tspan {
 						font-family: "Shark Heavy ABC";
-						font-size: ` + sIf(os.Getenv("LORES") == "", "12", "3") + `em;
+						font-size: ` + sIf(!lores, "12", "3") + `em;
 						font-weight: normal;
 						paint-order: stroke;
 						stroke: #ffffff;
-						stroke-width: ` + sIf(os.Getenv("LORES") == "", "4", "1") + `mm;
+						stroke-width: ` + sIf(!lores, "4", "1") + `mm;
 						white-space: pre;
 					}
 					text.toctitle tspan {
 						font-family: "Shark Heavy ABC";
 						font-weight: normal;
-						font-size: ` + sIf(os.Getenv("LORES") == "", "20", "5") + `em;
+						font-size: ` + sIf(!lores, "20", "5") + `em;
 						paint-order: stroke;
 						stroke: #000000;
-						stroke-width: ` + sIf(os.Getenv("LORES") == "", "8", "2") + `mm;
+						stroke-width: ` + sIf(!lores, "8", "2") + `mm;
 						fill: #ffffff;
 					}
 					text.tocsub tspan {
 						font-family: "Annie Use Your Telescope";
-						font-size: ` + sIf(os.Getenv("LORES") == "", "5.88", "1.44") + `em;
+						font-size: ` + sIf(!lores, "5.88", "1.44") + `em;
 						font-weight: bold;
 					}
 					image {
@@ -239,7 +241,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 			svg += me.tocSvg(lang, pgw, pgh) + "</svg>"
 			fileWrite(tocfilepathsvg, []byte(svg))
 			printLn(tocfilepathpng, "...")
-			imgAnyToPng(tocfilepathsvg, tocfilepathpng, 0, false, sIf(os.Getenv("LORES") == "", "toc_", "toc_lq_"))
+			imgAnyToPng(tocfilepathsvg, tocfilepathpng, 0, false, sIf(!lores, "toc_", "toc_lq_"))
 		}
 		pgfilepaths = append(pgfilepaths, tocfilepathpng)
 	}
@@ -269,7 +271,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 				panic(err)
 			}
 			fileWrite(tmpfilepath, buf.Bytes())
-			if os.Getenv("LORES") == "" {
+			if !lores {
 				_ = osExec(false, nil, "pngbattle", tmpfilepath)
 			}
 		}
@@ -278,7 +280,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 	}
 
 	if os.Getenv("NOCBZ") == "" {
-		outfilepathcbz := me.OutDirPath + "/screen_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".cbz"
+		outfilepathcbz := me.OutDirPath + "/" + bookFileName(me.Phrase, "screen", lang, dirRtl, ".cbz")
 		printLn(outfilepathcbz, "...")
 		outfile, err := os.Create(outfilepathcbz)
 		if err != nil {
@@ -300,7 +302,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 	}
 
 	if os.Getenv("NOPDF") == "" {
-		outfilepathpdf := me.OutDirPath + "/screen_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".pdf"
+		outfilepathpdf := me.OutDirPath + "/" + bookFileName(me.Phrase, "screen", lang, dirRtl, ".pdf")
 		printLn(outfilepathpdf, "...")
 		cmdArgs := []string{"--pillow-limit-break", "--nodate",
 			"--pagesize", "A5^T"}
@@ -425,7 +427,7 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 	outfilepathsvg := me.ShmDirPath + "/print_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".svg"
 	fileWrite(outfilepathsvg, []byte(svg))
 	if os.Getenv("NOPDF") == "" {
-		me.printSvgToPdf(outfilepathsvg, me.OutDirPath+"/print_"+lang+sIf(dirRtl, "_rtl", "_ltr")+".pdf")
+		me.printSvgToPdf(outfilepathsvg, me.OutDirPath+"/"+bookFileName(me.Phrase, "print", lang, dirRtl, ".pdf"))
 	}
 	return
 }
@@ -467,7 +469,7 @@ func (me *BookGen) tocSvg(lang string, pgW int, pgH int) (s string) {
 				if titleorig != "" {
 					subtext += "&quot;" + xEsc(titleorig) + "&quot;, "
 				}
-				subtext += xEsc("©") + itoa(chap.Year) + " " + chap.author.String(false, false)
+				subtext += xEsc("©") + itoa(chap.Year) + " " + chap.author.str(false, false)
 				s += `<text class="tocsub" x="22%" y="` + ftoa(ypc+2.22, -1) + `%"><tspan>` + subtext + `</tspan></text>`
 			}
 			ypc += pstep
@@ -628,7 +630,7 @@ func (me *BookGen) genPrintCover(title string, numPages int) {
 
 	fileWrite(outfilepathsvg, []byte(svg))
 	if os.Getenv("NOPDF") == "" {
-		me.printSvgToPdf(outfilepathsvg, me.OutDirPath+"/printcover.pdf")
+		me.printSvgToPdf(outfilepathsvg, me.OutDirPath+"/"+bookFileName(me.Phrase, "", "", false, ".pdf"))
 	}
 }
 
@@ -637,4 +639,8 @@ func (*BookGen) printSvgToPdf(svgFilePath string, pdfOutFilePath string) {
 	osExec(false, nil, browserCmd[0], append(browserCmd[2:],
 		"--headless", "--disable-gpu", "--print-to-pdf-no-header",
 		"--print-to-pdf="+pdfOutFilePath, svgFilePath)...)
+}
+
+func bookFileName(bookName string, pref string, lang string, dirRtl bool, ext string) string {
+	return App.Proj.Site.Host + "_" + bookName + "_" + sIf(pref == "", "printcover", pref+"_"+lang+`_`+sIf(dirRtl, "rtl", "ltr")) + ext
 }

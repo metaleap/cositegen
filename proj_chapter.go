@@ -93,9 +93,32 @@ func (me *Series) bwThreshold() uint8 {
 	return App.Proj.Sheets.Bw.Thresholds[0]
 }
 
-func (me *Series) numSheets() (ret int) {
+func (me *Series) numSheets(skipPriv bool) (ret int) {
 	for _, chap := range me.Chapters {
+		if chap.Priv && skipPriv {
+			continue
+		}
 		ret += len(chap.sheets)
+	}
+	return
+}
+
+func (me *Series) numPanels(skipPriv bool) (ret int) {
+	for _, chap := range me.Chapters {
+		if chap.Priv && skipPriv {
+			continue
+		}
+		ret += chap.numPanels()
+	}
+	return
+}
+
+func (me *Series) numPages(skipPriv bool) (ret int) {
+	for _, chap := range me.Chapters {
+		if chap.Priv && skipPriv {
+			continue
+		}
+		ret += len(chap.SheetsPerPage)
 	}
 	return
 }
@@ -157,7 +180,7 @@ func (me *Chapter) bwThreshold() uint8 {
 	return me.parentSeries.bwThreshold()
 }
 
-func (me *Chapter) NextAfter(withSheetsOnly bool) *Chapter {
+func (me *Chapter) nextAfter(withSheetsOnly bool) *Chapter {
 	series := me.parentSeries
 	for ok, i := false, 0; i < len(series.Chapters); i++ {
 		if ok && (len(series.Chapters[i].sheets) > 0 || !withSheetsOnly) {
@@ -171,7 +194,7 @@ func (me *Chapter) NextAfter(withSheetsOnly bool) *Chapter {
 	return series.Chapters[0]
 }
 
-func (me *Chapter) NumPanels() (ret int) {
+func (me *Chapter) numPanels() (ret int) {
 	for _, sheet := range me.sheets {
 		n, _ := sheet.versions[0].panelCount()
 		ret += n
@@ -179,7 +202,7 @@ func (me *Chapter) NumPanels() (ret int) {
 	return
 }
 
-func (me *Chapter) NumScans() (ret int) {
+func (me *Chapter) numScans() (ret int) {
 	for _, sheet := range me.sheets {
 		ret += len(sheet.versions)
 	}
@@ -244,7 +267,7 @@ func (me *Chapter) readDurationMinutes() int {
 	return len(me.sheets) / 2
 }
 
-func (me *Chapter) HasBgCol() bool {
+func (me *Chapter) hasBgCol() bool {
 	for _, sheet := range me.sheets {
 		for _, sv := range sheet.versions {
 			if sv.data.hasBgCol {
@@ -255,7 +278,7 @@ func (me *Chapter) HasBgCol() bool {
 	return false
 }
 
-func (me *Chapter) PercentColorized() float64 {
+func (me *Chapter) percentColorized() float64 {
 	numsv, numbg := 0, 0
 	for _, sheet := range me.sheets {
 		for _, sv := range sheet.versions {
@@ -319,7 +342,7 @@ func (me *PanelSvgTextGen) mergeWithParent(base *PanelSvgTextGen) {
 	}
 }
 
-func (me *Author) String(abbrev bool, forHtml bool) (ret string) {
+func (me *Author) str(abbrev bool, forHtml bool) (ret string) {
 	if me != nil {
 		name := me.Name
 		if abbrev {

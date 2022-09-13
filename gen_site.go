@@ -152,7 +152,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 				for _, me.bgCol = range []bool{false, true} {
 					for _, series := range me.series {
 						for _, chapter := range series.Chapters {
-							if me.bgCol && !chapter.HasBgCol() {
+							if me.bgCol && !chapter.hasBgCol() {
 								continue
 							}
 							for i := range chapter.SheetsPerPage {
@@ -362,7 +362,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 		var author string
 		if chapter.author != nil {
 			author = strings.Replace(
-				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", chapter.author.String(false, true), 1),
+				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", chapter.author.str(false, true), 1),
 				"%YEAR%", sIf(chapter.Year == 0, "", ",&nbsp;"+itoa(chapter.Year)), 1)
 		}
 		desc := locStr(chapter.DescHtml, me.lang)
@@ -418,7 +418,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 					pagename := me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svdt, me.bgCol)
 					numFilesWritten += me.genPageExecAndWrite(pagename, chapter, totalSizeRec)
 					if chapter.UrlJumpName != "" && viewmode == viewModes[0] && qidx == 1 &&
-						pageNr <= 1 && (me.bgCol || !chapter.HasBgCol()) && !me.dirRtl {
+						pageNr <= 1 && (me.bgCol || !chapter.hasBgCol()) && !me.dirRtl {
 						fileLinkOrCopy(".build/"+pagename+".html", ".build/"+chapter.UrlJumpName+sIf(me.lang == App.Proj.Langs[0], "", "."+me.lang)+".html")
 						numFilesWritten++
 					}
@@ -454,11 +454,18 @@ func (me *siteGen) prepHomePage() {
 			var author string
 			if series.author != nil {
 				author = strings.Replace(
-					strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", series.author.String(true, true), 1),
+					strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", series.author.str(true, true), 1),
 					"%YEAR%", sIf(series.Year == 0, "", ", "+itoa(series.Year)), 1)
 			}
 			s += "<span class='" + App.Proj.Site.Gen.ClsSeries + "'>"
-			s += "<h5 id='" + strings.ToLower(series.Name) + "_" + itoa(seryear) + "' class='" + App.Proj.Site.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + " (" + itoa(seryear) + ")</h5>"
+
+			h5title := strings.NewReplacer(
+				"%NUMPGS%", itoa(series.numPages(true)),
+				"%NUMPNL%", itoa(series.numPanels(true)),
+				"%NUMSCN%", itoa(series.numSheets(true)),
+				"%DATEINFO%", itoa(seryear),
+			).Replace(me.textStr("ChapStats"))
+			s += "<h5 title='" + h5title + "' id='" + strings.ToLower(series.Name) + "_" + itoa(seryear) + "' class='" + App.Proj.Site.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + " (" + itoa(seryear) + ")</h5>"
 			s += "<div class='" + App.Proj.Site.Gen.ClsSeries + "'>" + locStr(series.DescHtml, me.lang) + author + "</div>"
 			s += "<span>"
 			for _, chapter := range series.Chapters {
@@ -479,8 +486,8 @@ func (me *siteGen) prepHomePage() {
 				title := strings.NewReplacer(
 					"%MINS%", itoa(chapmins)+"-"+itoa(1+chapmins),
 					"%NUMPGS%", itoa(numpages),
-					"%NUMPNL%", itoa(chapter.NumPanels()),
-					"%NUMSCN%", itoa(chapter.NumScans()),
+					"%NUMPNL%", itoa(chapter.numPanels()),
+					"%NUMSCN%", itoa(chapter.numScans()),
 					"%DATEINFO%", sdt,
 				).Replace(me.textStr("ChapStats"))
 				if numpages <= 1 {
@@ -501,7 +508,7 @@ func (me *siteGen) prepHomePage() {
 				s += "<a name='" + chid + "' id='" + chid + "' class='" + App.Proj.Site.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[App.Proj.defaultQualiIdx].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + sIf(os.Getenv("NOPICS") != "", "files/white.png", App.Proj.Site.Gen.PicDirName+"/"+picname) + ".png\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
 				s += "<div>" + hEsc(locStr(chapter.Title, me.lang)) + "</div>"
 				s += "<span><span>" + itoa(chapmins) + "-" + itoa(1+chapmins) + me.textStr("Mins") + "</span><span>" +
-					sIf(chapter.Year == 0, "&nbsp;", "&copy;"+itoa(chapter.Year)) + "&nbsp;" + chapter.author.String(true, true) +
+					sIf(chapter.Year == 0, "&nbsp;", "&copy;"+itoa(chapter.Year)) + "&nbsp;" + chapter.author.str(true, true) +
 					"</span></span>"
 				s += "</a>"
 			}
@@ -511,20 +518,23 @@ func (me *siteGen) prepHomePage() {
 	s += "<h5 id='books' class='" + App.Proj.Site.Gen.ClsSeries + "'>Downloads</h5>"
 	s += "<span><ul>"
 	booklink := func(repo string, pref string, ext string) string {
-		return App.Proj.Books.RepoPath.Prefix + repo + App.Proj.Books.RepoPath.Infix + sIf(pref == "", "printcover", pref+me.lang+`_`+sIf(me.dirRtl, "rtl", "ltr")) + ext
+		return App.Proj.Books.RepoPath.Prefix + repo + App.Proj.Books.RepoPath.Infix + bookFileName(repo, pref, me.lang, me.dirRtl, ext)
 	}
 	for _, bookpub := range App.Proj.Books.Pubs {
 		s += "<li id='book_" + bookpub.RepoName + "'><b style='font-size: xx-large'>" + bookpub.Title + "</b><ul>"
 		s += "</li>"
-		s += `<li>Screen 4K &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen_", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen_", ".cbz") + `">CBZ</a></li>`
-		s += `<li>Print ~1700dpi &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "print_", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "", ".pdf") + `">Cover</a></li>`
+		s += `<li>Screen 4K &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen", ".cbz") + `">CBZ</a></li>`
+		s += `<li>Print ~1700dpi &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "print", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "", ".pdf") + `">Cover</a></li>`
+		if libgen := bookpub.LibGenEditionID; libgen != "" {
+			s += `<li><a target="_blank" rel="noopener noreferrer" href="https://libgen.lc/edition.php?id=` + libgen + `">LibGen</a></li>`
+		}
 		s += "<li>" + me.textStr("BookContents")
 		for _, series := range bookpub.Series {
 			if ser := App.Proj.seriesByName(series); ser != nil {
 				s += "&nbsp;<a href='#" + ser.Name + "_" + itoa(bookpub.Year) + "'>" + hEsc(locStr(ser.Title, me.lang)) + "</a>&nbsp;"
 			}
 		}
-		s += "</ul></li>"
+		s += "</li></ul></li>"
 	}
 	s += "</ul></span>"
 	s += "</div>"
@@ -561,11 +571,11 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		me.page.VersList += ">" + hEsc(text) + "</option>"
 	}
 	for _, bgcol := range []bool{false, true} {
-		if bgcol && !chapter.HasBgCol() {
+		if bgcol && !chapter.hasBgCol() {
 			continue
 		}
-		text := me.textStr("Bg" + sIf(!bgcol, "Bw", sIf(chapter.PercentColorized() < 100.0, "ColP", "Col")))
-		if perc := chapter.PercentColorized(); bgcol && perc < 100.0 {
+		text := me.textStr("Bg" + sIf(!bgcol, "Bw", sIf(chapter.percentColorized() < 100.0, "ColP", "Col")))
+		if perc := chapter.percentColorized(); bgcol && perc < 100.0 {
 			text += " (" + ftoa(perc, 0) + "%)"
 		}
 		me.page.ColsList += "<option value='" + me.namePage(chapter, quali.SizeHint, pageNr, viewMode, "", me.lang, svDt, bgcol) + "'"
@@ -968,5 +978,5 @@ func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, vie
 	if chapter == nil {
 		return "index" + sIf(dirMode == App.Proj.DirModes.Ltr.Name, "", "."+App.Proj.DirModes.Rtl.Name) + sIf(langId == App.Proj.Langs[0], "", ".de")
 	}
-	return strings.ToLower(chapter.parentSeries.UrlName + "-" + chapter.UrlName + "-" + itoa(pageNr) + sIf(bgCol && chapter.HasBgCol(), "col", "bw") + strconv.FormatInt(svDt, 36) + viewMode + itoa(qualiSizeHint) + "-" + dirMode + "." + langId)
+	return strings.ToLower(chapter.parentSeries.UrlName + "-" + chapter.UrlName + "-" + itoa(pageNr) + sIf(bgCol && chapter.hasBgCol(), "col", "bw") + strconv.FormatInt(svDt, 36) + viewMode + itoa(qualiSizeHint) + "-" + dirMode + "." + langId)
 }
