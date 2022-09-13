@@ -37,6 +37,7 @@ type PageGen struct {
 	PageTitleTxt   string
 	PageDesc       string
 	PageDescTxt    string
+	PageDescTitle  string
 	PageLang       string
 	PageCssClasses string
 	PageDirCur     string
@@ -336,6 +337,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 		me.page.PageTitleTxt = hEsc(me.textStr("HomeTitleTxt"))
 		me.page.PageDesc = repl.Replace(hEsc(me.textStr("HomeDesc")))
 		me.page.PageDescTxt = me.page.PageDesc
+		me.page.PageDescTitle = me.txtStats(App.Proj.numPages(true), App.Proj.numPanels(true), App.Proj.numSheets(true), "2021-"+itoa(App.Proj.scanYearLatest(true)))
 		me.page.PageCssClasses = App.Proj.Site.Gen.ClsChapter + "n"
 		if me.lang == App.Proj.Langs[0] {
 			me.page.HrefDirLtr = "./index.html"
@@ -459,13 +461,7 @@ func (me *siteGen) prepHomePage() {
 			}
 			s += "<span class='" + App.Proj.Site.Gen.ClsSeries + "'>"
 
-			h5title := strings.NewReplacer(
-				"%NUMPGS%", itoa(series.numPages(true)),
-				"%NUMPNL%", itoa(series.numPanels(true)),
-				"%NUMSCN%", itoa(series.numSheets(true)),
-				"%DATEINFO%", itoa(seryear),
-			).Replace(me.textStr("ChapStats"))
-			s += "<h5 title='" + h5title + "' id='" + strings.ToLower(series.Name) + "_" + itoa(seryear) + "' class='" + App.Proj.Site.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + " (" + itoa(seryear) + ")</h5>"
+			s += "<h5 title='" + me.txtStats(series.numPages(true), series.numPanels(true), series.numSheets(true), itoa(seryear)) + "' id='" + strings.ToLower(series.Name) + "_" + itoa(seryear) + "' class='" + App.Proj.Site.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + " (" + itoa(seryear) + ")</h5>"
 			s += "<div class='" + App.Proj.Site.Gen.ClsSeries + "'>" + locStr(series.DescHtml, me.lang) + author + "</div>"
 			s += "<span>"
 			for _, chapter := range series.Chapters {
@@ -482,19 +478,9 @@ func (me *siteGen) prepHomePage() {
 						sdt = strings.Replace(sdt, m, me.textStr("Month_"+m), 1)
 					}
 				}
-				chapmins := chapter.readDurationMinutes()
-				title := strings.NewReplacer(
-					"%MINS%", itoa(chapmins)+"-"+itoa(1+chapmins),
-					"%NUMPGS%", itoa(numpages),
-					"%NUMPNL%", itoa(chapter.numPanels()),
-					"%NUMSCN%", itoa(chapter.numScans()),
-					"%DATEINFO%", sdt,
-				).Replace(me.textStr("ChapStats"))
-				if numpages <= 1 {
-					title = trim(title[1+strings.IndexByte(title, '/'):])
-				}
+				title := me.txtStats(numpages, chapter.numPanels(), chapter.numScans(), sdt)
 				if App.Proj.percentTranslated(me.lang, series, chapter, nil, -1) < 50 {
-					title += " " + me.textStr("Untransl")
+					title = me.textStr("Untransl") + " " + title
 				}
 				picidxsheet, picidxpanel, picbgpos := 0.0, 0.0, ""
 				if chapter.Pic != nil && len(chapter.Pic) >= 2 {
@@ -507,6 +493,7 @@ func (me *siteGen) prepHomePage() {
 				picname, chid := me.namePanelPic(chapter.sheets[int(picidxsheet)].versions[0], int(picidxpanel), App.Proj.Qualis[App.Proj.maxQualiIdx(true)].SizeHint), chapter.parentSeries.Name+"_"+chapter.Name
 				s += "<a name='" + chid + "' id='" + chid + "' class='" + App.Proj.Site.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[App.Proj.defaultQualiIdx].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + sIf(os.Getenv("NOPICS") != "", "files/white.png", App.Proj.Site.Gen.PicDirName+"/"+picname) + ".png\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
 				s += "<div>" + hEsc(locStr(chapter.Title, me.lang)) + "</div>"
+				chapmins := chapter.readDurationMinutes()
 				s += "<span><span>" + itoa(chapmins) + "-" + itoa(1+chapmins) + me.textStr("Mins") + "</span><span>" +
 					sIf(chapter.Year == 0, "&nbsp;", "&copy;"+itoa(chapter.Year)) + "&nbsp;" + chapter.author.str(true, true) +
 					"</span></span>"
@@ -957,6 +944,15 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 		numFilesWritten++
 	}
 	return
+}
+
+func (me *siteGen) txtStats(numPg int, numPnl int, numScn int, dtStr string) string {
+	return strings.NewReplacer(
+		"%NUMPGS%", itoa(numPg),
+		"%NUMPNL%", itoa(numPnl),
+		"%NUMSCN%", itoa(numScn),
+		"%DATEINFO%", dtStr,
+	).Replace(me.textStr("ChapStats"))
 }
 
 func (siteGen) namePanelPic(sheetVer *SheetVer, pIdx int, qualiSizeHint int) string {

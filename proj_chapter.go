@@ -123,6 +123,18 @@ func (me *Series) numPages(skipPriv bool) (ret int) {
 	return
 }
 
+func (me *Series) scanYearLatest(skipPriv bool) (ret int) {
+	for _, chap := range me.Chapters {
+		if chap.Priv && skipPriv {
+			continue
+		}
+		if year := chap.scanYearLatest(); year > ret {
+			ret = year
+		}
+	}
+	return
+}
+
 func (me *Series) scanYearHas(year int, latestSvOnly bool) bool {
 	for _, chap := range me.Chapters {
 		if chap.scanYearHas(year, latestSvOnly) {

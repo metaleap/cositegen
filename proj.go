@@ -416,3 +416,45 @@ func (me *Project) load() (numSheetVers int) {
 
 	return
 }
+
+func (me *Project) numSheets(skipPriv bool) (ret int) {
+	for _, series := range me.Series {
+		if series.Priv && skipPriv {
+			continue
+		}
+		ret += series.numSheets(skipPriv)
+	}
+	return
+}
+
+func (me *Project) numPanels(skipPriv bool) (ret int) {
+	for _, series := range me.Series {
+		if series.Priv && skipPriv {
+			continue
+		}
+		ret += series.numPanels(skipPriv)
+	}
+	return
+}
+
+func (me *Project) numPages(skipPriv bool) (ret int) {
+	for _, series := range me.Series {
+		if series.Priv && skipPriv {
+			continue
+		}
+		ret += series.numPages(skipPriv)
+	}
+	return
+}
+
+func (me *Project) scanYearLatest(skipPriv bool) (ret int) {
+	for _, series := range me.Series {
+		if series.Priv && skipPriv {
+			continue
+		}
+		if year := series.scanYearLatest(skipPriv); year > ret {
+			ret = year
+		}
+	}
+	return
+}
