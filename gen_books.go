@@ -416,6 +416,7 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 					text.tocsub tspan {
 						font-family: "Gloria Hallelujah";
 						font-size: 1.11em;
+						font-weight: normal !important;
 						stroke-width: 0.088em;
 						stroke: #ffffff;
 					}
