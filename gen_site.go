@@ -947,12 +947,16 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 }
 
 func (me *siteGen) txtStats(numPg int, numPnl int, numScn int, dtStr string) string {
-	return strings.NewReplacer(
+	s := strings.NewReplacer(
 		"%NUMPGS%", itoa(numPg),
 		"%NUMPNL%", itoa(numPnl),
 		"%NUMSCN%", itoa(numScn),
 		"%DATEINFO%", dtStr,
 	).Replace(me.textStr("ChapStats"))
+	if i1, i2 := strings.IndexByte(s, '('), strings.IndexByte(s, ')'); i1 > 0 && i2 > i1 {
+		s = s[:i1] + sIf(numPg == 1, "", s[i1+1:i2]) + s[i2+1:]
+	}
+	return s
 }
 
 func (siteGen) namePanelPic(sheetVer *SheetVer, pIdx int, qualiSizeHint int) string {

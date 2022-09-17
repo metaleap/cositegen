@@ -229,9 +229,8 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 						fill: #ffffff;
 					}
 					text.tocsub tspan {
-						font-family: "Annie Use Your Telescope";
-						font-size: ` + sIf(!lores, "5.88", "1.44") + `em;
-						font-weight: bold;
+						font-family: "Gloria Hallelujah";
+						font-size: ` + sIf(!lores, "4.44", "1.11") + `em;
 					}
 					image {
 						opacity: 0.22;
@@ -415,9 +414,8 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 						fill: #ffffff;
 					}
 					text.tocsub tspan {
-						font-family: "Annie Use Your Telescope";
-						font-size: 1.44em;
-						font-weight: bold;
+						font-family: "Gloria Hallelujah";
+						font-size: 1.11em;
 						stroke-width: 0.088em;
 						stroke: #ffffff;
 					}

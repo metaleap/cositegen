@@ -11,7 +11,7 @@ import (
 const siteTmplDirName = "site"
 const siteTmplFileName = "site.html"
 
-var browserCmd = []string{"",
+var browserCmd = []string{"", // filled in by appDetectBrowser()
 	"--new-window", // "--single-process",
 	"--user-data-dir=./.ccache/.chromium",
 	"--disable-extensions",
