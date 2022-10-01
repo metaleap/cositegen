@@ -60,6 +60,7 @@ type PageGen struct {
 	VersList       string
 	ColsList       string
 	ChapTitle      string
+	SvgTextIdent   string
 }
 
 func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
@@ -80,9 +81,6 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 	mkDir(".build/" + App.Proj.Site.Gen.PicDirName)
 
 	timedLogged("SiteGen: copying static files to .build...", func() string {
-		if App.Proj.Sheets.Panel.SvgText.AppendToFiles == nil {
-			App.Proj.Sheets.Panel.SvgText.AppendToFiles = map[string]bool{}
-		}
 		numfilescopied := me.copyStaticFiles("")
 		return "for " + itoa(numfilescopied) + " files"
 	})
@@ -153,7 +151,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 				for _, me.bgCol = range []bool{false, true} {
 					for _, series := range me.series {
 						for _, chapter := range series.Chapters {
-							if me.bgCol && !chapter.hasBgCol() {
+							if (me.bgCol && !chapter.hasBgCol()) || !chapter.isTransl(me.lang) {
 								continue
 							}
 							for i := range chapter.SheetsPerPage {
@@ -167,8 +165,10 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 				}
 				for _, series := range me.series {
 					for _, chapter := range series.Chapters {
-						numfileswritten++
-						totalsize += uint64(len(me.genSvgTextsFile(chapter)))
+						if chapter.isTransl(me.lang) {
+							numfileswritten++
+							totalsize += uint64(len(me.genSvgTextsFile(chapter)))
+						}
 					}
 				}
 			}
@@ -194,6 +194,24 @@ func (me *siteGen) copyStaticFiles(relDirPath string) (numFilesWritten int) {
 	if fileinfos, err := os.ReadDir(srcdirpath); err != nil {
 		panic(err)
 	} else {
+		for k, svgtxt := range App.Proj.Sheets.Panel.SvgText {
+			data, dstpath := []byte(App.Proj.cssFontFaces(nil)), filepath.Join(".build", relDirPath, "site_"+k+".css")
+			for csssel, csslines := range svgtxt.Css {
+				if csssel != "" {
+					if csslines != nil && len(csslines) == 0 {
+						csslines = svgtxt.Css[""]
+					}
+					css := csssel + "{\n"
+					for k, v := range csslines {
+						css += k + ":" + v + ";\n"
+					}
+					css += "}\n"
+					data = append(data, css...)
+				}
+			}
+			fileWrite(dstpath, data)
+			numFilesWritten++
+		}
 		for _, fileinfo := range fileinfos {
 			fn := fileinfo.Name()
 			relpath := filepath.Join(relDirPath, fn)
@@ -203,19 +221,6 @@ func (me *siteGen) copyStaticFiles(relDirPath string) (numFilesWritten int) {
 				numFilesWritten += me.copyStaticFiles(relpath)
 			} else if fn != siteTmplFileName {
 				data := fileRead(filepath.Join(srcdirpath, fn))
-				if App.Proj.Sheets.Panel.SvgText.AppendToFiles[relpath] {
-					for csssel, csslines := range App.Proj.Sheets.Panel.SvgText.Css {
-						if csssel != "" && csssel != "@font-face" {
-							if csslines == nil {
-								csslines = App.Proj.Sheets.Panel.SvgText.Css[""]
-							}
-							data = append([]byte(csssel+"{"+strings.Join(csslines, ";")+"}\n"), data...)
-						}
-					}
-					if cssff := App.Proj.Sheets.Panel.SvgText.Css["@font-face"]; len(cssff) != 0 {
-						data = append([]byte("@font-face{"+strings.Join(cssff, ";")+"}\n"), data...)
-					}
-				}
 				fileWrite(dstpath, data)
 				numFilesWritten++
 			}
@@ -337,7 +342,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 		me.page.PageTitleTxt = hEsc(me.textStr("HomeTitleTxt"))
 		me.page.PageDesc = repl.Replace(hEsc(me.textStr("HomeDesc")))
 		me.page.PageDescTxt = me.page.PageDesc
-		me.page.PageDescTitle = me.txtStats(App.Proj.numPages(true), App.Proj.numPanels(true), App.Proj.numSheets(true), "2021-"+itoa(App.Proj.scanYearLatest(true)))
+		me.page.PageDescTitle = me.txtStats(App.Proj.numPages(true, me.lang), App.Proj.numPanels(true, me.lang), App.Proj.numSheets(true, me.lang), "2021-"+itoa(App.Proj.scanYearLatest(true, me.lang)))
 		me.page.PageCssClasses = App.Proj.Site.Gen.ClsChapter + "n"
 		if me.lang == App.Proj.Langs[0] {
 			me.page.HrefDirLtr = "./index.html"
@@ -351,6 +356,11 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 
 	} else {
 		series := chapter.parentSeries
+		if chapter.GenPanelSvgText.chap {
+			me.page.SvgTextIdent = chapter.Name
+		} else if series.GenPanelSvgText.ser {
+			me.page.SvgTextIdent = series.Name
+		}
 		// me.page.HrefHome += "#" + strings.ToLower(series.Name)
 		chaptitlewords := strings.Split(hEsc(trim(locStr(chapter.Title, me.lang))), " ")
 		for i, word := range chaptitlewords {
@@ -442,10 +452,7 @@ func (me *siteGen) prepHomePage() {
 			}
 			var gotsheets bool
 			for _, chapter := range series.Chapters {
-				if chapter.scanYearLatest() != seryear {
-					continue
-				}
-				if gotsheets = (len(chapter.sheets) > 0 && !chapter.Priv); gotsheets {
+				if gotsheets = (chapter.scanYearLatest() == seryear) && (len(chapter.sheets) > 0) && (!chapter.Priv) && chapter.isTransl(me.lang); gotsheets {
 					break
 				}
 			}
@@ -461,11 +468,11 @@ func (me *siteGen) prepHomePage() {
 			}
 			s += "<span class='" + App.Proj.Site.Gen.ClsSeries + "'>"
 
-			s += "<h5 title='" + me.txtStats(series.numPages(true), series.numPanels(true), series.numSheets(true), itoa(seryear)) + "' id='" + strings.ToLower(series.Name) + "_" + itoa(seryear) + "' class='" + App.Proj.Site.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + " (" + itoa(seryear) + ")</h5>"
+			s += "<h5 title='" + me.txtStats(series.numPages(true, me.lang), series.numPanels(true, me.lang), series.numSheets(true, me.lang), itoa(seryear)) + "' id='" + strings.ToLower(series.Name) + "_" + itoa(seryear) + "' class='" + App.Proj.Site.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + " (" + itoa(seryear) + ")</h5>"
 			s += "<div class='" + App.Proj.Site.Gen.ClsSeries + "'>" + locStr(series.DescHtml, me.lang) + author + "</div>"
 			s += "<span>"
 			for _, chapter := range series.Chapters {
-				if chapter.Priv || len(chapter.sheets) == 0 || chapter.scanYearLatest() != seryear {
+				if chapter.Priv || len(chapter.sheets) == 0 || chapter.scanYearLatest() != seryear || !chapter.isTransl(me.lang) {
 					continue
 				}
 				numpages := len(chapter.SheetsPerPage)
@@ -789,12 +796,16 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 
 func (me *siteGen) genPageExecAndWrite(name string, chapter *Chapter, totalSizeRec *uint64) (numFilesWritten int) {
 	me.page.LangsList = ""
-	for _, lang := range App.Proj.Langs {
+	var numlangs int
+	for i, lang := range App.Proj.Langs {
+		if i != 0 && chapter != nil && !chapter.isTransl(lang) {
+			continue
+		}
 		title, imgsrcpath := lang, strings.Replace(App.Proj.Site.Gen.ImgSrcLang, "%LANG%", lang, -1)
 		if langname := App.Proj.textStr(lang, "LangName"); langname != "" {
 			title = langname
 		}
-		if lang == me.lang {
+		if numlangs++; lang == me.lang {
 			me.page.LangsList += "<span><div>"
 			me.page.LangsList += "<b><img title='" + hEsc(title) + "' alt='" + hEsc(title) + "' src='" + imgsrcpath + "'/></b>"
 			me.page.LangsList += "</div></span>"
@@ -815,6 +826,9 @@ func (me *siteGen) genPageExecAndWrite(name string, chapter *Chapter, totalSizeR
 			me.page.LangsList += "<a class='" + App.Proj.Site.Gen.ClsPanel + "l' href='./" + href + ".html'><img alt='" + hEsc(title) + "' title='" + hEsc(title) + "' src='" + imgsrcpath + "'/></a>"
 			me.page.LangsList += "</div>"
 		}
+	}
+	if numlangs <= 1 {
+		me.page.LangsList = "<span style='display: none;'>" + me.page.LangsList + "</span>"
 	}
 	if me.page.PageTitleTxt == "" {
 		me.page.PageTitleTxt = me.page.PageTitle
@@ -878,7 +892,7 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 				continue
 			}
 			for _, chapter := range series.Chapters {
-				if chapter.Priv {
+				if chapter.Priv || !chapter.isTransl(me.lang) {
 					continue
 				}
 				pgnr, numpanels, numsheets, pages := -1, 0, 0, map[int]bool{}

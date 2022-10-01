@@ -211,7 +211,8 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 			"&lt;b&gt;", "<tspan style='font-weight: bolder'>",
 			"&lt;u&gt;", "<tspan style='text-decoration: underline'>",
 		}
-		for tagname, style := range App.Proj.Sheets.Panel.SvgText.TspanSubTagStyles {
+		for _, tagname := range sortedMapKeys(me.parentSheet.parentChapter.GenPanelSvgText.TspanSubTagStyles) {
+			style := me.parentSheet.parentChapter.GenPanelSvgText.TspanSubTagStyles[tagname]
 			repls = append(repls,
 				"&lt;"+tagname+"&gt;", "<tspan style='"+style+"'>",
 				"&lt;/"+tagname+"&gt;", "</tspan>",
@@ -234,12 +235,17 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 		}
 		s += "<text style='font-size: " + itoa(pxfont) + "px;' transform='" + trim(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
 		ts := "<tspan style='" + trim(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'" + sIf(isstorytitle || strings.Contains(pta.SvgTextTspanStyleAttr, "font-family"), "", " class='std'") + ">"
+		svgcss := me.parentSheet.parentChapter.GenPanelSvgText
 		for _, ln := range strings.Split(svgRepl.Replace(hEsc(locStr(pta.Data, langId))), hEscs['\n']) {
 			if ln == "" {
 				ln = "&nbsp;"
 			}
 			ln += hEscs['\n']
-			ts += "<tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'>" + ln + "</tspan>"
+			ts += "<tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'"
+			if svgcss.TspanCssCls != "" {
+				ts += " class='" + svgcss.TspanCssCls + "'"
+			}
+			ts += ">" + ln + "</tspan>"
 		}
 		ts += "</tspan>"
 		s += ts /*+ "<title>" + ts + "</title>"*/ + "</text>"

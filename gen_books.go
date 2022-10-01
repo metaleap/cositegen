@@ -34,6 +34,7 @@ type BookGen struct {
 	MaxSheetHeight int
 
 	facesFilePaths []string
+	cssRepl        *strings.Replacer
 }
 
 func makeBook(flags map[string]bool) {
@@ -42,6 +43,7 @@ func makeBook(flags map[string]bool) {
 		Phrase:     phrase,
 		ShmDirPath: "/dev/shm/" + phrase,
 		OutDirPath: ".books/" + phrase,
+		cssRepl:    strings.NewReplacer("./", strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/"),
 	}
 	rmDir(gen.ShmDirPath)
 	rmDir(gen.OutDirPath)
@@ -50,7 +52,7 @@ func makeBook(flags map[string]bool) {
 
 	var year int
 	for k := range flags {
-		if y := atoi(k, 0, 9999); y > 2020 && y < 2929 {
+		if y := atoi(k, 0, 9999); y > 2020 && y < 2121 {
 			year = y
 		}
 	}
@@ -134,28 +136,25 @@ func (me *BookGen) genSheetSvgsAndPngs(dirRtl bool, lang string) {
 	}
 }
 
-const bookCssTspanStd = "stroke: #000000 !important; stroke-width: 11px !important;"
-
 func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string) {
 	rectinner, lores := sv.data.pxBounds(), (os.Getenv("LORES") != "")
 
 	w, h := rectinner.Dx(), rectinner.Dy()
 
+	svgtxt := sv.parentSheet.parentChapter.GenPanelSvgText
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
         xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
         width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
-            <style type="text/css">
-                polygon { stroke: black; fill: white; }
-                @font-face { ` +
-		strings.Replace(strings.Join(App.Proj.Sheets.Panel.SvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) +
-		` 		}
-                g > svg > svg > text, g > svg > svg > text > tspan { ` +
-		strings.Join(App.Proj.Sheets.Panel.SvgText.Css[""], "; ") + `
-				}
-				g > svg > svg > text > tspan.std {
-					` + bookCssTspanStd + `
-				}
-            </style>`
+            <style type="text/css">` + App.Proj.cssFontFaces(me.cssRepl) + `
+				polygon { stroke: black; fill: white; }
+				g > svg > svg > text, g > svg > svg > text > tspan {
+					`
+
+	for _, k := range sortedMapKeys(svgtxt.Css[""]) {
+		svg += k + ":" + svgtxt.Css[""][k] + ";\n"
+	}
+
+	svg += `}</style>`
 
 	pidx, qidx := 0, iIf(!lores, App.Proj.maxQualiIdx(false), 0)
 
@@ -163,8 +162,7 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 		px, py, pw, ph := p.Rect.Min.X-rectinner.Min.X, p.Rect.Min.Y-rectinner.Min.Y, p.Rect.Dx(), p.Rect.Dy()
 		if px < 0 {
 			panic(px)
-		}
-		if py < 0 {
+		} else if py < 0 {
 			panic(py)
 		}
 		tx, gid := px, "pnl"+itoa(pidx)
@@ -181,7 +179,8 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
                         width="` + itoa(pw) + `" height="` + itoa(ph) + `"></rect>`
 		}
 		svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
-					xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(fileRead(filepath.Join(sv.data.PicDirPath(App.Proj.Qualis[qidx].SizeHint), itoa(pidx)+".png"))) + `" />`
+					xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(fileRead(filepath.Join(sv.data.PicDirPath(App.Proj.Qualis[qidx].SizeHint), itoa(pidx)+".png"))) + `" />
+					`
 		if lang != "" {
 			svg += sv.genTextSvgForPanel(pidx, p, lang, false, true)
 		}
@@ -290,14 +289,15 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 		for _, srcfilepath := range pgfilepaths {
 			if fw, err := zw.Create(filepath.Base(srcfilepath)); err != nil {
 				panic(err)
-			} else {
-				io.Copy(fw, bytes.NewReader(fileRead(srcfilepath)))
+			} else if _, err = io.Copy(fw, bytes.NewReader(fileRead(srcfilepath))); err != nil {
+				panic(err)
 			}
 		}
 		if err := zw.Close(); err != nil {
 			panic(err)
+		} else if err = outfile.Sync(); err != nil {
+			panic(err)
 		}
-		_ = outfile.Sync()
 	}
 
 	if os.Getenv("NOPDF") == "" {
@@ -311,7 +311,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 }
 
 func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
-	svgh, pgwmm, pghmm, isoddpage, pgidx, brepl := 0, 210, 297, false, -1, []byte(bookCssTspanStd)
+	svgh, pgwmm, pghmm, isoddpage, pgidx := 0, 210, 297, false, -1
 	for numPages = iIf(os.Getenv("NOTOC") == "", 4, 2) + len(me.Sheets)/2; (numPages % 4) != 0; {
 		numPages++
 	}
@@ -372,8 +372,8 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 			topborder = bookPrintBorderMmLil
 		}
 		const repl = "font-weight: normal !important;"
-		svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(topborder) + `mm" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath0), brepl, []byte(repl), -1)) + `"/>`
-		svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(iIf(strings.HasPrefix(me.Sheets[i*2].parentSheet.name, "01FROGF"), 47, 50)) + `%" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(bytes.Replace(fileRead(sheetsvgfilepath1), brepl, []byte(repl), -1)) + `"/>`
+		svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(topborder) + `mm" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(fileRead(sheetsvgfilepath0)) + `"/>`
+		svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(iIf(strings.HasPrefix(me.Sheets[i*2].parentSheet.name, "01FROGF"), 47, 50)) + `%" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(fileRead(sheetsvgfilepath1)) + `"/>`
 		svg += "</svg>"
 	}
 	dpadd(true)
@@ -381,20 +381,22 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 		dpadd(true)
 	}
 
-	svg = `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+	svgtxt := App.Proj.Sheets.Panel.SvgText[""]
+	svgfull := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
 				width="` + itoa(pgwmm) + `mm" height="` + itoa(svgh) + `mm">
 				<style type="text/css">
+				` + App.Proj.cssFontFaces(me.cssRepl) + `
 					@page { margin: 0; padding: 0; line-height: unset; size: ` + itoa(pgwmm) + `mm ` + itoa(pghmm) + `mm; }
 					* { margin: 0; padding: 0; line-height: unset; }
 					svg.pg { page-break-after: always; break-after: always;}
 					image { transform-origin: center; transform-box: fill-box; }
-					@font-face { ` +
-		strings.Replace(strings.Join(App.Proj.Sheets.Panel.SvgText.Css["@font-face"], "; "), "'./", "'"+strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/", -1) +
-		`}
-					text, text > tspan { ` +
-		strings.Join(App.Proj.Sheets.Panel.SvgText.Css[""], "; ") + `
-						font-size: 1em;
-					}
+					text, text > tspan {
+`
+	for _, k := range sortedMapKeys(svgtxt.Css[""]) {
+		svgfull += k + ":" + svgtxt.Css[""][k] + ";\n"
+	}
+
+	svgfull += `; font-size: 1em; }
 					text.toc tspan {
 						font-family: "Shark Heavy ABC";
 						font-size: 1.11cm;
@@ -420,11 +422,10 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 						stroke-width: 0.088em;
 						stroke: #ffffff;
 					}
-				</style>
-		` + svg + "</svg>"
+				</style>` + svg + "</svg>"
 
 	outfilepathsvg := me.ShmDirPath + "/print_" + lang + sIf(dirRtl, "_rtl", "_ltr") + ".svg"
-	fileWrite(outfilepathsvg, []byte(svg))
+	fileWrite(outfilepathsvg, []byte(svgfull))
 	if os.Getenv("NOPDF") == "" {
 		me.printSvgToPdf(outfilepathsvg, me.OutDirPath+"/"+bookFileName(me.Phrase, "print", lang, dirRtl, ".pdf"))
 	}

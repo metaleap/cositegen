@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -308,6 +309,15 @@ func intMax(is []int) (r int) {
 func atoi(s string, min int, max int) int {
 	v, _ := strconv.Atoi(s)
 	return intLim(v, min, max)
+}
+
+func sortedMapKeys(m map[string]string) []string {
+	ret := make([]string, 0, len(m))
+	for k := range m {
+		ret = append(ret, k)
+	}
+	sort.Strings(ret)
+	return ret
 }
 
 func timedLogged(logMsg string, do func() string) {

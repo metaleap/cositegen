@@ -194,7 +194,7 @@ func scanJobDo() {
 		if err != nil {
 			panic(pngfilename + ": " + err.Error())
 		}
-		imgPnmToPng(pnmfile, pngfile, true, 0, 0, 345, 44)
+		imgPnmToPng(pnmfile, pngfile, true, 0, 0, 399, 99)
 		_ = os.Remove(pnmfilename)
 		return "for " + pngfilename
 	})

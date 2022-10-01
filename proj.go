@@ -83,7 +83,8 @@ type Project struct {
 			BorderCm        float64
 			BgScale         float64
 			BgBlur          int
-			SvgText         PanelSvgTextGen
+			CssFontFaces    map[string]string
+			SvgText         map[string]*PanelSvgTextGen
 		}
 	}
 
@@ -231,11 +232,25 @@ func (me *Project) load() (numSheetVers int) {
 		me.Authors = map[string]*Author{}
 	}
 
+	svgtxt := me.Sheets.Panel.SvgText[""]
+	for k, v := range me.Sheets.Panel.CssFontFaces {
+		if svgtxt.TspanSubTagStyles[k] == "" {
+			svgtxt.TspanSubTagStyles[k] = v[:1+strings.IndexByte(v, ';')] + " !important;"
+		}
+	}
+	me.Sheets.Panel.SvgText[""] = svgtxt
+	for k, v := range me.Sheets.Panel.SvgText {
+		if k != "" {
+			v.baseOn(nil)
+		}
+	}
+
 	for _, series := range me.Series {
 		if series.GenPanelSvgText == nil {
-			series.GenPanelSvgText = &me.Sheets.Panel.SvgText
+			series.GenPanelSvgText = me.Sheets.Panel.SvgText[""]
 		} else {
-			series.GenPanelSvgText.mergeWithParent(&me.Sheets.Panel.SvgText)
+			series.GenPanelSvgText.baseOn(nil)
+			series.GenPanelSvgText.ser, me.Sheets.Panel.SvgText[series.Name] = true, series.GenPanelSvgText
 		}
 		if series.Author != "" {
 			if series.author = me.Authors[series.Author]; series.author == nil {
@@ -250,6 +265,12 @@ func (me *Project) load() (numSheetVers int) {
 			series.Title = map[string]string{me.Langs[0]: series.Name}
 		}
 		for _, chap := range series.Chapters {
+			if chap.GenPanelSvgText == nil {
+				chap.GenPanelSvgText = series.GenPanelSvgText
+			} else {
+				chap.GenPanelSvgText.baseOn(series.GenPanelSvgText)
+				chap.GenPanelSvgText.chap, me.Sheets.Panel.SvgText[chap.Name] = true, chap.GenPanelSvgText
+			}
 			if chap.Year == 0 {
 				chap.Year = series.Year
 			}
@@ -274,11 +295,6 @@ func (me *Project) load() (numSheetVers int) {
 				panic("unknown author: " + chap.Author)
 			}
 
-			if chap.GenPanelSvgText == nil {
-				chap.GenPanelSvgText = series.GenPanelSvgText
-			} else {
-				chap.GenPanelSvgText.mergeWithParent(series.GenPanelSvgText)
-			}
 			chap.parentSeries = series
 			chapdirpath := filepath.Join(seriesdirpath, chap.Name)
 			if chap.UrlName == "" {
@@ -417,44 +433,55 @@ func (me *Project) load() (numSheetVers int) {
 	return
 }
 
-func (me *Project) numSheets(skipPriv bool) (ret int) {
+func (me *Project) numSheets(skipPriv bool, lang string) (ret int) {
 	for _, series := range me.Series {
 		if series.Priv && skipPriv {
 			continue
 		}
-		ret += series.numSheets(skipPriv)
+		ret += series.numSheets(skipPriv, lang)
 	}
 	return
 }
 
-func (me *Project) numPanels(skipPriv bool) (ret int) {
+func (me *Project) numPanels(skipPriv bool, lang string) (ret int) {
 	for _, series := range me.Series {
 		if series.Priv && skipPriv {
 			continue
 		}
-		ret += series.numPanels(skipPriv)
+		ret += series.numPanels(skipPriv, lang)
 	}
 	return
 }
 
-func (me *Project) numPages(skipPriv bool) (ret int) {
+func (me *Project) numPages(skipPriv bool, lang string) (ret int) {
 	for _, series := range me.Series {
 		if series.Priv && skipPriv {
 			continue
 		}
-		ret += series.numPages(skipPriv)
+		ret += series.numPages(skipPriv, lang)
 	}
 	return
 }
 
-func (me *Project) scanYearLatest(skipPriv bool) (ret int) {
+func (me *Project) scanYearLatest(skipPriv bool, lang string) (ret int) {
 	for _, series := range me.Series {
 		if series.Priv && skipPriv {
 			continue
 		}
-		if year := series.scanYearLatest(skipPriv); year > ret {
+		if year := series.scanYearLatest(skipPriv, lang); year > ret {
 			ret = year
 		}
+	}
+	return
+}
+
+func (me *Project) cssFontFaces(repl *strings.Replacer) (css string) {
+	for _, k := range sortedMapKeys(me.Sheets.Panel.CssFontFaces) {
+		v := me.Sheets.Panel.CssFontFaces[k]
+		if repl != nil {
+			v = repl.Replace(v)
+		}
+		css = "@font-face { " + v + "}\n." + k + "{" + v[:1+strings.IndexByte(v, ';')] + "}\n" + css
 	}
 	return
 }

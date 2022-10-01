@@ -7,7 +7,6 @@ import (
 	"image/png"
 	"io"
 	"os"
-	"runtime"
 	"strconv"
 	"time"
 
@@ -17,6 +16,14 @@ import (
 
 var PngEncoder = png.Encoder{CompressionLevel: png.BestCompression}
 var ImgScaler draw.Interpolator = draw.CatmullRom
+
+func pngEncode(img image.Image) []byte {
+	var buf bytes.Buffer
+	if err := PngEncoder.Encode(&buf, img); err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
+}
 
 func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide bool, snipTop int, snipRight int, snipBottom int, snipLeft int) {
 	srcimg, err := pnm.Decode(srcImgData)
@@ -53,7 +60,6 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 		tmpfilepath = outFilePath
 	}
 	if noTmpFile || fileStat(tmpfilepath) == nil {
-		runtime.GC()
 		cmdargs := []string{srcFilePath,
 			"-quality", "90", /*png max lossless compression*/
 			"-background", "white",
@@ -74,7 +80,11 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 	}
 }
 
-func imgDownsized(srcImgData io.Reader, onDecoded func() error, maxWidth int, transparent bool) []byte {
+func imgDownsizedPng(srcImgData io.Reader, onDecoded func() error, maxWidth int, transparent bool) []byte {
+	return pngEncode(imgDownsized(srcImgData, onDecoded, maxWidth, transparent))
+}
+
+func imgDownsized(srcImgData io.Reader, onDecoded func() error, maxWidth int, transparent bool) draw.Image {
 	imgsrc, _, err := image.Decode(srcImgData)
 	if onDecoded != nil {
 		_ = onDecoded() // allow early file-closing for the caller
@@ -106,11 +116,7 @@ func imgDownsized(srcImgData io.Reader, onDecoded func() error, maxWidth int, tr
 		imgdown = image.NewGray(image.Rect(0, 0, maxWidth, newheight))
 	}
 	ImgScaler.Scale(imgdown, imgdown.Bounds(), imgsrc, imgsrc.Bounds(), draw.Over, nil)
-	var buf bytes.Buffer
-	if err = PngEncoder.Encode(&buf, imgdown); err != nil {
-		panic(err)
-	}
-	return buf.Bytes()
+	return imgdown
 }
 
 func imgFill(img draw.Image, r image.Rectangle, c color.Color) {
@@ -157,8 +163,12 @@ func imgGrayDistrs(srcImgData io.Reader, onDecoded func() error, numClusters int
 	return
 }
 
+func imgToMonochromePng(srcImgData io.Reader, onDecoded func() error, blackIfLessThan uint8) []byte {
+	return pngEncode(imgToMonochrome(srcImgData, onDecoded, blackIfLessThan))
+}
+
 // returns BW-thresholded by blackIfLessThan, or unthresholded grayscale if blackIfLessThan==0.
-func imgToMonochrome(srcImgData io.Reader, onDecoded func() error, blackIfLessThan uint8) []byte {
+func imgToMonochrome(srcImgData io.Reader, onDecoded func() error, blackIfLessThan uint8) *image.Gray {
 	srcimg, _, err := image.Decode(srcImgData)
 	if onDecoded != nil {
 		_ = onDecoded() // allow early file-closing for the caller
@@ -194,12 +204,7 @@ func imgToMonochrome(srcImgData io.Reader, onDecoded func() error, blackIfLessTh
 			imggray.Set(px, py, color.Gray{Y: colbw})
 		}
 	}
-
-	var pngbuf bytes.Buffer
-	if err = PngEncoder.Encode(&pngbuf, imggray); err != nil {
-		panic(err)
-	}
-	return pngbuf.Bytes()
+	return imggray
 }
 
 func imgIsRectFullyOfColor(img *image.Gray, rect image.Rectangle, col color.Gray) bool {
@@ -252,12 +257,7 @@ func imgSubRectSvg(srcImg *image.Gray, srcImgRect image.Rectangle, blackBorderSi
 }
 
 func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int, transparent bool, gotSameSizeAsOrig *bool) []byte {
-	imgdst := imgSubRect(srcImg, srcImgRect, width, height, blackBorderSize, transparent, gotSameSizeAsOrig)
-	var buf bytes.Buffer
-	if err := PngEncoder.Encode(&buf, imgdst); err != nil {
-		panic(err)
-	}
-	return buf.Bytes()
+	return pngEncode(imgSubRect(srcImg, srcImgRect, width, height, blackBorderSize, transparent, gotSameSizeAsOrig))
 }
 
 func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int, transparent bool, gotSameSizeAsOrig *bool) image.Image {
@@ -306,7 +306,11 @@ func imgDrawRect(imgDst *image.Gray, rect image.Rectangle, thickness int, gray u
 	}
 }
 
-func imgStitchHorizontally(fileNames []string, height int, gapWidth int, gapColor color.Color) []byte {
+func imgStitchHorizontallyPng(fileNames []string, height int, gapWidth int, gapColor color.Color) []byte {
+	return pngEncode(imgStitchHorizontally(fileNames, height, gapWidth, gapColor))
+}
+
+func imgStitchHorizontally(fileNames []string, height int, gapWidth int, gapColor color.Color) draw.Image {
 	totalwidth, srcimgs := 0, make(map[image.Image]int, len(fileNames))
 	for _, fname := range fileNames {
 		data := fileRead(fname)
@@ -334,10 +338,5 @@ func imgStitchHorizontally(fileNames []string, height int, gapWidth int, gapColo
 		ImgScaler.Scale(dst, dr, img, img.Bounds(), draw.Over, nil)
 		nextx += width + gapWidth
 	}
-
-	var buf bytes.Buffer
-	if err := PngEncoder.Encode(&buf, dst); err != nil {
-		panic(err)
-	}
-	return buf.Bytes()
+	return dst
 }

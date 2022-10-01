@@ -73,7 +73,7 @@ func httpServeDynPng(httpResp http.ResponseWriter, httpReq *http.Request) {
 		}
 
 		w := 0
-		pngdata = imgToMonochrome(file, file.Close, t)
+		pngdata = imgToMonochromePng(file, file.Close, t)
 		if len(args) > 1 {
 			if qw := args[1]; qw != "" {
 				if ui, err := strconv.ParseUint(qw, 0, 64); err != nil {
@@ -84,7 +84,7 @@ func httpServeDynPng(httpResp http.ResponseWriter, httpReq *http.Request) {
 			}
 		}
 		if w != 0 {
-			pngdata = imgDownsized(bytes.NewReader(pngdata), nil, int(w), false)
+			pngdata = imgDownsizedPng(bytes.NewReader(pngdata), nil, int(w), false)
 		}
 		_ = os.WriteFile(tmpfilename, pngdata, os.ModePerm)
 	}

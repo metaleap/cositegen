@@ -145,12 +145,12 @@ func (me *SheetVer) ensureBwSheetPngs(force bool) (didBw bool, didBwSmall bool) 
 			if file, err := os.Open(me.fileName); err != nil {
 				panic(err)
 			} else {
-				fileWrite(me.data.bwFilePath, imgToMonochrome(file, file.Close, me.bwThreshold()))
+				fileWrite(me.data.bwFilePath, imgToMonochromePng(file, file.Close, me.bwThreshold()))
 			}
 		}
 		if file, err := os.Open(me.data.bwFilePath); err != nil {
 			panic(err)
-		} else if data := imgDownsized(file, file.Close, int(App.Proj.Sheets.Bw.SmallWidth), true); data != nil {
+		} else if data := imgDownsizedPng(file, file.Close, int(App.Proj.Sheets.Bw.SmallWidth), true); data != nil {
 			fileWrite(me.data.bwSmallFilePath, data)
 		} else if err = os.Symlink(filepath.Base(me.data.bwFilePath), me.data.bwSmallFilePath); err != nil {
 			panic(err)
@@ -514,7 +514,7 @@ func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang strin
 		borderandfill := (pta.PointTo != nil)
 		if borderandfill {
 			rpx, rpy := pta.PointTo.X-panel.Rect.Min.X, pta.PointTo.Y-panel.Rect.Min.Y
-			mmh, cmh := int(me.data.PxCm*App.Proj.Sheets.Panel.SvgText.BoxPolyStrokeWidthCm), int(me.data.PxCm/2.0)
+			mmh, cmh := int(me.data.PxCm*me.parentSheet.parentChapter.GenPanelSvgText.BoxPolyStrokeWidthCm), int(me.data.PxCm/2.0)
 			pl, pr, pt, pb := (rx + mmh), ((rx + rw) - mmh), (ry + mmh), ((ry + rh) - mmh)
 			poly := [][2]int{{pl, pt}, {pr, pt}, {pr, pb}, {pl, pb}}
 			ins := func(idx int, pts ...[2]int) {
@@ -559,7 +559,7 @@ func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang strin
 			for _, pt := range poly {
 				s += itoa(pt[0]) + "," + itoa(pt[1]) + " "
 			}
-			s += "' class='" + App.Proj.Sheets.Panel.SvgText.ClsBoxPoly + "' stroke-width='" + itoa(mmh) + "px'/>"
+			s += "' class='" + me.parentSheet.parentChapter.GenPanelSvgText.ClsBoxPoly + "' stroke-width='" + itoa(mmh) + "px'/>"
 		}
 		s += "<svg x='" + itoa(rx) + "' y='" + itoa(ry) + "' class='" + sIf(borderandfill, "ptbf", "") + "'>" +
 			me.genTextSvgForPanelArea(panelIdx, tidx, &pta, lang, forHtml, forEbook) + "</svg>"
@@ -572,9 +572,9 @@ func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang strin
 func (me *SheetVer) genTextSvgForPanelArea(pidx int, tidx int, pta *ImgPanelArea, lang string, forHtml bool, forEbook bool) string {
 	linex := 0.0
 	if pta.PointTo != nil {
-		linex = me.data.PxCm * App.Proj.Sheets.Panel.SvgText.BoxPolyDxCmA4
+		linex = me.data.PxCm * me.parentSheet.parentChapter.GenPanelSvgText.BoxPolyDxCmA4
 	}
-	fontSizeCmA4, perLineDyCmA4 := App.Proj.Sheets.Panel.SvgText.FontSizeCmA4, App.Proj.Sheets.Panel.SvgText.PerLineDyCmA4
+	fontSizeCmA4, perLineDyCmA4 := me.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4, me.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4
 	if me.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4 > 0.01 { // !=0 in float
 		fontSizeCmA4 = me.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4
 	}

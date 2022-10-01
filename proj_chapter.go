@@ -58,15 +58,19 @@ type Chapter struct {
 }
 
 type PanelSvgTextGen struct {
+	BasedOn              string
 	BoxPolyStrokeWidthCm float64
 	ClsBoxPoly           string
 	BoxPolyDxCmA4        float64
 	PerLineDyCmA4        float64
 	FontSizeCmA4         float64
 	MozScale             float64
-	Css                  map[string][]string
-	AppendToFiles        map[string]bool
+	Css                  map[string]map[string]string
 	TspanSubTagStyles    map[string]string
+	TspanCssCls          string
+
+	chap bool
+	ser  bool
 }
 
 type Author struct {
@@ -93,9 +97,9 @@ func (me *Series) bwThreshold() uint8 {
 	return App.Proj.Sheets.Bw.Thresholds[0]
 }
 
-func (me *Series) numSheets(skipPriv bool) (ret int) {
+func (me *Series) numSheets(skipPriv bool, lang string) (ret int) {
 	for _, chap := range me.Chapters {
-		if chap.Priv && skipPriv {
+		if (chap.Priv && skipPriv) || !chap.isTransl(lang) {
 			continue
 		}
 		ret += len(chap.sheets)
@@ -103,9 +107,9 @@ func (me *Series) numSheets(skipPriv bool) (ret int) {
 	return
 }
 
-func (me *Series) numPanels(skipPriv bool) (ret int) {
+func (me *Series) numPanels(skipPriv bool, lang string) (ret int) {
 	for _, chap := range me.Chapters {
-		if chap.Priv && skipPriv {
+		if (chap.Priv && skipPriv) || !chap.isTransl(lang) {
 			continue
 		}
 		ret += chap.numPanels()
@@ -113,9 +117,9 @@ func (me *Series) numPanels(skipPriv bool) (ret int) {
 	return
 }
 
-func (me *Series) numPages(skipPriv bool) (ret int) {
+func (me *Series) numPages(skipPriv bool, lang string) (ret int) {
 	for _, chap := range me.Chapters {
-		if chap.Priv && skipPriv {
+		if (chap.Priv && skipPriv) || !chap.isTransl(lang) {
 			continue
 		}
 		ret += len(chap.SheetsPerPage)
@@ -123,9 +127,9 @@ func (me *Series) numPages(skipPriv bool) (ret int) {
 	return
 }
 
-func (me *Series) scanYearLatest(skipPriv bool) (ret int) {
+func (me *Series) scanYearLatest(skipPriv bool, lang string) (ret int) {
 	for _, chap := range me.Chapters {
-		if chap.Priv && skipPriv {
+		if (chap.Priv && skipPriv) || !chap.isTransl(lang) {
 			continue
 		}
 		if year := chap.scanYearLatest(); year > ret {
@@ -248,6 +252,10 @@ func (me *Chapter) isSheetOnPgNr(pgNr int, sheetIdx int) (is bool) {
 	return pgNr == (1 + me.pgIdxOfSheet(sheetIdx))
 }
 
+func (me *Chapter) isTransl(lang string) bool {
+	return lang == App.Proj.Langs[0] || App.Proj.percentTranslated(lang, nil, me, nil, -1) > 50
+}
+
 func (me *Chapter) pgIdxOfSheet(sheetIdx int) int {
 	var shidx int
 	for i, numsheets := range me.SheetsPerPage {
@@ -328,18 +336,43 @@ func (me *Chapter) At(i int) fmt.Stringer { return me.sheets[i] }
 func (me *Chapter) Len() int              { return len(me.sheets) }
 func (me *Chapter) String() string        { return me.Name }
 
-func (me *PanelSvgTextGen) mergeWithParent(base *PanelSvgTextGen) {
+func (me *PanelSvgTextGen) baseOn(base *PanelSvgTextGen) {
+	if base == nil || me.BasedOn != "" {
+		if base = App.Proj.Sheets.Panel.SvgText[me.BasedOn]; me.BasedOn != "" {
+			if me.BasedOn = ""; base.BasedOn != "" {
+				base.baseOn(nil)
+			}
+		}
+	}
 	if me.ClsBoxPoly == "" {
 		me.ClsBoxPoly = base.ClsBoxPoly
 	}
+	if me.TspanCssCls == "" {
+		me.TspanCssCls = base.TspanCssCls
+	}
 	if me.Css == nil {
 		me.Css = base.Css
-	}
-	if me.AppendToFiles == nil {
-		me.AppendToFiles = base.AppendToFiles
+	} else {
+		for bk, bv := range base.Css {
+			if m := me.Css[bk]; m == nil {
+				me.Css[bk] = bv
+			} else {
+				for k, v := range bv {
+					if _, exists := m[k]; !exists {
+						m[k] = v
+					}
+				}
+			}
+		}
 	}
 	if me.TspanSubTagStyles == nil {
 		me.TspanSubTagStyles = base.TspanSubTagStyles
+	} else {
+		for k, v := range base.TspanSubTagStyles {
+			if _, exists := me.TspanSubTagStyles[k]; !exists {
+				me.TspanSubTagStyles[k] = v
+			}
+		}
 	}
 	for ptr, val := range map[*float64]float64{
 		&me.BoxPolyStrokeWidthCm: base.BoxPolyStrokeWidthCm,

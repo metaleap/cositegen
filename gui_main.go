@@ -16,20 +16,28 @@ func fV(r *http.Request) func(string) string {
 }
 
 func guiMain(r *http.Request, notice string) []byte {
-	fv, dirpref, s := fV(r), "", "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><link rel='stylesheet' type='text/css' href='/main.css'/><style type='text/css'>"
-	for k := range App.Proj.Sheets.Panel.SvgText.AppendToFiles {
-		if idx := strings.LastIndexByte(k, '/'); idx > 0 {
-			dirpref = k[:idx]
-			break
+	svgtxt, fv, dirpref, s := App.Proj.Sheets.Panel.SvgText[""], fV(r), "", "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><link rel='stylesheet' type='text/css' href='/main.css'/><style type='text/css'>"
+	App.Gui.State.Sel.Series, _ = guiGetFormSel(fv("series"), &App.Proj).(*Series)
+	if series := App.Gui.State.Sel.Series; series != nil {
+		if App.Gui.State.Sel.Chapter, _ = guiGetFormSel(fv("chapter"), series).(*Chapter); App.Gui.State.Sel.Chapter != nil {
+			svgtxt = App.Gui.State.Sel.Chapter.GenPanelSvgText
+		} else {
+			svgtxt = series.GenPanelSvgText
 		}
 	}
-	for csssel, csslines := range App.Proj.Sheets.Panel.SvgText.Css {
+	if idx := strings.LastIndexByte(App.Proj.Site.Gen.ImgSrcLang, '/'); idx > 0 {
+		dirpref = App.Proj.Site.Gen.ImgSrcLang[:idx]
+	}
+	repl := strings.NewReplacer("./", dirpref+"/")
+	for csssel, csslines := range svgtxt.Css {
 		if csssel == "" {
 			csssel = "div.panel .panelrect svg text"
 		}
-		if csslines != nil {
-			s += csssel + "{" + strings.Replace(strings.Join(csslines, ";"), "./", dirpref+"/", -1) + "}"
+		s += csssel + "{\n"
+		for k, v := range csslines {
+			s += k + ":" + repl.Replace(v) + ";\n"
 		}
+		s += "}\n"
 	}
 	s += "</style><script type='text/javascript' language='javascript'>const $ = window, numImagePanelTextAreas = " + itoa(App.Proj.Sheets.Panel.MaxNumTextAreas) + ";</script><script src='/main.js' type='text/javascript' language='javascript'></script>"
 	s += "</head><body><form method='POST' action='/' id='main_form' novalidate='novalidate'>" + guiHtmlInput("hidden", "main_focus_id", fv("main_focus_id"), nil)
@@ -49,14 +57,12 @@ func guiMain(r *http.Request, notice string) []byte {
 		}
 	}
 
-	App.Gui.State.Sel.Series, _ = guiGetFormSel(fv("series"), &App.Proj).(*Series)
 	s += guiHtmlList("series", "("+itoa(numseries)+" series, "+itoa(numchapters)+" chapters, "+itoa(numsheets)+" sheets)", false, len(App.Proj.Series), func(i int) (string, string, bool) {
 		return App.Proj.Series[i].Name, App.Proj.Series[i].Name + " (" + itoa(len(App.Proj.Series[i].Chapters)) + ")", App.Gui.State.Sel.Series != nil && App.Proj.Series[i].Name == App.Gui.State.Sel.Series.Name
 	})
 
 	shouldsavemeta, havefullgui := false, false
 	if series := App.Gui.State.Sel.Series; series != nil {
-		App.Gui.State.Sel.Chapter, _ = guiGetFormSel(fv("chapter"), series).(*Chapter)
 		s += guiHtmlList("chapter", "("+itoa(len(series.Chapters))+" chapter/s)", false, len(series.Chapters), func(i int) (string, string, bool) {
 			chapter := series.Chapters[i]
 			return chapter.Name, chapter.Name + " (" + itoa(len(chapter.sheets)) + ")", App.Gui.State.Sel.Chapter != nil && App.Gui.State.Sel.Chapter.Name == chapter.Name
@@ -109,13 +115,7 @@ func guiStartView() (s string) {
 			for _, chapter := range series.Chapters {
 				if id := "chk" + itoa(int(time.Now().UnixNano())); App.Gui.State.Sel.Series == nil || App.Gui.State.Sel.Chapter == nil || App.Gui.State.Sel.Chapter == chapter {
 					numpages := len(chapter.SheetsPerPage)
-					fontsizecm, lineheight := App.Proj.Sheets.Panel.SvgText.FontSizeCmA4, App.Proj.Sheets.Panel.SvgText.PerLineDyCmA4
-					if chapter.GenPanelSvgText.FontSizeCmA4 > 0.01 {
-						fontsizecm = chapter.GenPanelSvgText.FontSizeCmA4
-					}
-					if chapter.GenPanelSvgText.PerLineDyCmA4 > 0.01 {
-						lineheight = chapter.GenPanelSvgText.PerLineDyCmA4
-					}
+					fontsizecm, lineheight := chapter.GenPanelSvgText.FontSizeCmA4, chapter.GenPanelSvgText.PerLineDyCmA4
 					title := "Default font size: " + ftoa(fontsizecm, 3) + "cm (" + ftoa((fontsizecm*10)/0.3528, 3) + "pt), line height: " + ftoa(lineheight, 3) + "cm (" + ftoa((lineheight*10)/0.3528, 3) + "pt)"
 					s += "<div title='" + title + "'><input class='collchk' id='" + id + "' type='checkbox' checked='checked'/><h3><label for='" + id + "'>" + series.Name + "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;" + chapter.Name + "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;(" + itoa(len(chapter.sheets)) + " sheet/s, " + itoa(numpages) + " page/s)</label></h3>"
 					s += "<div class='collchk'><table width='99%'>"
@@ -303,7 +303,7 @@ func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 
 func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s string) {
 	_ = sv.ensurePrep(false, false)
-	numpanels, maxpanelwidth, bwsrc := 0, 0, fv("srcpx")
+	numpanels, maxpanelwidth, bwsrc, chap := 0, 0, fv("srcpx"), sv.parentSheet.parentChapter
 	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
 		numpanels++
 		if w := panel.Rect.Dx(); w > maxpanelwidth {
@@ -313,12 +313,12 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	if bwsrc != sv.data.bwSmallFilePath && bwsrc != sv.data.bwFilePath {
 		bwsrc = sv.data.bwSmallFilePath
 	}
-	fontSizeCmA4, perLineDyCmA4 := App.Proj.Sheets.Panel.SvgText.FontSizeCmA4, App.Proj.Sheets.Panel.SvgText.PerLineDyCmA4
-	if sv.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4 > 0.01 {
-		fontSizeCmA4 = sv.parentSheet.parentChapter.GenPanelSvgText.FontSizeCmA4
+	fontSizeCmA4, perLineDyCmA4 := chap.GenPanelSvgText.FontSizeCmA4, chap.GenPanelSvgText.PerLineDyCmA4
+	if chap.GenPanelSvgText.FontSizeCmA4 > 0.01 {
+		fontSizeCmA4 = chap.GenPanelSvgText.FontSizeCmA4
 	}
-	if sv.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4 > 0.01 {
-		perLineDyCmA4 = sv.parentSheet.parentChapter.GenPanelSvgText.PerLineDyCmA4
+	if chap.GenPanelSvgText.PerLineDyCmA4 > 0.01 {
+		perLineDyCmA4 = chap.GenPanelSvgText.PerLineDyCmA4
 	}
 	if sv.data.FontFactor > 0.01 {
 		fontSizeCmA4 *= sv.data.FontFactor
@@ -545,7 +545,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		for _, lang := range App.Proj.Langs {
 			langs = append(langs, lang)
 		}
-		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Dx()) + ", " + itoa(panel.Rect.Dy()) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + ftoa(sv.data.PxCm, 8) + ", '" + App.Proj.Sheets.Panel.SvgText.ClsBoxPoly + "', " + ftoa(App.Proj.Sheets.Panel.SvgText.BoxPolyStrokeWidthCm, 8) + ", " + toJsonStr(App.Proj.Sheets.Panel.SvgText.TspanSubTagStyles) + ");"
+		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Dx()) + ", " + itoa(panel.Rect.Dy()) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + ftoa(sv.data.PxCm, 8) + ", '" + chap.GenPanelSvgText.ClsBoxPoly + "', " + ftoa(chap.GenPanelSvgText.BoxPolyStrokeWidthCm, 8) + ", " + toJsonStr(chap.GenPanelSvgText.TspanSubTagStyles) + ");"
 		btnhtml := guiHtmlButton(pid+"save", "Save changes (all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 
 		numpanelareas := len(sv.panelAreas(pidx))
@@ -580,10 +580,14 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 
 			s += "<span style='display: " + styledisplay + "'><hr/>"
 			for _, lang := range App.Proj.Langs {
+				var css string
+				for k, v := range chap.GenPanelSvgText.Css[""] {
+					css += k + ":" + v + ";"
+				}
 				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang, area.Data[lang], A{
 					"placeholder": lang,
 					"onfocus":     jsrefr, "onblur": jsrefr, "onchange": jsrefr, "onkeydown": jsrefr, "onkeyup": jsrefr, "onkeypress": jsrefr,
-					"style": "background-image: url(\"/" + path.Join("site", strings.Replace(App.Proj.Site.Gen.ImgSrcLang, "%LANG%", lang, -1)) + "\");" + strings.Join(App.Proj.Sheets.Panel.SvgText.Css[""], ";"),
+					"style": "background-image: url(\"/" + path.Join("site", strings.Replace(App.Proj.Site.Gen.ImgSrcLang, "%LANG%", lang, -1)) + "\");" + css,
 					"class": "panelcfgtext col" + itoa(i%8)}) + "</div>"
 			}
 
