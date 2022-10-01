@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	pnm "github.com/go-forks/gopnm"
@@ -60,20 +61,29 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 		tmpfilepath = outFilePath
 	}
 	if noTmpFile || fileStat(tmpfilepath) == nil {
-		cmdargs := []string{srcFilePath,
-			"-quality", "90", /*png max lossless compression*/
-			"-background", "white",
-			"-alpha", "remove",
-			"-alpha", "off"}
-		if reSize != 0 {
-			cmdargs = append(cmdargs, "-resize", itoa(reSize))
+		if src := string(srcdata); strings.HasSuffix(srcFilePath, ".svg") {
+			sw, sh := src[7+strings.Index(src, "width=\""):], src[8+strings.Index(src, "height=\""):]
+			sw, sh = sw[:strings.IndexByte(sw, '"')], sh[:strings.IndexByte(sh, '"')]
+			w, h := atoi(sw, 0, 22222), atoi(sh, 0, 11111)
+			if w == 0 || h == 0 {
+				panic(sw + "x" + sh)
+			}
+			if s := osExec(false, nil, browserCmd[0], append(browserCmd[2:],
+				"--headless", "--disable-gpu", "--force-gpu-mem-available-mb=4096", "--window-size="+itoa(w)+","+itoa(h)+"",
+				"--screenshot="+tmpfilepath, srcFilePath)...); strings.Contains(s, "tile memory limits") {
+				panic(s)
+			}
 		} else {
-			// cmdargs = append(cmdargs,
-			// 	"-units", "PixelsPerInch",
-			// 	"-set", "units", "PixelsPerInch",
-			// 	"-density", "1200")
+			cmdargs := []string{srcFilePath,
+				"-quality", "90", /*png max lossless compression*/
+				"-background", "white",
+				"-alpha", "remove",
+				"-alpha", "off"}
+			if reSize != 0 {
+				cmdargs = append(cmdargs, "-resize", itoa(reSize))
+			}
+			_ = osExec(true, nil, "convert", append(cmdargs, tmpfilepath)...)
 		}
-		_ = osExec(true, nil, "convert", append(cmdargs, tmpfilepath)...)
 	}
 	if !noTmpFile {
 		fileLinkOrCopy(tmpfilepath, outFilePath)

@@ -7,6 +7,7 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
+	"image/png"
 	_ "image/png"
 	"io"
 	"math/rand"
@@ -244,6 +245,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 		pgfilepaths = append(pgfilepaths, tocfilepathpng)
 	}
 
+	penc := png.Encoder{CompressionLevel: png.NoCompression}
 	for i := range me.Sheets {
 		shfilepath := me.sheetSvgPath(i, dirRtl, lang) + ".sh.png"
 		outfilepath := me.sheetSvgPath(i, dirRtl, lang) + ".pg.png"
@@ -265,7 +267,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 			shx, shy := (pgw-shw)/2, (pgh-shh)/2
 			ImgScaler.Scale(imgpg, image.Rect(shx, shy, shx+shw, shy+shh), imgsh, imgsh.Bounds(), draw.Over, nil)
 			var buf bytes.Buffer
-			if err = PngEncoder.Encode(&buf, imgpg); err != nil {
+			if err = penc.Encode(&buf, imgpg); err != nil {
 				panic(err)
 			}
 			fileWrite(tmpfilepath, buf.Bytes())
@@ -371,7 +373,6 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 		if me.Sheets[i*2].parentSheet.parentChapter.Name == "half-pagers" {
 			topborder = bookPrintBorderMmLil
 		}
-		const repl = "font-weight: normal !important;"
 		svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(topborder) + `mm" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(fileRead(sheetsvgfilepath0)) + `"/>`
 		svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(iIf(strings.HasPrefix(me.Sheets[i*2].parentSheet.name, "01FROGF"), 47, 50)) + `%" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + base64.StdEncoding.EncodeToString(fileRead(sheetsvgfilepath1)) + `"/>`
 		svg += "</svg>"
