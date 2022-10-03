@@ -225,9 +225,7 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 	svgTxtCounter++
 
 	if forHtml {
-		s += sIf(isstorytitle, "<span style='display:none'>", "") +
-			`<use id='_t_` + itoa(svgTxtCounter) + `' xlink:href="t.` + me.parentSheet.parentChapter.parentSeries.Name + `.` + me.parentSheet.parentChapter.Name + `.` + langId + `.svg#` + me.id + `_` + itoa(pidx) + `t` + itoa(tidx+1) + `"/>` +
-			sIf(isstorytitle, "</span>", "")
+		s += sIf(isstorytitle, ``, `<use id='_t_`+itoa(svgTxtCounter)+`' xlink:href="t.`+me.parentSheet.parentChapter.parentSeries.Name+`.`+me.parentSheet.parentChapter.Name+`.`+langId+`.svg#`+me.id+`_`+itoa(pidx)+`t`+itoa(tidx+1)+`"/>`)
 	} else {
 		mozscale := me.parentSheet.parentChapter.GenPanelSvgText.MozScale > 0.01 && !forEbook
 		if mozscale {

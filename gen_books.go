@@ -157,8 +157,7 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 
 	svg += `}</style>`
 
-	pidx, qidx := 0, iIf(!lores, App.Proj.maxQualiIdx(false), 0)
-
+	pidx, qidx := 0, iIf(lores, 0, App.Proj.maxQualiIdx(false))
 	sv.data.PanelsTree.iter(func(p *ImgPanel) {
 		px, py, pw, ph := p.Rect.Min.X-rectinner.Min.X, p.Rect.Min.Y-rectinner.Min.Y, p.Rect.Dx(), p.Rect.Dy()
 		if px < 0 {
@@ -308,7 +307,9 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 		cmdArgs := []string{"--pillow-limit-break", "--nodate",
 			"--pagesize", "A5^T"}
 		cmdArgs = append(cmdArgs, pgfilepaths...)
-		osExec(true, nil, "img2pdf", append(cmdArgs, "-o", outfilepathpdf)...)
+		if s := osExec(false, nil, "img2pdf", append(cmdArgs, "-o", outfilepathpdf)...); strings.Contains(s, "error:") {
+			panic(s)
+		}
 	}
 }
 
@@ -637,9 +638,12 @@ func (me *BookGen) genPrintCover(title string, numPages int) {
 
 func (*BookGen) printSvgToPdf(svgFilePath string, pdfOutFilePath string) {
 	printLn(pdfOutFilePath, "...")
-	osExec(false, nil, browserCmd[0], append(browserCmd[2:],
-		"--headless", "--disable-gpu", "--print-to-pdf-no-header",
+	s := osExec(false, nil, browserCmd[0], append(browserCmd[2:],
+		"--headless", "--disable-gpu", "--force-gpu-mem-available-mb=4096", "--print-to-pdf-no-header",
 		"--print-to-pdf="+pdfOutFilePath, svgFilePath)...)
+	if fstat := fileStat(pdfOutFilePath); fstat == nil || fstat.Size() == 0 {
+		panic(s)
+	}
 }
 
 func bookFileName(bookName string, pref string, lang string, dirRtl bool, ext string) string {

@@ -72,6 +72,8 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 				"--headless", "--disable-gpu", "--force-gpu-mem-available-mb=4096", "--window-size="+itoa(w)+","+itoa(h)+"",
 				"--screenshot="+tmpfilepath, srcFilePath)...); strings.Contains(s, "tile memory limits") {
 				panic(s)
+			} else if fstat := fileStat(tmpfilepath); fstat == nil || fstat.Size() == 0 {
+				panic(s)
 			}
 		} else {
 			cmdargs := []string{srcFilePath,
