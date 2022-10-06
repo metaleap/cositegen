@@ -15,7 +15,7 @@ import (
 	"golang.org/x/image/draw"
 )
 
-var PngEncoder = png.Encoder{CompressionLevel: png.BestCompression}
+var PngEncoder = png.Encoder{CompressionLevel: png.NoCompression}
 var ImgScaler draw.Interpolator = draw.CatmullRom
 
 func pngEncode(img image.Image) []byte {
@@ -53,7 +53,7 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 	_ = dstImgFile.Close()
 }
 
-func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile bool, tmpFileNamePrefix string) {
+func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile bool, tmpFileNamePrefix string) (writtenFilePath string) {
 	srcdata := fileRead(srcFilePath)
 	chash := contentHashStr(srcdata)
 	tmpfilepath := ".ccache/.pngtmp/" + tmpFileNamePrefix + chash + "." + itoa(reSize) + ".png"
@@ -61,6 +61,7 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 		tmpfilepath = outFilePath
 	}
 	if noTmpFile || fileStat(tmpfilepath) == nil {
+		// os.WriteFile("/home/_/tmp/pix/bla/"+strings.Replace(srcFilePath, "/", "_", -1)+"."+chash, srcdata, os.ModePerm)
 		if src := string(srcdata); strings.HasSuffix(srcFilePath, ".svg") {
 			sw, sh := src[7+strings.Index(src, "width=\""):], src[8+strings.Index(src, "height=\""):]
 			sw, sh = sw[:strings.IndexByte(sw, '"')], sh[:strings.IndexByte(sh, '"')]
@@ -77,7 +78,7 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 			}
 		} else {
 			cmdargs := []string{srcFilePath,
-				"-quality", "90", /*png max lossless compression*/
+				"-quality", "00",
 				"-background", "white",
 				"-alpha", "remove",
 				"-alpha", "off"}
@@ -86,10 +87,12 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 			}
 			_ = osExec(true, nil, "convert", append(cmdargs, tmpfilepath)...)
 		}
+		writtenFilePath = tmpfilepath
 	}
 	if !noTmpFile {
 		fileLinkOrCopy(tmpfilepath, outFilePath)
 	}
+	return
 }
 
 func imgDownsizedPng(srcImgData io.Reader, onDecoded func() error, maxWidth int, transparent bool) []byte {
@@ -318,37 +321,8 @@ func imgDrawRect(imgDst *image.Gray, rect image.Rectangle, thickness int, gray u
 	}
 }
 
-func imgStitchHorizontallyPng(fileNames []string, height int, gapWidth int, gapColor color.Color) []byte {
-	return pngEncode(imgStitchHorizontally(fileNames, height, gapWidth, gapColor))
-}
-
-func imgStitchHorizontally(fileNames []string, height int, gapWidth int, gapColor color.Color) draw.Image {
-	totalwidth, srcimgs := 0, make(map[image.Image]int, len(fileNames))
-	for _, fname := range fileNames {
-		data := fileRead(fname)
-		if img, _, err := image.Decode(bytes.NewReader(data)); err != nil {
-			panic(err)
-		} else {
-			width := int(float64(img.Bounds().Max.X) / (float64(img.Bounds().Max.Y) / float64(height)))
-			srcimgs[img] = width
-			totalwidth += width + gapWidth
-		}
+func pngOptFireAndForget(pngFilePath string) {
+	if pngFilePath != "" {
+		_ = osExec(false, nil, "pngbattle", pngFilePath)
 	}
-	var dst draw.Image
-	if _, isbw := gapColor.(color.Gray); isbw || gapWidth <= 0 {
-		dst = image.NewGray(image.Rect(0, 0, totalwidth, height))
-	} else {
-		dst = image.NewNRGBA(image.Rect(0, 0, totalwidth, height))
-	}
-	if gapWidth > 0 {
-		imgFill(dst, image.Rect(0, 0, totalwidth, height), gapColor)
-	}
-	nextx := gapWidth / 2
-	for img, width := range srcimgs {
-		dr := image.Rect(nextx, 0, nextx+width, height)
-		imgFill(dst, dr, color.NRGBA{255, 255, 255, 255})
-		ImgScaler.Scale(dst, dr, img, img.Bounds(), draw.Over, nil)
-		nextx += width + gapWidth
-	}
-	return dst
 }

@@ -476,7 +476,7 @@ func (me *siteGen) prepHomePage() {
 					continue
 				}
 				numpages := len(chapter.SheetsPerPage)
-				dt1, dt2 := chapter.dateRangeOfSheets(false)
+				dt1, dt2 := chapter.dateRangeOfSheets(false, seryear)
 				sdt1, sdt2 := dt1.Format("Jan 2006"), dt2.Format("Jan 2006")
 				sdt := sdt1 + " - " + sdt2
 				if sdt1 == sdt2 {

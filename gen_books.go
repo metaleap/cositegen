@@ -7,7 +7,6 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"image/png"
 	_ "image/png"
 	"io"
 	"math/rand"
@@ -34,6 +33,7 @@ type BookGen struct {
 	MaxSheetWidth  int
 	MaxSheetHeight int
 
+	year           int
 	facesFilePaths []string
 	cssRepl        *strings.Replacer
 }
@@ -51,17 +51,16 @@ func makeBook(flags map[string]bool) {
 	mkDir(gen.ShmDirPath)
 	mkDir(gen.OutDirPath)
 
-	var year int
 	for k := range flags {
 		if y := atoi(k, 0, 9999); y > 2020 && y < 2121 {
-			year = y
+			gen.year = y
 		}
 	}
 	for _, series := range App.Proj.Series {
 		for _, chap := range series.Chapters {
 			if (flags[chap.Name] || flags[chap.UrlName] ||
 				flags[series.Name] || flags[series.UrlName]) &&
-				(year == 0 || chap.scanYearHas(year, true)) {
+				(gen.year == 0 || chap.scanYearHas(gen.year, true)) {
 				for _, sheet := range chap.sheets {
 					sv := sheet.versions[0]
 					gen.Sheets = append(gen.Sheets, sv)
@@ -230,6 +229,9 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 					text.tocsub tspan {
 						font-family: "Gloria Hallelujah";
 						font-size: ` + sIf(!lores, "4.44", "1.11") + `em;
+						font-weight: bold;
+						stroke: #ffffff;
+						stroke-width: 0.044em;
 					}
 					image {
 						opacity: 0.22;
@@ -239,12 +241,13 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 			svg += me.tocSvg(lang, pgw, pgh) + "</svg>"
 			fileWrite(tocfilepathsvg, []byte(svg))
 			printLn(tocfilepathpng, "...")
-			imgAnyToPng(tocfilepathsvg, tocfilepathpng, 0, false, sIf(!lores, "toc_", "toc_lq_"))
+			if writtenfilepath := imgAnyToPng(tocfilepathsvg, tocfilepathpng, 0, false, sIf(!lores, "toc_", "toc_lq_")); os.Getenv("NOZOP") == "" {
+				pngOptFireAndForget(writtenfilepath)
+			}
 		}
 		pgfilepaths = append(pgfilepaths, tocfilepathpng)
 	}
 
-	penc := png.Encoder{CompressionLevel: png.NoCompression}
 	for i := range me.Sheets {
 		shfilepath := me.sheetSvgPath(i, dirRtl, lang) + ".sh.png"
 		outfilepath := me.sheetSvgPath(i, dirRtl, lang) + ".pg.png"
@@ -265,13 +268,9 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 			}
 			shx, shy := (pgw-shw)/2, (pgh-shh)/2
 			ImgScaler.Scale(imgpg, image.Rect(shx, shy, shx+shw, shy+shh), imgsh, imgsh.Bounds(), draw.Over, nil)
-			var buf bytes.Buffer
-			if err = penc.Encode(&buf, imgpg); err != nil {
-				panic(err)
-			}
-			fileWrite(tmpfilepath, buf.Bytes())
-			if !lores {
-				_ = osExec(false, nil, "pngbattle", tmpfilepath)
+			fileWrite(tmpfilepath, pngEncode(imgpg))
+			if os.Getenv("NOZOP") == "" && !lores {
+				pngOptFireAndForget(tmpfilepath)
 			}
 		}
 		fileLink(tmpfilepath, outfilepath)
@@ -453,16 +452,33 @@ func (me *BookGen) tocSvg(lang string, pgW int, pgH int) (s string) {
 
 	hastoclist := os.Getenv("NOTOC") == "" && len(tocs) > 1
 	s += `<g x="0" y="0">`
-	s += `<text class="toctitle" x="` + ftoa(fIf(isforprint, 18.18, 34.56), -1) + `%" y="` + ftoa(fIf(hastoclist, 12.34, 54.32), -1) + `%"><tspan>` + os.Getenv("TITLE") + `</tspan></text>`
+	s += `<text class="toctitle" x="` + ftoa(fIf(isforprint, 18.18, 31.13), -1) + `%" y="` + ftoa(fIf(hastoclist, 12.34, 54.32), -1) + `%"><tspan>` + os.Getenv("TITLE") + `</tspan></text>`
 	if hastoclist {
 		ypc, pstep := 22.0, (94.0-22.0)/float64(len(tocs)-1)
 		for _, idx := range tocs {
 			sv := me.Sheets[idx]
 			chap := sv.parentSheet.parentChapter
 			pgnr := iIf(isforprint, 5, 2) + idx/iIf(isforprint, 2, 1)
-			s += `<text class="toc" x="8.88%" y="` + ftoa(ypc, -1) + `%"><tspan>` + itoa0pref(pgnr, 2) + "&#009;&#009;&#009;&#009;" + locStr(chap.Title, lang) + `</tspan></text>`
+			s += `<text class="toc" x="8.88%" y="` + ftoa(ypc, -1) + `%"><tspan>` + itoa0pref(pgnr, 2) + sIf(pgnr >= 10 && pgnr < 20, " ", "") + "&#009;&#009;&#009;&#009;" + locStr(chap.Title, lang) + `</tspan></text>`
 			if chap.author != nil {
 				subtext, titleorig := "Story: ", chap.TitleOrig
+				if prependWhen := false; prependWhen {
+					_, dt := chap.dateRangeOfSheets(false, me.year)
+					month1, month2 := "", dt.Month().String()
+					if month := atoi(chap.Name[2:4], 0, 9999); month < 1 || month > 12 {
+						panic(chap.Name[2:4])
+					} else {
+						month1 = time.Month(month).String()
+					}
+					if lang != App.Proj.Langs[0] {
+						month1, month2 = App.Proj.textStr(lang, "Month_"+month1), App.Proj.textStr(lang, "Month_"+month2)
+					}
+					dtstr := month1[:3] + " 20" + chap.Name[:2] + " - " + month2[:3] + " " + itoa(me.year)
+					if idx := strings.IndexByte(dtstr, '-'); idx > 0 && dtstr[:idx-1] == dtstr[idx+2:] {
+						dtstr = dtstr[:idx-1]
+					}
+					subtext = "(" + dtstr + ")&#xA0;&#xA0;&#8212;&#xA0;&#xA0;" + subtext
+				}
 				if chap.TitleOrig == locStr(chap.Title, lang) {
 					titleorig = ""
 				} else if titleorig == "" && lang != App.Proj.Langs[0] {
@@ -487,7 +503,6 @@ func (me *BookGen) facesPicPaths() []string {
 		for _, sv := range me.Sheets {
 			var svimg *image.Gray
 			var pidx int
-			var buf bytes.Buffer
 			sv.data.PanelsTree.iter(func(p *ImgPanel) {
 				for i, area := range sv.panelFaceAreas(pidx) {
 					rect, facefilepath := area.Rect, ".ccache/.pngtmp/face_"+sv.id+itoa0pref(pidx, 2)+itoa0pref(i, 2)+".png"
@@ -510,11 +525,8 @@ func (me *BookGen) facesPicPaths() []string {
 							fy = diff / 2
 						}
 						draw.Draw(imgsq, image.Rect(fx, fy, fx+rect.Dx(), fy+rect.Dy()), imgface, imgface.Bounds().Min, draw.Over)
-						buf.Reset()
-						if err := PngEncoder.Encode(&buf, imgsq); err != nil {
-							panic(err)
-						}
-						fileWrite(facefilepath, buf.Bytes())
+						fileWrite(facefilepath, pngEncode(imgsq))
+						pngOptFireAndForget(facefilepath)
 					}
 					me.facesFilePaths = append(me.facesFilePaths, absPath(facefilepath))
 				}

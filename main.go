@@ -12,10 +12,37 @@ const siteTmplDirName = "site"
 const siteTmplFileName = "site.html"
 
 var browserCmd = []string{"", // filled in by appDetectBrowser()
-	"--new-window", // "--single-process",
+	"--new-window", "--single-process",
 	"--user-data-dir=./.ccache/.chromium",
 	"--disable-extensions",
 	"--allow-file-access-from-files",
+
+	"--disable-client-side-phishing-detection",
+	"--disable-component-extensions-with-background-pages",
+	"--disable-default-apps",
+	"--mute-audio",
+	"--no-default-browser-check",
+	"--no-first-run",
+	"--use-fake-device-for-media-stream",
+	"--allow-running-insecure-content",
+	"--autoplay-policy=user-gesture-required",
+	"--disable-background-timer-throttling",
+	"--disable-ipc-flooding-protection",
+	"--disable-notifications",
+	"--disable-popup-blocking",
+	"--disable-prompt-on-repost",
+	"--disable-device-discovery-notifications",
+	"--password-store=basic",
+	"--disable-background-networking",
+	"--disable-background-networking",
+	"--disable-breakpad",
+	"--disable-component-update",
+	"--disable-domain-reliability",
+	"--disable-sync",
+	"--disable-features=OptimizationHints",
+	"--disable-features=Translate",
+	"--enable-automation",
+	"--deny-permission-prompts",
 }
 
 func main() {

@@ -28,24 +28,29 @@ var hEscs = map[rune]string{
 	'€':  "&euro;",
 	'©':  "&copy;",
 	'\n': "&#xA;",
-	'’':  "&apos;",
-	'‘':  "&apos;",
 	'…':  "&hellip;",
 	'—':  "&mdash;",
-	'–':  "&mdash;",
-	'”':  "&quot;",
-	'“':  "&quot;",
-	'·':  "&bull;",
 	'•':  "&bull;",
 	'×':  "&times;",
 	0xa0: "&nbsp;",
+}
+var hEscsX = map[rune]string{
+	'–': "&mdash;",
+	'·': "&bull;",
+	'’': "&apos;",
+	'‘': "&apos;",
+	'”': "&quot;",
+	'“': "&quot;",
 }
 var hEscRepl *strings.Replacer
 var preRepl *strings.Replacer
 
 func init() {
-	repl := make([]string, 0, len(hEscs)*2)
+	repl := make([]string, 0, len(hEscs)*2+len(hEscsX)*2)
 	for k, v := range hEscs {
+		repl = append(repl, string([]rune{k}), v)
+	}
+	for k, v := range hEscsX {
 		repl = append(repl, string([]rune{k}), v)
 	}
 	hEscRepl = strings.NewReplacer(repl...)
@@ -73,12 +78,12 @@ func xEsc(s string) string {
 func hEsc(s string) string {
 	s = html.EscapeString(preRepl.Replace(s))
 	for i, r := range s {
-		if (r < 32 || r > 127) && hEscs[r] == "" {
-			if str := s[i:]; r > 127 {
-				if len(str) > 8 {
-					str = str[:8]
+		if (r < 32 || r > 127) && hEscs[r] == "" && hEscsX[r] == "" {
+			if tail := s[i:]; r > 127 {
+				if len(tail) > 8 {
+					tail = tail[:8]
 				}
-				println("!!!!!!!!!!!!!NEEDHESC!!!!!!!!!!!!!" + str)
+				println("!!!!!!!!!!!!!NEEDHESC!!!!!!!!!!!!!" + tail)
 			}
 		}
 	}

@@ -196,6 +196,7 @@ func scanJobDo() {
 		}
 		imgPnmToPng(pnmfile, pngfile, true, 0, 0, 399, 99)
 		_ = os.Remove(pnmfilename)
+		go pngOptFireAndForget(pngfilename)
 		return "for " + pngfilename
 	})
 }

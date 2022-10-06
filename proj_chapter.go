@@ -313,11 +313,14 @@ func (me *Chapter) percentColorized() float64 {
 	return 100.0 / (float64(numsv) / float64(numbg))
 }
 
-func (me *Chapter) dateRangeOfSheets(newestSheetVerOnly bool) (time.Time, time.Time) {
+func (me *Chapter) dateRangeOfSheets(newestSheetVerOnly bool, onlyYear int) (time.Time, time.Time) {
 	var dt1, dt2 int64
 	for _, sheet := range me.sheets {
 		for _, sv := range sheet.versions {
 			dt := sv.dateTimeUnixNano
+			if onlyYear > 0 && time.Unix(0, dt).Year() != onlyYear {
+				continue
+			}
 			if dt < dt1 || dt1 == 0 {
 				dt1 = dt
 			}

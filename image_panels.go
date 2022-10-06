@@ -207,14 +207,13 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 			"&lt;/i&gt;", "</tspan>",
 			"&lt;/b&gt;", "</tspan>",
 			"&lt;/u&gt;", "</tspan>",
-			"&lt;i&gt;", "<tspan style='font-style: italic'>",
-			"&lt;b&gt;", "<tspan style='font-weight: bolder'>",
-			"&lt;u&gt;", "<tspan style='text-decoration: underline'>",
+			"&lt;i&gt;", "<tspan class='i' font-style='italic'>",
+			"&lt;b&gt;", "<tspan class='b' font-weight='bold'>",
+			"&lt;u&gt;", "<tspan class='u' text-decoration='underline'>",
 		}
 		for _, tagname := range sortedMapKeys(me.parentSheet.parentChapter.GenPanelSvgText.TspanSubTagStyles) {
-			style := me.parentSheet.parentChapter.GenPanelSvgText.TspanSubTagStyles[tagname]
 			repls = append(repls,
-				"&lt;"+tagname+"&gt;", "<tspan style='"+style+"'>",
+				"&lt;"+tagname+"&gt;", "<tspan style='"+me.parentSheet.parentChapter.GenPanelSvgText.TspanSubTagStyles[tagname]+"'>",
 				"&lt;/"+tagname+"&gt;", "</tspan>",
 			)
 		}
@@ -246,12 +245,10 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 			ts += ">" + ln + "</tspan>"
 		}
 		ts += "</tspan>"
-		s += ts /*+ "<title>" + ts + "</title>"*/ + "</text>"
+		s += ts + "</text>"
 		if mozscale {
 			s += "</svg>"
 		}
-	}
-	if !forHtml {
 		s = htmlEscdToXmlEsc(s)
 	}
 	return
