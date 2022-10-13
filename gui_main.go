@@ -345,7 +345,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		s += "<option value='url(\"/" + bgfilename + "\")'>Colorized</option>"
 	}
 	s += "</select> version at black-threshold of <select onchange='$.fsimg.src=this.value;'>"
-	bwthresholds, idx, svbwt := App.Proj.Sheets.Bw.Thresholds, -1, sv.bwThreshold()
+	bwthresholds, idx, svbwt := App.Proj.Sheets.Bw.Thresholds.Previewable, -1, sv.bwThreshold()
 	for i, bwt := range bwthresholds {
 		if bwt == svbwt {
 			idx = i

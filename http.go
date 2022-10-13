@@ -61,7 +61,7 @@ func httpServeDynPng(httpResp http.ResponseWriter, httpReq *http.Request) {
 		}
 
 		args := strings.Split(urlargstr, "/")
-		t := App.Proj.Sheets.Bw.Thresholds[0]
+		t := App.Proj.bwThreshold(0)
 		if qt := args[0]; qt != "" {
 			if ui8, err := strconv.ParseUint(qt, 0, 8); err != nil {
 				panic(err)

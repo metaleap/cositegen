@@ -26,6 +26,7 @@ type siteGen struct {
 	onPicSize  func(*Chapter, string, int, int64)
 	maxPicSize uint32
 	sheetPgNrs map[*SheetVer]int
+	dummy      bool
 }
 
 type PageGen struct {
@@ -66,8 +67,7 @@ type PageGen struct {
 func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 	var err error
 	tstart := time.Now()
-	me.series = App.Proj.Series
-	me.sheetPgNrs = map[*SheetVer]int{}
+	me.series, me.sheetPgNrs, me.dummy = App.Proj.Series, map[*SheetVer]int{}, (os.Getenv("DUMMY") != "")
 	printLn("SiteGen started. When done, result will open in new window.")
 	if fromGui {
 		defer func() {
@@ -317,15 +317,15 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 		"%LANG"+me.lang+"%", itoa(int(App.Proj.percentTranslated(me.lang, nil, nil, nil, -1))),
 	)
 	me.page = PageGen{
-		SiteTitle:    App.Proj.Site.Title,
-		SiteTitleEsc: hEsc(App.Proj.Site.Title),
-		SiteHost:     App.Proj.Site.Host,
-		SiteDesc:     repl.Replace(hEsc(locStr(App.Proj.Site.Desc, me.lang))),
-		PageLang:     me.lang,
-		HrefFeed:     "./" + App.Proj.Site.Feed.Name + "." + me.lang + ".atom",
-		PageDirCur:   "ltr",
-		PageDirAlt:   "rtl",
+		SiteTitle:  sIf(me.dummy, "Site", App.Proj.Site.Title),
+		SiteHost:   sIf(me.dummy, " site.host", App.Proj.Site.Host),
+		SiteDesc:   sIf(me.dummy, "Site description", repl.Replace(hEsc(locStr(App.Proj.Site.Desc, me.lang)))),
+		PageLang:   me.lang,
+		HrefFeed:   "./" + App.Proj.Site.Feed.Name + "." + me.lang + ".atom",
+		PageDirCur: "ltr",
+		PageDirAlt: "rtl",
 	}
+	me.page.SiteTitleEsc = hEsc(me.page.SiteTitle)
 	if parts := strings.Split(trim(me.page.SiteDesc)+" ", ". "); len(parts) > 1 {
 		for i, s := range parts {
 			parts[i] = sIf(s == "", "", "<nobr>"+s+".</nobr> ")
@@ -338,9 +338,9 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 	me.page.HrefHome = "./" + homename + ".html"
 
 	if chapter == nil {
-		me.page.PageTitle = hEsc(me.textStr("HomeTitle"))
+		me.page.PageTitle = sIf(me.dummy, "Page Title", (me.textStr("HomeTitle")))
 		me.page.PageTitleTxt = hEsc(me.textStr("HomeTitleTxt"))
-		me.page.PageDesc = repl.Replace(hEsc(me.textStr("HomeDesc")))
+		me.page.PageDesc = sIf(me.dummy, "Page Description", repl.Replace(hEsc(me.textStr("HomeDesc"))))
 		me.page.PageDescTxt = me.page.PageDesc
 		me.page.PageDescTitle = me.txtStats(App.Proj.numPages(true, me.lang), App.Proj.numPanels(true, me.lang), App.Proj.numSheets(true, me.lang), "2021-"+itoa(App.Proj.scanYearLatest(true, me.lang)))
 		me.page.PageCssClasses = App.Proj.Site.Gen.ClsChapter + "n"
@@ -468,9 +468,10 @@ func (me *siteGen) prepHomePage() {
 			}
 			s += "<span class='" + App.Proj.Site.Gen.ClsSeries + "'>"
 
-			s += "<h5 title='" + me.txtStats(series.numPages(true, me.lang), series.numPanels(true, me.lang), series.numSheets(true, me.lang), itoa(seryear)) + "' id='" + strings.ToLower(series.Name) + "_" + itoa(seryear) + "' class='" + App.Proj.Site.Gen.ClsSeries + "'>" + hEsc(locStr(series.Title, me.lang)) + " (" + itoa(seryear) + ")</h5>"
-			s += "<div class='" + App.Proj.Site.Gen.ClsSeries + "'>" + locStr(series.DescHtml, me.lang) + author + "</div>"
+			s += "<h5 title='" + me.txtStats(series.numPages(true, me.lang), series.numPanels(true, me.lang), series.numSheets(true, me.lang), itoa(seryear)) + "' id='" + strings.ToLower(series.Name) + "_" + itoa(seryear) + "' class='" + App.Proj.Site.Gen.ClsSeries + "'>" + hEsc(sIf(me.dummy, "Series Title", locStr(series.Title, me.lang))) + " (" + itoa(seryear) + ")</h5>"
+			s += "<div class='" + App.Proj.Site.Gen.ClsSeries + "'>" + sIf(me.dummy, "Series Description", locStr(series.DescHtml, me.lang)) + author + "</div>"
 			s += "<span>"
+			chaps := ""
 			for _, chapter := range series.Chapters {
 				if chapter.Priv || len(chapter.sheets) == 0 || chapter.scanYearLatest() != seryear || !chapter.isTransl(me.lang) {
 					continue
@@ -497,40 +498,43 @@ func (me *siteGen) prepHomePage() {
 						picbgpos = chapter.Pic[2].(string)
 					}
 				}
-				picname, chid := me.namePanelPic(chapter.sheets[int(picidxsheet)].versions[0], int(picidxpanel), App.Proj.Qualis[App.Proj.maxQualiIdx(true)].SizeHint), chapter.parentSeries.Name+"_"+chapter.Name
-				s += "<a name='" + chid + "' id='" + chid + "' class='" + App.Proj.Site.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[App.Proj.defaultQualiIdx].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + sIf(os.Getenv("NOPICS") != "", "files/white.png", App.Proj.Site.Gen.PicDirName+"/"+picname) + ".png\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
-				s += "<div>" + hEsc(locStr(chapter.Title, me.lang)) + "</div>"
-				chapmins := chapter.readDurationMinutes()
+				s, picname, chid := "", me.namePanelPic(chapter.sheets[int(picidxsheet)].versions[0], int(picidxpanel), App.Proj.Qualis[App.Proj.maxQualiIdx(true)].SizeHint), chapter.parentSeries.Name+"_"+chapter.Name
+				s += "<a name='" + chid + "' id='" + chid + "' class='" + App.Proj.Site.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[App.Proj.defaultQualiIdx].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + sIf(os.Getenv("NOPICS") != "", "files/white.png", App.Proj.Site.Gen.PicDirName+"/"+sIf(me.dummy, "nope", picname)) + ".png\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
+				s += "<div>" + hEsc(sIf(me.dummy, "Chapter Title", locStr(chapter.Title, me.lang))) + "</div>"
+				chapmins := iIf(me.dummy, 1, chapter.readDurationMinutes())
 				s += "<span><span>" + itoa(chapmins) + "-" + itoa(1+chapmins) + me.textStr("Mins") + "</span><span>" +
-					sIf(chapter.Year == 0, "&nbsp;", "&copy;"+itoa(chapter.Year)) + "&nbsp;" + chapter.author.str(true, true) +
+					sIf(chapter.Year == 0, "&nbsp;", "&copy;"+itoa(iIf(me.dummy, 1234, chapter.Year))) + "&nbsp;" + sIf(me.dummy, "Author Name", chapter.author.str(true, true)) +
 					"</span></span>"
 				s += "</a>"
+				chaps = s + chaps
 			}
-			s += "</span></span>"
+			s += chaps + "</span></span>"
 		}
 	}
-	s += "<h5 id='books' class='" + App.Proj.Site.Gen.ClsSeries + "'>Downloads</h5>"
-	s += "<span><ul>"
-	booklink := func(repo string, pref string, ext string) string {
-		return App.Proj.Books.RepoPath.Prefix + repo + App.Proj.Books.RepoPath.Infix + bookFileName(repo, pref, me.lang, me.dirRtl, ext)
-	}
-	for _, bookpub := range App.Proj.Books.Pubs {
-		s += "<li id='book_" + bookpub.RepoName + "'><b style='font-size: xx-large'>" + bookpub.Title + "</b><ul>"
-		s += "</li>"
-		s += `<li>Screen 4K &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen", ".cbz") + `">CBZ</a></li>`
-		s += `<li>Print ~1700dpi &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "print", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "", ".pdf") + `">Cover</a></li>`
-		if libgen := bookpub.LibGenEditionID; libgen != "" {
-			s += `<li><a target="_blank" rel="noopener noreferrer" href="https://libgen.lc/edition.php?id=` + libgen + `">LibGen</a></li>`
+	if !me.dummy {
+		s += "<h5 id='books' class='" + App.Proj.Site.Gen.ClsSeries + "'>Downloads</h5>"
+		s += "<span><ul>"
+		booklink := func(repo string, pref string, ext string) string {
+			return App.Proj.Books.RepoPath.Prefix + repo + App.Proj.Books.RepoPath.Infix + bookFileName(repo, pref, me.lang, me.dirRtl, ext)
 		}
-		s += "<li>" + me.textStr("BookContents")
-		for _, series := range bookpub.Series {
-			if ser := App.Proj.seriesByName(series); ser != nil {
-				s += "&nbsp;<a href='#" + ser.Name + "_" + itoa(bookpub.Year) + "'>" + hEsc(locStr(ser.Title, me.lang)) + "</a>&nbsp;"
+		for _, bookpub := range App.Proj.Books.Pubs {
+			s += "<li id='book_" + bookpub.RepoName + "'><b style='font-size: xx-large'>" + bookpub.Title + "</b><ul>"
+			s += "</li>"
+			s += `<li>Screen 4K &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen", ".cbz") + `">CBZ</a></li>`
+			s += `<li>Print ~1700dpi &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "print", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "", ".pdf") + `">Cover</a></li>`
+			if libgen := bookpub.LibGenEditionID; libgen != "" {
+				s += `<li><a target="_blank" rel="noopener noreferrer" href="https://libgen.lc/edition.php?id=` + libgen + `">LibGen</a></li>`
 			}
+			s += "<li>" + me.textStr("BookContents")
+			for _, series := range bookpub.Series {
+				if ser := App.Proj.seriesByName(series); ser != nil {
+					s += "&nbsp;<a href='#" + ser.Name + "_" + itoa(bookpub.Year) + "'>" + hEsc(locStr(ser.Title, me.lang)) + "</a>&nbsp;"
+				}
+			}
+			s += "</li></ul></li>"
 		}
-		s += "</li></ul></li>"
+		s += "</ul></span>"
 	}
-	s += "</ul></span>"
 	s += "</div>"
 	me.page.PageContent = s
 }

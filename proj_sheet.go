@@ -28,7 +28,12 @@ type Sheet struct {
 func (me *Sheet) At(i int) fmt.Stringer { return me.versions[i] }
 func (me *Sheet) Len() int              { return len(me.versions) }
 func (me *Sheet) String() string        { return me.name }
-func (me *Sheet) bwThreshold() uint8    { return me.parentChapter.bwThreshold() }
+func (me *Sheet) bwThreshold(dt int64) uint8 {
+	if dt == 0 {
+		dt = me.versions[0].dateTimeUnixNano
+	}
+	return me.parentChapter.bwThreshold(dt)
+}
 
 func (me *Sheet) versionNoOlderThanOrLatest(dt int64) *SheetVer {
 	if dt > 0 {
@@ -76,7 +81,7 @@ func (me *SheetVer) bwThreshold() uint8 {
 	if me.data.BwThreshold != 0 {
 		return me.data.BwThreshold
 	}
-	return me.parentSheet.bwThreshold()
+	return me.parentSheet.bwThreshold(me.dateTimeUnixNano)
 }
 
 func (me *SheetVer) DtName() string {
@@ -129,6 +134,11 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 		App.Proj.save(false)
 	}
 	didWork = shouldsaveprojdata || didbw || didbwsmall || didgraydistr || didpanels || didpanelpics
+
+	for i := range me.data.PanelsTree.SubRows {
+		me.data.PanelsTree.SubRows[i].setTopLevelRowRecenteredX(me.data.PanelsTree)
+	}
+
 	return
 }
 

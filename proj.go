@@ -74,8 +74,11 @@ type Project struct {
 	}
 	Sheets struct {
 		Bw struct {
-			SmallWidth       uint16
-			Thresholds       []uint8
+			SmallWidth uint16
+			Thresholds struct {
+				Previewable []uint8
+				Defaults    map[string]uint8
+			}
 			NumDistrClusters int
 		}
 		Panel struct {
@@ -470,6 +473,20 @@ func (me *Project) scanYearLatest(skipPriv bool, lang string) (ret int) {
 		}
 		if year := series.scanYearLatest(skipPriv, lang); year > ret {
 			ret = year
+		}
+	}
+	return
+}
+
+func (me *Project) bwThreshold(dtUnixNano int64) (ret uint8) {
+	if ret = me.Sheets.Bw.Thresholds.Defaults[""]; dtUnixNano > 0 {
+		var d int64
+		for k, v := range me.Sheets.Bw.Thresholds.Defaults {
+			if dt, _ := strconv.ParseInt(k, 0, 64); dt != 0 {
+				if diff := dtUnixNano - dt; diff >= 0 && diff <= d {
+					ret, d = v, diff
+				}
+			}
 		}
 	}
 	return

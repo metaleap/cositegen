@@ -90,11 +90,11 @@ func (me *Series) numNonPrivChaptersWithSheets() (r int) {
 	return
 }
 
-func (me *Series) bwThreshold() uint8 {
+func (me *Series) bwThreshold(dt int64) uint8 {
 	if me.BwThreshold != 0 {
 		return me.BwThreshold
 	}
-	return App.Proj.Sheets.Bw.Thresholds[0]
+	return App.Proj.bwThreshold(dt)
 }
 
 func (me *Series) numSheets(skipPriv bool, lang string) (ret int) {
@@ -189,11 +189,14 @@ func (me *Series) dateRange() (dtOldest int64, dtNewest int64) {
 	return
 }
 
-func (me *Chapter) bwThreshold() uint8 {
+func (me *Chapter) bwThreshold(dt int64) uint8 {
 	if me.BwThreshold != 0 {
 		return me.BwThreshold
 	}
-	return me.parentSeries.bwThreshold()
+	if dt == 0 {
+		dt = me.verDtLatest.from
+	}
+	return me.parentSeries.bwThreshold(dt)
 }
 
 func (me *Chapter) nextAfter(withSheetsOnly bool) *Chapter {

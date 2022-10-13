@@ -23,6 +23,7 @@ const (
 	bookScreenLoResDiv   = 4
 	bookPrintBorderMmBig = 15
 	bookPrintBorderMmLil = 7
+	bookPanelsHPadding   = 188
 )
 
 type BookGen struct {
@@ -140,7 +141,6 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 	rectinner, lores := sv.data.pxBounds(), (os.Getenv("LORES") != "")
 
 	w, h := rectinner.Dx(), rectinner.Dy()
-
 	svgtxt := sv.parentSheet.parentChapter.GenPanelSvgText
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
         xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -158,11 +158,12 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 
 	pidx, qidx := 0, iIf(lores, 0, App.Proj.maxQualiIdx(false))
 	sv.data.PanelsTree.iter(func(p *ImgPanel) {
-		px, py, pw, ph := p.Rect.Min.X-rectinner.Min.X, p.Rect.Min.Y-rectinner.Min.Y, p.Rect.Dx(), p.Rect.Dy()
+		px, py, pw, ph := (p.Rect.Min.X+p.recenteredXOffset)-rectinner.Min.X, p.Rect.Min.Y-rectinner.Min.Y, p.Rect.Dx(), p.Rect.Dy()
 		if px < 0 {
-			panic(px)
-		} else if py < 0 {
-			panic(py)
+			px = 0
+		}
+		if diff := rectinner.Dx() - (px + pw); diff < 0 {
+			px += diff
 		}
 		tx, gid := px, "pnl"+itoa(pidx)
 		if dirRtl {
@@ -173,9 +174,6 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 		if panelbgpngsrcfilepath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png"); fileStat(panelbgpngsrcfilepath) != nil {
 			svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
 						xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(fileRead(panelbgpngsrcfilepath)) + `" />`
-		} else {
-			svg += `<rect x="0" y="0" stroke="#000000" stroke-width="0" fill="#ffffff"
-                        width="` + itoa(pw) + `" height="` + itoa(ph) + `"></rect>`
 		}
 		svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
 					xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(fileRead(filepath.Join(sv.data.PicDirPath(App.Proj.Qualis[qidx].SizeHint), itoa(pidx)+".png"))) + `" />

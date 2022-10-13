@@ -14,9 +14,10 @@ var svgRepl *strings.Replacer
 var svgTxtCounter int
 
 type ImgPanel struct {
-	Rect    image.Rectangle
-	SubRows []ImgPanel `json:",omitempty"`
-	SubCols []ImgPanel `json:",omitempty"`
+	Rect              image.Rectangle
+	SubRows           []ImgPanel `json:",omitempty"`
+	SubCols           []ImgPanel `json:",omitempty"`
+	recenteredXOffset int
 }
 
 type ImgPanelArea struct {
@@ -145,12 +146,14 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 	for _, row := range rows {
 		imgpanel := ImgPanel{Rect: row}
 		imgpanel.detectSubPanels(srcImg)
-		me.SubRows = append(me.SubRows, imgpanel.flattened())
+		imgpanel = imgpanel.flattened()
+		me.SubRows = append(me.SubRows, imgpanel)
 	}
 	for _, col := range cols {
 		imgpanel := ImgPanel{Rect: col}
 		imgpanel.detectSubPanels(srcImg)
-		me.SubCols = append(me.SubCols, imgpanel.flattened())
+		imgpanel = imgpanel.flattened()
+		me.SubCols = append(me.SubCols, imgpanel)
 	}
 }
 
@@ -167,6 +170,42 @@ func (me *ImgPanel) iter(onPanel func(*ImgPanel)) {
 	} else {
 		onPanel(me)
 	}
+}
+
+func (me *ImgPanel) setTopLevelRowRecenteredX(root *ImgPanel) {
+	wroot, padding := root.Rect.Dx(), bookPanelsHPadding
+start:
+	var netwidth int
+	for _, col := range me.SubCols {
+		netwidth += col.Rect.Dx() + padding
+	}
+	netwidth -= padding
+	if netwidth > wroot {
+		padding--
+		goto start
+	}
+
+	x := (wroot - netwidth) / 2
+	me.recenteredXOffset = x - root.Rect.Min.X
+	for i := range me.SubCols {
+		offset := x - me.SubCols[i].Rect.Min.X
+		me.SubCols[i].setRecenteredXOffset(offset)
+		x = x + me.SubCols[i].Rect.Dx() + padding
+	}
+}
+
+func (me *ImgPanel) setRecenteredXOffset(offset int) {
+	if len(me.SubCols) > 0 {
+		for i := range me.SubCols {
+			me.SubCols[i].setRecenteredXOffset(offset)
+		}
+	}
+	if len(me.SubRows) > 0 {
+		for i := range me.SubRows {
+			me.SubRows[i].setRecenteredXOffset(offset)
+		}
+	}
+	me.recenteredXOffset = offset
 }
 
 func (me *ImgPanel) nextPanel(parent *Chapter) (foundSheet *SheetVer, foundPanel *ImgPanel, pIdx int, pgNr int) {
