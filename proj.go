@@ -192,8 +192,8 @@ func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sh
 }
 
 func (me *Project) save(texts bool) {
-	if jsonSave(".ccache/data.json", &me.data); texts {
-		jsonSave("txt.json", me.data.Sv.textRects)
+	if jsonSave("_data.json", &me.data); texts {
+		jsonSave("_txt.json", me.data.Sv.textRects)
 	}
 }
 
@@ -204,12 +204,12 @@ func (me *Project) load() (numSheetVers int) {
 	}
 	mkDir(".ccache")
 	var dtdatajson time.Time
-	if fileinfo := fileStat(".ccache/data.json"); fileinfo != nil {
+	if fileinfo := fileStat("_data.json"); fileinfo != nil {
 		dtdatajson = fileinfo.ModTime()
-		jsonLoad(".ccache/data.json", nil, &me.data)
+		jsonLoad("_data.json", nil, &me.data)
 	}
-	if fileStat("txt.json") != nil {
-		jsonLoad("txt.json", nil, &me.data.Sv.textRects)
+	if fileStat("_txt.json") != nil {
+		jsonLoad("_txt.json", nil, &me.data.Sv.textRects)
 	} else {
 		me.data.Sv.textRects = map[string][][]ImgPanelArea{}
 	}
@@ -317,7 +317,7 @@ func (me *Project) load() (numSheetVers int) {
 			}{}
 			for _, f := range files {
 				if fnamebase := f.Name(); strings.HasSuffix(fnamebase, ".png") &&
-					!(f.IsDir() || strings.HasPrefix(fnamebase, "bw.")) {
+					!(f.IsDir() || strings.HasPrefix(fnamebase, "bw.") || strings.HasPrefix(fnamebase, "p.")) {
 					fname := filepath.Join(chapdirpath, fnamebase)
 					fnamebase = fnamebase[:len(fnamebase)-len(".png")]
 					versionname := fnamebase[1+strings.LastIndexByte(fnamebase, '.'):]

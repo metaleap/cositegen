@@ -54,7 +54,7 @@ func main() {
 	}
 	App.StaticFilesDirPath = filepath.Join(os.Getenv("GOPATH"), "src/github.com/metaleap/cositegen/_static")
 	appDetectBrowser()
-	timedLogged("Loading project (cx.json  &  txt.json  &  .ccache/data.json)...", func() string {
+	timedLogged("Loading project (cx.json  &  _txt.json  &  _data.json)...", func() string {
 		numsheets := App.Proj.load()
 		return "for " + itoa(numsheets) + " sheets"
 	})

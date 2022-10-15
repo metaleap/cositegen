@@ -172,21 +172,21 @@ func (me *ImgPanel) iter(onPanel func(*ImgPanel)) {
 	}
 }
 
-func (me *ImgPanel) setTopLevelRowRecenteredX(root *ImgPanel) {
-	wroot, padding := root.Rect.Dx(), bookPanelsHPadding
+func (me *ImgPanel) setTopLevelRowRecenteredX(root *ImgPanel, w int, h int) {
+	padding := bookPanelsHPadding
 start:
 	var netwidth int
 	for _, col := range me.SubCols {
 		netwidth += col.Rect.Dx() + padding
 	}
 	netwidth -= padding
-	if netwidth > wroot {
+	if netwidth > w {
 		padding--
 		goto start
 	}
 
-	x := (wroot - netwidth) / 2
-	me.recenteredXOffset = x - root.Rect.Min.X
+	x := (w - netwidth) / 2
+	me.recenteredXOffset = x // - root.Rect.Min.X
 	for i := range me.SubCols {
 		offset := x - me.SubCols[i].Rect.Min.X
 		me.SubCols[i].setRecenteredXOffset(offset)

@@ -135,10 +135,6 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	}
 	didWork = shouldsaveprojdata || didbw || didbwsmall || didgraydistr || didpanels || didpanelpics
 
-	for i := range me.data.PanelsTree.SubRows {
-		me.data.PanelsTree.SubRows[i].setTopLevelRowRecenteredX(me.data.PanelsTree)
-	}
-
 	return
 }
 

@@ -75,12 +75,12 @@ func convert(srcFilePath string) {
 		panic(err)
 	}
 
-	for _, pgsize := range []string{"A4", "A5"} {
+	for _, pgsize := range []string{"A4", "A5", "A3"} {
 		htmlfilepath := srcFilePath[:len(srcFilePath)-len(".fodp")] + "." + pgsize + ".html"
 		pdffilepath := srcFilePath[:len(srcFilePath)-len(".fodp")] + "." + pgsize + ".pdf"
 		_ = os.Remove(htmlfilepath)
 		_ = os.Remove(pdffilepath)
-		if err := os.WriteFile(htmlfilepath, sbToHtml(sb, srcFilePath, pgsize == "A5"), os.ModePerm); err != nil {
+		if err := os.WriteFile(htmlfilepath, sbToHtml(sb, srcFilePath, pgsize == "A5", pgsize == "A3"), os.ModePerm); err != nil {
 			panic(err)
 		}
 		html2pdf, err := exec.Command("wkhtmltopdf",
@@ -106,14 +106,15 @@ func sbToJson(it Storyboard) []byte {
 	return data
 }
 
-func sbToHtml(it Storyboard, srcFilePath string, isA5 bool) []byte {
-	const scale = 2.0
-	title, zoom := srcFilePath, 116
-	if isA5 {
-		zoom = 80
+func sbToHtml(it Storyboard, srcFilePath string, isA5 bool, isA3 bool) []byte {
+	title, zoom := filepath.Dir(srcFilePath), 125
+	if title == "" || title == "." {
+		title = filepath.Base(os.Getenv("PWD"))
 	}
-	for idx := strings.IndexByte(title, '/'); idx >= 0 && idx < strings.LastIndexByte(title, '/'); idx = strings.IndexByte(title, '/') {
-		title = title[idx+1:]
+	if isA5 {
+		zoom = 87
+	} else if isA3 {
+		zoom = 177
 	}
 	s := `<!DOCTYPE html><html lang="{{.PageLang}}" dir="{{.PageDirCur}}"><head>
 			<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
@@ -192,20 +193,14 @@ func sbToHtml(it Storyboard, srcFilePath string, isA5 bool) []byte {
 					font-size: small;
 					letter-spacing: -0.22em;
 				}
-				h1 {
-					font-family: sans;
-					margin-top: 0cm;
-					padding: 0;
-					white-space: nowrap;
-				}
 			</style></head><body>`
 	for _, page := range it {
 		if len(page.Panels) == 0 && len(page.Balloons) == 0 {
 			continue
 		}
-		s += `<h1>` + title + ` &mdash; ` + page.Name + `</h1><div title="` + page.Name + `" class="page box">`
+		s += `<div title="` + page.Name + `" class="page box">`
 		for _, p := range page.Panels {
-			s += objToHtml(&p, "panel", 123, isA5)
+			s += objToHtml(&p, "panel", 123, isA5, isA3)
 		}
 		for idx, b := range page.Balloons {
 			var prior *Object
@@ -220,7 +215,7 @@ func sbToHtml(it Storyboard, srcFilePath string, isA5 bool) []byte {
 			if prior != nil {
 				b.Paras = prior.Paras
 			}
-			s += objToHtml(&b, "balloon", 1, isA5)
+			s += objToHtml(&b, "balloon", 1, isA5, isA3)
 		}
 		s += `</div>`
 	}
@@ -228,10 +223,12 @@ func sbToHtml(it Storyboard, srcFilePath string, isA5 bool) []byte {
 	return []byte(s)
 }
 
-func objToHtml(it *Object, cssClsExtra string, repeatParas int, isA5 bool) (s string) {
+func objToHtml(it *Object, cssClsExtra string, repeatParas int, isA5 bool, isA3 bool) (s string) {
 	cmw, cmh := it.CmW, it.CmH
 	if isA5 {
 		cmw, cmh = cmw/a5factor, cmh/a5factor
+	} else if isA3 {
+		cmw, cmh = cmw*a5factor, cmh*a5factor
 	}
 	strcm := ftoa(cmw, 1) + `&bull;` + ftoa(cmh, 1)
 
