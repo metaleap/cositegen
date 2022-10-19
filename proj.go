@@ -482,8 +482,8 @@ func (me *Project) bwThreshold(dtUnixNano int64) (ret uint8) {
 	if ret = me.Sheets.Bw.Thresholds.Defaults[""]; dtUnixNano > 0 {
 		var d int64
 		for k, v := range me.Sheets.Bw.Thresholds.Defaults {
-			if dt, _ := strconv.ParseInt(k, 0, 64); dt != 0 {
-				if diff := dtUnixNano - dt; diff >= 0 && diff <= d {
+			if dt, _ := strconv.ParseInt(k, 0, 64); k != "" && dt != 0 {
+				if diff := dtUnixNano - dt; diff >= 0 && (diff <= d || d == 0) {
 					ret, d = v, diff
 				}
 			}

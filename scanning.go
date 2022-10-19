@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 )
 
 var (
@@ -184,15 +185,16 @@ func scanJobDo() {
 	scanJobNotice = "scan completed, background PNG conversion kicked off."
 	printLn(scanJobNotice)
 
+	time.Sleep(time.Second) // rarely, the PNM isn't fully there yet
 	pnmfilename, pngfilename := sj.PnmFileName, sj.PngFileName
 	go timedLogged("SheetScan: converting to "+pngfilename+"...", func() string {
-		pnmfile, err := os.Open(pnmfilename)
-		if err != nil {
-			panic(pnmfilename + ": " + err.Error())
-		}
 		pngfile, err := os.Create(pngfilename)
 		if err != nil {
 			panic(pngfilename + ": " + err.Error())
+		}
+		pnmfile, err := os.Open(pnmfilename)
+		if err != nil {
+			panic(pnmfilename + ": " + err.Error())
 		}
 		imgPnmToPng(pnmfile, pngfile, true, 0, 0, 399, 99)
 		_ = os.Remove(pnmfilename)

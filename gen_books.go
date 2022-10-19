@@ -219,7 +219,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 				<style type="text/css">
 					text.toc tspan {
 						font-family: "Shark Heavy ABC";
-						font-size: ` + sIf(!lores, "12", "3") + `em;
+						font-size: ` + sIf(!lores, "8.88", "2.22") + `em;
 						font-weight: normal;
 						paint-order: stroke;
 						stroke: #ffffff;
@@ -237,7 +237,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 					}
 					text.tocsub tspan {
 						font-family: "Gloria Hallelujah";
-						font-size: ` + sIf(!lores, "4.44", "1.11") + `em;
+						font-size: ` + sIf(!lores, "4", "1") + `em;
 						font-weight: bold;
 						stroke: #ffffff;
 						stroke-width: 0.044em;
@@ -323,7 +323,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 
 func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 	svgh, pgwmm, pghmm, isoddpage, pgidx := 0, 210, 297, false, -1
-	for numPages = iIf(os.Getenv("NOTOC") == "", 4, 2) + len(me.Sheets)/2; (numPages % 4) != 0; {
+	for numPages = 2 + iIf(os.Getenv("NOTOC") == "", 4, 2) + len(me.Sheets)/2; (numPages % 4) != 0; {
 		numPages++
 	}
 	svg := ""
@@ -373,14 +373,26 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 		svg += me.tocSvg(lang, 0, 0) + "</svg>"
 		dpadd(true)
 	}
-	svg2base64 := func(svgfilepath string) string {
+	svg2base64 := func(svgfilepath string, inlineHrefs bool) string {
 		src := fileRead(svgfilepath)
+		s := string(src)
 		if me.year <= 2022 {
-			src = bytes.ReplaceAll(src, []byte("/*_un_bold_*/"), []byte("font-weight: normal !important;"))
+			s = strings.ReplaceAll(s, "/*_un_bold_*/", "font-weight: normal !important;")
 		}
-		return base64.StdEncoding.EncodeToString(src)
+		if s1, s2 := "xlink:href=\"", "xlink_href=\""; inlineHrefs {
+			for i1 := strings.Index(s, s1); i1 > 0; i1 = strings.Index(s, s1) {
+				i2 := i1 + len(s1) + strings.IndexByte(s[i1+len(s1):], '"')
+				href := s[i1+len(s1) : i2]
+				if fp := filepath.Join("stuff", me.Phrase, href); fileStat(fp) != nil {
+					href = "data:image/" + strings.TrimPrefix(filepath.Ext(href), ".") + ";base64," + base64.StdEncoding.EncodeToString(fileRead(fp))
+				}
+				s = s[:i1] + s2 + href + s[i2:]
+			}
+			s = strings.ReplaceAll(s, s2, s1)
+		}
+		return base64.StdEncoding.EncodeToString([]byte(s))
 	}
-	for i := 0; i < len(me.Sheets)/2; i++ {
+	for i, l := 0, (len(me.Sheets)/2)+(len(me.Sheets)%2); i < l; i++ {
 		svgpgstart()
 		sheetsvgfilepath0 := me.sheetSvgPath(i*2, dirRtl, lang)
 		sheetsvgfilepath1 := me.sheetSvgPath((i*2)+1, dirRtl, lang)
@@ -389,8 +401,13 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 		if me.Sheets[i*2].parentSheet.parentChapter.Name == "half-pagers" {
 			topborder = bookPrintBorderMmLil
 		}
-		svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(topborder) + `mm" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + svg2base64(sheetsvgfilepath0) + `"/>`
-		svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(iIf(strings.HasPrefix(me.Sheets[i*2].parentSheet.name, "01FROGF"), 47, 50)) + `%" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + svg2base64(sheetsvgfilepath1) + `"/>`
+		svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(topborder) + `mm" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + svg2base64(sheetsvgfilepath0, false) + `"/>`
+		if fileStat(sheetsvgfilepath1) != nil {
+			svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(iIf(strings.HasPrefix(me.Sheets[i*2].parentSheet.name, "01FROGF"), 47, 50)) + `%" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + svg2base64(sheetsvgfilepath1, false) + `"/>`
+		} else if altsvgfilepath := "stuff/" + me.Phrase + "/collage.svg"; fileStat(altsvgfilepath) != nil {
+
+			svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(50) + `%" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + svg2base64(altsvgfilepath, true) + `"/>`
+		}
 		svg += "</svg>"
 	}
 	dpadd(true)
@@ -434,7 +451,7 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 					}
 					text.tocsub tspan {
 						font-family: "Gloria Hallelujah";
-						font-size: 1.11em;
+						font-size: 1em;
 						font-weight: normal !important;
 						stroke-width: 0.088em;
 						stroke: #ffffff;
@@ -475,7 +492,7 @@ func (me *BookGen) tocSvg(lang string, pgW int, pgH int) (s string) {
 			sv := me.Sheets[idx]
 			chap := sv.parentSheet.parentChapter
 			pgnr := iIf(isforprint, 5, 2) + idx/iIf(isforprint, 2, 1)
-			s += `<text class="toc" x="8.88%" y="` + ftoa(ypc, -1) + `%"><tspan>` + itoa0pref(pgnr, 2) + sIf(pgnr >= 10 && pgnr < 20, " ", "") + "&#009;&#009;&#009;&#009;" + locStr(chap.Title, lang) + `</tspan></text>`
+			s += `<text class="toc" x="8.88%" y="` + ftoa(ypc, -1) + `%"><tspan>` + itoa0pref(pgnr, 2) + sIf((pgnr >= 10 && pgnr < 20) || (((pgnr-1)%10) == 0), " ", "") + strings.Repeat("&#009;", iIf(pgnr >= 100, 3, 4)) + locStr(chap.Title, lang) + `</tspan></text>`
 			if chap.author != nil {
 				subtext, titleorig := "Story: ", chap.TitleOrig
 				if prependWhen := false; prependWhen {

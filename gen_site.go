@@ -506,7 +506,7 @@ func (me *siteGen) prepHomePage() {
 					sIf(chapter.Year == 0, "&nbsp;", "&copy;"+itoa(iIf(me.dummy, 1234, chapter.Year))) + "&nbsp;" + sIf(me.dummy, "Author Name", chapter.author.str(true, true)) +
 					"</span></span>"
 				s += "</a>"
-				chaps = s + chaps
+				chaps = chaps + s
 			}
 			s += chaps + "</span></span>"
 		}
