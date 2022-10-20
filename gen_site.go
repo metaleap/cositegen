@@ -150,7 +150,13 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 				numfileswritten += me.genPages(nil, 0, &totalsize)
 				for _, me.bgCol = range []bool{false, true} {
 					for _, series := range me.series {
+						if series.Priv {
+							continue
+						}
 						for _, chapter := range series.Chapters {
+							if chapter.Priv {
+								continue
+							}
 							if (me.bgCol && !chapter.hasBgCol()) || !chapter.isTransl(me.lang) {
 								continue
 							}
@@ -237,7 +243,13 @@ func (me *siteGen) genOrCopyPanelPics() (numSvgs uint32, numPngs uint32, numShee
 	atomic.StoreUint32(&numPanels, 0)
 	atomic.StoreUint64(&totalSize, 0)
 	for _, series := range App.Proj.Series {
+		if series.Priv {
+			continue
+		}
 		for _, chapter := range series.Chapters {
+			if chapter.Priv {
+				continue
+			}
 			for _, sheet := range chapter.sheets {
 				work.Add(1)
 				go func(chapter *Chapter, sheet *Sheet) {
@@ -278,9 +290,9 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 				if fileinfo := fileStat(srcpath); fileinfo == nil && quali.SizeHint != 0 {
 					break
 				} else {
-					for fs, swap := uint32(fileinfo.Size()), true; swap; {
+					for fs, again := uint32(fileinfo.Size()), true; again; {
 						max := atomic.LoadUint32(&me.maxPicSize)
-						swap = fs > max && !atomic.CompareAndSwapUint32(&me.maxPicSize, max, fs)
+						again = (fs > max) && !atomic.CompareAndSwapUint32(&me.maxPicSize, max, fs)
 					}
 					atomic.AddUint64(&totalSize, uint64(fileinfo.Size()))
 					dstpath := filepath.Join(".build/"+App.Proj.Site.Gen.PicDirName+"/", me.namePanelPic(sv, pidx, quali.SizeHint)+fext)
