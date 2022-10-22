@@ -338,13 +338,17 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		s += "&nbsp;&nbsp;<a href='#pa" + sv.id + itoa(i) + "'>" + itoa(i+1) + "</a>"
 	}
 	s += "</h3>"
-	graydistrs := sv.grayDistrs()
+	graydistrs, isbwlores := sv.grayDistrs(), (fv("srcpx") != sv.data.bwFilePath)
 	s += guiHtmlGrayDistrs(graydistrs)
 	s += "<div><select onchange='$.fsimg.style.backgroundImage=this.value;'><option value='none'>Black&amp;White</option>"
-	if bgfilename := sv.fileName[:len(sv.fileName)-len(".png")] + ".svg"; fileStat(bgfilename) != nil && fv("srcpx") != sv.data.bwFilePath {
+	if bgfilename := sv.fileName[:len(sv.fileName)-len(".png")] + ".svg"; fileStat(bgfilename) != nil && isbwlores {
 		s += "<option value='url(\"/" + bgfilename + "\")'>Colorized</option>"
 	}
-	s += "</select> version at black-threshold of <select onchange='$.fsimg.src=this.value;'>"
+	s += "</select> version at black-threshold of <select onchange='$.fsimg.src=this.value;'"
+	if isbwlores {
+		s += " disabled='disabled'"
+	}
+	s += ">"
 	bwthresholds, idx, svbwt := App.Proj.Sheets.Bw.Thresholds.Previewable, -1, sv.bwThreshold()
 	for i, bwt := range bwthresholds {
 		if bwt == svbwt {
@@ -359,10 +363,10 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	}
 	for i, bwt := range bwthresholds {
 		href := "/" + sv.fileName + "/" + itoa(int(bwt))
-		if i != 0 && fv("srcpx") != sv.data.bwFilePath {
+		if i != 0 && isbwlores {
 			break
 		}
-		s += "<option value='" + href + "' style='background-image: url(\"" + href + "\");'>&lt; " + itoa(int(bwt)) + " (" + sIf(i == 0, "current", "preview") + ")" + "</option>"
+		s += "<option value='" + href + "' style='background-image: url(\"" + sIf(isbwlores, "", href) + "\");'>&lt; " + itoa(int(bwt)) + " (" + sIf(i == 0, "current", "preview") + ")" + "</option>"
 	}
 	s += "</select></div>"
 	s += "<div id='fullsheet'>" + guiHtmlImg("/"+bwsrc, A{"id": "fsimg", "style": "background-image: none"})

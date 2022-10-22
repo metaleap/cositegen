@@ -530,10 +530,9 @@ func (me *siteGen) prepHomePage() {
 			return App.Proj.Books.RepoPath.Prefix + repo + App.Proj.Books.RepoPath.Infix + bookFileName(repo, pref, me.lang, me.dirRtl, ext)
 		}
 		for _, bookpub := range App.Proj.Books.Pubs {
-			s += "<li id='book_" + bookpub.RepoName + "'><b style='font-size: xx-large'>" + bookpub.Title + "</b><ul>"
-			s += "</li>"
-			s += `<li>Screen 4K &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen", ".cbz") + `">CBZ</a></li>`
-			s += `<li>Print ~1700dpi &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "print", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "", ".pdf") + `">Cover</a></li>`
+			s += "<li id='book_" + bookpub.RepoName + "'><b style='font-size: xx-large'>" + bookpub.Title + "</b><ul style='margin-bottom: 1em;'>"
+			s += `<li>Screen 4K &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen", ".cbz") + `">CBZ</a> &mdash; ` + me.textStr("OrientL") + `</li>`
+			s += `<li>Print ~1700dpi &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "print", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "", ".pdf") + `">Cover</a> &mdash; ` + me.textStr("OrientP") + `</li>`
 			if libgen := bookpub.LibGenEditionID; libgen != "" {
 				s += `<li><a target="_blank" rel="noopener noreferrer" href="https://libgen.lc/edition.php?id=` + libgen + `">LibGen</a></li>`
 			}

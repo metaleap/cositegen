@@ -86,7 +86,9 @@ func httpServeDynPng(httpResp http.ResponseWriter, httpReq *http.Request) {
 		if w != 0 {
 			pngdata = imgDownsizedPng(bytes.NewReader(pngdata), nil, int(w), false)
 		}
-		_ = os.WriteFile(tmpfilename, pngdata, os.ModePerm)
+		if err = os.WriteFile(tmpfilename, pngdata, os.ModePerm); err == nil {
+			App.pngDynServe = append(App.pngDynServe, tmpfilename)
+		}
 	}
 
 	httpResp.Header().Add("Cache-Control", "public")

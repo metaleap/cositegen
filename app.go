@@ -34,7 +34,9 @@ var App struct {
 			}
 		}
 	}
-	pngOptBusy bool
+
+	pngOptBusy  bool
+	pngDynServe []string
 }
 
 func appDetectBrowser() {
@@ -54,6 +56,9 @@ func appDetectBrowser() {
 
 func appOnExit() {
 	App.Proj.save(false)
+	for _, pngfilepath := range App.pngDynServe {
+		_ = os.Remove(pngfilepath)
+	}
 }
 
 func appMainAction(fromGui bool, name string, args map[string]bool) string {

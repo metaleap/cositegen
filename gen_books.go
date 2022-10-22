@@ -521,7 +521,7 @@ func (me *BookGen) tocSvg(lang string, pgW int, pgH int) (s string) {
 					subtext += "&quot;" + xEsc(titleorig) + "&quot;, "
 				}
 				subtext += xEsc("©") + itoa(chap.Year) + " " + chap.author.str(false, false)
-				s += `<text class="tocsub" x="22%" y="` + ftoa(ypc+2.22, -1) + `%"><tspan>` + subtext + `</tspan></text>`
+				s += `<text class="tocsub" x="24%" y="` + ftoa(ypc+2.22, -1) + `%"><tspan>` + subtext + `</tspan></text>`
 			}
 			ypc += pstep
 		}
