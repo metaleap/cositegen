@@ -127,7 +127,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm
                                 .replace("</" + k + ">", "</tspan>");
                         }
                 }
-                innerhtml += "<tspan dy='" + pxline + "' x='" + (borderandfill ? (px1cm * 0.44) : 0) + "'>"
+                innerhtml += "<tspan dy='" + (("_storytitle" == document.getElementById(pid + "t" + i + "_style").value) ? (1.23 * pxline) : pxline) + "' x='" + (borderandfill ? (px1cm * 0.44) : 0) + "'>"
                     + line
                         .replace(/<b>/g, "<tspan font-weight='bold'>")
                         .replace(/<u>/g, "<tspan text-decoration='underline'>")

@@ -591,6 +591,9 @@ func (me *SheetVer) genTextSvgForPanelArea(pidx int, tidx int, pta *ImgPanelArea
 		fontSizeCmA4 *= me.data.FontFactor
 		perLineDyCmA4 *= me.data.FontFactor
 	}
+	if pta.SvgTextTspanStyleAttr == "_storytitle" {
+		perLineDyCmA4 *= 1.23
+	}
 	return me.imgSvgText(pidx, tidx, pta, lang, int(linex), fontSizeCmA4, perLineDyCmA4, forHtml, forEbook)
 }
 
