@@ -21,8 +21,8 @@ const (
 	bookScreenWidth      = 3744
 	bookScreenBorder     = 44
 	bookScreenLoResDiv   = 4
-	bookPrintBorderMmBig = 15
-	bookPrintBorderMmLil = 7
+	bookPrintBorderMmBig = 18
+	bookPrintBorderMmLil = 4
 	bookPanelsHPadding   = 188
 )
 
@@ -373,11 +373,27 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 		svg += me.tocSvg(lang, 0, 0) + "</svg>"
 		dpadd(true)
 	}
+	repl2022 := strings.NewReplacer(
+		"/*_un_bold_*/", "font-weight: normal !important;",
+	)
 	svg2base64 := func(svgfilepath string, inlineHrefs bool) string {
 		src := fileRead(svgfilepath)
 		s := string(src)
 		if me.year <= 2022 {
-			s = strings.ReplaceAll(s, "/*_un_bold_*/", "font-weight: normal !important;")
+			for again := true; again; { // keep sync'd the below needles with consts in SheetVer.imgSvgText
+				idx1, idx2 := strings.Index(s, "<tspan class='i' font-style='italic'><tspan class='u' text-decoration='underline'>"), strings.Index(s, "<tspan class='u' text-decoration='underline'><tspan class='i' font-style='italic'>")
+				if again = false; idx1 >= 0 || idx2 >= 0 {
+					if idx1 < 0 || (idx2 >= 0 && idx2 < idx1) {
+						idx1 = idx2
+					}
+					if idx2 = idx1 + strings.Index(s[idx1:], "</tspan></tspan>"); idx2 > idx1 {
+						str := s[idx1+82 : idx2]
+						s = s[:idx1] + "<tspan class='b' font-weight='bold'>" + str + "</tspan>" + s[idx2+16:]
+						again = true
+					}
+				}
+			}
+			s = repl2022.Replace(s)
 		}
 		if s1, s2 := "xlink:href=\"", "xlink_href=\""; inlineHrefs {
 			for i1 := strings.Index(s, s1); i1 > 0; i1 = strings.Index(s, s1) {
@@ -453,7 +469,7 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 						font-family: "Gloria Hallelujah";
 						font-size: 1em;
 						font-weight: normal !important;
-						stroke-width: 0.088em;
+						stroke-width: 0.123em;
 						stroke: #ffffff;
 					}
 				</style>` + svg + "</svg>"

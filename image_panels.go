@@ -246,9 +246,9 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 			"&lt;/i&gt;", "</tspan>",
 			"&lt;/b&gt;", "</tspan>",
 			"&lt;/u&gt;", "</tspan>",
-			"&lt;i&gt;", "<tspan class='i' font-style='italic'>",
-			"&lt;b&gt;", "<tspan class='b' font-weight='bold'>",
-			"&lt;u&gt;", "<tspan class='u' text-decoration='underline'>",
+			"&lt;i&gt;", "<tspan class='i' font-style='italic'>", // keep sync'd these three...
+			"&lt;b&gt;", "<tspan class='b' font-weight='bold'>", // ...with the needles in...
+			"&lt;u&gt;", "<tspan class='u' text-decoration='underline'>", // ...BookGen.genPrintVersion/svg2base64
 		}
 		for _, tagname := range sortedMapKeys(me.parentSheet.parentChapter.GenPanelSvgText.TspanSubTagStyles) {
 			repls = append(repls,
