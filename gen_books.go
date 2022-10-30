@@ -618,7 +618,7 @@ func (me *BookGen) facesDraw(faces []string, perRow int, perCol int, areaWidth f
 		} else if !first {
 			fy += fwh + fpad
 		}
-		if (fx + fwh) > svgWidth {
+		if (fx + fwh) > (svgWidth) {
 			break
 		}
 		svg += `<image x="` + ftoa(fx, -1) + svgUnit + `" y="` + ftoa(fy, -1) + svgUnit + `"
