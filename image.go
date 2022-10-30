@@ -71,7 +71,7 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 			}
 			if s := osExec(false, nil, browserCmd[0], append(browserCmd[2:],
 				"--headless", "--disable-gpu", "--force-gpu-mem-available-mb=4096", "--window-size="+itoa(w)+","+itoa(h)+"",
-				"--screenshot="+tmpfilepath, srcFilePath)...); strings.Contains(s, "tile memory limits") {
+				"--screenshot="+tmpfilepath, "--default-background-color=00000000", srcFilePath)...); strings.Contains(s, "tile memory limits") {
 				panic(s)
 			} else if fstat := fileStat(tmpfilepath); fstat == nil || fstat.Size() == 0 {
 				panic(s)

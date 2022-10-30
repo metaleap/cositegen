@@ -18,12 +18,13 @@ import (
 )
 
 const (
-	bookScreenWidth      = 3744
-	bookScreenBorder     = 44
-	bookScreenLoResDiv   = 4
-	bookPrintBorderMmBig = 18
-	bookPrintBorderMmLil = 4
-	bookPanelsHPadding   = 188
+	bookScreenWidth        = 3744
+	bookScreenBorder       = 44
+	bookScreenLoResDiv     = 4
+	bookPrintBorderMmBig   = 15
+	bookPrintBorderMmLil   = 7
+	bookPrintBorderMmShift = 3
+	bookPanelsHPadding     = 188
 )
 
 type BookGen struct {
@@ -185,6 +186,9 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 		if panelbgpngsrcfilepath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png"); fileStat(panelbgpngsrcfilepath) != nil {
 			svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
 						xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(fileRead(panelbgpngsrcfilepath)) + `" />`
+		} else {
+			svg += `<rect x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
+						fill="#ffffff" stroke-width="0" />`
 		}
 		svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
 					xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(fileRead(filepath.Join(sv.data.PicDirPath(App.Proj.Qualis[qidx].SizeHint), itoa(pidx)+".png"))) + `" />
@@ -264,7 +268,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 		tmpfilepath := ".ccache/.pngtmp/pgsh_" + itoa(border) + "_" + itoa(pgw) + "_" + contentHashStr(fileRead(shfilepath)) + ".png"
 		if fileStat(tmpfilepath) == nil {
 			imgpg := image.NewNRGBA(image.Rect(0, 0, pgw, pgh))
-			imgFill(imgpg, imgpg.Bounds(), color.NRGBA{R: 255, G: 255, B: 255, A: 255})
+			imgFill(imgpg, imgpg.Bounds(), color.NRGBA{R: 255, G: 255, B: 255, A: 0})
 			imgsh, _, err := image.Decode(bytes.NewReader(fileRead(shfilepath)))
 			if err != nil {
 				panic(err)
@@ -417,12 +421,13 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 		if me.Sheets[i*2].parentSheet.parentChapter.Name == "half-pagers" {
 			topborder = bookPrintBorderMmLil
 		}
-		svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(topborder) + `mm" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + svg2base64(sheetsvgfilepath0, false) + `"/>`
+		x := iIf(isoddpage, bookPrintBorderMmBig+bookPrintBorderMmShift, bookPrintBorderMmLil-bookPrintBorderMmShift)
+		w := pgwmm - (bookPrintBorderMmBig + bookPrintBorderMmLil)
+		svg += `<image x="` + itoa(x) + `mm" y="` + itoa(topborder) + `mm" width="` + itoa(w) + `mm" xlink:href="data:image/svg+xml;base64,` + svg2base64(sheetsvgfilepath0, false) + `"/>`
 		if fileStat(sheetsvgfilepath1) != nil {
-			svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(iIf(strings.HasPrefix(me.Sheets[i*2].parentSheet.name, "01FROGF"), 47, 50)) + `%" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + svg2base64(sheetsvgfilepath1, false) + `"/>`
+			svg += `<image x="` + itoa(x) + `mm" y="` + itoa(iIf(strings.HasPrefix(me.Sheets[i*2].parentSheet.name, "01FROGF"), 47, 50)) + `%" width="` + itoa(w) + `mm" xlink:href="data:image/svg+xml;base64,` + svg2base64(sheetsvgfilepath1, false) + `"/>`
 		} else if altsvgfilepath := "stuff/" + me.Phrase + "/collage.svg"; fileStat(altsvgfilepath) != nil {
-
-			svg += `<image x="` + itoa(iIf(isoddpage, bookPrintBorderMmBig, bookPrintBorderMmLil)) + `mm" y="` + itoa(50) + `%" width="` + itoa(pgwmm-(bookPrintBorderMmBig+bookPrintBorderMmLil)) + `mm" xlink:href="data:image/svg+xml;base64,` + svg2base64(altsvgfilepath, true) + `"/>`
+			svg += `<image x="` + itoa(x) + `mm" y="` + itoa(50) + `%" width="` + itoa(w) + `mm" xlink:href="data:image/svg+xml;base64,` + svg2base64(altsvgfilepath, true) + `"/>`
 		}
 		svg += "</svg>"
 	}
@@ -495,7 +500,7 @@ func (me *BookGen) tocSvg(lang string, pgW int, pgH int) (s string) {
 		s += `<g x="0" y="0">`
 		faces := me.facesPicPaths()
 		fperrow, fpercol := me.facesDistr(len(faces), float64(pgW), float64(pgH), false)
-		s += me.facesDraw(faces, fperrow, fpercol, float64(pgW), float64(pgH), float64(pgW), float64(pgH), 0.0, 12.34, "px")
+		s += me.facesDraw(faces, fperrow, fpercol, float64(pgW), float64(pgH), float64(pgW), float64(pgH), 0.0, 0.01, "px")
 		s += `</g>`
 	}
 
@@ -618,7 +623,7 @@ func (me *BookGen) facesDraw(faces []string, perRow int, perCol int, areaWidth f
 		} else if !first {
 			fy += fwh + fpad
 		}
-		if (fx + fwh) > (svgWidth) {
+		if (fx + fwh + fpad) > (svgWidth - margin) {
 			break
 		}
 		svg += `<image x="` + ftoa(fx, -1) + svgUnit + `" y="` + ftoa(fy, -1) + svgUnit + `"
