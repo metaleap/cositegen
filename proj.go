@@ -35,12 +35,15 @@ type Project struct {
 			Infix  string
 		}
 		Pubs []struct {
-			Title           string
-			RepoName        string
-			Year            int
-			Series          []string
-			PubDate         string
-			LibGenEditionID string
+			Title    string
+			RepoName string
+			Year     int
+			Series   []string
+			PubDate  string
+			NumPages struct {
+				Screen int
+				Print  int
+			}
 		}
 	}
 	Site struct {

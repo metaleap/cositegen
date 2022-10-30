@@ -612,13 +612,13 @@ func (me *BookGen) facesDraw(faces []string, perRow int, perCol int, areaWidth f
 	for first, doneincol := true, 0; true; first = false {
 		if doneincol >= perCol {
 			doneincol, fy, fx = 0, fy0, fx+fwh+fpad
-			if center := (svgWidth * 0.5); fx <= center && (fx+fwh+fpad) >= center && spine > 0.01 {
+			if center := (svgWidth * 0.5); spine > 0.01 && fx <= center && (fx+fwh+fpad) >= center {
 				fx = spine + (0.33 * fpad) + (0.5 * (areaWidth - faceswidth))
 			}
 		} else if !first {
 			fy += fwh + fpad
 		}
-		if (fx + fwh + fpad) > (svgWidth - margin) {
+		if (fx + fwh) > svgWidth {
 			break
 		}
 		svg += `<image x="` + ftoa(fx, -1) + svgUnit + `" y="` + ftoa(fy, -1) + svgUnit + `"
