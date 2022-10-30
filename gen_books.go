@@ -171,12 +171,6 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 	pidx, qidx := 0, iIf(lores, 0, App.Proj.maxQualiIdx(false))
 	sv.data.PanelsTree.iter(func(p *ImgPanel) {
 		px, py, pw, ph := p.Rect.Min.X+p.recenteredXOffset, p.Rect.Min.Y-rectinner.Min.Y, p.Rect.Dx(), p.Rect.Dy()
-		// if diff := (px + pw) - w; diff > 0 {
-		// 	px -= diff
-		// }
-		// if px < 0 {
-		// 	px = 0
-		// }
 		tx, gid := px, "pnl"+itoa(pidx)
 		if dirRtl {
 			tx = w - pw - px
@@ -219,7 +213,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 		tocfilepathpng := tocfilepathsvg + ".png"
 		if fileStat(tocfilepathpng) == nil {
 			svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-				width="` + itoa(pgw) + `" height="` + itoa(pgh) + `">
+				width="` + itoa(pgw) + `" height="` + itoa(pgh) + `" style="background-color: #ffffff">
 				<style type="text/css">
 					text.toc tspan {
 						font-family: "Shark Heavy ABC";
@@ -500,7 +494,7 @@ func (me *BookGen) tocSvg(lang string, pgW int, pgH int) (s string) {
 		s += `<g x="0" y="0">`
 		faces := me.facesPicPaths()
 		fperrow, fpercol := me.facesDistr(len(faces), float64(pgW), float64(pgH), false)
-		s += me.facesDraw(faces, fperrow, fpercol, float64(pgW), float64(pgH), float64(pgW), float64(pgH), 0.0, 0.01, "px")
+		s += me.facesDraw(faces, fperrow, fpercol, float64(pgW), float64(pgH), float64(pgW), float64(pgH), 0.0, 12.34, "px")
 		s += `</g>`
 	}
 
@@ -612,8 +606,12 @@ func (me *BookGen) facesDraw(faces []string, perRow int, perCol int, areaWidth f
 		facesheight := svgHeight - (float64(perCol) * (fwh + fpad))
 		fy0 = (0.5 * fpad) + (0.5 * facesheight)
 	}
-	faceswidth := float64(perRow) * (fwh + fpad)
+	faceswidth := (float64(perRow) * (fwh + fpad))
 	fx, fy, fidx := margin+(0.5*fpad)+(0.5*(areaWidth-faceswidth)), fy0, 0
+	isforscreen := (svgUnit == "px")
+	if isforscreen {
+		fx = 0.5 * (svgWidth - (faceswidth - fpad))
+	}
 	for first, doneincol := true, 0; true; first = false {
 		if doneincol >= perCol {
 			doneincol, fy, fx = 0, fy0, fx+fwh+fpad
@@ -623,7 +621,7 @@ func (me *BookGen) facesDraw(faces []string, perRow int, perCol int, areaWidth f
 		} else if !first {
 			fy += fwh + fpad
 		}
-		if (fx + fwh + fpad) > (svgWidth - margin) {
+		if bIf(isforscreen, (fx+fwh) > svgWidth, (fx+fwh+fpad) > (svgWidth-margin)) {
 			break
 		}
 		svg += `<image x="` + ftoa(fx, -1) + svgUnit + `" y="` + ftoa(fy, -1) + svgUnit + `"
