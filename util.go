@@ -153,6 +153,7 @@ func percent(hundred int, val int) int {
 }
 
 func fileLink(srcPath string, dstPath string) {
+	_ = os.Remove(dstPath)
 	if err := os.Symlink(absPath(srcPath), dstPath); err != nil {
 		panic(err)
 	}

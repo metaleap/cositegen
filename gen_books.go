@@ -248,7 +248,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 			svg += me.tocSvg(lang, pgw, pgh) + "</svg>"
 			fileWrite(tocfilepathsvg, []byte(svg))
 			printLn(tocfilepathpng, "...")
-			if writtenfilepath := imgAnyToPng(tocfilepathsvg, tocfilepathpng, 0, false, sIf(!lores, "toc_", "toc_lq_")); os.Getenv("NOZOP") == "" {
+			if writtenfilepath := imgAnyToPng(tocfilepathsvg, tocfilepathpng, 0, true, sIf(!lores, "toc_", "toc_lq_")); os.Getenv("NOZOP") == "" {
 				pngOptFireAndForget(writtenfilepath)
 			}
 		}
