@@ -284,6 +284,15 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 		pgfilepaths = append(pgfilepaths, outfilepath)
 	}
 
+	if altsvgfilepath := "stuff/" + me.Phrase + "/collage.svg"; fileStat(altsvgfilepath) != nil {
+		outfilepath := me.sheetSvgPath(len(pgfilepaths), true, "") + ".png"
+		printLn(outfilepath, "...")
+		if writtenfilepath := imgAnyToPng(altsvgfilepath, outfilepath, pgw, false, "xtra"); os.Getenv("NOZOP") == "" {
+			pngOptFireAndForget(writtenfilepath)
+		}
+		pgfilepaths = append(pgfilepaths, outfilepath)
+	}
+
 	if os.Getenv("NOCBZ") == "" {
 		outfilepathcbz := me.OutDirPath + "/" + bookFileName(me.Phrase, "screen", lang, dirRtl, ".cbz")
 		printLn(outfilepathcbz, "...")

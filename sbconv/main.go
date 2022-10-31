@@ -49,6 +49,7 @@ func convert(srcFilePath string) {
 	}
 
 	var sb Storyboard
+	var numPanels int
 	for _, xmlpage := range xmlOuters(string(src), "<draw:page>", "</draw:page>") {
 		page := Page{Name: xmlAttr(xmlpage, "draw:name")}
 		for _, xmlframe := range xmlOuters(xmlpage, "<draw:frame>", "</draw:frame>") {
@@ -66,8 +67,9 @@ func convert(srcFilePath string) {
 			objSetParasFrom(&panel, xmlshape)
 			page.Panels = append(page.Panels, panel)
 		}
-		sb = append(sb, page)
+		sb, numPanels = append(sb, page), numPanels+len(page.Panels)
 	}
+	println(numPanels, "panels")
 
 	jsonfilepath := srcFilePath[:len(srcFilePath)-len(".fodp")] + ".json"
 	_ = os.Remove(jsonfilepath)

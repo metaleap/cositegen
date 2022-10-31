@@ -64,7 +64,7 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 		// os.WriteFile("/home/_/tmp/pix/bla/"+strings.Replace(srcFilePath, "/", "_", -1)+"."+chash, srcdata, os.ModePerm)
 		if src := string(srcdata); strings.HasSuffix(srcFilePath, ".svg") {
 			sw, sh := src[7+strings.Index(src, "width=\""):], src[8+strings.Index(src, "height=\""):]
-			sw, sh = sw[:strings.IndexByte(sw, '"')], sh[:strings.IndexByte(sh, '"')]
+			sw, sh = strings.TrimSuffix(sw[:strings.IndexByte(sw, '"')], "px"), strings.TrimSuffix(sh[:strings.IndexByte(sh, '"')], "px")
 			w, h := atoi(sw, 0, 22222), atoi(sh, 0, 11111)
 			if w == 0 || h == 0 {
 				panic(sw + "x" + sh)
@@ -75,6 +75,10 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 				panic(s)
 			} else if fstat := fileStat(tmpfilepath); fstat == nil || fstat.Size() == 0 {
 				panic(s)
+			}
+			if reSize != 0 && reSize != w {
+				_ = osExec(true, nil, "mogrify",
+					"-quality", "00", "-resize", itoa(reSize), tmpfilepath)
 			}
 		} else {
 			cmdargs := []string{srcFilePath,
