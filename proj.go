@@ -155,6 +155,9 @@ func (me *Project) textStr(lang string, key string) (s string) {
 }
 
 func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sheetVer *SheetVer, pgNr int) float64 {
+	if lang == "" || lang == App.Proj.Langs[0] {
+		return 100
+	}
 	numtotal, numtrans, allseries := 0, 0, me.Series
 	if ser != nil {
 		allseries = []*Series{ser}

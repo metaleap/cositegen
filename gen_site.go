@@ -531,7 +531,7 @@ func (me *siteGen) prepHomePage() {
 			s += `<li>Screen 4K &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen", ".cbz") + `">CBZ</a> &mdash; (` + me.textStr("OrientL") + `, ` + numpg + `)</li>`
 			numpg = strings.Replace(me.textStr("ChapStats"), "%NUMPGS%", itoa(bookpub.NumPages.Print), 1)
 			numpg = strings.Replace(numpg[:strings.IndexByte(numpg, ')')], "(", "", 1)
-			s += `<li>Print ~1700dpi &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "print", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "", ".pdf") + `">Cover</a> &mdash; (` + me.textStr("OrientP") + `, ` + numpg + `)</li>`
+			s += `<li>Print &tilde;1700dpi &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "print", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "", ".pdf") + `">Cover</a> &mdash; (` + me.textStr("OrientP") + `, ` + numpg + `)</li>`
 
 			s += "<li>" + me.textStr("BookContents")
 			for _, series := range bookpub.Series {
