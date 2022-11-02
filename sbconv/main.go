@@ -49,7 +49,7 @@ func convert(srcFilePath string) {
 	}
 
 	var sb Storyboard
-	var numPanels int
+	var numPanels, numPages int
 	for _, xmlpage := range xmlOuters(string(src), "<draw:page>", "</draw:page>") {
 		page := Page{Name: xmlAttr(xmlpage, "draw:name")}
 		for _, xmlframe := range xmlOuters(xmlpage, "<draw:frame>", "</draw:frame>") {
@@ -67,9 +67,9 @@ func convert(srcFilePath string) {
 			objSetParasFrom(&panel, xmlshape)
 			page.Panels = append(page.Panels, panel)
 		}
-		sb, numPanels = append(sb, page), numPanels+len(page.Panels)
+		sb, numPanels, numPages = append(sb, page), numPanels+len(page.Panels), numPages+1
 	}
-	println(numPanels, "panels")
+	println(numPages, "pages,", numPanels, "panels")
 
 	jsonfilepath := srcFilePath[:len(srcFilePath)-len(".fodp")] + ".json"
 	_ = os.Remove(jsonfilepath)
@@ -77,9 +77,17 @@ func convert(srcFilePath string) {
 		panic(err)
 	}
 
+	dirpath, dirname := filepath.Dir(srcFilePath), filepath.Dir(srcFilePath)
+	if dirname == "" || dirname == "." {
+		dirname = os.Getenv("PWD")
+	}
+	dirname = strings.TrimSpace(filepath.Base(dirname))
+	if idx := strings.IndexByte(dirname, ' '); idx > 0 && idx < len(dirname)-1 {
+		dirname = dirname[idx+1:]
+	}
 	for _, pgsize := range []string{"A4", "A5", "A3"} {
-		htmlfilepath := srcFilePath[:len(srcFilePath)-len(".fodp")] + "." + pgsize + ".html"
-		pdffilepath := srcFilePath[:len(srcFilePath)-len(".fodp")] + "." + pgsize + ".pdf"
+		htmlfilepath := filepath.Join(dirpath, dirname+"."+itoa(numPages)+"_"+itoa(numPanels)+"."+pgsize+".html")
+		pdffilepath := filepath.Join(dirpath, dirname+"."+pgsize+".pdf")
 		_ = os.Remove(htmlfilepath)
 		_ = os.Remove(pdffilepath)
 		if err := os.WriteFile(htmlfilepath, sbToHtml(sb, srcFilePath, pgsize == "A5", pgsize == "A3"), os.ModePerm); err != nil {
@@ -89,7 +97,8 @@ func convert(srcFilePath string) {
 			"--orientation", "Landscape",
 			"--page-size", pgsize,
 			"--log-level", "error",
-			"--grayscale", htmlfilepath, pdffilepath,
+			"--grayscale",
+			htmlfilepath, pdffilepath,
 		).CombinedOutput()
 		if h2p := strings.TrimSpace(string(html2pdf)); h2p != "" {
 			println(h2p)
@@ -163,10 +172,10 @@ func sbToHtml(it Storyboard, srcFilePath string, isA5 bool, isA3 bool) []byte {
 					text-align: center;
 				}
 				p {
-					font-weight: bold;
-					font-size: 18pt;
-					line-height: 0.88em;
-					font-family: "Annie Use Your Telescope", sans;
+					font-weight: normal;
+					font-size: 14pt;
+					line-height: 0.66em; /*0.88em*/
+					font-family: "Architects Daughter", sans;
 				}
 				.panel {
 					align-items: end;
@@ -232,7 +241,7 @@ func objToHtml(it *Object, cssClsExtra string, repeatParas int, isA5 bool, isA3 
 	} else if isA3 {
 		cmw, cmh = cmw*a5factor, cmh*a5factor
 	}
-	strcm := ftoa(cmw, 1) + `&bull;` + ftoa(cmh, 1)
+	strcm := ftoa(cmw, 1) + `&times;` + ftoa(cmh, 1)
 
 	s += `<div title="(` + strcm + "')\n" + strings.Join(it.Paras, "\n") + `" class="obj box ` + cssClsExtra + `" style="left: ` + ftoa(it.CmX, 9) + `cm; top: ` + ftoa(it.CmY, 9) + `cm; width: ` + ftoa(it.CmW, 9) + `cm; height: ` + ftoa(it.CmH, 9) + `cm"><div>`
 	for i := 0; i < repeatParas; i++ {
