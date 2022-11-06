@@ -145,7 +145,7 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 			panic(err)
 		}
 		for _, me.lang = range App.Proj.Langs {
-			for _, me.dirRtl = range []bool{true, false /*KEEP this order of bools*/} {
+			for _, me.dirRtl = range []bool{false, true /*KEEP this order of bools*/} {
 				me.bgCol = false
 				numfileswritten += me.genPages(nil, 0, &totalsize)
 				for _, me.bgCol = range []bool{false, true} {
@@ -166,16 +166,21 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 						}
 					}
 				}
-				if App.Proj.Site.Feed.Name != "" {
-					numfileswritten += me.genAtomXml(&totalsize)
-				}
-				for _, series := range me.series {
-					for _, chapter := range series.Chapters {
-						if chapter.isTransl(me.lang) {
-							numfileswritten++
-							totalsize += uint64(len(me.genSvgTextsFile(chapter)))
+				if !me.dirRtl {
+					if App.Proj.Site.Feed.Name != "" {
+						numfileswritten += me.genAtomXml(&totalsize)
+					}
+					for _, series := range me.series {
+						for _, chapter := range series.Chapters {
+							if chapter.isTransl(me.lang) {
+								numfileswritten++
+								totalsize += uint64(len(me.genSvgTextsFile(chapter)))
+							}
 						}
 					}
+				}
+				if os.Getenv("NORTL") != "" || os.Getenv("NODIR") != "" {
+					break
 				}
 			}
 		}

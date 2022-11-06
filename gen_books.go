@@ -98,7 +98,7 @@ func makeBook(flags map[string]bool) {
 	}
 
 	var coverdone bool
-	for _, dirrtl := range []bool{false, true} {
+	for _, dirrtl := range []bool{false, true /*KEEP this order of bools*/} {
 		for _, lang := range App.Proj.Langs {
 			gen.genSheetSvgsAndPngs(dirrtl, lang)
 			if os.Getenv("NOSCREEN") == "" {
