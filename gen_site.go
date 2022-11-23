@@ -524,6 +524,13 @@ func (me *siteGen) prepHomePage() {
 	}
 	if !me.dummy {
 		s += "<h5 id='books' class='" + App.Proj.Site.Gen.ClsSeries + "'>Downloads</h5>"
+		if !me.dirRtl {
+			s += "<div style='font-size: 1.11em;'>(" + me.textStr("DownloadAlt")
+			for _, tld := range []string{"lc", "li", "gs"} {
+				s += `&nbsp;&mdash;&nbsp;<a target="_blank" rel="noopener noreferrer" href="https://libgen.` + tld + `/series.php?id=403594">.` + tld + "</a>"
+			}
+			s += ")</div>"
+		}
 		s += "<span><ul>"
 		booklink := func(repo string, pref string, ext string) string {
 			return App.Proj.Books.RepoPath.Prefix + repo + App.Proj.Books.RepoPath.Infix + bookFileName(repo, pref, me.lang, me.dirRtl, ext)
@@ -533,10 +540,10 @@ func (me *siteGen) prepHomePage() {
 
 			numpg := strings.Replace(me.textStr("ChapStats"), "%NUMPGS%", itoa(bookpub.NumPages.Screen), 1)
 			numpg = strings.Replace(numpg[:strings.IndexByte(numpg, ')')], "(", "", 1)
-			s += `<li>Screen 4K &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "screen", ".cbz") + `">CBZ</a> &mdash; (` + me.textStr("OrientL") + `, ` + numpg + `)</li>`
+			s += `<li>Screen 4K &mdash; <a target="_blank" rel="noopener noreferrer" href="` + booklink(bookpub.RepoName, "screen", ".pdf") + `">PDF</a>, <a target="_blank" rel="noopener noreferrer" href="` + booklink(bookpub.RepoName, "screen", ".cbz") + `">CBZ</a> &mdash; (` + me.textStr("OrientL") + `, ` + numpg + `)</li>`
 			numpg = strings.Replace(me.textStr("ChapStats"), "%NUMPGS%", itoa(bookpub.NumPages.Print), 1)
 			numpg = strings.Replace(numpg[:strings.IndexByte(numpg, ')')], "(", "", 1)
-			s += `<li>Print &tilde;1700dpi &mdash; <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "print", ".pdf") + `">PDF</a>, <a target="_blank" rel=“noopener noreferrer“ href="` + booklink(bookpub.RepoName, "", ".pdf") + `">Cover</a> &mdash; (` + me.textStr("OrientP") + `, ` + numpg + `)</li>`
+			s += `<li>Print &tilde;1700dpi &mdash; <a target="_blank" rel="noopener noreferrer" href="` + booklink(bookpub.RepoName, "print", ".pdf") + `">PDF</a>, <a target="_blank" rel="noopener noreferrer" href="` + booklink(bookpub.RepoName, "", ".pdf") + `">Cover</a> &mdash; (` + me.textStr("OrientP") + `, ` + numpg + `)</li>`
 
 			s += "<li>" + me.textStr("BookContents")
 			for _, series := range bookpub.Series {
