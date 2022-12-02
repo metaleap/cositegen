@@ -278,7 +278,7 @@ func (me *Project) load() (numSheetVers int) {
 				chap.GenPanelSvgText = series.GenPanelSvgText
 			} else {
 				chap.GenPanelSvgText.baseOn(series.GenPanelSvgText)
-				chap.GenPanelSvgText.chap, me.Sheets.Panel.SvgText[chap.Name] = true, chap.GenPanelSvgText
+				chap.GenPanelSvgText.chap, me.Sheets.Panel.SvgText[series.Name+"_"+chap.Name] = true, chap.GenPanelSvgText
 			}
 			if chap.Year == 0 {
 				chap.Year = series.Year

@@ -374,7 +374,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 	} else {
 		series := chapter.parentSeries
 		if chapter.GenPanelSvgText.chap {
-			me.page.SvgTextIdent = chapter.Name
+			me.page.SvgTextIdent = series.Name + "_" + chapter.Name
 		} else if series.GenPanelSvgText.ser {
 			me.page.SvgTextIdent = series.Name
 		}
@@ -388,6 +388,9 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 		homelink := me.namePage(nil, 0, 0, "", "", "", 0, false) + ".html#" + series.Name + "_" + chapter.Name
 		me.page.PageTitle = "<a href='" + homelink + "'><span>" + hEsc(locStr(series.Title, me.lang)) + ":</span></a> " + strings.Join(chaptitlewords, " ")
 		me.page.PageTitleTxt = hEsc(locStr(series.Title, me.lang)) + ": " + hEsc(locStr(chapter.Title, me.lang))
+		if len(chapter.SheetsPerPage) > 1 {
+			me.page.PageTitleTxt += " (" + itoa(pageNr) + "/" + itoa(len(chapter.SheetsPerPage)) + ")"
+		}
 		var author string
 		if chapter.author != nil {
 			author = strings.Replace(
@@ -400,8 +403,16 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 			skiptitle := chapter.TitleOrig == "" && (me.lang == App.Proj.Langs[0] || locStr(chapter.Title, App.Proj.Langs[0]) == locStr(chapter.Title, me.lang))
 			desc = "Story: " + sIf(skiptitle, "", "&quot;"+sIf(chapter.TitleOrig != "", chapter.TitleOrig, locStr(chapter.Title, App.Proj.Langs[0]))+"&quot;, ") + desc
 		}
-		me.page.PageDesc = sIf(desc == "", locStr(series.DescHtml, me.lang), desc) + author
-		me.page.PageDescTxt = hEsc(sIf(desc == "", locStr(series.DescHtml, me.lang), desc))
+		desc = sIf(desc == "", locStr(series.DescHtml, me.lang), desc)
+		me.page.PageDesc = desc + sIf(author == "", "", " ("+author+")")
+		for _a, i := "</a>", strings.Index(desc, "<a "); i >= 0; i = strings.Index(desc, "<a ") {
+			if i2 := strings.Index(desc, _a); i2 > i {
+				desc = desc[:i] + desc[i2+len(_a):]
+			} else {
+				break
+			}
+		}
+		me.page.PageDescTxt = desc + author
 		for qidx, quali := range App.Proj.Qualis {
 			if quali.ExcludeInSiteGen {
 				continue
@@ -443,7 +454,6 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 					me.page.QualList = "<select disabled='disabled' title='" + hEsc(me.textStr("QualityHint")) + "' name='" + App.Proj.Site.Gen.IdQualiList + "' id='" + App.Proj.Site.Gen.IdQualiList + "'>" + me.page.QualList + "</select>"
 					me.page.HrefDirLtr = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Ltr.Name, me.lang, svdt, me.bgCol) + ".html"
 					me.page.HrefDirRtl = "./" + me.namePage(chapter, quali.SizeHint, pageNr, viewmode, App.Proj.DirModes.Rtl.Name, me.lang, svdt, me.bgCol) + ".html"
-					me.page.PageTitleTxt += " (" + itoa(pageNr) + "/" + itoa(len(chapter.SheetsPerPage)) + ")"
 					pagename := me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svdt, me.bgCol)
 					numFilesWritten += me.genPageExecAndWrite(pagename, chapter, totalSizeRec)
 					if chapter.UrlJumpName != "" && viewmode == viewModes[0] && qidx == 1 &&
@@ -525,7 +535,7 @@ func (me *siteGen) prepHomePage() {
 	if !me.dummy {
 		s += "<h5 id='books' class='" + App.Proj.Site.Gen.ClsSeries + "'>Downloads</h5>"
 		if !me.dirRtl {
-			s += "<div style='font-size: 1.11em;'>(" + me.textStr("DownloadAlt")
+			s += "<div>(" + me.textStr("DownloadAlt")
 			for _, tld := range []string{"lc", "li", "gs"} {
 				s += `&nbsp;&mdash;&nbsp;<a target="_blank" rel="noopener noreferrer" href="https://libgen.` + tld + `/series.php?id=403594">.` + tld + "</a>"
 			}
