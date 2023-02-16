@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -40,7 +42,7 @@ type Chapter struct {
 	StoryUrls        StoryUrls
 	SheetsPerPage    []int
 	NumSheetsPerPage int
-	StoryboardFile   string
+	Storyboard       string
 	GenPanelSvgText  *PanelSvgTextGen
 	Priv             bool
 	Pic              []interface{}
@@ -54,11 +56,13 @@ type Chapter struct {
 		from  int64
 		until int64
 	}
-	storyBoardPages []ChapterStoryboardPage
+	storyboard struct {
+		fullFilePath string
+		pages        []ChapterStoryboardPage
+	}
 }
 
 type PanelSvgTextGen struct {
-	BasedOn              string
 	BoxPolyStrokeWidthCm float64
 	ClsBoxPoly           string
 	BoxPolyDxCmA4        float64
@@ -69,8 +73,7 @@ type PanelSvgTextGen struct {
 	TspanSubTagStyles    map[string]string
 	TspanCssCls          string
 
-	chap bool
-	ser  bool
+	cssName string
 }
 
 type Author struct {
@@ -290,6 +293,24 @@ func (me *Chapter) readDurationMinutes() int {
 	return len(me.sheets) / 2
 }
 
+func (me *Chapter) storyboardFilePath() string {
+	if me.storyboard.fullFilePath == "" {
+		me.storyboard.fullFilePath = filepath.Join(App.Proj.Site.StoryboardsDir, me.Storyboard)
+		if info, _ := os.Stat(me.storyboard.fullFilePath); info == nil {
+			me.storyboard.fullFilePath = "/"
+		} else if info.IsDir() {
+			me.storyboard.fullFilePath = filepath.Join(me.storyboard.fullFilePath, "storyboard.json")
+			if fileStat(me.storyboard.fullFilePath) == nil {
+				me.storyboard.fullFilePath = "/"
+			}
+		}
+	}
+	if me.storyboard.fullFilePath == "/" {
+		return ""
+	}
+	return me.storyboard.fullFilePath
+}
+
 func (me *Chapter) hasBgCol() bool {
 	for _, sheet := range me.sheets {
 		for _, sv := range sheet.versions {
@@ -342,14 +363,29 @@ func (me *Chapter) At(i int) fmt.Stringer { return me.sheets[i] }
 func (me *Chapter) Len() int              { return len(me.sheets) }
 func (me *Chapter) String() string        { return me.Name }
 
-func (me *PanelSvgTextGen) baseOn(base *PanelSvgTextGen) {
-	if base == nil || me.BasedOn != "" {
-		if base = App.Proj.Sheets.Panel.SvgText[me.BasedOn]; me.BasedOn != "" {
-			if me.BasedOn = ""; base.BasedOn != "" {
-				base.baseOn(nil)
-			}
-		}
+func (me *PanelSvgTextGen) basedOn(base *PanelSvgTextGen) *PanelSvgTextGen {
+	if me == nil {
+		return nil
 	}
+	copy := *me
+	copy.Css, copy.TspanSubTagStyles = make(map[string]map[string]string, len(me.Css)), make(map[string]string, len(me.TspanSubTagStyles))
+	for k, v := range me.TspanSubTagStyles {
+		copy.TspanSubTagStyles[k] = v
+	}
+	for k, v := range me.Css {
+		m := make(map[string]string, len(v))
+		for vk, vv := range v {
+			m[vk] = vv
+		}
+		copy.Css[k] = m
+	}
+	if base != nil {
+		copy.baseOn(base)
+	}
+	return &copy
+}
+
+func (me *PanelSvgTextGen) baseOn(base *PanelSvgTextGen) {
 	if me.ClsBoxPoly == "" {
 		me.ClsBoxPoly = base.ClsBoxPoly
 	}
@@ -357,27 +393,26 @@ func (me *PanelSvgTextGen) baseOn(base *PanelSvgTextGen) {
 		me.TspanCssCls = base.TspanCssCls
 	}
 	if me.Css == nil {
-		me.Css = base.Css
-	} else {
-		for bk, bv := range base.Css {
-			if m := me.Css[bk]; m == nil {
-				me.Css[bk] = bv
-			} else {
-				for k, v := range bv {
-					if _, exists := m[k]; !exists {
-						m[k] = v
-					}
-				}
+		me.Css = make(map[string]map[string]string, len(base.Css))
+	}
+	for bk, bv := range base.Css {
+		m := me.Css[bk]
+		if m == nil {
+			m = make(map[string]string, len(bv))
+		}
+		for k, v := range bv {
+			if _, exists := m[k]; !exists {
+				m[k] = v
 			}
 		}
+		me.Css[bk] = m
 	}
 	if me.TspanSubTagStyles == nil {
-		me.TspanSubTagStyles = base.TspanSubTagStyles
-	} else {
-		for k, v := range base.TspanSubTagStyles {
-			if _, exists := me.TspanSubTagStyles[k]; !exists {
-				me.TspanSubTagStyles[k] = v
-			}
+		me.TspanSubTagStyles = make(map[string]string, len(base.TspanSubTagStyles))
+	}
+	for k, v := range base.TspanSubTagStyles {
+		if _, exists := me.TspanSubTagStyles[k]; !exists {
+			me.TspanSubTagStyles[k] = v
 		}
 	}
 	for ptr, val := range map[*float64]float64{

@@ -317,7 +317,7 @@ func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, heig
 func imgDrawRect(imgDst *image.Gray, rect image.Rectangle, thickness int, gray uint8) {
 	for x := rect.Min.X; x < rect.Max.X; x++ {
 		for y := rect.Min.Y; y < rect.Max.Y; y++ {
-			if x < (rect.Min.X+thickness) || x > (rect.Max.X-thickness) ||
+			if thickness == 0 || x < (rect.Min.X+thickness) || x > (rect.Max.X-thickness) ||
 				y < (rect.Min.Y+thickness) || y > (rect.Max.Y-thickness) {
 				imgDst.SetGray(x, y, color.Gray{gray})
 			}

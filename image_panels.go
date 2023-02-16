@@ -17,6 +17,7 @@ type ImgPanel struct {
 	Rect              image.Rectangle
 	SubRows           []ImgPanel `json:",omitempty"`
 	SubCols           []ImgPanel `json:",omitempty"`
+	SbBorder          int        `json:",omitempty"`
 	recenteredXOffset int
 }
 
@@ -28,7 +29,14 @@ type ImgPanelArea struct {
 	Rect                  image.Rectangle
 }
 
-func imgPanels(srcImgData io.Reader, onDecoded func() error) ImgPanel {
+func imgPanels(srcImg image.Image) *ImgPanel {
+	ret := ImgPanel{Rect: srcImg.Bounds()}
+	ret.detectSubPanels(srcImg.(*image.Gray))
+	ret = ret.flattened()
+	return &ret
+}
+
+func imgPanelsFile(srcImgData io.Reader, onDecoded func() error) *ImgPanel {
 	imgsrc, _, err := image.Decode(srcImgData)
 	if onDecoded != nil {
 		_ = onDecoded() // allow early file-closing for the caller
@@ -36,9 +44,7 @@ func imgPanels(srcImgData io.Reader, onDecoded func() error) ImgPanel {
 	if err != nil {
 		panic(err)
 	}
-	ret := ImgPanel{Rect: imgsrc.Bounds()}
-	ret.detectSubPanels(imgsrc.(*image.Gray))
-	return ret.flattened()
+	return imgPanels(imgsrc)
 }
 
 func (me ImgPanel) flattened() ImgPanel {

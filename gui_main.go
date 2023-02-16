@@ -370,9 +370,9 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	}
 	s += "</select></div>"
 	s += "<div id='fullsheet'>" + guiHtmlImg("/"+bwsrc, A{"id": "fsimg", "style": "background-image: none"})
-	if len(sv.parentSheet.parentChapter.storyBoardPages) > 0 {
+	if len(sv.parentSheet.parentChapter.storyboard.pages) > 0 {
 		sw, sh := sv.sizeCm()
-		for i, pg := range sv.parentSheet.parentChapter.storyBoardPages {
+		for i, pg := range sv.parentSheet.parentChapter.storyboard.pages {
 			doimport := (fv("txtimpsel") == itoa(i)) && (fv("main_focus_id") == "txtimpsel")
 			pareas := App.Proj.data.Sv.textRects[sv.id]
 			if doimport {
@@ -382,7 +382,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 			}
 			s += "<div id='txtprev" + itoa(i) + "' class='txtprev'>"
 			for _, tb := range pg.dualLangTextBoxes() {
-				xywh := sv.cmToPx(tb.xywhCm...)
+				xywh := sv.cmsToPxs(tb.xywhCm...)
 				rect := image.Rect(xywh[0], xywh[1], xywh[0]+xywh[2], xywh[1]+xywh[3])
 				_, pidx := sv.panelMostCoveredBy(rect)
 				px, py, pw, ph := 100.0/(sw/tb.xywhCm[0]), 100.0/(sh/tb.xywhCm[1]), 100.0/(sw/tb.xywhCm[2]), 100.0/(sh/tb.xywhCm[3])
@@ -406,9 +406,9 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		}
 	}
 	s += "</div><div>Preview other B&amp;W thresholds: <input type='text' id='previewbwt' onchange='addBwtPreviewLinks(\"" + sv.fileName + "\");'/><div id='previewbwtlinks'></div></div><div>"
-	if len(sv.parentSheet.parentChapter.storyBoardPages) > 0 {
+	if len(sv.parentSheet.parentChapter.storyboard.pages) > 0 {
 		s += "<select name='txtimpsel' id='txtimpsel' onchange='txtPrev(this.value);'><option value=''>(Preview story-board text import...)</option>"
-		for i, pg := range sv.parentSheet.parentChapter.storyBoardPages {
+		for i, pg := range sv.parentSheet.parentChapter.storyboard.pages {
 			s += "<option value='" + itoa(i) + "'>" + hEsc(pg.name) + "</option>"
 		}
 		s += "</select>&nbsp;&nbsp;<button onclick='txtImp()'>Import Now!</button>&nbsp;&nbsp;&nbsp;&nbsp;"

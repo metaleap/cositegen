@@ -47,10 +47,11 @@ type Project struct {
 		}
 	}
 	Site struct {
-		Title string
-		Host  string
-		Desc  map[string]string
-		Feed  struct {
+		StoryboardsDir string
+		Title          string
+		Host           string
+		Desc           map[string]string
+		Feed           struct {
 			Name           string
 			PubDates       []string
 			ContentTxt     map[string]string
@@ -85,6 +86,10 @@ type Project struct {
 			NumDistrClusters int
 		}
 		Panel struct {
+			TreeFromStoryboard struct {
+				After  string
+				Border int
+			}
 			MaxNumTextAreas int
 			BorderCm        float64
 			BgScale         float64
@@ -248,18 +253,22 @@ func (me *Project) load() (numSheetVers int) {
 		}
 	}
 	me.Sheets.Panel.SvgText[""] = svgtxt
-	for k, v := range me.Sheets.Panel.SvgText {
-		if k != "" {
-			v.baseOn(nil)
+
+	svgTextKeys := sortedMapKeys(me.Sheets.Panel.SvgText)
+	for i, k := range svgTextKeys {
+		if v := me.Sheets.Panel.SvgText[k]; i > 0 {
+			v.baseOn(me.Sheets.Panel.SvgText[svgTextKeys[i-1]])
+			v.cssName = k
 		}
 	}
 
 	for _, series := range me.Series {
+		seriesOrigSvgText := series.GenPanelSvgText.basedOn(nil)
 		if series.GenPanelSvgText == nil {
 			series.GenPanelSvgText = me.Sheets.Panel.SvgText[""]
 		} else {
-			series.GenPanelSvgText.baseOn(nil)
-			series.GenPanelSvgText.ser, me.Sheets.Panel.SvgText[series.Name] = true, series.GenPanelSvgText
+			series.GenPanelSvgText.baseOn(me.Sheets.Panel.SvgText[""])
+			series.GenPanelSvgText.cssName = series.Name
 		}
 		if series.Author != "" {
 			if series.author = me.Authors[series.Author]; series.author == nil {
@@ -274,12 +283,26 @@ func (me *Project) load() (numSheetVers int) {
 			series.Title = map[string]string{me.Langs[0]: series.Name}
 		}
 		for _, chap := range series.Chapters {
-			if chap.GenPanelSvgText == nil {
-				chap.GenPanelSvgText = series.GenPanelSvgText
-			} else {
-				chap.GenPanelSvgText.baseOn(series.GenPanelSvgText)
-				chap.GenPanelSvgText.chap, me.Sheets.Panel.SvgText[series.Name+"_"+chap.Name] = true, chap.GenPanelSvgText
+			svgTextBase := series.GenPanelSvgText
+			if chap.Storyboard != "" {
+				for i := len(svgTextKeys) - 1; i > 0; i-- {
+					if k := svgTextKeys[i]; chap.Storyboard > k {
+						svgTextBase = me.Sheets.Panel.SvgText[k]
+						if seriesOrigSvgText != nil {
+							svgTextBase = seriesOrigSvgText.basedOn(svgTextBase)
+							svgTextBase.cssName = series.Name + "_" + chap.Name
+						}
+						break
+					}
+				}
 			}
+			if chap.GenPanelSvgText == nil {
+				chap.GenPanelSvgText = svgTextBase
+			} else {
+				chap.GenPanelSvgText.baseOn(svgTextBase)
+				chap.GenPanelSvgText.cssName = series.Name + "_" + chap.Name
+			}
+
 			if chap.Year == 0 {
 				chap.Year = series.Year
 			}
@@ -412,10 +435,10 @@ func (me *Project) load() (numSheetVers int) {
 						}
 					}
 				}
-				if fileStat(chap.StoryboardFile) != nil {
+				if sbPath := chap.storyboardFilePath(); fileStat(sbPath) != nil {
 					chap.loadStoryboard()
-				} else if chap.StoryboardFile != "" {
-					panic(chap.StoryboardFile)
+				} else if sbPath != "" {
+					panic(sbPath)
 				}
 			}
 		}

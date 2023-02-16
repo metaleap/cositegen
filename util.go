@@ -312,7 +312,16 @@ func atoi(s string, min int, max int) int {
 	return intLim(v, min, max)
 }
 
-func sortedMapKeys(m map[string]string) []string {
+func indexOf[T comparable](list []T, item T) int {
+	for i, v := range list {
+		if item == v {
+			return i
+		}
+	}
+	return -1
+}
+
+func sortedMapKeys[T any](m map[string]T) []string {
 	ret := make([]string, 0, len(m))
 	for k := range m {
 		ret = append(ret, k)

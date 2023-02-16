@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"image"
+	"image/color"
+	"image/draw"
 	"math"
 	"path/filepath"
 	"strconv"
@@ -14,6 +17,7 @@ type ChapterStoryboardPage struct {
 	name        string
 	canDualLang bool
 	textBoxes   []ChapterStoryboardPageTextBox
+	panels      []Object
 }
 
 type ChapterStoryboardPageTextBox struct {
@@ -22,7 +26,7 @@ type ChapterStoryboardPageTextBox struct {
 }
 
 func (me *Chapter) loadStoryboard() {
-	switch filepath.Ext(me.StoryboardFile) {
+	switch filepath.Ext(me.storyboardFilePath()) {
 	case ".json":
 		me.loadStoryboardJson()
 	case ".fodp":
@@ -32,22 +36,22 @@ func (me *Chapter) loadStoryboard() {
 
 func (me *Chapter) loadStoryboardJson() {
 	var sb Storyboard
-	jsonLoad(me.StoryboardFile, nil, &sb)
+	jsonLoad(me.storyboardFilePath(), nil, &sb)
 
 	for _, page := range sb {
-		pg := ChapterStoryboardPage{name: page.Name, canDualLang: true}
+		pg := ChapterStoryboardPage{name: page.Name, canDualLang: true, panels: page.Panels}
 		for _, txt := range page.Balloons {
 			pg.textBoxes = append(pg.textBoxes, ChapterStoryboardPageTextBox{
 				xywhCm:    []float64{txt.CmX, txt.CmY, txt.CmW, txt.CmH},
 				textSpans: [][]string{txt.Paras},
 			})
 		}
-		me.storyBoardPages = append(me.storyBoardPages, pg)
+		me.storyboard.pages = append(me.storyboard.pages, pg)
 	}
 }
 
 func (me *Chapter) loadStoryboardFodp() {
-	s := strings.Replace(string(fileRead(me.StoryboardFile)), "<text:s/>", "", -1)
+	s := strings.Replace(string(fileRead(me.storyboardFilePath())), "<text:s/>", "", -1)
 	for _, sp := range xmlOuters(s, `<draw:page>`, `</draw:page>`) {
 		csp := ChapterStoryboardPage{name: xmlAttr(sp, "draw:name")}
 		for _, sf := range xmlOuters(sp, `<draw:frame>`, `</draw:frame>`) {
@@ -81,9 +85,41 @@ func (me *Chapter) loadStoryboardFodp() {
 			}
 		}
 		if len(csp.textBoxes) > 0 {
-			me.storyBoardPages = append(me.storyBoardPages, csp)
+			me.storyboard.pages = append(me.storyboard.pages, csp)
 		}
 	}
+}
+
+func (me *Chapter) panelsTreeFromStoryboard(sv *SheetVer) *ImgPanel {
+	me.loadStoryboard()
+	page := &me.storyboard.pages[indexOf(me.sheets, sv.parentSheet)]
+
+	img, _, err := image.Decode(bytes.NewReader(fileRead(sv.data.bwFilePath)))
+	if err != nil {
+		panic(err)
+	}
+	img = image.NewGray(img.Bounds())
+	imgFill(img.(draw.Image), img.Bounds(), color.Gray{Y: 255})
+	cmW, cmH := 0.0, 0.0
+	for _, pnl := range page.panels {
+		if x := pnl.CmX + pnl.CmW; x > cmW {
+			cmW = x
+		}
+		if y := pnl.CmY + pnl.CmH; y > cmH {
+			cmH = y
+		}
+	}
+	pxCmX, pxCmY := float64(img.Bounds().Max.X)/cmW, float64(img.Bounds().Max.Y)/cmH
+	for _, pnl := range page.panels {
+		rect := image.Rect(int(pnl.CmX*pxCmX), int(pnl.CmY*pxCmY), int((pnl.CmX+pnl.CmW)*pxCmX), int((pnl.CmY+pnl.CmH)*pxCmY))
+		imgDrawRect(img.(*image.Gray), rect, App.Proj.Sheets.Panel.TreeFromStoryboard.Border, 0)
+	}
+	imgDrawRect(img.(*image.Gray), img.Bounds(), 2*App.Proj.Sheets.Panel.TreeFromStoryboard.Border, 0)
+
+	data := pngEncode(img)
+	fileWrite(sv.data.bwFilePath+".pnls.png", data)
+
+	return imgPanels(img)
 }
 
 func (me *ChapterStoryboardPage) dualLangTextBoxes() (ret []ChapterStoryboardPageTextBox) {

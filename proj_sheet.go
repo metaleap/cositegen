@@ -336,9 +336,14 @@ func (me *SheetVer) sizeCm() (float64, float64) {
 	return float64(me.data.PanelsTree.Rect.Max.X) / me.data.PxCm, float64(me.data.PanelsTree.Rect.Max.Y) / me.data.PxCm
 }
 
-func (me *SheetVer) cmToPx(fs ...float64) (ret []int) {
-	for _, f := range fs {
-		ret = append(ret, int(f*me.data.PxCm))
+func (me *SheetVer) cmToPx(f float64) int {
+	return int(f * me.data.PxCm)
+}
+
+func (me *SheetVer) cmsToPxs(fs ...float64) (ret []int) {
+	ret = make([]int, len(fs))
+	for i, f := range fs {
+		ret[i] = me.cmToPx(f)
 	}
 	return
 }
@@ -377,14 +382,19 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 	filebasename := filepath.Base(me.fileName)
 	bgtmplsvgfilename := strings.TrimSuffix(filebasename, ".png") + ".svg"
 	bgtmplsvgfilepath := filepath.Join(me.data.dirPath, bgtmplsvgfilename)
-	if did = force || me.data.PanelsTree == nil; did {
+	detectFromSb := (me.DtStr() > App.Proj.Sheets.Panel.TreeFromStoryboard.After) &&
+		(me.parentSheet.parentChapter.storyboardFilePath() != "")
+	if did = force || me.data.PanelsTree == nil ||
+		(me.data.PanelsTree.SbBorder != iIf(detectFromSb, App.Proj.Sheets.Panel.TreeFromStoryboard.Border, 0)); did {
 		_ = os.Remove(bgtmplsvgfilepath)
-		if file, err := os.Open(me.data.bwFilePath); err != nil {
+		if detectFromSb {
+			me.data.PanelsTree = me.parentSheet.parentChapter.panelsTreeFromStoryboard(me)
+		} else if file, err := os.Open(me.data.bwFilePath); err != nil {
 			panic(err)
 		} else {
-			imgpanel := imgPanels(file, file.Close)
-			me.data.PanelsTree = &imgpanel
+			me.data.PanelsTree = imgPanelsFile(file, file.Close)
 		}
+		me.data.PanelsTree.SbBorder = iIf(detectFromSb, App.Proj.Sheets.Panel.TreeFromStoryboard.Border, 0)
 	} else if os.Getenv("REDO_BGS") != "" {
 		_ = os.Remove(bgtmplsvgfilepath)
 	}
