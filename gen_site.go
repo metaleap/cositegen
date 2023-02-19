@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-var viewModes = []string{"s", "r"}
+var viewModes = []string{"s"}
 
 type siteGen struct {
 	tmpl       *template.Template
@@ -46,7 +46,6 @@ type PageGen struct {
 	DirCurTitle    string
 	DirAltTitle    string
 	LangsList      string
-	ViewerList     string
 	HrefViewAlt    string
 	HrefViewCur    string
 	QualList       string
@@ -545,7 +544,7 @@ func (me *siteGen) prepHomePage() {
 			s += chaps + "</span></span>"
 		}
 	}
-	if !me.dummy {
+	if false && !me.dummy {
 		s += "<h5 id='books' class='" + App.Proj.Site.Gen.ClsSeries + "'>Downloads</h5>"
 		if !me.dirRtl {
 			s += "<div>(" + me.textStr("DownloadAlt")
@@ -707,22 +706,6 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 	}
 	me.page.PagesList, me.page.PageContent = pageslist(), "<div class='"+App.Proj.Site.Gen.ClsViewerPage+"'>"
 
-	me.page.ViewerList = ""
-	for _, viewmode := range viewModes {
-		if me.page.ViewerList += "<div title='" + hEsc(me.textStr("ViewMode_"+viewmode)) + "' class='v" + viewmode; viewmode == viewMode {
-			me.page.ViewerList += " vc"
-		}
-		me.page.ViewerList += "'>"
-		if n := me.namePage(chapter, quali.SizeHint, pageNr, viewmode, "", me.lang, svDt, me.bgCol); viewmode == viewMode {
-			me.page.HrefViewCur = "./" + n + ".html"
-			me.page.ViewerList += "<b>&nbsp;</b>"
-		} else {
-			me.page.HrefViewAlt = "./" + n + ".html"
-			me.page.ViewerList += "<a class='" + App.Proj.Site.Gen.ClsPanel + "l' href='" + me.page.HrefViewAlt + "'>&nbsp;</a>"
-		}
-		me.page.ViewerList += "</div>"
-	}
-
 	var iter func(*SheetVer, *ImgPanel, bool) string
 	pidx, allpanels, firstpanel, firstrow := 0, map[*SheetVer]int{}, "f", "f"
 	iter = func(sv *SheetVer, panel *ImgPanel, istop bool) (s string) {
@@ -731,25 +714,14 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		if len(panel.SubRows) > 0 {
 			for i := range panel.SubRows {
 				sr := &panel.SubRows[i]
-				if viewMode == "r" && istop {
-					s += "<td>"
-				}
 				s += "<div id='" + firstrow + App.Proj.Site.Gen.ClsPanel + "r" + sv.id + itoa(i) + "' class='" + App.Proj.Site.Gen.ClsPanelRow
-				if firstrow = ""; istop && viewMode == "r" {
-					s += " " + App.Proj.Site.Gen.ClsPanelRow + "t"
-				} else if istop {
+				if firstrow = ""; istop {
 					s += "' onfocus='" + App.Proj.Site.Gen.ClsPanel + "f(this)' tabindex='0"
 				}
 				s += "'>" + iter(sv, sr, false) + "</div>"
-				if viewMode == "r" && istop {
-					s += "</td>"
-				}
 			}
 
 		} else if len(panel.SubCols) > 0 {
-			if viewMode == "r" && istop {
-				s += "<td>"
-			}
 			for i := range panel.SubCols {
 				sc := &panel.SubCols[i]
 				s += "<div class='" + App.Proj.Site.Gen.ClsPanelCol + "'"
@@ -757,9 +729,6 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				pp := 100.0 / (float64(sw) / float64(pw))
 				s += " style='width: " + ftoa(pp, 8) + "%'"
 				s += ">" + iter(sv, sc, false) + "</div>"
-			}
-			if viewMode == "r" && istop {
-				s += "</td>"
 			}
 
 		} else {
@@ -775,9 +744,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 			}
 
 			s += "<div id='" + firstpanel + App.Proj.Site.Gen.ClsPanel + "p" + sv.id + itoa(pidx) + "' class='" + App.Proj.Site.Gen.ClsPanel + "'"
-			if firstpanel = ""; viewMode == "r" {
-				s += " tabindex='0' onfocus='" + App.Proj.Site.Gen.ClsPanel + "f(this)'"
-			}
+			firstpanel = ""
 			s += ">" + sv.genTextSvgForPanel(pidx, panel, me.lang, true, false)
 			me.sheetPgNrs[sv] = pageNr
 			s += "<img src='./" + sIf(os.Getenv("NOPICS") != "", "files/white.png", App.Proj.Site.Gen.PicDirName+"/"+imgfilename) + "'"
@@ -800,13 +767,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		return
 	}
 	cls := App.Proj.Site.Gen.ClsSheetsView
-	if viewMode == "r" {
-		cls = App.Proj.Site.Gen.ClsRowsView
-	}
 	me.page.PageContent += "<div class='" + App.Proj.Site.Gen.ClsViewer + " " + cls + "'>"
-	if viewMode == "r" {
-		me.page.PageContent += "<table><tr>"
-	}
 	for _, sheet := range sheets {
 		sheetver := sheet.versions[0]
 		if svDt > 0 {
@@ -818,16 +779,9 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		}
 		_ = sheetver.ensurePrep(false, false)
 		pidx = 0
-		if viewMode != "r" {
-			me.page.PageContent += "<div id='" + sheetver.id + "' class='" + App.Proj.Site.Gen.ClsSheet + "'>"
-		}
+		me.page.PageContent += "<div id='" + sheetver.id + "' class='" + App.Proj.Site.Gen.ClsSheet + "'>"
 		me.page.PageContent += iter(sheetver, sheetver.data.PanelsTree, true)
-		if viewMode != "r" {
-			me.page.PageContent += "</div>"
-		}
-	}
-	if viewMode == "r" {
-		me.page.PageContent += "</tr></table>"
+		me.page.PageContent += "</div>"
 	}
 	me.page.PageContent += "</div>"
 	me.page.PageContent += pageslist()

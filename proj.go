@@ -69,7 +69,6 @@ type Project struct {
 			ClsPanel         string
 			ClsViewer        string
 			ClsSheetsView    string
-			ClsRowsView      string
 			ClsSheet         string
 			APaging          string
 			ImgSrcLang       string

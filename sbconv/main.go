@@ -175,7 +175,7 @@ func sbToHtml(it Storyboard, srcFilePath string, isA5 bool, isA3 bool) []byte {
 					font-weight: normal;
 					font-size: 14pt;
 					line-height: 0.66em; /*0.88em*/
-					font-family: "Architects Daughter", sans;
+					font-family: "Collect Em Now BB", sans;
 				}
 				.panel {
 					align-items: end;
@@ -190,9 +190,10 @@ func sbToHtml(it Storyboard, srcFilePath string, isA5 bool, isA3 bool) []byte {
 				}
 				.balloon p span {
 					font-size: 0.88em;
+					letter-spacing: -0.01em;
 				}
 				.balloon p {
-					line-height: 0.77em;
+					line-height: 0.66em;
 				}
 				hr {
 					opacity: 0.22;
@@ -201,7 +202,7 @@ func sbToHtml(it Storyboard, srcFilePath string, isA5 bool, isA3 bool) []byte {
 				small {
 					font-weight: normal;
 					font-family: mono;
-					font-size: small;
+					font-size: xx-small;
 					letter-spacing: -0.22em;
 				}
 			</style></head><body>`

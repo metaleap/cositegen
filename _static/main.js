@@ -82,7 +82,8 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm
                 const mmh = px1cm * panelSvgTextBoxPolyStrokeWidthCm, cmh = px1cm * 0.5;
                 const pl = (rx + mmh), pr = ((rx + rw) - mmh), pt = (ry + mmh), pb = ((ry + rh) - mmh);
                 let poly = [pl + ',' + pt, pr + ',' + pt, pr + ',' + pb, pl + ',' + pb];
-                if (!((trPx == 0) && (trPy == 0))) { // "speech-text" pointing somewhere?
+                const isBalloon = !((trPx == 0) && (trPy == 0));
+                if (isBalloon) { // "speech-text" pointing somewhere?
                     const dx = Math.abs(rpx - (rx + (rw * 0.5))), dy = Math.abs(rpy - (ry + (rh * 0.5)));
                     const isr = rpx > (rx + (rw * 0.5)), isl = !isr,
                         isb = rpy > (ry + (rh * 0.5)), ist = !isb,
@@ -110,7 +111,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm
                     else if (islb)
                         poly = arrIns(poly, 4, [dst, pl + ',' + (pb - cmh)]);
                 }
-                innerhtml += "<polygon points='" + poly.join(' ') + "' class='" + panelSvgTextClsBoxPoly + "' stroke-width='" + mmh + "px'/>";
+                innerhtml += "<polygon points='" + poly.join(' ') + "' class='" + (isBalloon ? (panelSvgTextClsBoxPoly + " " + panelSvgTextClsBoxPoly + "b") : panelSvgTextClsBoxPoly) + "' stroke-width='" + mmh + "px'/>";
             }
 
             innerhtml += "<svg x='" + rx + "' y='" + ry + "'><text x='0' y='0' style='font-size: " + pxfont + "px' transform='" + document.getElementById(pid + "t" + i + "_transform").value.replace(/\n/g, " ").trim() + "'>";

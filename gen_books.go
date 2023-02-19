@@ -146,7 +146,7 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
         xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
         width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
             <style type="text/css">` + App.Proj.cssFontFaces(me.cssRepl) + `
-				polygon { stroke: black; fill: white; }
+				polygon.pt, polygon.ptb { stroke: black; fill: white; }
 				g > svg > svg > text, g > svg > svg > text > tspan {
 					`
 
@@ -262,7 +262,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 		tmpfilepath := ".ccache/.pngtmp/pgsh_" + itoa(border) + "_" + itoa(pgw) + "_" + contentHashStr(fileRead(shfilepath)) + ".png"
 		if fileStat(tmpfilepath) == nil {
 			imgpg := image.NewNRGBA(image.Rect(0, 0, pgw, pgh))
-			imgFill(imgpg, imgpg.Bounds(), color.NRGBA{R: 255, G: 255, B: 255, A: 0})
+			imgFill(imgpg, imgpg.Bounds(), color.NRGBA{R: 255, G: 255, B: 255, A: 255})
 			imgsh, _, err := image.Decode(bytes.NewReader(fileRead(shfilepath)))
 			if err != nil {
 				panic(err)

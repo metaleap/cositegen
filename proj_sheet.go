@@ -538,7 +538,8 @@ func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang strin
 				poly = append(head, append(pts, tail...)...)
 			}
 
-			if !(pta.PointTo.X == 0 && pta.PointTo.Y == 0) { // "speech-text" pointing somewhere?
+			isBalloon := !(pta.PointTo.X == 0 && pta.PointTo.Y == 0)
+			if isBalloon {
 				dx, dy := intAbs(rpx-(rx+(rw/2))), intAbs(rpy-(ry+(rh/2)))
 				isr, isb := rpx > (rx+(rw/2)), rpy > (ry+(rh/2))
 				isl, ist, dst := !isr, !isb, [2]int{rpx, rpy}
@@ -575,7 +576,7 @@ func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang strin
 			for _, pt := range poly {
 				s += itoa(pt[0]) + "," + itoa(pt[1]) + " "
 			}
-			s += "' class='" + me.parentSheet.parentChapter.GenPanelSvgText.ClsBoxPoly + "' stroke-width='" + itoa(mmh) + "px'/>"
+			s += "' class='" + me.parentSheet.parentChapter.GenPanelSvgText.ClsBoxPoly + sIf(isBalloon, " "+me.parentSheet.parentChapter.GenPanelSvgText.ClsBoxPoly+"b", "") + "' stroke-width='" + itoa(mmh) + "px'/>"
 		}
 		s += "<svg x='" + itoa(rx) + "' y='" + itoa(ry) + "' class='" + sIf(borderandfill, "ptbf", "") + "'>" +
 			me.genTextSvgForPanelArea(panelIdx, tidx, &pta, lang, forHtml, forEbook) + "</svg>"
