@@ -112,9 +112,9 @@ func (me *Chapter) panelsTreeFromStoryboard(sv *SheetVer) *ImgPanel {
 	pxCmX, pxCmY := float64(img.Bounds().Max.X)/cmW, float64(img.Bounds().Max.Y)/cmH
 	for _, pnl := range page.panels {
 		rect := image.Rect(int(pnl.CmX*pxCmX), int(pnl.CmY*pxCmY), int((pnl.CmX+pnl.CmW)*pxCmX), int((pnl.CmY+pnl.CmH)*pxCmY))
-		imgDrawRect(img.(*image.Gray), rect, App.Proj.Sheets.Panel.TreeFromStoryboard.Border, 0)
+		imgDrawRect(img.(*image.Gray), rect, App.Proj.Sheets.Panel.TreeFromStoryboard.BorderInner, 0)
 	}
-	imgDrawRect(img.(*image.Gray), img.Bounds(), 2*App.Proj.Sheets.Panel.TreeFromStoryboard.Border, 0)
+	imgDrawRect(img.(*image.Gray), img.Bounds(), App.Proj.Sheets.Panel.TreeFromStoryboard.BorderOuter, 0)
 
 	data := pngEncode(img)
 	fileWrite(sv.data.bwFilePath+".pnls.png", data)

@@ -86,8 +86,9 @@ type Project struct {
 		}
 		Panel struct {
 			TreeFromStoryboard struct {
-				After  string
-				Border int
+				After       string
+				BorderInner int
+				BorderOuter int
 			}
 			MaxNumTextAreas int
 			BorderCm        float64

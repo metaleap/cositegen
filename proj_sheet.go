@@ -385,7 +385,8 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 	detectFromSb := (me.DtStr() > App.Proj.Sheets.Panel.TreeFromStoryboard.After) &&
 		(me.parentSheet.parentChapter.storyboardFilePath() != "")
 	if did = force || me.data.PanelsTree == nil ||
-		(me.data.PanelsTree.SbBorder != iIf(detectFromSb, App.Proj.Sheets.Panel.TreeFromStoryboard.Border, 0)); did {
+		(me.data.PanelsTree.SbBorderOuter != iIf(detectFromSb, App.Proj.Sheets.Panel.TreeFromStoryboard.BorderOuter, 0)) ||
+		(me.data.PanelsTree.SbBorderInner != iIf(detectFromSb, App.Proj.Sheets.Panel.TreeFromStoryboard.BorderInner, 0)); did {
 		_ = os.Remove(bgtmplsvgfilepath)
 		if detectFromSb {
 			me.data.PanelsTree = me.parentSheet.parentChapter.panelsTreeFromStoryboard(me)
@@ -394,7 +395,8 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 		} else {
 			me.data.PanelsTree = imgPanelsFile(file, file.Close)
 		}
-		me.data.PanelsTree.SbBorder = iIf(detectFromSb, App.Proj.Sheets.Panel.TreeFromStoryboard.Border, 0)
+		me.data.PanelsTree.SbBorderOuter = iIf(detectFromSb, App.Proj.Sheets.Panel.TreeFromStoryboard.BorderOuter, 0)
+		me.data.PanelsTree.SbBorderInner = iIf(detectFromSb, App.Proj.Sheets.Panel.TreeFromStoryboard.BorderInner, 0)
 	} else if os.Getenv("REDO_BGS") != "" {
 		_ = os.Remove(bgtmplsvgfilepath)
 	}

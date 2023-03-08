@@ -17,7 +17,8 @@ type ImgPanel struct {
 	Rect              image.Rectangle
 	SubRows           []ImgPanel `json:",omitempty"`
 	SubCols           []ImgPanel `json:",omitempty"`
-	SbBorder          int        `json:",omitempty"`
+	SbBorderOuter     int        `json:",omitempty"`
+	SbBorderInner     int        `json:",omitempty"`
 	recenteredXOffset int
 }
 
