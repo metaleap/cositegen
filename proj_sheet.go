@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -59,6 +60,7 @@ type SheetVerData struct {
 	GrayDistr          []int     `json:",omitempty"`
 	ColDarkestLightest []uint8   `json:",omitempty"`
 	PanelsTree         *ImgPanel `json:",omitempty"`
+	HomePic            string    `json:",omitempty"`
 }
 
 func (me *SheetVerData) PicDirPath(qualiSizeHint int) string {
@@ -129,11 +131,14 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	didbw, didbwsmall := me.ensureBwSheetPngs(forceFullRedo)
 	didpanels := me.ensurePanelsTree(me.data.PanelsTree == nil || forceFullRedo || didbw)
 	didpanelpics := me.ensurePanelPics(forceFullRedo || didpanels)
+	didhomepic := me.ensureHomePic(forceFullRedo || didbw || didbwsmall || didpanels)
 
-	if shouldsaveprojdata = shouldsaveprojdata || didgraydistr || didpanels; shouldsaveprojdata {
+	if shouldsaveprojdata = shouldsaveprojdata || didgraydistr || didpanels || didhomepic; shouldsaveprojdata {
 		App.Proj.save(false)
 	}
-	didWork = shouldsaveprojdata || didbw || didbwsmall || didgraydistr || didpanels || didpanelpics
+	if didWork = shouldsaveprojdata || didbw || didbwsmall || didpanelpics; didWork {
+		runtime.GC()
+	}
 
 	return
 }
@@ -243,25 +248,29 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 	if err != nil {
 		panic(err)
 	}
-	for _, quali := range App.Proj.Qualis {
-		force = force || (nil == dirStat(me.data.PicDirPath(quali.SizeHint)))
+	forceQualis := map[int]bool{}
+	for qidx, quali := range App.Proj.Qualis {
+		forceQualis[qidx] = force || (nil == dirStat(me.data.PicDirPath(quali.SizeHint)))
 	}
-	for qidx := 0; qidx < len(App.Proj.Qualis) && !force; qidx++ {
+	for qidx := 0; qidx < len(App.Proj.Qualis) && !forceQualis[qidx]; qidx++ {
 		quali := App.Proj.Qualis[qidx]
-		for pidx, pngdir := 0, me.data.PicDirPath(quali.SizeHint); pidx < numpanels && !force; pidx++ {
-			force = bIf(quali.SizeHint == 0,
+		for pidx, pngdir := 0, me.data.PicDirPath(quali.SizeHint); pidx < numpanels && !forceQualis[qidx]; pidx++ {
+			forceQualis[qidx] = bIf(quali.SizeHint == 0,
 				nil == fileStat(filepath.Join(me.data.PicDirPath(0), itoa(pidx)+".svg")),
 				nil == fileStat(filepath.Join(pngdir, itoa(pidx)+".png")))
 		}
 	}
 	for _, fileinfo := range diritems {
 		if rm, name := force, fileinfo.Name(); fileinfo.IsDir() && strings.HasPrefix(name, "__panels__") {
-			if got, qstr := false, name[strings.LastIndexByte(name, '_')+1:]; (!rm) && qstr != "" {
+			if got, qstr := -1, name[strings.LastIndexByte(name, '_')+1:]; (!rm) && qstr != "" {
 				if q, errparse := strconv.ParseUint(qstr, 10, 64); errparse == nil {
-					for _, quali := range App.Proj.Qualis {
-						got = (quali.SizeHint == int(q)) || got
+					for i, quali := range App.Proj.Qualis {
+						if quali.SizeHint == int(q) {
+							got, rm = i, rm || forceQualis[i]
+							break
+						}
 					}
-					rm = !got
+					rm = rm || (got == -1)
 				}
 			}
 			if rm {
@@ -269,12 +278,21 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 			}
 		}
 	}
-	if !force {
-		return false
+	if forceSome := force; !forceSome {
+		for _, f := range forceQualis {
+			if forceSome = f; forceSome {
+				break
+			}
+		}
+		if !forceSome {
+			return false
+		}
 	}
 
-	for _, quali := range App.Proj.Qualis {
-		mkDir(me.data.PicDirPath(quali.SizeHint))
+	for qidx, quali := range App.Proj.Qualis {
+		if forceQualis[qidx] {
+			mkDir(me.data.PicDirPath(quali.SizeHint))
+		}
 	}
 	srcimgfile, err := os.Open(me.data.bwFilePath)
 	if err != nil {
@@ -293,8 +311,8 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 		go func(pidx int) {
 			defer work.Done()
 			pw, ph, sw := panel.Rect.Dx(), panel.Rect.Dy(), me.data.PanelsTree.Rect.Dx()
-			for _, quali := range App.Proj.Qualis {
-				if quali.SizeHint == 0 {
+			for qidx, quali := range App.Proj.Qualis {
+				if quali.SizeHint == 0 || !forceQualis[qidx] {
 					continue
 				}
 				width := float64(quali.SizeHint) / (float64(sw) / float64(pw))
@@ -316,8 +334,22 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 		pidx++
 	})
 	work.Wait()
-
 	return true
+}
+
+func (me *SheetVer) ensureHomePic(force bool) (didHomePic bool) {
+	if picsheet, picidxpanel := me.parentSheet.parentChapter.pic(); picsheet == me {
+		picpath := me.data.bwFilePath + ".homepic_" + itoa(picidxpanel) + "_" + itoa(App.Proj.Site.Gen.HomePicSizeHint) + ".png"
+		if didHomePic = (force || (picpath != me.data.HomePic) || fileStat(picpath) == nil); didHomePic {
+			if me.data.HomePic != "" {
+				_ = os.Remove(me.data.HomePic)
+			}
+			me.data.HomePic = picpath
+			fileWrite(picpath,
+				imgSubRectPngFile(me.data.bwFilePath, me.panel(picidxpanel).Rect, 0, App.Proj.Site.Gen.HomePicSizeHint, false))
+		}
+	}
+	return
 }
 
 func (me *SheetVer) ensureGrayDistr(force bool) bool {
@@ -345,6 +377,17 @@ func (me *SheetVer) cmsToPxs(fs ...float64) (ret []int) {
 	for i, f := range fs {
 		ret[i] = me.cmToPx(f)
 	}
+	return
+}
+
+func (me *SheetVer) panel(idx int) (pnl *ImgPanel) {
+	pidx := 0
+	me.data.PanelsTree.iter(func(p *ImgPanel) {
+		if pidx == idx {
+			pnl = p
+		}
+		pidx++
+	})
 	return
 }
 
@@ -480,6 +523,13 @@ func (me *SheetVer) panelCount() (numPanels int, numPanelAreas int) {
 		})
 	}
 	return
+}
+
+func (me *SheetVer) homePicName() string {
+	if me.data.HomePic != "" {
+		return me.parentSheet.parentChapter.parentSeries.Name + "-" + me.parentSheet.parentChapter.Name + ".png"
+	}
+	return ""
 }
 
 func (me *SheetVer) haveAnyTexts() bool {

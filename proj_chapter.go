@@ -231,6 +231,18 @@ func (me *Chapter) numScans() (ret int) {
 	return
 }
 
+func (me *Chapter) pic() (*SheetVer, int) {
+	if len(me.Pic) > 0 {
+		idxsheet := me.Pic[0].(float64)
+		idxpanel := me.Pic[1].(float64)
+		return me.sheets[int(idxsheet)].versions[0], int(idxpanel)
+	}
+	if len(me.sheets) > 0 && len(me.sheets[0].versions) > 0 {
+		return me.sheets[0].versions[0], 0
+	}
+	return nil, 0
+}
+
 func (me *Chapter) scanYearLatest() (r int) {
 	for _, sheet := range me.sheets {
 		dt := time.Unix(0, sheet.versions[0].dateTimeUnixNano)

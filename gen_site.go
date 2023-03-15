@@ -312,7 +312,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 						again = (fs > max) && !atomic.CompareAndSwapUint32(&me.maxPicSize, max, fs)
 					}
 					atomic.AddUint64(&totalSize, uint64(fileinfo.Size()))
-					dstpath := filepath.Join(".build/"+App.Proj.Site.Gen.PicDirName+"/", me.namePanelPic(sv, pidx, quali.SizeHint)+fext)
+					dstpath := filepath.Join(".build", App.Proj.Site.Gen.PicDirName, me.namePanelPic(sv, pidx, quali.SizeHint)+fext)
 					fileLinkOrCopy(srcpath, dstpath)
 					if me.onPicSize != nil {
 						me.onPicSize(sv.parentSheet.parentChapter, sv.id+itoa(pidx), qidx, fileinfo.Size())
@@ -327,7 +327,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 			if srcpath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png"); sv.data.hasBgCol {
 				if fileinfo := fileStat(srcpath); fileinfo != nil {
 					atomic.AddUint64(&totalSize, uint64(fileinfo.Size()))
-					dstpath := filepath.Join(".build/" + App.Proj.Site.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg.png")
+					dstpath := filepath.Join(".build", App.Proj.Site.Gen.PicDirName, sv.DtStr()+sv.id+itoa(pidx)+"bg.png")
 					fileLinkOrCopy(srcpath, dstpath)
 					atomic.AddUint32(&numPngs, 1)
 				}
@@ -336,6 +336,11 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 		}(pidx)
 		pidx++
 	})
+
+	if homepicname := sv.homePicName(); homepicname != "" {
+		fileLinkOrCopy(sv.data.HomePic, filepath.Join(".build", App.Proj.Site.Gen.PicDirName, homepicname))
+		atomic.AddUint32(&numPngs, 1)
+	}
 
 	work.Wait()
 	return
@@ -523,16 +528,14 @@ func (me *siteGen) prepHomePage() {
 				if App.Proj.percentTranslated(me.lang, series, chapter, nil, -1) < 50 {
 					title = me.textStr("Untransl") + " " + title
 				}
-				picidxsheet, picidxpanel, picbgpos := 0.0, 0.0, ""
-				if chapter.Pic != nil && len(chapter.Pic) >= 2 {
-					picidxsheet, _ = chapter.Pic[0].(float64)
-					picidxpanel, _ = chapter.Pic[1].(float64)
-					if len(chapter.Pic) > 2 {
+				picidxsheet, picbgpos := 0.0, "center center"
+				if chapter.Pic != nil && len(chapter.Pic) > 0 {
+					if picidxsheet = chapter.Pic[0].(float64); len(chapter.Pic) > 2 {
 						picbgpos = chapter.Pic[2].(string)
 					}
 				}
-				s, picname, chid := "", me.namePanelPic(chapter.sheets[int(picidxsheet)].versions[0], int(picidxpanel), App.Proj.Qualis[App.Proj.maxQualiIdx(true)].SizeHint), chapter.parentSeries.Name+"_"+chapter.Name
-				s += "<a name='" + chid + "' id='" + chid + "' class='" + App.Proj.Site.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[App.Proj.defaultQualiIdx].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + sIf(os.Getenv("NOPICS") != "", "files/white.png", App.Proj.Site.Gen.PicDirName+"/"+sIf(me.dummy, "nope", picname)) + ".png\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
+				s, picname, chid := "", chapter.sheets[int(picidxsheet)].versions[0].homePicName(), chapter.parentSeries.Name+"_"+chapter.Name
+				s += "<a name='" + chid + "' id='" + chid + "' class='" + App.Proj.Site.Gen.ClsChapter + "' title='" + hEsc(title) + "' href='./" + me.namePage(chapter, App.Proj.Qualis[App.Proj.defaultQualiIdx].SizeHint, 1, "s", "", me.lang, 0, true) + ".html' style='background-image: url(\"" + sIf(os.Getenv("NOPICS") != "", "files/white.png", App.Proj.Site.Gen.PicDirName+"/"+sIf(me.dummy, "nope.png", picname)) + "\"); " + sIf(picbgpos == "", "", "background-position: "+picbgpos) + "'>"
 				s += "<h6>" + hEsc(sIf(me.dummy, "Chapter Title", locStr(chapter.Title, me.lang))) + "</h6>"
 				chapmins := iIf(me.dummy, 1, chapter.readDurationMinutes())
 				s += "<span><span>" + itoa(chapmins) + "-" + itoa(1+chapmins) + me.textStr("Mins") + "</span><span>" +
@@ -544,7 +547,7 @@ func (me *siteGen) prepHomePage() {
 			s += chaps + "</span></span>"
 		}
 	}
-	if false && !me.dummy {
+	if true && !me.dummy {
 		s += "<h5 id='books' class='" + App.Proj.Site.Gen.ClsSeries + "'>Downloads</h5>"
 		if !me.dirRtl {
 			s += "<div>(" + me.textStr("DownloadAlt")

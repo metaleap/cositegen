@@ -63,6 +63,10 @@ func ftoa(f float64, prec int) string {
 	return strconv.FormatFloat(f, 'f', prec, 64)
 }
 
+func itoh[T uint8](i T) string {
+	return strconv.FormatInt(int64(i), 16)
+}
+
 func itoa0pref(i int, digits int) string {
 	s := itoa(i)
 	if len(s) >= digits {

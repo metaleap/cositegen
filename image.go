@@ -275,6 +275,20 @@ func imgSubRectSvg(srcImg *image.Gray, srcImgRect image.Rectangle, blackBorderSi
 	return
 }
 
+func imgSubRectPngFile(srcImgFilePath string, rect image.Rectangle, blackBorderSize int, reWidth int, transparent bool) []byte {
+	imgsrc, _, err := image.Decode(bytes.NewReader(fileRead(srcImgFilePath)))
+	if err != nil {
+		panic(err)
+	}
+	var gotsamesizeasorig bool
+	w, h := rect.Dx(), rect.Dy()
+	if reWidth != 0 && reWidth != imgsrc.Bounds().Dx() {
+		factor := float64(imgsrc.Bounds().Dx()) / float64(reWidth)
+		w, h = int(float64(w)/factor), int(float64(h)/factor)
+	}
+	return pngEncode(imgSubRect(imgsrc.(*image.Gray), rect, &w, &h, blackBorderSize, transparent, &gotsamesizeasorig))
+}
+
 func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int, transparent bool, gotSameSizeAsOrig *bool) []byte {
 	return pngEncode(imgSubRect(srcImg, srcImgRect, width, height, blackBorderSize, transparent, gotSameSizeAsOrig))
 }
@@ -296,7 +310,7 @@ func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, heig
 	}
 
 	var imgdst draw.Image
-	if *width > origwidth {
+	if *width >= origwidth {
 		*gotSameSizeAsOrig, *width, *height = true, origwidth, origheight
 		if !transparent {
 			imgdst = srcImg.SubImage(srcImgRect).(draw.Image)

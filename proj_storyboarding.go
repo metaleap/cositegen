@@ -116,8 +116,8 @@ func (me *Chapter) panelsTreeFromStoryboard(sv *SheetVer) *ImgPanel {
 	}
 	imgDrawRect(img.(*image.Gray), img.Bounds(), App.Proj.Sheets.Panel.TreeFromStoryboard.BorderOuter, 0)
 
-	data := pngEncode(img)
-	fileWrite(sv.data.bwFilePath+".pnls.png", data)
+	// data := pngEncode(img)
+	// fileWrite(sv.data.bwFilePath+".pnls.png", data)
 
 	return imgPanels(img)
 }

@@ -27,6 +27,8 @@ const (
 	bookPanelsHPadding     = 188
 )
 
+var bookScreenPgBgCol = [3]uint8{0xf7, 0xf2, 0xeb}
+
 type BookGen struct {
 	Sheets         []*SheetVer
 	Phrase         string
@@ -54,7 +56,7 @@ func makeBook(flags map[string]bool) {
 	mkDir(gen.OutDirPath)
 
 	for k := range flags {
-		if y := atoi(k, 0, 9999); y > 2020 && y < 2121 {
+		if y := atoi(k, 0, 9999); y > 2020 && y < 3131 {
 			gen.year = y
 		}
 	}
@@ -127,8 +129,10 @@ func makeBook(flags map[string]bool) {
 func (me *BookGen) genSheetSvgsAndPngs(dirRtl bool, lang string) {
 	lores := (os.Getenv("LORES") != "")
 	for i, sv := range me.Sheets {
-		sheetsvgfilepath := me.sheetSvgPath(i, dirRtl, lang)
-		me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, lang)
+		sheetsvgfilepath := me.sheetSvgPath(i, dirRtl, lang, true)
+		me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, lang, true)
+		sheetsvgfilepath = me.sheetSvgPath(i, dirRtl, lang, false)
+		me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, lang, false)
 		if os.Getenv("NOSCREEN") == "" {
 			sheetpngfilepath := sheetsvgfilepath + ".sh.png"
 			printLn(sheetpngfilepath, "...")
@@ -137,7 +141,7 @@ func (me *BookGen) genSheetSvgsAndPngs(dirRtl bool, lang string) {
 	}
 }
 
-func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string) {
+func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string, forPrint bool) {
 	rectinner, lores := sv.data.pxBounds(), (os.Getenv("LORES") != "")
 
 	w, h := rectinner.Dx(), rectinner.Dy()
@@ -146,7 +150,7 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
         xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
         width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
             <style type="text/css">` + App.Proj.cssFontFaces(me.cssRepl) + `
-				polygon.pt, polygon.ptb { stroke: black; fill: white; }
+				polygon.pt, polygon.ptb { stroke: black; ` + sIf(forPrint, "fill: white;", `fill: #`+itoh(bookScreenPgBgCol[0])+itoh(bookScreenPgBgCol[1])+itoh(bookScreenPgBgCol[2])+";") + ` }
 				g > svg > svg > text, g > svg > svg > text > tspan {
 					`
 
@@ -155,10 +159,12 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 	}
 
 	svg += `}`
-	if me.year <= 2022 {
+	if me.year > 0 && me.year <= 2022 {
 		svg += `
 				g > svg > svg > text > tspan.std { /*_un_bold_*/ }
 				g > svg > svg > text > tspan.std tspan.b { font-weight: bold !important; }`
+	} else if forPrint {
+		svg += `g > svg > svg > text > tspan { letter-spacing: -0.005em !important; }`
 	}
 	svg += `</style>`
 
@@ -197,8 +203,8 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 	fileWrite(outFilePath, []byte(svg))
 }
 
-func (me *BookGen) sheetSvgPath(idx int, dirRtl bool, lang string) string {
-	return me.ShmDirPath + "/" + sIf(dirRtl, "r", "l") + itoa0pref(idx, 3) + lang + sIf(os.Getenv("LORES") == "", "", "_lq") + ".svg"
+func (me *BookGen) sheetSvgPath(idx int, dirRtl bool, lang string, forPrint bool) string {
+	return me.ShmDirPath + "/" + sIf(dirRtl, "r", "l") + sIf(forPrint, "p", "s") + itoa0pref(idx, 3) + lang + sIf(os.Getenv("LORES") == "", "", "_lq") + ".svg"
 }
 
 func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
@@ -208,7 +214,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 	}
 
 	pgfilepaths := []string{}
-	{
+	if os.Getenv("NOTOC") == "" {
 		tocfilepathsvg := me.ShmDirPath + "/0toc." + lang + sIf(!lores, "", "_lq") + ".svg"
 		tocfilepathpng := tocfilepathsvg + ".png"
 		if fileStat(tocfilepathpng) == nil {
@@ -256,13 +262,13 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 	}
 
 	for i := range me.Sheets {
-		shfilepath := me.sheetSvgPath(i, dirRtl, lang) + ".sh.png"
-		outfilepath := me.sheetSvgPath(i, dirRtl, lang) + ".pg.png"
+		shfilepath := me.sheetSvgPath(i, dirRtl, lang, false) + ".sh.png"
+		outfilepath := me.sheetSvgPath(i, dirRtl, lang, false) + ".pg.png"
 		printLn(outfilepath, "...")
 		tmpfilepath := ".ccache/.pngtmp/pgsh_" + itoa(border) + "_" + itoa(pgw) + "_" + contentHashStr(fileRead(shfilepath)) + ".png"
 		if fileStat(tmpfilepath) == nil {
 			imgpg := image.NewNRGBA(image.Rect(0, 0, pgw, pgh))
-			imgFill(imgpg, imgpg.Bounds(), color.NRGBA{R: 255, G: 255, B: 255, A: 255})
+			imgFill(imgpg, imgpg.Bounds(), color.NRGBA{R: bookScreenPgBgCol[0], G: bookScreenPgBgCol[1], B: bookScreenPgBgCol[2], A: 255})
 			imgsh, _, err := image.Decode(bytes.NewReader(fileRead(shfilepath)))
 			if err != nil {
 				panic(err)
@@ -285,7 +291,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 	}
 
 	if altsvgfilepath := "stuff/" + me.Phrase + "/collage.svg"; fileStat(altsvgfilepath) != nil {
-		outfilepath := me.sheetSvgPath(len(pgfilepaths), true, "") + ".png"
+		outfilepath := me.sheetSvgPath(len(pgfilepaths), true, "", false) + ".png"
 		printLn(outfilepath, "...")
 		if writtenfilepath := imgAnyToPng(altsvgfilepath, outfilepath, pgw, false, "xtra"); os.Getenv("NOZOP") == "" {
 			pngOptFireAndForget(writtenfilepath)
@@ -329,19 +335,21 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 }
 
 func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
-	svgh, pgwmm, pghmm, isoddpage, pgidx := 0, 210, 297, false, -1
-	for numPages = 2 + iIf(os.Getenv("NOTOC") == "", 4, 2) + len(me.Sheets)/2; (numPages % 4) != 0; {
+	svgh, pgwmm, pghmm, isoddpage, pgidx, dpnope := 0, 210, 297, false, -1, os.Getenv("NOTOC") != "" && os.Getenv("NOCOV") != ""
+	for numPages = iIf(dpnope, 0, 2+iIf(os.Getenv("NOTOC") == "", 4, 2)) + len(me.Sheets)/2; (numPages%4) != 0 && !dpnope; {
 		numPages++
 	}
 	svg := ""
-	dpbwidx, dpbwfilepaths := 0, make([]string, len(me.Sheets))
-	for i, sv := range me.Sheets {
-		dpbwfilepaths[i] = absPath(sv.data.bwSmallFilePath)
+	dpbwidx, dpbwfilepaths := 0, make([]string, 0, len(me.Sheets))
+	if !dpnope {
+		for _, sv := range me.Sheets {
+			dpbwfilepaths = append(dpbwfilepaths, absPath(sv.data.bwSmallFilePath))
+		}
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(dpbwfilepaths), func(i int, j int) {
+			dpbwfilepaths[i], dpbwfilepaths[j] = dpbwfilepaths[j], dpbwfilepaths[i]
+		})
 	}
-	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(dpbwfilepaths), func(i int, j int) {
-		dpbwfilepaths[i], dpbwfilepaths[j] = dpbwfilepaths[j], dpbwfilepaths[i]
-	})
 	svgpgstart := func() {
 		isoddpage = !isoddpage
 		pgidx++
@@ -350,6 +358,9 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 		svgh = int(y) + pghmm
 	}
 	dpadd := func(closeTag bool) {
+		if dpnope {
+			return
+		}
 		svgpgstart()
 		x, y := -55, -20
 		for {
@@ -417,8 +428,8 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 	}
 	for i, l := 0, (len(me.Sheets)/2)+(len(me.Sheets)%2); i < l; i++ {
 		svgpgstart()
-		sheetsvgfilepath0 := me.sheetSvgPath(i*2, dirRtl, lang)
-		sheetsvgfilepath1 := me.sheetSvgPath((i*2)+1, dirRtl, lang)
+		sheetsvgfilepath0 := me.sheetSvgPath(i*2, dirRtl, lang, true)
+		sheetsvgfilepath1 := me.sheetSvgPath((i*2)+1, dirRtl, lang, true)
 		svg += `<text x="50%" y="97%"><tspan>` + itoa(pgidx+1) + `</tspan></text>`
 		topborder := bookPrintBorderMmBig
 		if me.Sheets[i*2].parentSheet.parentChapter.Name == "half-pagers" {
@@ -454,7 +465,7 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 		svgfull += k + ":" + svgtxt.Css[""][k] + ";\n"
 	}
 
-	svgfull += `; font-size: 1em; }
+	svgfull += ` 	}
 					text.toc tspan {
 						font-family: "Shark Heavy ABC";
 						font-size: 1.11cm;

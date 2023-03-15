@@ -73,6 +73,7 @@ type Project struct {
 			APaging          string
 			ImgSrcLang       string
 			PicDirName       string
+			HomePicSizeHint  int
 		}
 	}
 	Sheets struct {
