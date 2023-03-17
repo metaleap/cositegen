@@ -27,7 +27,7 @@ const (
 	bookPanelsHPadding     = 188
 )
 
-var bookScreenPgBgCol = [3]uint8{0xf7, 0xf2, 0xeb}
+var bookScreenPgBgCol = [3]uint8{0xe7, 0xe2, 0xdb}
 
 type BookGen struct {
 	Sheets         []*SheetVer
@@ -129,11 +129,13 @@ func makeBook(flags map[string]bool) {
 func (me *BookGen) genSheetSvgsAndPngs(dirRtl bool, lang string) {
 	lores := (os.Getenv("LORES") != "")
 	for i, sv := range me.Sheets {
-		sheetsvgfilepath := me.sheetSvgPath(i, dirRtl, lang, true)
-		me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, lang, true)
-		sheetsvgfilepath = me.sheetSvgPath(i, dirRtl, lang, false)
-		me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, lang, false)
+		if os.Getenv("NOPRINT") == "" {
+			sheetsvgfilepath := me.sheetSvgPath(i, dirRtl, lang, true)
+			me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, lang, true)
+		}
 		if os.Getenv("NOSCREEN") == "" {
+			sheetsvgfilepath := me.sheetSvgPath(i, dirRtl, lang, false)
+			me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, lang, false)
 			sheetpngfilepath := sheetsvgfilepath + ".sh.png"
 			printLn(sheetpngfilepath, "...")
 			imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, iIf(!lores, 0, bookScreenWidth/bookScreenLoResDiv), false, sIf(!lores, "sh_", "sh_lq_"))
@@ -164,7 +166,7 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 				g > svg > svg > text > tspan.std { /*_un_bold_*/ }
 				g > svg > svg > text > tspan.std tspan.b { font-weight: bold !important; }`
 	} else if forPrint {
-		svg += `g > svg > svg > text > tspan { letter-spacing: -0.005em !important; }`
+		svg += `g > svg > svg > text > tspan { letter-spacing: -0.006em !important; }`
 	}
 	svg += `</style>`
 
@@ -439,9 +441,9 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 		w := pgwmm - (bookPrintBorderMmBig + bookPrintBorderMmLil)
 		svg += `<image x="` + itoa(x) + `mm" y="` + itoa(topborder) + `mm" width="` + itoa(w) + `mm" xlink:href="data:image/svg+xml;base64,` + svg2base64(sheetsvgfilepath0, false) + `"/>`
 		if fileStat(sheetsvgfilepath1) != nil {
-			svg += `<image x="` + itoa(x) + `mm" y="` + itoa(iIf(strings.HasPrefix(me.Sheets[i*2].parentSheet.name, "01FROGF"), 47, 50)) + `%" width="` + itoa(w) + `mm" xlink:href="data:image/svg+xml;base64,` + svg2base64(sheetsvgfilepath1, false) + `"/>`
+			svg += `<image x="` + itoa(x) + `mm" y="` + ftoa(fIf(strings.HasPrefix(me.Sheets[i*2].parentSheet.name, "01FROGF"), 47, 50.2), 1) + `%" width="` + itoa(w) + `mm" xlink:href="data:image/svg+xml;base64,` + svg2base64(sheetsvgfilepath1, false) + `"/>`
 		} else if altsvgfilepath := "stuff/" + me.Phrase + "/collage.svg"; fileStat(altsvgfilepath) != nil {
-			svg += `<image x="` + itoa(x) + `mm" y="` + itoa(50) + `%" width="` + itoa(w) + `mm" xlink:href="data:image/svg+xml;base64,` + svg2base64(altsvgfilepath, true) + `"/>`
+			svg += `<image x="` + itoa(x) + `mm" y="51%" width="` + itoa(w) + `mm" xlink:href="data:image/svg+xml;base64,` + svg2base64(altsvgfilepath, true) + `"/>`
 		}
 		svg += "</svg>"
 	}
