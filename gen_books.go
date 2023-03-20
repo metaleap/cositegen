@@ -27,7 +27,10 @@ const (
 	bookPanelsHPadding     = 188
 )
 
-var bookScreenPgBgCol = [3]uint8{0xe7, 0xe2, 0xdb}
+var (
+	bookScreenPgBgCol = [3]uint8{0xe7, 0xe2, 0xdb}
+	bookGenCssRepl    = strings.NewReplacer("./", strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/")
+)
 
 type BookGen struct {
 	Sheets         []*SheetVer
@@ -39,7 +42,6 @@ type BookGen struct {
 
 	year           int
 	facesFilePaths []string
-	cssRepl        *strings.Replacer
 }
 
 func makeBook(flags map[string]bool) {
@@ -48,7 +50,6 @@ func makeBook(flags map[string]bool) {
 		Phrase:     phrase,
 		ShmDirPath: "/dev/shm/" + phrase,
 		OutDirPath: ".books/" + phrase,
-		cssRepl:    strings.NewReplacer("./", strings.TrimSuffix(os.Getenv("PWD"), "/")+"/site/files/"),
 	}
 	rmDir(gen.ShmDirPath)
 	rmDir(gen.OutDirPath)
@@ -131,11 +132,11 @@ func (me *BookGen) genSheetSvgsAndPngs(dirRtl bool, lang string) {
 	for i, sv := range me.Sheets {
 		if os.Getenv("NOPRINT") == "" {
 			sheetsvgfilepath := me.sheetSvgPath(i, dirRtl, lang, true)
-			me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, lang, true)
+			me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, lang, true, "white")
 		}
 		if os.Getenv("NOSCREEN") == "" {
 			sheetsvgfilepath := me.sheetSvgPath(i, dirRtl, lang, false)
-			me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, lang, false)
+			me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, lang, false, "#"+itoh(bookScreenPgBgCol[0])+itoh(bookScreenPgBgCol[1])+itoh(bookScreenPgBgCol[2]))
 			sheetpngfilepath := sheetsvgfilepath + ".sh.png"
 			printLn(sheetpngfilepath, "...")
 			imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, iIf(!lores, 0, bookScreenWidth/bookScreenLoResDiv), false, sIf(!lores, "sh_", "sh_lq_"))
@@ -143,7 +144,7 @@ func (me *BookGen) genSheetSvgsAndPngs(dirRtl bool, lang string) {
 	}
 }
 
-func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string, forPrint bool) {
+func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string, skewForPrint bool, polyBgCol string) {
 	rectinner, lores := sv.data.pxBounds(), (os.Getenv("LORES") != "")
 
 	w, h := rectinner.Dx(), rectinner.Dy()
@@ -151,8 +152,8 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
         xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
         width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
-            <style type="text/css">` + App.Proj.cssFontFaces(me.cssRepl) + `
-				polygon.pt, polygon.ptb { stroke: black; ` + sIf(forPrint, "fill: white;", `fill: #`+itoh(bookScreenPgBgCol[0])+itoh(bookScreenPgBgCol[1])+itoh(bookScreenPgBgCol[2])+";") + ` }
+            <style type="text/css">` + App.Proj.cssFontFaces(bookGenCssRepl) + `
+				polygon.pt, polygon.ptb { stroke: black; fill: ` + polyBgCol + `; }
 				g > svg > svg > text, g > svg > svg > text > tspan {
 					`
 
@@ -165,7 +166,7 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 		svg += `
 				g > svg > svg > text > tspan.std { /*_un_bold_*/ }
 				g > svg > svg > text > tspan.std tspan.b { font-weight: bold !important; }`
-	} else if forPrint {
+	} else if skewForPrint {
 		svg += `g > svg > svg > text > tspan { letter-spacing: -0.006em !important; }`
 	}
 	svg += `</style>`
@@ -456,7 +457,7 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 	svgfull := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
 				width="` + itoa(pgwmm) + `mm" height="` + itoa(svgh) + `mm">
 				<style type="text/css">
-				` + App.Proj.cssFontFaces(me.cssRepl) + `
+				` + App.Proj.cssFontFaces(bookGenCssRepl) + `
 					@page { margin: 0; padding: 0; line-height: unset; size: ` + itoa(pgwmm) + `mm ` + itoa(pghmm) + `mm; }
 					* { margin: 0; padding: 0; line-height: unset; }
 					svg.pg { page-break-after: always; break-after: always;}

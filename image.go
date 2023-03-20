@@ -117,14 +117,17 @@ func imgDownsized(srcImgData io.Reader, onDecoded func() error, maxWidth int, tr
 		return nil
 	}
 
-	if transparent {
-		img := image.NewNRGBA(imgsrc.Bounds())
-		for x := 0; x < imgsrc.Bounds().Max.X; x++ {
-			for y := 0; y < imgsrc.Bounds().Max.Y; y++ {
-				img.SetNRGBA(x, y, color.NRGBA{0, 0, 0, 255 - imgsrc.(*image.Gray).GrayAt(x, y).Y})
+	switch imgsrcgray := imgsrc.(type) {
+	case *image.Gray:
+		if transparent {
+			img := image.NewNRGBA(imgsrc.Bounds())
+			for x := 0; x < imgsrc.Bounds().Max.X; x++ {
+				for y := 0; y < imgsrc.Bounds().Max.Y; y++ {
+					img.SetNRGBA(x, y, color.NRGBA{0, 0, 0, 255 - imgsrcgray.GrayAt(x, y).Y})
+				}
 			}
+			imgsrc = img
 		}
-		imgsrc = img
 	}
 
 	newheight := int(float64(origheight) / (float64(origwidth) / float64(maxWidth)))
