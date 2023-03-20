@@ -311,7 +311,12 @@ func (me *Chapter) storyboardFilePath() string {
 		if info, _ := os.Stat(me.storyboard.fullFilePath); info == nil {
 			me.storyboard.fullFilePath = "/"
 		} else if info.IsDir() {
+			fodpfilepath := filepath.Join(me.storyboard.fullFilePath, "storyboard.fodp")
 			me.storyboard.fullFilePath = filepath.Join(me.storyboard.fullFilePath, "storyboard.json")
+			if statfodp, statjson := fileStat(fodpfilepath), fileStat(me.storyboard.fullFilePath); statfodp != nil &&
+				(statjson == nil || statfodp.ModTime().After(statjson.ModTime())) {
+				_ = osExec(false, []string{"JSON_ONLY=1"}, "sbconv", fodpfilepath)
+			}
 			if fileStat(me.storyboard.fullFilePath) == nil {
 				me.storyboard.fullFilePath = "/"
 			}

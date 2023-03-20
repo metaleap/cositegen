@@ -76,6 +76,9 @@ func convert(srcFilePath string) {
 	if err := os.WriteFile(jsonfilepath, sbToJson(sb), os.ModePerm); err != nil {
 		panic(err)
 	}
+	if os.Getenv("JSON_ONLY") != "" {
+		return
+	}
 
 	dirpath, dirname := filepath.Dir(srcFilePath), filepath.Dir(srcFilePath)
 	if dirname == "" || dirname == "." {

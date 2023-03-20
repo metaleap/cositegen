@@ -28,6 +28,7 @@ type Project struct {
 		Rtl DirMode
 	}
 	Authors map[string]*Author
+	Strips  []string
 	Series  []*Series
 	Books   struct {
 		RepoPath struct {
@@ -261,6 +262,23 @@ func (me *Project) load() (numSheetVers int) {
 			v.baseOn(me.Sheets.Panel.SvgText[svgTextKeys[i-1]])
 			v.cssName = k
 		}
+	}
+
+	for _, strip := range me.Strips {
+		series := Series{Name: strip, UrlName: strip, Title: map[string]string{"": strip}, Priv: true,
+			GenPanelSvgText: me.Sheets.Panel.SvgText["2023-06"]}
+		for done, year := false, 2023; year <= 2323 && !done; year++ {
+			for month := iIf(year == 2023, 3, 1); month <= 12 && !done; month++ {
+				chapdir := itoa(year) + "-" + itoa0pref(month, 2)
+				if done = (dirStat("scans/"+strip+"/"+chapdir) == nil); !done {
+					chapter := Chapter{Name: chapdir, UrlName: chapdir, TitleOrig: chapdir, Year: year,
+						GenPanelSvgText: series.GenPanelSvgText, Priv: true, NumSheetsPerPage: 1,
+						Storyboard: strip + " " + chapdir}
+					series.Chapters = append(series.Chapters, &chapter)
+				}
+			}
+		}
+		me.Series = append(me.Series, &series)
 	}
 
 	for _, series := range me.Series {
