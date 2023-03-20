@@ -100,10 +100,10 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 }
 
 func imgDownsizedPng(srcImgData io.Reader, onDecoded func() error, maxWidth int, transparent bool) []byte {
-	return pngEncode(imgDownsized(srcImgData, onDecoded, maxWidth, transparent))
+	return pngEncode(imgDownsizedReader(srcImgData, onDecoded, maxWidth, transparent))
 }
 
-func imgDownsized(srcImgData io.Reader, onDecoded func() error, maxWidth int, transparent bool) draw.Image {
+func imgDownsizedReader(srcImgData io.Reader, onDecoded func() error, maxWidth int, transparent bool) draw.Image {
 	imgsrc, _, err := image.Decode(srcImgData)
 	if onDecoded != nil {
 		_ = onDecoded() // allow early file-closing for the caller
@@ -111,22 +111,25 @@ func imgDownsized(srcImgData io.Reader, onDecoded func() error, maxWidth int, tr
 	if err != nil {
 		panic(err)
 	}
+	return imgDownsized(imgsrc, maxWidth, transparent)
+}
 
-	origwidth, origheight := imgsrc.Bounds().Max.X, imgsrc.Bounds().Max.Y
+func imgDownsized(imgSrc image.Image, maxWidth int, transparent bool) draw.Image {
+	origwidth, origheight := imgSrc.Bounds().Max.X, imgSrc.Bounds().Max.Y
 	if origwidth <= maxWidth && !transparent {
 		return nil
 	}
 
-	switch imgsrcgray := imgsrc.(type) {
+	switch imgsrcgray := imgSrc.(type) {
 	case *image.Gray:
 		if transparent {
-			img := image.NewNRGBA(imgsrc.Bounds())
-			for x := 0; x < imgsrc.Bounds().Max.X; x++ {
-				for y := 0; y < imgsrc.Bounds().Max.Y; y++ {
+			img := image.NewNRGBA(imgSrc.Bounds())
+			for x := 0; x < imgSrc.Bounds().Max.X; x++ {
+				for y := 0; y < imgSrc.Bounds().Max.Y; y++ {
 					img.SetNRGBA(x, y, color.NRGBA{0, 0, 0, 255 - imgsrcgray.GrayAt(x, y).Y})
 				}
 			}
-			imgsrc = img
+			imgSrc = img
 		}
 	}
 
@@ -137,7 +140,7 @@ func imgDownsized(srcImgData io.Reader, onDecoded func() error, maxWidth int, tr
 	} else {
 		imgdown = image.NewGray(image.Rect(0, 0, maxWidth, newheight))
 	}
-	ImgScaler.Scale(imgdown, imgdown.Bounds(), imgsrc, imgsrc.Bounds(), draw.Over, nil)
+	ImgScaler.Scale(imgdown, imgdown.Bounds(), imgSrc, imgSrc.Bounds(), draw.Over, nil)
 	return imgdown
 }
 

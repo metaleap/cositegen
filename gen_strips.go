@@ -15,6 +15,7 @@ func makeStrips(flags map[string]bool) {
 	var work sync.WaitGroup
 	const force_all = true
 	const polygonBgCol = "#f7f2eb"
+	polygon_bg_col := [3]uint8{0xf7, 0xf2, 0xeb}
 	var bookGen BookGen
 	var did bool
 	for _, strip := range App.Proj.Strips {
@@ -29,7 +30,6 @@ func makeStrips(flags map[string]bool) {
 							defer work.Done()
 							dtName := sv.parentSheet.name
 							dt, err := time.Parse("2006-01-02", dtName)
-							_ = dt
 							if err != nil {
 								panic(err)
 							}
@@ -48,22 +48,29 @@ func makeStrips(flags map[string]bool) {
 							for x := 0; x < img.Bounds().Dx(); x++ {
 								for y := 0; y < img.Bounds().Dy(); y++ {
 									col := img.At(x, y).(color.NRGBA)
-									if col.R == 0xf7 && col.G == 0xf2 && col.B == 0xeb {
+									if col.R == polygon_bg_col[0] && col.G == polygon_bg_col[1] && col.B == polygon_bg_col[2] {
 										col.A = 0
 										img.(draw.Image).Set(x, y, col)
 									}
 								}
 							}
-							pngsrc = pngEncode(img)
-							fileWrite(sheetpngfilepath, pngsrc)
-							pngsrc = imgDownsizedPng(bytes.NewReader(pngsrc), nil, 4096, true)
-							fileWrite(sheetpngfilepath+".4096.png", pngsrc)
-							work.Add(1)
-							go func() {
-								defer work.Done()
+
+							img = imgDownsized(img, 4096, true)
+							if dt.Weekday() == time.Sunday {
+								fileWrite(sheetpngfilepath, pngEncode(img))
 								pngOpt(sheetpngfilepath)
-								pngOpt(sheetpngfilepath + ".4096.png")
-							}()
+							} else {
+								fileWrite(sheetpngfilepath, pngEncode(img.(*image.NRGBA).SubImage(
+									image.Rect(0, 0, img.Bounds().Max.X, img.Bounds().Max.Y/2))))
+
+								sheetpngfilepath2 := filepath.Join(dir, dt.AddDate(0, 0, 1).Format("2006-01-02")+".png")
+								fileWrite(sheetpngfilepath2, pngEncode(img.(*image.NRGBA).SubImage(
+									image.Rect(0, img.Bounds().Max.Y/2, img.Bounds().Max.X, img.Bounds().Max.Y))))
+
+								pngOpt(sheetpngfilepath)
+								pngOpt(sheetpngfilepath2)
+							}
+
 						}(sv)
 					}
 				}
