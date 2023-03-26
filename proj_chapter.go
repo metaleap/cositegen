@@ -27,7 +27,8 @@ type Series struct {
 	Priv            bool
 	BwThreshold     uint8
 
-	author *Author
+	author  *Author
+	isStrip bool
 }
 
 type Chapter struct {
@@ -51,6 +52,7 @@ type Chapter struct {
 	author       *Author
 	sheets       []*Sheet
 	parentSeries *Series
+	isStrip      bool
 	versions     []int64
 	verDtLatest  struct {
 		from  int64

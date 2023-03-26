@@ -130,28 +130,6 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 			}
 		}
 
-		for _, strip := range App.Proj.Strips {
-			rmDir(".build/" + strip)
-			mkDir(".build/" + strip)
-			series := App.Proj.seriesByName(strip)
-			for _, chap := range series.Chapters {
-				for _, sheet := range chap.sheets {
-					for _, sv := range sheet.versions {
-						dir := filepath.Join(sv.data.dirPath, "strip")
-						if fileinfos, err := os.ReadDir(dir); err != nil {
-							panic(err)
-						} else {
-							for _, fileinfo := range fileinfos {
-								if name := fileinfo.Name(); strings.HasSuffix(name, ".png") {
-									fileLinkOrCopy(filepath.Join(dir, name), ".build/"+strip+"/"+name)
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-
 		return "for " + itoa(int(numpngs)) + " PNGs & " + itoa(int(numsvgs)) + " SVGs (" + strSize(totalsize) + ") from " + itoa(int(numpanels)) + " panels in " + itoa(int(numsheets)) + " sheets, max panel pic size: " + strSize(uint64(me.maxPicSize))
 	})
 

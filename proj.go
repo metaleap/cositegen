@@ -265,17 +265,15 @@ func (me *Project) load() (numSheetVers int) {
 	}
 
 	for _, strip := range me.Strips {
-		series := Series{Name: strip, UrlName: strip, Title: map[string]string{"": strip}, Priv: true,
-			GenPanelSvgText: me.Sheets.Panel.SvgText["2023-06"]}
+		series := Series{Name: strip, UrlName: strip, Title: map[string]string{"": strip},
+			Priv: true, isStrip: true}
 		for done, year := false, 2023; year <= 2323 && !done; year++ {
-			for month := iIf(year == 2023, 3, 1); month <= 12 && !done; month++ {
-				chapdir := itoa(year) + "-" + itoa0pref(month, 2)
-				if done = (dirStat("scans/"+strip+"/"+chapdir) == nil); !done {
-					chapter := Chapter{Name: chapdir, UrlName: chapdir, TitleOrig: chapdir, Year: year,
-						GenPanelSvgText: series.GenPanelSvgText, Priv: true, NumSheetsPerPage: 1,
-						Storyboard: strip + " " + chapdir}
-					series.Chapters = append(series.Chapters, &chapter)
-				}
+			chapdir := itoa(year)
+			if done = (dirStat("scans/"+strip+"/"+chapdir) == nil); !done {
+				chapter := Chapter{Name: chapdir, UrlName: chapdir, TitleOrig: chapdir, Year: year,
+					NumSheetsPerPage: 1, Storyboard: strip + "/" + chapdir,
+					Priv: true, isStrip: true}
+				series.Chapters = append(series.Chapters, &chapter)
 			}
 		}
 		me.Series = append(me.Series, &series)

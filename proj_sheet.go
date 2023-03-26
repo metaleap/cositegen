@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"image"
+	"image/color"
+	"image/draw"
 	_ "image/png"
 	"math"
 	"os"
@@ -126,17 +128,18 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	me.data.bwSmallFilePath = filepath.Join(me.data.dirPath, "bwsmall."+itoa(int(me.bwThreshold()))+"."+itoa(int(App.Proj.Sheets.Bw.SmallWidth))+".png")
 	mkDir(me.data.dirPath)
 
-	// the 4 major prep steps
+	// the major prep steps
 	didgraydistr := me.ensureGrayDistr(forceFullRedo || len(me.data.GrayDistr) == 0)
 	didbw, didbwsmall := me.ensureBwSheetPngs(forceFullRedo)
 	didpanels := me.ensurePanelsTree(me.data.PanelsTree == nil || forceFullRedo || didbw)
 	didpanelpics := me.ensurePanelPics(forceFullRedo || didpanels)
 	didhomepic := me.ensureHomePic(forceFullRedo || didbw || didbwsmall || didpanels)
+	didstrips := me.parentSheet.parentChapter.isStrip && me.ensureStrips(forceFullRedo || didbw || didpanels || didpanelpics)
 
 	if shouldsaveprojdata = shouldsaveprojdata || didgraydistr || didpanels || didhomepic; shouldsaveprojdata {
 		App.Proj.save(false)
 	}
-	if didWork = shouldsaveprojdata || didbw || didbwsmall || didpanelpics; didWork {
+	if didWork = shouldsaveprojdata || didbw || didbwsmall || didpanelpics || didstrips; didWork {
 		runtime.GC()
 	}
 
@@ -350,6 +353,53 @@ func (me *SheetVer) ensureHomePic(force bool) (didHomePic bool) {
 		}
 	}
 	return
+}
+
+func (me *SheetVer) ensureStrips(force bool) bool {
+	const polygonBgCol = "#f7f2eb"
+	polygon_bg_col, split := [3]uint8{0xf7, 0xf2, 0xeb}, strings.IndexByte(me.parentSheet.name, '_') > 0
+
+	sheetpngfilepath1, sheetpngfilepath2 := filepath.Join(me.data.dirPath, "strip.1.png"), filepath.Join(me.data.dirPath, "strip.2.png")
+	if force = force || fileStat(sheetpngfilepath1) == nil || bIf(split, fileStat(sheetpngfilepath2) == nil, false); !force {
+		return false
+	}
+
+	sheetsvgfilepath := "/dev/shm/" + filepath.Base(me.fileName) + ".strips.svg"
+	sheetpngfilepath := sheetsvgfilepath + ".png"
+	var bookGen BookGen
+	bookGen.genSheetSvg(me, sheetsvgfilepath, false, App.Proj.Langs[0], false, polygonBgCol)
+	defer os.Remove(sheetsvgfilepath)
+	_ = imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, 0, true, "")
+	defer os.Remove(sheetpngfilepath)
+
+	// set polygon_bg_col pixels to fully transparent
+	pngsrc := fileRead(sheetpngfilepath)
+	img, _, err := image.Decode(bytes.NewReader(pngsrc))
+	if err != nil {
+		panic(err)
+	}
+	for x := 0; x < img.Bounds().Dx(); x++ {
+		for y := 0; y < img.Bounds().Dy(); y++ {
+			col := img.At(x, y).(color.NRGBA)
+			if col.R == polygon_bg_col[0] && col.G == polygon_bg_col[1] && col.B == polygon_bg_col[2] {
+				col.A = 0
+				img.(draw.Image).Set(x, y, col)
+			}
+		}
+	}
+
+	if !split {
+		fileWrite(sheetpngfilepath1, pngEncode(img))
+		pngOpt(sheetpngfilepath1)
+	} else {
+		fileWrite(sheetpngfilepath1, pngEncode(img.(*image.NRGBA).SubImage(
+			image.Rect(0, 0, img.Bounds().Max.X, img.Bounds().Max.Y/2))))
+		fileWrite(sheetpngfilepath2, pngEncode(img.(*image.NRGBA).SubImage(
+			image.Rect(0, img.Bounds().Max.Y/2, img.Bounds().Max.X, img.Bounds().Max.Y))))
+		pngOpt(sheetpngfilepath1)
+		pngOpt(sheetpngfilepath2)
+	}
+	return true
 }
 
 func (me *SheetVer) ensureGrayDistr(force bool) bool {
