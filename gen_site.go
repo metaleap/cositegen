@@ -373,7 +373,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 	me.page.HrefHome = "./" + homename + ".html"
 
 	if chapter == nil {
-		me.page.PageTitle = sIf(me.dummy, "Page Title", (me.textStr("HomeTitle")))
+		me.page.PageTitle = "<span>" + sIf(me.dummy, "Page Title", (me.textStr("HomeTitle"))) + "</span>"
 		me.page.PageTitleTxt = hEsc(me.textStr("HomeTitleTxt"))
 		me.page.PageDesc = sIf(me.dummy, "Page Description", repl.Replace(hEsc(me.textStr("HomeDesc"))))
 		me.page.PageDescTxt = me.page.PageDesc
@@ -404,7 +404,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 			}
 		}
 		homelink := me.namePage(nil, 0, 0, "", "", "", 0, false) + ".html#" + series.Name + "_" + chapter.Name
-		me.page.PageTitle = "<a href='" + homelink + "'><span>" + hEsc(locStr(series.Title, me.lang)) + ":</span></a> " + strings.Join(chaptitlewords, " ")
+		me.page.PageTitle = "<a href='" + homelink + "'><span>" + hEsc(locStr(series.Title, me.lang)) + ":</span></a> <span>" + strings.Join(chaptitlewords, " ") + "</span>"
 		me.page.PageTitleTxt = hEsc(locStr(series.Title, me.lang)) + ": " + hEsc(locStr(chapter.Title, me.lang))
 		if len(chapter.SheetsPerPage) > 1 {
 			me.page.PageTitleTxt += " (" + itoa(pageNr) + "/" + itoa(len(chapter.SheetsPerPage)) + ")"
@@ -836,7 +836,7 @@ func (me *siteGen) genPageExecAndWrite(name string, chapter *Chapter, totalSizeR
 		me.page.LangsList = "<span style='display: none;'>" + me.page.LangsList + "</span>"
 	}
 	if me.page.PageTitleTxt == "" {
-		me.page.PageTitleTxt = me.page.PageTitle
+		panic(me.page.PageTitle)
 	}
 	if me.dirRtl {
 		me.page.HrefDirCur, me.page.HrefDirAlt = me.page.HrefDirRtl, me.page.HrefDirLtr

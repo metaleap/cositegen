@@ -388,16 +388,20 @@ func (me *SheetVer) ensureStrips(force bool) bool {
 		}
 	}
 
-	if !split {
+	if png_opt := (os.Getenv("NOOPT") == ""); !split {
 		fileWrite(sheetpngfilepath1, pngEncode(img))
-		pngOpt(sheetpngfilepath1)
+		if png_opt {
+			pngOpt(sheetpngfilepath1)
+		}
 	} else {
 		fileWrite(sheetpngfilepath1, pngEncode(img.(*image.NRGBA).SubImage(
 			image.Rect(0, 0, img.Bounds().Max.X, img.Bounds().Max.Y/2))))
 		fileWrite(sheetpngfilepath2, pngEncode(img.(*image.NRGBA).SubImage(
 			image.Rect(0, img.Bounds().Max.Y/2, img.Bounds().Max.X, img.Bounds().Max.Y))))
-		pngOpt(sheetpngfilepath1)
-		pngOpt(sheetpngfilepath2)
+		if png_opt {
+			pngOpt(sheetpngfilepath1)
+			pngOpt(sheetpngfilepath2)
+		}
 	}
 	return true
 }

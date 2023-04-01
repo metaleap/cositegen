@@ -39,6 +39,9 @@ func (me *Chapter) loadStoryboardJson() {
 	jsonLoad(me.storyboardFilePath(), nil, &sb)
 
 	for _, page := range sb {
+		if len(page.Panels) == 0 && len(page.Balloons) == 0 {
+			continue
+		}
 		pg := ChapterStoryboardPage{name: page.Name, canDualLang: true, panels: page.Panels}
 		for _, txt := range page.Balloons {
 			pg.textBoxes = append(pg.textBoxes, ChapterStoryboardPageTextBox{
