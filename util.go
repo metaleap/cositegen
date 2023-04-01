@@ -30,6 +30,11 @@ type FilePathsSortingByFileSize []string
 func (me FilePathsSortingByFileSize) Len() int          { return len(me) }
 func (me FilePathsSortingByFileSize) Swap(i int, j int) { me[i], me[j] = me[j], me[i] }
 func (me FilePathsSortingByFileSize) Less(i int, j int) bool {
+	if strings.HasPrefix(me[i], "scans/") {
+		return true
+	} else if strings.HasPrefix(me[j], "scans/") {
+		return false
+	}
 	fi1, fi2 := fileStat(me[i]), fileStat(me[j])
 	return fi1 == nil || (fi2 != nil && fi1.Size() > fi2.Size())
 }

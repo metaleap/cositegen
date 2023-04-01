@@ -261,26 +261,32 @@ func (me *siteGen) genOrCopyPanelPics() (numSvgs uint32, numPngs uint32, numShee
 	atomic.StoreUint32(&numPanels, 0)
 	atomic.StoreUint64(&totalSize, 0)
 	for _, series := range App.Proj.Series {
-		if series.Priv {
-			continue
-		}
 		for _, chapter := range series.Chapters {
-			if chapter.Priv {
-				continue
-			}
 			for _, sheet := range chapter.sheets {
-				work.Add(1)
-				go func(chapter *Chapter, sheet *Sheet) {
-					for _, sv := range sheet.versions {
-						nsvgs, npngs, npnls, totalsize := me.genOrCopyPanelPicsOf(sv)
-						atomic.AddUint32(&numSheets, 1)
-						atomic.AddUint32(&numPngs, npngs)
-						atomic.AddUint32(&numPanels, npnls)
-						atomic.AddUint32(&numSvgs, nsvgs)
-						atomic.AddUint64(&totalSize, totalsize)
+				if !(chapter.Priv || series.Priv) {
+					work.Add(1)
+					go func(chapter *Chapter, sheet *Sheet) {
+						for _, sv := range sheet.versions {
+							nsvgs, npngs, npnls, totalsize := me.genOrCopyPanelPicsOf(sv)
+							atomic.AddUint32(&numSheets, 1)
+							atomic.AddUint32(&numPngs, npngs)
+							atomic.AddUint32(&numPanels, npnls)
+							atomic.AddUint32(&numSvgs, nsvgs)
+							atomic.AddUint64(&totalSize, totalsize)
+						}
+						work.Done()
+					}(chapter, sheet)
+				}
+				sv := sheet.versions[0]
+				if pngfilepath := filepath.Join(sv.data.dirPath, "strip.1.png"); fileStat(pngfilepath) != nil {
+					outfilepathfrag := ".build/" + App.Proj.Site.Gen.PicDirName + "/" + sv.parentSheet.parentChapter.parentSeries.Name + "_" + sv.parentSheet.parentChapter.Name + "_" + sv.parentSheet.name
+					fileLinkOrCopy(pngfilepath, outfilepathfrag+".1.png")
+					atomic.AddUint32(&numPngs, 1)
+					if pngfilepath = filepath.Join(sv.data.dirPath, "strip.2.png"); fileStat(pngfilepath) != nil {
+						fileLinkOrCopy(pngfilepath, outfilepathfrag+".2.png")
+						atomic.AddUint32(&numPngs, 1)
 					}
-					work.Done()
-				}(chapter, sheet)
+				}
 			}
 		}
 	}
@@ -342,7 +348,6 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 		fileLinkOrCopy(sv.data.HomePic, filepath.Join(".build", App.Proj.Site.Gen.PicDirName, homepicname))
 		atomic.AddUint32(&numPngs, 1)
 	}
-
 	work.Wait()
 	return
 }
@@ -930,14 +935,15 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 					if chapter.UrlJumpName != "" && pgnr == 1 {
 						pgname = chapter.UrlJumpName + sIf(me.lang == App.Proj.Langs[0], "", "."+me.lang)
 					}
-					xml += `<link href="http://` + App.Proj.Site.Host + "/" + pgname + `.html"/>`
+					xml += `<link href="https://` + App.Proj.Site.Host + "/" + pgname + `.html"/>`
 					xml += `<author><name>` + App.Proj.Site.Host + `</name></author>`
-					xml += `<content type="text">` + strings.NewReplacer(
+					xml += `<content type="text">`
+					content := strings.NewReplacer(
 						"%NUMSVS%", itoa(numsheets),
 						"%NUMPNL%", itoa(numpanels),
 						"%NUMPGS%", itoa(len(pages)),
-					).Replace(locStr(af.ContentTxt, me.lang)) + `</content>`
-					xmls = append(xmls, xml+`</entry>`)
+					).Replace(locStr(af.ContentTxt, me.lang))
+					xmls = append(xmls, xml+content+`</content></entry>`)
 				}
 			}
 		}
@@ -946,7 +952,7 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 		xml := "<entry><updated>" + bookpub.PubDate + "T11:22:44Z</updated>"
 		xml += `<title>Album: ` + xEsc(bookpub.Title) + `</title>`
 		xml += "<id>info:" + contentHashStr([]byte(strings.Join(bookpub.Series, "+")+"_"+bookpub.RepoName+"_"+bookpub.PubDate+"_"+"_"+me.lang)) + "</id>"
-		xml += `<link href="http://` + App.Proj.Site.Host + "/" + me.namePage(nil, 0, 0, "", "", "", 0, false) + `.html#book_` + bookpub.RepoName + `"/>`
+		xml += `<link href="https://` + App.Proj.Site.Host + "/" + me.namePage(nil, 0, 0, "", "", "", 0, false) + `.html#book_` + bookpub.RepoName + `"/>`
 		xml += `<author><name>` + App.Proj.Site.Host + `</name></author>`
 		xml += `<content type="text">` + strings.NewReplacer(
 			"%REPONAME%", bookpub.RepoName,
@@ -956,7 +962,7 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 	if len(xmls) > 0 && tlatest != "" {
 		filename := af.Name + "." + me.lang + ".atom"
 		s := `<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="` + me.lang + `">`
-		s += `<updated>` + tlatest + `Z</updated><title>` + hEsc(App.Proj.Site.Title) + `</title><link href="http://` + App.Proj.Site.Host + `"/><link rel="self" href="http://` + App.Proj.Site.Host + `/` + filename + `"/><id>http://` + App.Proj.Site.Host + "/</id>"
+		s += `<updated>` + tlatest + `Z</updated><title>` + hEsc(App.Proj.Site.Title) + `</title><link href="https://` + App.Proj.Site.Host + `"/><link rel="self" href="https://` + App.Proj.Site.Host + `/` + filename + `"/><id>http://` + App.Proj.Site.Host + "/</id>"
 		s += "\n" + strings.Join(xmls, "\n") + "\n</feed>"
 		*totalSizeRec = *totalSizeRec + uint64(len(s))
 		fileWrite(".build/"+af.Name+"."+me.lang+".atom", []byte(s))

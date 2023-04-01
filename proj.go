@@ -22,6 +22,7 @@ type Project struct {
 		SizeHint           int
 		ExcludeInSiteGen   bool
 		HomeAndFeedDefault bool
+		StripDefault       bool
 	}
 	DirModes struct {
 		Ltr DirMode

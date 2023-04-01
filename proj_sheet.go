@@ -356,6 +356,10 @@ func (me *SheetVer) ensureHomePic(force bool) (didHomePic bool) {
 }
 
 func (me *SheetVer) ensureStrips(force bool) bool {
+	if !me.haveAnyTexts() {
+		return false
+	}
+
 	const polygonBgCol = "#f7f2eb"
 	polygon_bg_col, split := [3]uint8{0xf7, 0xf2, 0xeb}, strings.IndexByte(me.parentSheet.name, '_') > 0
 
@@ -385,6 +389,13 @@ func (me *SheetVer) ensureStrips(force bool) bool {
 				col.A = 0
 				img.(draw.Image).Set(x, y, col)
 			}
+		}
+	}
+
+	for _, q := range App.Proj.Qualis {
+		if q.StripDefault {
+			img = imgDownsized(img, q.SizeHint, true)
+			break
 		}
 	}
 
