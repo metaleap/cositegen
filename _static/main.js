@@ -44,7 +44,7 @@ function onDualIntTextInputKeyDown(evt) {
     }
 }
 
-function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm, panelSvgTextClsBoxPoly, panelSvgTextBoxPolyStrokeWidthCm, tspanSubTagStyles) {
+function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm, panelSvgTextClsBoxPoly, panelSvgTextBoxPolyStrokeWidthCm, panelSvgTextBoxPolyTopPx, tspanSubTagStyles) {
     const pid = "p" + panelIdx;
     let innerhtml = "";
     const pxfont = parseInt(px1cm * svgTxtFontSizeCmA4);
@@ -114,8 +114,14 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm
                 innerhtml += "<polygon points='" + poly.join(' ') + "' class='" + (isBalloon ? (panelSvgTextClsBoxPoly + " " + panelSvgTextClsBoxPoly + "b") : panelSvgTextClsBoxPoly) + "' stroke-width='" + mmh + "px'/>";
             }
 
-            innerhtml += "<svg x='" + rx + "' y='" + ry + "'><text x='0' y='0' style='font-size: " + pxfont + "px' transform='" + document.getElementById(pid + "t" + i + "_transform").value.replace(/\n/g, " ").trim() + "'>";
-            innerhtml += "<tspan style='" + document.getElementById(pid + "t" + i + "_style").value.replace(/\n/g, " ").trim() + "'>";
+            innerhtml += "<svg x='" + rx + "' y='" + ry + "'><text x='0' y='" + (borderandfill ? panelSvgTextBoxPolyTopPx : 0) + "' style='font-size: " + pxfont + "px' transform='" + document.getElementById(pid + "t" + i + "_transform").value.replace(/\n/g, " ").trim() + "'>";
+            let tspanCls = [],
+                tspanStyle = document.getElementById(pid + "t" + i + "_style").value.replace(/\n/g, " ").trim();
+            if (tspanStyle.startsWith('.')) {
+                tspanCls = tspanStyle.substring(1).split('.');
+                tspanStyle = "";
+            }
+            innerhtml += "<tspan style='" + tspanStyle + "'>";
             for (let line of ptext.split('\n')) {
                 if ((!line) || line.length == 0)
                     line = '&nbsp;';
@@ -128,7 +134,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm
                                 .replace("</" + k + ">", "</tspan>");
                         }
                 }
-                innerhtml += "<tspan dy='" + (("_storytitle" == document.getElementById(pid + "t" + i + "_style").value) ? (1.23 * pxline) : pxline) + "' x='" + (borderandfill ? (px1cm * 0.44) : 0) + "'>"
+                innerhtml += "<tspan class='" + tspanCls.join(' ') + "' dy='" + (("_storytitle" == tspanStyle) ? (1.23 * pxline) : pxline) + "' x='" + (borderandfill ? (px1cm * 0.44) : 0) + "'>"
                     + line
                         .replace(/<b>/g, "<tspan font-weight='bold'>")
                         .replace(/<u>/g, "<tspan text-decoration='underline'>")

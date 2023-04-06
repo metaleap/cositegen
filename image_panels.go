@@ -9,7 +9,7 @@ import (
 
 const panelMinDiv = 11
 
-var DeNewLineRepl = strings.NewReplacer("\n", " ")
+var DeNewlineRepl = strings.NewReplacer("\n", " ")
 var svgRepl *strings.Replacer
 var svgTxtCounter int
 
@@ -164,15 +164,19 @@ func (me *ImgPanel) detectSubPanels(srcImg *image.Gray) {
 	}
 }
 
-func (me *ImgPanel) iter(onPanel func(*ImgPanel)) {
+func (me *ImgPanel) each(onPanel func(*ImgPanel)) {
+	me.forEach(false, onPanel)
+}
+
+func (me *ImgPanel) forEach(rev bool, onPanel func(*ImgPanel)) {
 	assert(len(me.SubCols) == 0 || len(me.SubRows) == 0)
 	if len(me.SubRows) > 0 {
-		for i := range me.SubRows {
-			me.SubRows[i].iter(onPanel)
+		for i := iIf(rev, len(me.SubRows)-1, 0); bIf(rev, i >= 0, i < len(me.SubRows)); i = iIf(rev, i-1, i+1) {
+			me.SubRows[i].each(onPanel)
 		}
 	} else if len(me.SubCols) > 0 {
-		for i := range me.SubCols {
-			me.SubCols[i].iter(onPanel)
+		for i := iIf(rev, len(me.SubCols)-1, 0); bIf(rev, i >= 0, i < len(me.SubCols)); i = iIf(rev, i-1, i+1) {
+			me.SubCols[i].each(onPanel)
 		}
 	} else {
 		onPanel(me)
@@ -227,7 +231,7 @@ func (me *ImgPanel) nextPanel(parent *Chapter) (foundSheet *SheetVer, foundPanel
 			_ = sv.ensurePrep(false, false)
 			if sv.data != nil && sv.data.PanelsTree != nil {
 				pidx := 0
-				sv.data.PanelsTree.iter(func(panel *ImgPanel) {
+				sv.data.PanelsTree.each(func(panel *ImgPanel) {
 					if panel == me {
 						pastme, pgnrme = true, pgnr
 					} else if pastme && foundPanel == nil &&
@@ -245,8 +249,9 @@ func (me *ImgPanel) nextPanel(parent *Chapter) (foundSheet *SheetVer, foundPanel
 	return
 }
 
-func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId string, lineX int, fontSizeCmA4 float64, perLineDyCmA4 float64, forHtml bool, forEbook bool) (s string) {
-	isstorytitle := (pta.SvgTextTspanStyleAttr == "_storytitle")
+func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId string, lineX int, fontSizeCmA4 float64, perLineDyCmA4 float64, forHtml bool, forEbook bool, isBorderAndFill bool) (s string) {
+	svgTxtCounter++
+	svgtext, isstorytitle := me.parentSheet.parentChapter.GenPanelSvgText, (pta.SvgTextTspanStyleAttr == "_storytitle")
 	if svgRepl == nil {
 		repls := []string{
 			" ", "&nbsp;",
@@ -257,38 +262,44 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 			"&lt;b&gt;", "<tspan class='b' font-weight='bold'>", // ...with the needles in...
 			"&lt;u&gt;", "<tspan class='u' text-decoration='underline'>", // ...BookGen.genPrintVersion/svg2base64
 		}
-		for _, tagname := range sortedMapKeys(me.parentSheet.parentChapter.GenPanelSvgText.TspanSubTagStyles) {
+		for _, tagname := range sortedMapKeys(svgtext.TspanSubTagStyles) {
 			repls = append(repls,
-				"&lt;"+tagname+"&gt;", "<tspan style='"+me.parentSheet.parentChapter.GenPanelSvgText.TspanSubTagStyles[tagname]+"'>",
+				"&lt;"+tagname+"&gt;", "<tspan style='"+svgtext.TspanSubTagStyles[tagname]+"'>",
 				"&lt;/"+tagname+"&gt;", "</tspan>",
 			)
 		}
 		svgRepl = strings.NewReplacer(repls...)
 	}
 
-	pxfont, pxline := int(me.data.PxCm*fontSizeCmA4), int(me.data.PxCm*perLineDyCmA4)
-	svgTxtCounter++
+	pxfont, pxline, tspanstyle, tspancls := int(me.data.PxCm*fontSizeCmA4), int(me.data.PxCm*perLineDyCmA4), pta.SvgTextTspanStyleAttr, []string{svgtext.TspanCssCls}
+	if strings.HasPrefix(tspanstyle, ".") {
+		tspanstyle, tspancls = "", append(tspancls, strings.Split(tspanstyle[1:], ".")...)
+	}
 
 	if forHtml {
 		s += sIf(isstorytitle, ``, `<use id='_t_`+itoa(svgTxtCounter)+`' xlink:href="t.`+me.parentSheet.parentChapter.parentSeries.Name+`.`+me.parentSheet.parentChapter.Name+`.`+langId+`.svg#`+me.id+`_`+itoa(pidx)+`t`+itoa(tidx+1)+`"/>`)
 	} else {
-		mozscale := me.parentSheet.parentChapter.GenPanelSvgText.MozScale > 0.01 && !forEbook
+		mozscale := svgtext.MozScale > 0.01 && !forEbook
 		if mozscale {
 			s += `<svg class="mz" width="` + itoa(me.data.PanelsTree.Rect.Dx()) + `">`
 		}
-		s += "<text style='font-size: " + itoa(pxfont) + "px;' transform='" + trim(DeNewLineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
-		ts := "<tspan style='" + trim(DeNewLineRepl.Replace(pta.SvgTextTspanStyleAttr)) + "'" + sIf(isstorytitle || strings.Contains(pta.SvgTextTspanStyleAttr, "font-family"), "", " class='std'") + ">"
-		svgcss := me.parentSheet.parentChapter.GenPanelSvgText
+		s += "<text " + sIf((!isBorderAndFill) || (svgtext.BoxPolyTopPx == 0), "", "y='"+itoa(svgtext.BoxPolyTopPx)+"'") + " style='font-size: " + itoa(pxfont) + "px;' transform='" + trim(DeNewlineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
+		ts := "<tspan style='" + trim(DeNewlineRepl.Replace(tspanstyle)) + "' class='" + sIf(isstorytitle || strings.Contains(tspanstyle, "font-family"), "", "std") + "'>"
 		for _, ln := range strings.Split(svgRepl.Replace(hEsc(locStr(pta.Data, langId))), hEscs['\n']) {
 			if ln == "" {
 				ln = "&nbsp;"
 			}
 			ln += hEscs['\n']
-			ts += "<tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'"
-			if svgcss.TspanCssCls != "" {
-				ts += " class='" + svgcss.TspanCssCls + "'"
+			adhoc_css := ""
+			for _, cls := range tspancls {
+				if css := svgtext.Css["."+cls]; len(css) > 0 {
+					for k, v := range css {
+						adhoc_css += k + ":" + v + ";"
+					}
+				}
 			}
-			ts += ">" + ln + "</tspan>"
+			ts += "<tspan dy='" + itoa(pxline) + "' x='" + itoa(lineX) + "'" +
+				" style='" + adhoc_css + "' class='" + strings.Join(tspancls, " ") + "'" + ">" + ln + "</tspan>"
 		}
 		ts += "</tspan>"
 		s += ts + "</text>"

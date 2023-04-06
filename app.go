@@ -251,10 +251,12 @@ func pngOpt(pngFilePath string) bool {
 					fileWrite(svgfilepath, []byte(strings.ReplaceAll(string(svg), curfilehash, newfilehash)))
 				}
 			}
-			if os.Getenv("NOCRASH") == "" {
+			if msg := "relinked hash from " + curfilehash + " to " + newfilehash; os.Getenv("NOCRASH") == "" {
 				_ = exec.Command("beepintime", "1ns").Start()
 				App.Proj.save(os.Getenv("NOGUI") != "")
-				panic("relinked hash from " + curfilehash + " to " + newfilehash + " — intentional crash, restart manually")
+				panic(msg + " — intentional crash, restart manually")
+			} else {
+				println(msg)
 			}
 		} else if strings.Contains(pngFilePath, "/bwsmall.") && strings.HasSuffix(pngFilePath, "."+itoa(int(App.Proj.Sheets.Bw.SmallWidth))+".png") {
 			if hashid := filepath.Base(filepath.Dir(pngFilePath)); App.Proj.data.Sv.ById != nil {

@@ -42,6 +42,10 @@ type BookGen struct {
 
 	year           int
 	facesFilePaths []string
+	perRow         struct {
+		vertText  string
+		firstOnly bool
+	}
 }
 
 func makeBook(flags map[string]bool) {
@@ -154,7 +158,9 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
         width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
             <style type="text/css">` + App.Proj.cssFontFaces(bookGenCssRepl) + `
 				polygon.pt, polygon.ptb { stroke: black; fill: ` + polyBgCol + `; }
-				g > svg > svg > text, g > svg > svg > text > tspan {
+				tspan.sidetxt { font-size: 177px; stroke-width: 22px !important; }
+				text.sidetxt { transform: rotate(-90deg); }
+				g > svg > svg > text, g > svg > svg > text > tspan, tspan.sidetxt {
 					`
 
 	for _, k := range sortedMapKeys(svgtxt.Css[""]) {
@@ -178,8 +184,13 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 	}
 
 	pidx, qidx := 0, iIf(lores, 0, App.Proj.maxQualiIdx(false))
-	sv.data.PanelsTree.iter(func(p *ImgPanel) {
+	rowmids, ymid := map[int]int{}, -1
+	sv.data.PanelsTree.each(func(p *ImgPanel) {
 		px, py, pw, ph := p.Rect.Min.X+p.recenteredXOffset, p.Rect.Min.Y-rectinner.Min.Y, p.Rect.Dx(), p.Rect.Dy()
+		if py != ymid && (len(rowmids) == 0 || !me.perRow.firstOnly) {
+			ymid = py
+			rowmids[py+(ph/2)] = px + pw + 128 + 6
+		}
 		tx, gid := px, "pnl"+itoa(pidx)
 		if dirRtl {
 			tx = w - pw - px
@@ -202,6 +213,13 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 		svg += "\n</g>\n\n"
 		pidx++
 	})
+
+	if me.perRow.vertText != "" {
+		for y, x := range rowmids {
+			svg += `<g x="0" y="0" transform="translate(` + itoa(x) + ` ` + itoa(y) + `)"><text class="sidetxt"><tspan dx="0" dy="0" class="sidetxt">` + xEsc(me.perRow.vertText) + `</tspan></text></g>`
+		}
+	}
+
 	svg += `</svg>`
 	fileWrite(outFilePath, []byte(svg))
 }
@@ -574,7 +592,7 @@ func (me *BookGen) facesPicPaths() []string {
 		for _, sv := range me.Sheets {
 			var svimg *image.Gray
 			var pidx int
-			sv.data.PanelsTree.iter(func(p *ImgPanel) {
+			sv.data.PanelsTree.each(func(p *ImgPanel) {
 				for i, area := range sv.panelFaceAreas(pidx) {
 					rect, facefilepath := area.Rect, ".ccache/.pngtmp/face_"+sv.id+itoa0pref(pidx, 2)+itoa0pref(i, 2)+".png"
 					if fileStat(facefilepath) == nil {

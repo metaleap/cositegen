@@ -304,7 +304,7 @@ func guiSheetScan(chapter *Chapter, fv func(string) string) (s string) {
 func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s string) {
 	_ = sv.ensurePrep(false, false)
 	numpanels, maxpanelwidth, bwsrc, chap := 0, 0, fv("srcpx"), sv.parentSheet.parentChapter
-	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
+	sv.data.PanelsTree.each(func(panel *ImgPanel) {
 		numpanels++
 		if w := panel.Rect.Dx(); w > maxpanelwidth {
 			maxpanelwidth = w
@@ -474,6 +474,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	}
 	s += guiHtmlInput("number", "numtextrects", numtextrects, A{"min": "1", "max": itoa(App.Proj.Sheets.Panel.MaxNumTextAreas), "onchange": "doPostBack('numtextrects')"})
 	s += "/" + itoa(App.Proj.Sheets.Panel.MaxNumTextAreas) + " text-rect editor/s</li></ul>"
+	s += `<input type="checkbox" class="chkcols" id="chk_cols" style="display: none"/>`
 	if wmax := 480; maxpanelwidth > wmax {
 		zoomdiv = float64(wmax) / float64(maxpanelwidth)
 		zoom = int(100.0 * zoomdiv)
@@ -484,7 +485,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		*shouldSaveMeta, savebtnpressed, App.Proj.data.Sv.textRects[sv.id] = true, true, nil
 	}
 	pidx = 0
-	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
+	sv.data.PanelsTree.each(func(panel *ImgPanel) {
 		rect, pid := panel.Rect, "p"+itoa(pidx)
 		w, h := rect.Dx(), rect.Dy()
 		cfgdisplay := "none"
@@ -549,7 +550,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		for _, lang := range App.Proj.Langs {
 			langs = append(langs, lang)
 		}
-		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Dx()) + ", " + itoa(panel.Rect.Dy()) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + ftoa(sv.data.PxCm, 8) + ", '" + chap.GenPanelSvgText.ClsBoxPoly + "', " + ftoa(chap.GenPanelSvgText.BoxPolyStrokeWidthCm, 8) + ", " + toJsonStr(chap.GenPanelSvgText.TspanSubTagStyles) + ");"
+		jsrefr := "refreshPanelRects(" + itoa(pidx) + ", " + itoa(panel.Rect.Min.X) + ", " + itoa(panel.Rect.Min.Y) + ", " + itoa(panel.Rect.Dx()) + ", " + itoa(panel.Rect.Dy()) + ", [\"" + strings.Join(langs, "\", \"") + "\"], " + ftoa(sv.data.PxCm, 8) + ", '" + chap.GenPanelSvgText.ClsBoxPoly + "', " + ftoa(chap.GenPanelSvgText.BoxPolyStrokeWidthCm, 8) + ", " + itoa(chap.GenPanelSvgText.BoxPolyTopPx) + ", " + toJsonStr(chap.GenPanelSvgText.TspanSubTagStyles) + ");"
 		btnhtml := guiHtmlButton(pid+"save", "Save changes (all panels)", A{"onclick": "doPostBack(\"" + pid + "save\")"})
 
 		numpanelareas := len(sv.panelAreas(pidx))
@@ -557,6 +558,7 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 		for i, lang := range App.Proj.Langs {
 			s += "&nbsp;&nbsp;<a href='javascript:refreshAllPanelRects(" + itoa(numpanels) + "," + itoa(i) + ",\"" + lang + "\");'><b>" + lang + "</b></a>"
 		}
+		s += `&nbsp;&nbsp;color-code texts:&nbsp;&nbsp;<a href='javascript:document.getElementById("chk_cols").checked=true;'>on</a>&nbsp;&nbsp;<a href='javascript:document.getElementById("chk_cols").checked=false;'>off</a>`
 		s += "</h4><div>Panel coords: " + rect.String() + "</div>"
 
 		s += "<table><tr><td>"

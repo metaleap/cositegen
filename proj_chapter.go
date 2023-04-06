@@ -65,9 +65,10 @@ type Chapter struct {
 }
 
 type PanelSvgTextGen struct {
-	BoxPolyStrokeWidthCm float64
 	ClsBoxPoly           string
+	BoxPolyStrokeWidthCm float64
 	BoxPolyDxCmA4        float64
+	BoxPolyTopPx         int
 	PerLineDyCmA4        float64
 	FontSizeCmA4         float64
 	MozScale             float64

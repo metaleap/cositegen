@@ -136,7 +136,7 @@ func (me *SheetVer) ensurePrep(fromBgPrep bool, forceFullRedo bool) (didWork boo
 	didhomepic := me.ensureHomePic(forceFullRedo || didbw || didbwsmall || didpanels)
 	didstrips := me.parentSheet.parentChapter.isStrip && me.ensureStrips(forceFullRedo || didbw || didpanels || didpanelpics)
 
-	if shouldsaveprojdata = shouldsaveprojdata || didgraydistr || didpanels || didhomepic; shouldsaveprojdata {
+	if shouldsaveprojdata = shouldsaveprojdata || didgraydistr || didpanels || didhomepic || didstrips; shouldsaveprojdata {
 		App.Proj.save(false)
 	}
 	if didWork = shouldsaveprojdata || didbw || didbwsmall || didpanelpics || didstrips; didWork {
@@ -195,7 +195,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 	if bgsrcfile != nil {
 		pidx, bgsvgsrc := 0, string(fileRead(bgsrcpath))
 		me.data.hasBgCol = true
-		me.data.PanelsTree.iter(func(p *ImgPanel) {
+		me.data.PanelsTree.each(func(p *ImgPanel) {
 			gid, dstfilepath := "pnl"+itoa(pidx), filepath.Join(me.data.dirPath, "bg"+itoa(pidx)+".png")
 			if s, svg := "", bgsvgsrc; force || (nil == fileStat(dstfilepath)) {
 				_ = os.Remove(dstfilepath)
@@ -309,7 +309,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 
 	var pidx int
 	var work sync.WaitGroup
-	me.data.PanelsTree.iter(func(panel *ImgPanel) {
+	me.data.PanelsTree.each(func(panel *ImgPanel) {
 		work.Add(1)
 		go func(pidx int) {
 			defer work.Done()
@@ -371,6 +371,7 @@ func (me *SheetVer) ensureStrips(force bool) bool {
 	sheetsvgfilepath := "/dev/shm/" + filepath.Base(me.fileName) + ".strips.svg"
 	sheetpngfilepath := sheetsvgfilepath + ".png"
 	var bookGen BookGen
+	bookGen.perRow.firstOnly, bookGen.perRow.vertText = !split, me.parentSheet.parentChapter.parentSeries.Name+"@"+strings.ReplaceAll(App.Proj.Site.Host, ".", "·")
 	bookGen.genSheetSvg(me, sheetsvgfilepath, false, App.Proj.Langs[0], false, polygonBgCol)
 	defer os.Remove(sheetsvgfilepath)
 	_ = imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, 0, true, "")
@@ -447,7 +448,7 @@ func (me *SheetVer) cmsToPxs(fs ...float64) (ret []int) {
 
 func (me *SheetVer) panel(idx int) (pnl *ImgPanel) {
 	pidx := 0
-	me.data.PanelsTree.iter(func(p *ImgPanel) {
+	me.data.PanelsTree.each(func(p *ImgPanel) {
 		if pidx == idx {
 			pnl = p
 		}
@@ -458,7 +459,7 @@ func (me *SheetVer) panel(idx int) (pnl *ImgPanel) {
 
 func (me *SheetVer) panelAt(x int, y int) (pnl *ImgPanel, idx int) {
 	pidx := 0
-	me.data.PanelsTree.iter(func(p *ImgPanel) {
+	me.data.PanelsTree.each(func(p *ImgPanel) {
 		if pnl == nil && p.Rect.Min.X <= x && p.Rect.Max.X >= x &&
 			p.Rect.Min.Y <= y && p.Rect.Max.Y >= y {
 			pnl, idx = p, pidx
@@ -471,7 +472,7 @@ func (me *SheetVer) panelAt(x int, y int) (pnl *ImgPanel, idx int) {
 func (me *SheetVer) panelMostCoveredBy(r image.Rectangle) (pnl *ImgPanel, idx int) {
 	pidx, lastperc := 0, 0.0
 	idx = -1
-	me.data.PanelsTree.iter(func(p *ImgPanel) {
+	me.data.PanelsTree.each(func(p *ImgPanel) {
 		if r.In(p.Rect) {
 			pnl, idx, lastperc = p, pidx, 100.0
 		} else if r.Overlaps(p.Rect) {
@@ -522,7 +523,7 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 			width="` + itoa(pw) + `" height="` + itoa(ph) + `" viewBox="0 0 ` + itoa(pw) + ` ` + itoa(ph) + `">
 		`
 		pidx := 0
-		me.data.PanelsTree.iter(func(p *ImgPanel) {
+		me.data.PanelsTree.each(func(p *ImgPanel) {
 			x, y, w, h := float64(p.Rect.Min.X)*scale, float64(p.Rect.Min.Y)*scale, float64(p.Rect.Dx())*scale, float64(p.Rect.Dy())*scale
 			gid := "pnl" + itoa(pidx)
 			svg += `<g id="` + gid + `" inkscape:label="` + gid + `" inkscape:groupmode="layer" transform="translate(` + itoa(int(x)) + ` ` + itoa(int(y)) + `)">`
@@ -554,7 +555,7 @@ func (me *SheetVer) panelAreas(panelIdx int) []ImgPanelArea {
 
 func (me *SheetVer) hasFaceAreas() (ret bool) {
 	var pidx int
-	me.data.PanelsTree.iter(func(p *ImgPanel) {
+	me.data.PanelsTree.each(func(p *ImgPanel) {
 		ret = ret || len(me.panelFaceAreas(pidx)) > 0
 		pidx++
 	})
@@ -583,7 +584,7 @@ func (me *SheetVer) panelCount() (numPanels int, numPanelAreas int) {
 		numPanels, numPanelAreas = numPanels+1, numPanelAreas+len(areas)
 	}
 	if numPanels == 0 && me.data != nil && me.data.PanelsTree != nil {
-		me.data.PanelsTree.iter(func(p *ImgPanel) {
+		me.data.PanelsTree.each(func(p *ImgPanel) {
 			numPanels++
 		})
 	}
@@ -696,14 +697,14 @@ func (me *SheetVer) genTextSvgForPanel(panelIdx int, panel *ImgPanel, lang strin
 			s += "' class='" + me.parentSheet.parentChapter.GenPanelSvgText.ClsBoxPoly + sIf(isBalloon, " "+me.parentSheet.parentChapter.GenPanelSvgText.ClsBoxPoly+"b", "") + "' stroke-width='" + itoa(mmh) + "px'/>"
 		}
 		s += "<svg x='" + itoa(rx) + "' y='" + itoa(ry) + "' class='" + sIf(borderandfill, "ptbf", "") + "'>" +
-			me.genTextSvgForPanelArea(panelIdx, tidx, &pta, lang, forHtml, forEbook) + "</svg>"
+			me.genTextSvgForPanelArea(panelIdx, tidx, &pta, lang, forHtml, forEbook, borderandfill) + "</svg>"
 	}
 
 	s += "</svg>"
 	return s
 }
 
-func (me *SheetVer) genTextSvgForPanelArea(pidx int, tidx int, pta *ImgPanelArea, lang string, forHtml bool, forEbook bool) string {
+func (me *SheetVer) genTextSvgForPanelArea(pidx int, tidx int, pta *ImgPanelArea, lang string, forHtml bool, forEbook bool, isBorderAndFill bool) string {
 	linex := 0.0
 	if pta.PointTo != nil {
 		linex = me.data.PxCm * me.parentSheet.parentChapter.GenPanelSvgText.BoxPolyDxCmA4
@@ -722,12 +723,12 @@ func (me *SheetVer) genTextSvgForPanelArea(pidx int, tidx int, pta *ImgPanelArea
 	if pta.SvgTextTspanStyleAttr == "_storytitle" {
 		perLineDyCmA4 *= 1.23
 	}
-	return me.imgSvgText(pidx, tidx, pta, lang, int(linex), fontSizeCmA4, perLineDyCmA4, forHtml, forEbook)
+	return me.imgSvgText(pidx, tidx, pta, lang, int(linex), fontSizeCmA4, perLineDyCmA4, forHtml, forEbook, isBorderAndFill)
 }
 
 func (me *SheetVerData) pxBounds() (ret image.Rectangle) {
 	ret.Min, ret.Max = image.Point{math.MaxInt, math.MaxInt}, image.Point{math.MinInt, math.MinInt}
-	me.PanelsTree.iter(func(pnl *ImgPanel) {
+	me.PanelsTree.each(func(pnl *ImgPanel) {
 		if pnl.Rect.Min.X < ret.Min.X {
 			ret.Min.X = pnl.Rect.Min.X
 		}

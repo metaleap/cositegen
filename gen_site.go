@@ -279,12 +279,13 @@ func (me *siteGen) genOrCopyPanelPics() (numSvgs uint32, numPngs uint32, numShee
 				}
 				sv := sheet.versions[0]
 				if pngfilepath := filepath.Join(sv.data.dirPath, "strip.1.png"); fileStat(pngfilepath) != nil {
-					outfilepathfrag := ".build/" + App.Proj.Site.Gen.PicDirName + "/" + sv.parentSheet.parentChapter.parentSeries.Name + "_" + sv.parentSheet.parentChapter.Name + "_" + sv.parentSheet.name
-					fileLinkOrCopy(pngfilepath, outfilepathfrag+".1.png")
-					atomic.AddUint32(&numPngs, 1)
-					if pngfilepath = filepath.Join(sv.data.dirPath, "strip.2.png"); fileStat(pngfilepath) != nil {
-						fileLinkOrCopy(pngfilepath, outfilepathfrag+".2.png")
-						atomic.AddUint32(&numPngs, 1)
+					if year, num, ok := strings.Cut(sv.parentSheet.name, "."); ok {
+						splits := strings.Split(num, "_")
+						for i, num := range splits {
+							outfilepath := ".build/" + App.Proj.Site.Gen.PicDirName + "/" + sv.parentSheet.parentChapter.parentSeries.Name + "-" + year + "-" + num + ".png"
+							fileLinkOrCopy(strings.ReplaceAll(pngfilepath, ".1.", "."+itoa(i+1)+"."), outfilepath)
+							atomic.AddUint32(&numPngs, 1)
+						}
 					}
 				}
 			}
@@ -301,7 +302,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 	atomic.StoreUint64(&totalSize, 0)
 	var pidx int
 	var work sync.WaitGroup
-	sv.data.PanelsTree.iter(func(panel *ImgPanel) {
+	sv.data.PanelsTree.each(func(panel *ImgPanel) {
 		work.Add(1)
 		numPanels++
 		go func(pidx int) {
@@ -872,10 +873,10 @@ func (me *siteGen) genSvgTextsFile(chapter *Chapter) string {
 	for _, sheet := range chapter.sheets {
 		for _, sv := range sheet.versions {
 			pidx := 0
-			sv.data.PanelsTree.iter(func(pnl *ImgPanel) {
+			sv.data.PanelsTree.each(func(pnl *ImgPanel) {
 				for i, area := range sv.panelAreas(pidx) {
 					svg += "<symbol id=\"" + sv.id + "_" + itoa(pidx) + "t" + itoa(i+1) + "\">\t" +
-						sv.genTextSvgForPanelArea(pidx, i, &area, me.lang, false, false) + "</symbol>"
+						sv.genTextSvgForPanelArea(pidx, i, &area, me.lang, false, false, false) + "</symbol>"
 				}
 				pidx++
 			})

@@ -5,7 +5,11 @@ body {
     margin: 0;
 }
 
-input, textarea, button, select, option {
+input,
+textarea,
+button,
+select,
+option {
     color: #2f2928;
     font-family: "Yanone Kaffeesatz", sans-serif;
 }
@@ -30,7 +34,10 @@ div#fullsheet img {
 
 div#fullsheet div.txtprev {
     position: absolute;
-    top: 0;left: 0;width: 99%;height: 100%;
+    top: 0;
+    left: 0;
+    width: 99%;
+    height: 100%;
     display: none;
     overflow: hidden;
 }
@@ -77,7 +84,8 @@ div.panel .panelrect {
     padding: 0;
     line-height: normal;
     position: absolute;
-    opacity: 0.55;/*0.6*/
+    opacity: 0.55;
+    /*0.6*/
     z-index: 999;
     text-overflow: clip;
     overflow: hidden;
@@ -100,16 +108,40 @@ div.panel .panelrect svg {
     left: 0px;
 }
 
-.col0 { background-color: lightblue; }
-.col1 { background-color: chocolate; }
-.col2 { background-color: darkseagreen; }
-.col3 { background-color: darkorange; }
-.col4 { background-color: deepskyblue; }
-.col5 { background-color: gold; }
-.col6 { background-color: lightgreen; }
-.col7 { background-color: palevioletred; }
+body:has(input.chkcols:checked) .col0 {
+    background-color: lightblue;
+}
 
-div.panelcfg, div.scandevopts {
+body:has(input.chkcols:checked) .col1 {
+    background-color: chocolate;
+}
+
+body:has(input.chkcols:checked) .col2 {
+    background-color: darkseagreen;
+}
+
+body:has(input.chkcols:checked) .col3 {
+    background-color: darkorange;
+}
+
+body:has(input.chkcols:checked) .col4 {
+    background-color: deepskyblue;
+}
+
+body:has(input.chkcols:checked) .col5 {
+    background-color: gold;
+}
+
+body:has(input.chkcols:checked) .col6 {
+    background-color: lightgreen;
+}
+
+body:has(input.chkcols:checked) .col7 {
+    background-color: palevioletred;
+}
+
+div.panelcfg,
+div.scandevopts {
     padding: 1em;
     background-color: #efe9e8;
 }
@@ -163,7 +195,7 @@ div.graydistrs {
     font-size: 0.77em;
 }
 
-div.graydistrs > div {
+div.graydistrs>div {
     display: inline-block;
     border-left: 0.1em #000000 solid;
     border-top: 0.1em #000000 solid;
@@ -182,12 +214,14 @@ input.collchk {
     display: none;
 }
 
-div.collchk  {
+div.collchk {
     display: none;
 }
 
-input.collchk:checked ~ div.collchk {
+input.collchk:checked~div.collchk {
     display: block;
 }
 
-h4 small { font-weight: normal; }
+h4 small {
+    font-weight: normal;
+}
