@@ -340,21 +340,6 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 	return true
 }
 
-func (me *SheetVer) ensureHomePic(force bool) (didHomePic bool) {
-	if picsheet, picidxpanel := me.parentSheet.parentChapter.pic(); picsheet == me {
-		picpath := me.data.bwFilePath + ".homepic_" + itoa(picidxpanel) + "_" + itoa(App.Proj.Site.Gen.HomePicSizeHint) + ".png"
-		if didHomePic = (force || (picpath != me.data.HomePic) || fileStat(picpath) == nil); didHomePic {
-			if me.data.HomePic != "" {
-				_ = os.Remove(me.data.HomePic)
-			}
-			me.data.HomePic = picpath
-			fileWrite(picpath,
-				imgSubRectPngFile(me.data.bwFilePath, me.panel(picidxpanel).Rect, 0, App.Proj.Site.Gen.HomePicSizeHint, false))
-		}
-	}
-	return
-}
-
 func (me *SheetVer) ensureStrips(force bool) bool {
 	if !me.haveAnyTexts() {
 		return false
@@ -428,6 +413,25 @@ func (me *SheetVer) ensureGrayDistr(force bool) bool {
 		return true
 	}
 	return false
+}
+
+func (me *SheetVer) ensureHomePic(force bool) (didHomePic bool) {
+	if sv, pidx := me.parentSheet.parentChapter.homePic(); sv == me {
+		picpath := me.homePicPath(pidx)
+		if didHomePic = (force || (picpath != me.data.HomePic) || fileStat(picpath) == nil); didHomePic {
+			if me.data.HomePic != "" {
+				_ = os.Remove(me.data.HomePic)
+			}
+			me.data.HomePic = picpath
+			fileWrite(picpath,
+				imgSubRectPngFile(me.data.bwFilePath, me.panel(pidx).Rect, 0, App.Proj.Site.Gen.HomePicSizeHint, false))
+		}
+	}
+	return
+}
+
+func (me *SheetVer) homePicPath(panelIdx int) string {
+	return me.data.bwFilePath + ".homepic_" + itoa(panelIdx) + "_" + itoa(App.Proj.Site.Gen.HomePicSizeHint) + ".png"
 }
 
 func (me *SheetVer) sizeCm() (float64, float64) {

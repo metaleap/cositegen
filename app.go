@@ -95,6 +95,7 @@ func appPrepWork(fromGui bool) {
 		var numjobs, numwork int
 		for _, series := range App.Proj.Series {
 			for _, chapter := range series.Chapters {
+				hp_sv, hp_pidx := chapter.homePic()
 				for _, sheet := range chapter.sheets {
 					for _, sv := range sheet.versions {
 						if !sv.prep.done {
@@ -107,6 +108,14 @@ func appPrepWork(fromGui bool) {
 								}
 							}
 							sv.prep.Unlock()
+						}
+						if num_panels, _ := sv.panelCount(); num_panels > 0 {
+							for pidx := 0; pidx < num_panels; pidx++ {
+								hp_path := sv.homePicPath(pidx)
+								if fileStat(hp_path) != nil && (sv != hp_sv || pidx != hp_pidx) {
+									_ = os.Remove(hp_path)
+								}
+							}
 						}
 					}
 				}

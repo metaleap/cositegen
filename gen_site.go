@@ -345,7 +345,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 		pidx++
 	})
 
-	if homepicname := sv.homePicName(); homepicname != "" {
+	if homepicname := sv.homePicName(); homepicname != "" && fileStat(sv.data.HomePic) != nil {
 		fileLinkOrCopy(sv.data.HomePic, filepath.Join(".build", App.Proj.Site.Gen.PicDirName, homepicname))
 		atomic.AddUint32(&numPngs, 1)
 	}
@@ -536,9 +536,9 @@ func (me *siteGen) prepHomePage() {
 					title = me.textStr("Untransl") + " " + title
 				}
 				picidxsheet, picbgpos := 0.0, "center center"
-				if chapter.Pic != nil && len(chapter.Pic) > 0 {
-					if picidxsheet = chapter.Pic[0].(float64); len(chapter.Pic) > 2 {
-						picbgpos = chapter.Pic[2].(string)
+				if chapter.HomePic != nil && len(chapter.HomePic) > 0 {
+					if picidxsheet = chapter.HomePic[0].(float64); len(chapter.HomePic) > 2 {
+						picbgpos = chapter.HomePic[2].(string)
 					}
 				}
 				s, picname, chid := "", chapter.sheets[int(picidxsheet)].versions[0].homePicName(), chapter.parentSeries.Name+"_"+chapter.Name

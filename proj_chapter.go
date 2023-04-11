@@ -46,7 +46,7 @@ type Chapter struct {
 	Storyboard       string
 	GenPanelSvgText  *PanelSvgTextGen
 	Priv             bool
-	Pic              []interface{}
+	HomePic          []interface{}
 	BwThreshold      uint8
 
 	author       *Author
@@ -234,10 +234,10 @@ func (me *Chapter) numScans() (ret int) {
 	return
 }
 
-func (me *Chapter) pic() (*SheetVer, int) {
-	if len(me.Pic) > 0 {
-		idxsheet := me.Pic[0].(float64)
-		idxpanel := me.Pic[1].(float64)
+func (me *Chapter) homePic() (*SheetVer, int) {
+	if len(me.HomePic) > 0 {
+		idxsheet := me.HomePic[0].(float64)
+		idxpanel := me.HomePic[1].(float64)
 		return me.sheets[int(idxsheet)].versions[0], int(idxpanel)
 	}
 	if len(me.sheets) > 0 && len(me.sheets[0].versions) > 0 {

@@ -259,8 +259,8 @@ func (me *Project) load() (numSheetVers int) {
 
 	svgTextKeys := sortedMapKeys(me.Sheets.Panel.SvgText)
 	for i, k := range svgTextKeys {
-		if v := me.Sheets.Panel.SvgText[k]; i > 0 {
-			v.baseOn(me.Sheets.Panel.SvgText[svgTextKeys[i-1]])
+		if v := me.Sheets.Panel.SvgText[k]; i > 0 && k != "" {
+			v.baseOn(me.Sheets.Panel.SvgText[svgTextKeys[iIf(k[0] >= '0' && k[0] <= '9', i-1, 0)]])
 			v.cssName = k
 		}
 	}
@@ -268,6 +268,9 @@ func (me *Project) load() (numSheetVers int) {
 	for _, strip := range me.Strips {
 		series := Series{Name: strip, UrlName: strip, Title: map[string]string{"": strip},
 			Priv: true, isStrip: true}
+		if svgText := me.Sheets.Panel.SvgText[strip]; svgText != nil {
+			series.GenPanelSvgText = svgText
+		}
 		for done, year := false, 2023; year <= 2323 && !done; year++ {
 			chapdir := itoa(year)
 			if done = (dirStat("scans/"+strip+"/"+chapdir) == nil); !done {
@@ -302,7 +305,7 @@ func (me *Project) load() (numSheetVers int) {
 		}
 		for _, chap := range series.Chapters {
 			svgTextBase := series.GenPanelSvgText
-			if chap.Storyboard != "" {
+			if chap.Storyboard != "" && chap.Storyboard[0] >= '0' && chap.Storyboard[0] <= '9' {
 				for i := len(svgTextKeys) - 1; i > 0; i-- {
 					if k := svgTextKeys[i]; chap.Storyboard > k {
 						svgTextBase = me.Sheets.Panel.SvgText[k]
