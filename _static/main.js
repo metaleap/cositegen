@@ -114,7 +114,7 @@ function refreshPanelRects(panelIdx, pOffX, pOffY, pWidth, pHeight, langs, px1cm
                 innerhtml += "<polygon points='" + poly.join(' ') + "' class='" + (isBalloon ? (panelSvgTextClsBoxPoly + " " + panelSvgTextClsBoxPoly + "b") : panelSvgTextClsBoxPoly) + "' stroke-width='" + mmh + "px'/>";
             }
 
-            innerhtml += "<svg x='" + rx + "' y='" + ry + "'><text x='0' y='" + (borderandfill ? panelSvgTextBoxPolyTopPx : 0) + "' style='font-size: " + pxfont + "px' transform='" + document.getElementById(pid + "t" + i + "_transform").value.replace(/\n/g, " ").trim() + "'>";
+            innerhtml += "<svg x='" + rx + "' y='" + ry + "'><text x='0' y='" + (borderandfill ? panelSvgTextBoxPolyTopPx : 0) + "px' style='font-size: " + pxfont + "px' transform='" + document.getElementById(pid + "t" + i + "_transform").value.replace(/\n/g, " ").trim() + "'>";
             let tspanCls = [],
                 tspanStyle = document.getElementById(pid + "t" + i + "_style").value.replace(/\n/g, " ").trim();
             if (tspanStyle.startsWith('.')) {

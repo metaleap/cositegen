@@ -16,7 +16,7 @@ func fV(r *http.Request) func(string) string {
 }
 
 func guiMain(r *http.Request, notice string) []byte {
-	svgtxt, fv, dirpref, s := App.Proj.Sheets.Panel.SvgText[""], fV(r), "", "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><link rel='stylesheet' type='text/css' href='/main.css'/><style type='text/css'>"
+	svgtxt, fv, dirpref, s := App.Proj.Sheets.Panel.SvgText[""], fV(r), "", "<!DOCTYPE html><html lang='en'><head><meta charset='utf-8'><link rel='stylesheet' type='text/css' href='/main.css'/><style type='text/css'>"+App.Proj.cssFontFaces(strings.NewReplacer("./", "/files/"))
 	App.Gui.State.Sel.Series, _ = guiGetFormSel(fv("series"), &App.Proj).(*Series)
 	if series := App.Gui.State.Sel.Series; series != nil {
 		if App.Gui.State.Sel.Chapter, _ = guiGetFormSel(fv("chapter"), series).(*Chapter); App.Gui.State.Sel.Chapter != nil {

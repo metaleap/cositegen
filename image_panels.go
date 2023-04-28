@@ -283,7 +283,7 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 		if mozscale {
 			s += `<svg class="mz" width="` + itoa(me.data.PanelsTree.Rect.Dx()) + `">`
 		}
-		s += "<text " + sIf((!isBorderAndFill) || (svgtext.BoxPolyTopPx == 0), "", "y='"+itoa(svgtext.BoxPolyTopPx)+"'") + " style='font-size: " + itoa(pxfont) + "px;' transform='" + trim(DeNewlineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
+		s += "<text " + sIf(isBorderAndFill, "y='"+itoa(svgtext.BoxPolyTopPx)+"px'", "") + " style='font-size: " + itoa(pxfont) + "px;' transform='" + trim(DeNewlineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
 		ts := "<tspan style='" + trim(DeNewlineRepl.Replace(tspanstyle)) + "' class='" + sIf(isstorytitle || strings.Contains(tspanstyle, "font-family"), "", "std") + "'>"
 		for _, ln := range strings.Split(svgRepl.Replace(hEsc(locStr(pta.Data, langId))), hEscs['\n']) {
 			if ln == "" {

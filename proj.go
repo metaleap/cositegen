@@ -548,7 +548,7 @@ func (me *Project) cssFontFaces(repl *strings.Replacer) (css string) {
 		if repl != nil {
 			v = repl.Replace(v)
 		}
-		css = "@font-face { " + v + "}\n." + k + "{" + v[:1+strings.IndexByte(v, ';')] + "}\n" + css
+		css = "@font-face { text-rendering: optimizeLegibility; " + v + "}\n." + k + "{" + v[:1+strings.IndexByte(v, ';')] + "}\n" + css
 	}
 	return
 }

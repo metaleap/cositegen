@@ -497,7 +497,7 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 	bgtmplsvgfilepath := filepath.Join(me.data.dirPath, bgtmplsvgfilename)
 	detectFromSb := (me.DtStr() > App.Proj.Sheets.Panel.TreeFromStoryboard.After) &&
 		(me.parentSheet.parentChapter.storyboardFilePath() != "")
-	if did = force || me.data.PanelsTree == nil ||
+	if did = force || (os.Getenv("FORCE_PTREE") == me.parentSheet.parentChapter.Name) || me.data.PanelsTree == nil ||
 		(me.data.PanelsTree.SbBorderOuter != iIf(detectFromSb, App.Proj.Sheets.Panel.TreeFromStoryboard.BorderOuter, 0)) ||
 		(me.data.PanelsTree.SbBorderInner != iIf(detectFromSb, App.Proj.Sheets.Panel.TreeFromStoryboard.BorderInner, 0)); did {
 		_ = os.Remove(bgtmplsvgfilepath)

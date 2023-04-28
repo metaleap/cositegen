@@ -412,14 +412,15 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 		homelink := me.namePage(nil, 0, 0, "", "", "", 0, false) + ".html#" + series.Name + "_" + chapter.Name
 		me.page.PageTitle = "<a href='" + homelink + "'><span>" + hEsc(locStr(series.Title, me.lang)) + ":</span></a> <span>" + strings.Join(chaptitlewords, " ") + "</span>"
 		me.page.PageTitleTxt = hEsc(locStr(series.Title, me.lang)) + ": " + hEsc(locStr(chapter.Title, me.lang))
-		if len(chapter.SheetsPerPage) > 1 {
-			me.page.PageTitleTxt += " (" + itoa(pageNr) + "/" + itoa(len(chapter.SheetsPerPage)) + ")"
-		}
 		var author string
 		if chapter.author != nil {
 			author = strings.Replace(
 				strings.Replace(me.textStr("TmplAuthorInfoHtml"), "%AUTHOR%", chapter.author.str(false, true), 1),
 				"%YEAR%", sIf(chapter.Year == 0, "", itoa(chapter.Year)), 1)
+			me.page.PageTitleTxt += ", " + strings.ReplaceAll(author, "&nbsp;", " ")
+		}
+		if len(chapter.SheetsPerPage) > 1 {
+			me.page.PageTitleTxt += " (" + itoa(pageNr) + "/" + itoa(len(chapter.SheetsPerPage)) + ")"
 		}
 		desc := locStr(chapter.DescHtml, me.lang)
 		if desc == "" && chapter.Year != 0 && chapter.StoryUrls.LinkHref != "" {
@@ -707,9 +708,9 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				ulid += "b"
 			}
 			s = "<ul id='" + ulid + "'>" +
-				"<li><a style='visibility: " + pvis + "' href='./" + strings.ToLower(phref) + "'>&larr;</a></li>" +
+				"<li><a style='visibility: " + pvis + "' href='./" + strings.ToLower(phref) + "'>&#9668;</a></li>" +
 				s +
-				"<li><a style='display: " + nvis + "' href='./" + strings.ToLower(nhref) + "'>&rarr;</a></li>" +
+				"<li><a style='display: " + nvis + "' href='./" + strings.ToLower(nhref) + "'>&#9658;</a></li>" +
 				"</ul>"
 		}
 		return s
@@ -876,7 +877,7 @@ func (me *siteGen) genSvgTextsFile(chapter *Chapter) string {
 			sv.data.PanelsTree.each(func(pnl *ImgPanel) {
 				for i, area := range sv.panelAreas(pidx) {
 					svg += "<symbol id=\"" + sv.id + "_" + itoa(pidx) + "t" + itoa(i+1) + "\">\t" +
-						sv.genTextSvgForPanelArea(pidx, i, &area, me.lang, false, false, false) + "</symbol>"
+						sv.genTextSvgForPanelArea(pidx, i, &area, me.lang, false, false, area.PointTo != nil) + "</symbol>"
 				}
 				pidx++
 			})
