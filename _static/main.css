@@ -171,6 +171,7 @@ textarea.panelcfgtextattr:focus {
 }
 
 textarea.panelcfgtext {
+    letter-spacing: initial !important;
     opacity: 0.6;
     color: #000000 !important;
     width: 99%;
