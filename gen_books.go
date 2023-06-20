@@ -67,6 +67,9 @@ func makeBook(flags map[string]bool) {
 	}
 	for _, series := range App.Proj.Series {
 		for _, chap := range series.Chapters {
+			if y := itoa(gen.year); (chap.Name == y || chap.UrlName == y) && len(flags) > 1 {
+				continue
+			}
 			if (flags[chap.Name] || flags[chap.UrlName] ||
 				flags[series.Name] || flags[series.UrlName]) &&
 				(gen.year == 0 || chap.scanYearHas(gen.year, true)) {
@@ -107,6 +110,9 @@ func makeBook(flags map[string]bool) {
 	var coverdone bool
 	for _, dirrtl := range []bool{false, true /*KEEP this order of bools*/} {
 		for _, lang := range App.Proj.Langs {
+			if l := os.Getenv("LANG"); l != "" && lang != l {
+				continue
+			}
 			gen.genSheetSvgsAndPngs(dirrtl, lang)
 			if os.Getenv("NOSCREEN") == "" {
 				gen.genScreenVersion(dirrtl, lang)
@@ -172,7 +178,7 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 		svg += `
 				g > svg > svg > text > tspan.std { /*_un_bold_*/ }
 				g > svg > svg > text > tspan.std tspan.b { font-weight: bold !important; }`
-	} else if skewForPrint {
+	} else if skewForPrint && sv.DtStr() < "20230301" {
 		svg += `g > svg > svg > text > tspan { letter-spacing: -0.006em !important; }`
 	}
 	svg += `</style>`
@@ -744,8 +750,9 @@ func (me *BookGen) genPrintCover(title string, numPages int) {
 func (*BookGen) printSvgToPdf(svgFilePath string, pdfOutFilePath string) {
 	printLn(pdfOutFilePath, "...")
 	s := osExec(false, nil, browserCmd[0], append(browserCmd[2:],
-		"--headless", "--disable-gpu", "--force-gpu-mem-available-mb=4096", "--print-to-pdf-no-header",
-		"--print-to-pdf="+pdfOutFilePath, svgFilePath)...)
+		// "--headless",
+		"--no-pdf-header-footer", "--print-to-pdf="+pdfOutFilePath,
+		svgFilePath)...)
 	if fstat := fileStat(pdfOutFilePath); fstat == nil || fstat.Size() == 0 {
 		panic(s)
 	}
