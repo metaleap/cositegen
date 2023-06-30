@@ -168,7 +168,6 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 				text.sidetxt { transform: rotate(-90deg); }
 				g > svg > svg > text, g > svg > svg > text > tspan, tspan.sidetxt {
 					`
-
 	for _, k := range sortedMapKeys(svgtxt.Css[""]) {
 		svg += k + ":" + svgtxt.Css[""][k] + ";\n"
 	}
