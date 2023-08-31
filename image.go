@@ -302,6 +302,12 @@ func imgSubRectPng(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, h
 
 func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, height *int, blackBorderSize int, transparent bool, gotSameSizeAsOrig *bool) image.Image {
 	origwidth, origheight := srcImgRect.Dx(), srcImgRect.Dy()
+	if width == nil {
+		width = &origwidth
+	}
+	if height == nil {
+		height = &origheight
+	}
 	assert(((*width < origwidth) == (*height < origheight)) &&
 		((*width > origwidth) == (*height > origheight)))
 
@@ -318,7 +324,10 @@ func imgSubRect(srcImg *image.Gray, srcImgRect image.Rectangle, width *int, heig
 
 	var imgdst draw.Image
 	if *width >= origwidth {
-		*gotSameSizeAsOrig, *width, *height = true, origwidth, origheight
+		if gotSameSizeAsOrig != nil {
+			*gotSameSizeAsOrig = true
+		}
+		*width, *height = origwidth, origheight
 		if !transparent {
 			imgdst = srcImg.SubImage(srcImgRect).(draw.Image)
 		} else {

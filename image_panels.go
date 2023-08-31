@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"io"
+	"slices"
 	"strings"
 )
 
@@ -180,6 +181,23 @@ func (me *ImgPanel) forEach(rev bool, onPanel func(*ImgPanel)) {
 		}
 	} else {
 		onPanel(me)
+	}
+}
+
+func (me *ImgPanel) removePanels(sub_panels ...*ImgPanel) {
+	for i := 0; i < len(me.SubRows); i++ {
+		if slices.Contains(sub_panels, &me.SubRows[i]) {
+			i, me.SubRows = i-1, slices.Delete(me.SubRows, i, i+1)
+		} else {
+			me.SubRows[i].removePanels(sub_panels...)
+		}
+	}
+	for i := 0; i < len(me.SubCols); i++ {
+		if slices.Contains(sub_panels, &me.SubCols[i]) {
+			i, me.SubCols = i-1, slices.Delete(me.SubCols, i, i+1)
+		} else {
+			me.SubCols[i].removePanels(sub_panels...)
+		}
 	}
 }
 

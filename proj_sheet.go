@@ -20,7 +20,7 @@ import (
 )
 
 const dpi1200 float64 = 472.424242424
-const svCacheDirNamePrefix = "" // TODO: switch from empty to sth. like "sv."
+const svCacheDirNamePrefix = "" // TODO: switch from empty to sth like "sv"
 
 type Sheet struct {
 	parentChapter *Chapter

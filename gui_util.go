@@ -33,6 +33,7 @@ var hEscs = map[rune]string{
 	'•':  "&bull;",
 	'×':  "&times;",
 	'™':  "&trade;",
+	'²':  "&sup2;",
 	0xa0: "&nbsp;",
 }
 var hEscsX = map[rune]string{

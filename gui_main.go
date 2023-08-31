@@ -588,7 +588,9 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 			for _, lang := range App.Proj.Langs {
 				var css string
 				for k, v := range chap.GenPanelSvgText.Css[""] {
-					css += k + ":" + v + ";"
+					if k != "letter-spacing" {
+						css += k + ":" + v + ";"
+					}
 				}
 				s += "<div>" + guiHtmlInput("textarea", pid+"t"+itoa(i)+lang, area.Data[lang], A{
 					"placeholder": lang,

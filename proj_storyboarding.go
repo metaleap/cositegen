@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"image"
 	"image/color"
-	"image/draw"
 	"math"
 	"path/filepath"
 	"strconv"
@@ -97,12 +96,12 @@ func (me *Chapter) panelsTreeFromStoryboard(sv *SheetVer) *ImgPanel {
 	me.loadStoryboard()
 	page := &me.storyboard.pages[indexOf(me.sheets, sv.parentSheet)]
 
-	img, _, err := image.Decode(bytes.NewReader(fileRead(sv.data.bwFilePath)))
+	img_bw, _, err := image.Decode(bytes.NewReader(fileRead(sv.data.bwFilePath)))
 	if err != nil {
 		panic(err)
 	}
-	img = image.NewGray(img.Bounds())
-	imgFill(img.(draw.Image), img.Bounds(), color.Gray{Y: 255})
+	img := image.NewGray(img_bw.Bounds())
+	imgFill(img, img.Bounds(), color.Gray{Y: 255})
 	cmW, cmH := 0.0, 0.0
 	for _, pnl := range page.panels {
 		if x := pnl.CmX + pnl.CmW; x > cmW {
@@ -115,14 +114,24 @@ func (me *Chapter) panelsTreeFromStoryboard(sv *SheetVer) *ImgPanel {
 	pxCmX, pxCmY := float64(img.Bounds().Max.X)/cmW, float64(img.Bounds().Max.Y)/cmH
 	for _, pnl := range page.panels {
 		rect := image.Rect(int(pnl.CmX*pxCmX), int(pnl.CmY*pxCmY), int((pnl.CmX+pnl.CmW)*pxCmX), int((pnl.CmY+pnl.CmH)*pxCmY))
-		imgDrawRect(img.(*image.Gray), rect, App.Proj.Sheets.Panel.TreeFromStoryboard.BorderInner, 0)
+		imgDrawRect(img, rect, App.Proj.Sheets.Panel.TreeFromStoryboard.BorderInner, 0)
 	}
-	imgDrawRect(img.(*image.Gray), img.Bounds(), App.Proj.Sheets.Panel.TreeFromStoryboard.BorderOuter, 0)
+	imgDrawRect(img, img.Bounds(), App.Proj.Sheets.Panel.TreeFromStoryboard.BorderOuter, 0)
 
 	// data := pngEncode(img)
 	// fileWrite(sv.data.bwFilePath+".pnls.png", data)
 
-	return imgPanels(img)
+	ret := imgPanels(img)
+	// find any completely white (thus non-existing and falsely-"detected") panels and remove them
+	var remove_panels []*ImgPanel
+	ret.each(func(pnl *ImgPanel) {
+		rect := image.Rect(pnl.Rect.Min.X+App.Proj.Sheets.Panel.TreeFromStoryboard.BorderInner, pnl.Rect.Min.Y+App.Proj.Sheets.Panel.TreeFromStoryboard.BorderInner, pnl.Rect.Max.X-App.Proj.Sheets.Panel.TreeFromStoryboard.BorderInner, pnl.Rect.Max.Y-App.Proj.Sheets.Panel.TreeFromStoryboard.BorderInner)
+		if imgIsRectFullyOfColor(img_bw.(*image.Gray), rect, color.Gray{Y: 255}) {
+			remove_panels = append(remove_panels, pnl)
+		}
+	})
+	ret.removePanels(remove_panels...)
+	return ret
 }
 
 func (me *ChapterStoryboardPage) dualLangTextBoxes() (ret []ChapterStoryboardPageTextBox) {
