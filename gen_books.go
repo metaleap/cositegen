@@ -110,7 +110,7 @@ func makeBook(flags map[string]bool) {
 	var coverdone bool
 	for _, dirrtl := range []bool{false, true /*KEEP this order of bools*/} {
 		for _, lang := range App.Proj.Langs {
-			if l := os.Getenv("LANG"); l != "" && lang != l {
+			if lang != os.Getenv("LANG") {
 				continue
 			}
 			gen.genSheetSvgsAndPngs(dirrtl, lang)
@@ -750,7 +750,7 @@ func (*BookGen) printSvgToPdf(svgFilePath string, pdfOutFilePath string) {
 	printLn(pdfOutFilePath, "...")
 	s := osExec(false, nil, browserCmd[0], append(browserCmd[2:],
 		// "--headless",
-		"--no-pdf-header-footer", "--print-to-pdf="+pdfOutFilePath,
+		"--no-pdf-header-footer", "--disable-hang-monitor", // "--print-to-pdf="+pdfOutFilePath,
 		svgFilePath)...)
 	if fstat := fileStat(pdfOutFilePath); fstat == nil || fstat.Size() == 0 {
 		panic(s)
