@@ -289,7 +289,7 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 		svgRepl = strings.NewReplacer(repls...)
 	}
 
-	pxfont, pxline, tspanstyle, tspancls := int(me.data.PxCm*fontSizeCmA4), int(me.data.PxCm*perLineDyCmA4), pta.SvgTextTspanStyleAttr, []string{svgtext.TspanCssCls}
+	pxfont, pxline, tspanstyle, tspancls := int(me.data.PxCm*fontSizeCmA4*0.995), int(me.data.PxCm*perLineDyCmA4), pta.SvgTextTspanStyleAttr, []string{svgtext.TspanCssCls}
 	if strings.HasPrefix(tspanstyle, ".") {
 		tspanstyle, tspancls = "", append(tspancls, strings.Split(tspanstyle[1:], ".")...)
 	}

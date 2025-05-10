@@ -134,7 +134,7 @@ func sbToHtml(it Storyboard, srcFilePath string, isA5 bool, isA3 bool) []byte {
 			<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
 			<title>` + title + `</title><style type="text/css">
 				body {
-					zoom: ` + itoa(zoom) + `%;
+					zoom: ` + itoa(int(0.88*float64(zoom))) + `%;
 					padding: 0 0cm;
 					margin: 0px;
 				}
@@ -176,9 +176,9 @@ func sbToHtml(it Storyboard, srcFilePath string, isA5 bool, isA3 bool) []byte {
 				}
 				p {
 					font-weight: normal;
-					font-size: 14pt;
-					line-height: 0.66em; /*0.88em*/
-					font-family: "Collect Em Now BB", sans;
+					font-size: 13pt;
+					line-height: 0.77em;
+					font-family: "Collect Em Now BB" !important;
 				}
 				.panel {
 					align-items: end;
@@ -206,7 +206,7 @@ func sbToHtml(it Storyboard, srcFilePath string, isA5 bool, isA3 bool) []byte {
 					font-weight: normal;
 					font-family: mono;
 					font-size: xx-small;
-					letter-spacing: -0.22em;
+					/*letter-spacing: -0.22em;*/
 				}
 			</style></head><body>`
 	for _, page := range it {

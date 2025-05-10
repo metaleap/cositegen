@@ -100,6 +100,7 @@ type Project struct {
 			CssFontFaces    map[string]string
 			SvgText         map[string]*PanelSvgTextGen
 		}
+		GenLetteredPngsInDir string
 	}
 
 	defaultQualiIdx int

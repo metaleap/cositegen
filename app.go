@@ -17,6 +17,7 @@ var AppMainActions = A{
 	"gen":  "Re-generate site",
 	"book": "Generate book",
 	"cfg":  "Edit cx.json",
+	"pngs": "Generate lettered PNGs",
 }
 
 var App struct {
@@ -73,6 +74,8 @@ func appMainAction(fromGui bool, name string, args map[string]bool) string {
 		action = func(flags map[string]bool) { siteGen{}.genSite(fromGui, flags) }
 	case "book":
 		action = makeBook
+	case "pngs":
+		action = makePngs
 	default:
 		s := "Unknown action: '" + name + "', try one of these:"
 		for name, desc := range AppMainActions {

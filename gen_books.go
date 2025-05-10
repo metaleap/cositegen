@@ -48,6 +48,20 @@ type BookGen struct {
 	}
 }
 
+func makePngs(_ map[string]bool) {
+	for _, series := range App.Proj.Series {
+		for _, chap := range series.Chapters {
+			for _, sheet := range chap.sheets {
+				for _, sv := range sheet.versions {
+					if sv.prep.done {
+						sv.ensureLetteredPngIfNeeded()
+					}
+				}
+			}
+		}
+	}
+}
+
 func makeBook(flags map[string]bool) {
 	phrase := strings.Join(os.Args[2:], "-")
 	gen := BookGen{
@@ -65,11 +79,15 @@ func makeBook(flags map[string]bool) {
 			gen.year = y
 		}
 	}
+	if os.Getenv("NOYEAR") != "" {
+		gen.year = 0
+	}
 	for _, series := range App.Proj.Series {
 		for _, chap := range series.Chapters {
 			if y := itoa(gen.year); (chap.Name == y || chap.UrlName == y) && len(flags) > 1 {
 				continue
 			}
+			// println(chap.Name, flags[chap.Name], chap.UrlName, flags[chap.UrlName], series.Name, flags[series.Name], series.UrlName, flags[series.UrlName])
 			if (flags[chap.Name] || flags[chap.UrlName] ||
 				flags[series.Name] || flags[series.UrlName]) &&
 				(gen.year == 0 || chap.scanYearHas(gen.year, true)) {
@@ -149,9 +167,16 @@ func (me *BookGen) genSheetSvgsAndPngs(dirRtl bool, lang string) {
 			me.genSheetSvg(sv, sheetsvgfilepath, dirRtl, lang, false, "#"+itoh(bookScreenPgBgCol[0])+itoh(bookScreenPgBgCol[1])+itoh(bookScreenPgBgCol[2]))
 			sheetpngfilepath := sheetsvgfilepath + ".sh.png"
 			printLn(sheetpngfilepath, "...")
-			imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, iIf(!lores, 0, bookScreenWidth/bookScreenLoResDiv), false, sIf(!lores, "sh_", "sh_lq_"))
+			imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, iIf(!lores, 0, bookScreenWidth/bookScreenLoResDiv), false, sIf(!lores, "sh_", "sh_lq_"), 0)
 		}
 	}
+}
+
+func (me *BookGen) genSheetSvgAndPng(sv *SheetVer, dstPngFilePath string, lang string) {
+	dst_svg_file_path := dstPngFilePath + ".svg"
+	me.genSheetSvg(sv, dst_svg_file_path, false, lang, true, "white")
+	imgAnyToPng(dst_svg_file_path, dstPngFilePath, 0, true, "foo", 1024*1024)
+	os.Remove(dst_svg_file_path)
 }
 
 func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string, skewForPrint bool, polyBgCol string) {
@@ -161,7 +186,7 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 	svgtxt := sv.parentSheet.parentChapter.GenPanelSvgText
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
         xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-        width="` + itoa(w) + `" height="` + itoa(h) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
+        width="` + itoa(w/2) + `" height="` + itoa(h/2) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
             <style type="text/css">` + App.Proj.cssFontFaces(bookGenCssRepl) + `
 				polygon.pt, polygon.ptb { stroke: black; fill: ` + polyBgCol + `; }
 				tspan.sidetxt { font-size: 177px; stroke-width: 22px !important; }
@@ -280,7 +305,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 			svg += me.tocSvg(lang, pgw, pgh) + "</svg>"
 			fileWrite(tocfilepathsvg, []byte(svg))
 			printLn(tocfilepathpng, "...")
-			if writtenfilepath := imgAnyToPng(tocfilepathsvg, tocfilepathpng, 0, true, sIf(!lores, "toc_", "toc_lq_")); os.Getenv("NOZOP") == "" {
+			if writtenfilepath := imgAnyToPng(tocfilepathsvg, tocfilepathpng, 0, true, sIf(!lores, "toc_", "toc_lq_"), 0); os.Getenv("NOZOP") == "" {
 				pngOptFireAndForget(writtenfilepath)
 			}
 		}
@@ -319,7 +344,7 @@ func (me *BookGen) genScreenVersion(dirRtl bool, lang string) {
 	if altsvgfilepath := "stuff/" + me.Phrase + "/collage.svg"; fileStat(altsvgfilepath) != nil {
 		outfilepath := me.sheetSvgPath(len(pgfilepaths), true, "", false) + ".png"
 		printLn(outfilepath, "...")
-		if writtenfilepath := imgAnyToPng(altsvgfilepath, outfilepath, pgw, false, "xtra"); os.Getenv("NOZOP") == "" {
+		if writtenfilepath := imgAnyToPng(altsvgfilepath, outfilepath, pgw, false, "xtra", 0); os.Getenv("NOZOP") == "" {
 			pngOptFireAndForget(writtenfilepath)
 		}
 		pgfilepaths = append(pgfilepaths, outfilepath)

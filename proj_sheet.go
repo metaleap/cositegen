@@ -233,7 +233,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 
 					tmpfilepath := "/dev/shm/" + me.id + "_bg" + itoa(pidx) + ".svg"
 					fileWrite(tmpfilepath, []byte(s))
-					out, errprog := exec.Command("convert", tmpfilepath, "-resize", itoa(int(100.0*App.Proj.Sheets.Panel.BgScale))+"%", dstfilepath).CombinedOutput()
+					out, errprog := exec.Command("magick", tmpfilepath, "-resize", itoa(int(100.0*App.Proj.Sheets.Panel.BgScale))+"%", dstfilepath).CombinedOutput()
 					_ = os.Remove(tmpfilepath)
 					if s := trim(string(out)); errprog != nil {
 						_ = os.Remove(dstfilepath)
@@ -341,7 +341,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 }
 
 func (me *SheetVer) ensureStrips(force bool) bool {
-	if !me.haveAnyTexts() {
+	if !me.haveAnyTexts("") {
 		return false
 	}
 
@@ -359,7 +359,7 @@ func (me *SheetVer) ensureStrips(force bool) bool {
 	bookGen.perRow.firstOnly, bookGen.perRow.vertText = !split, me.parentSheet.parentChapter.parentSeries.Name+"@"+strings.ReplaceAll(App.Proj.Site.Host, ".", "·")
 	bookGen.genSheetSvg(me, sheetsvgfilepath, false, App.Proj.Langs[0], false, polygonBgCol)
 	defer os.Remove(sheetsvgfilepath)
-	_ = imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, 0, true, "")
+	_ = imgAnyToPng(sheetsvgfilepath, sheetpngfilepath, 0, true, "", 0)
 	defer os.Remove(sheetpngfilepath)
 
 	// set polygon_bg_col pixels to fully transparent
@@ -602,11 +602,11 @@ func (me *SheetVer) homePicName() string {
 	return ""
 }
 
-func (me *SheetVer) haveAnyTexts() bool {
+func (me *SheetVer) haveAnyTexts(lang string) bool {
 	for _, areas := range App.Proj.data.Sv.textRects[me.id] {
 		for _, area := range areas {
-			for _, text := range area.Data {
-				if trim(text) != "" {
+			for data_lang, text := range area.Data {
+				if trim(text) != "" && (lang == "" || data_lang == lang) {
 					return true
 				}
 			}
@@ -747,4 +747,24 @@ func (me *SheetVerData) pxBounds() (ret image.Rectangle) {
 		}
 	})
 	return
+}
+
+func (me *SheetVer) ensureLetteredPngIfNeeded() {
+	if App.Proj.Sheets.GenLetteredPngsInDir == "" {
+		return
+	}
+	dir := filepath.Join(App.Proj.Sheets.GenLetteredPngsInDir, me.parentSheet.parentChapter.parentSeries.Name+"_"+me.parentSheet.parentChapter.Name)
+	mkDir(dir)
+
+	fake := BookGen{Sheets: []*SheetVer{me}}
+	for _, lang := range App.Proj.Langs {
+		if !me.haveAnyTexts(lang) {
+			continue
+		}
+		dst_png_file_path := filepath.Join(dir, me.parentSheet.name+"."+lang+".png")
+		if file_info := fileStat(dst_png_file_path); file_info != nil && (!file_info.IsDir()) && file_info.Size() > 0 {
+			continue
+		}
+		fake.genSheetSvgAndPng(me, dst_png_file_path, lang)
+	}
 }

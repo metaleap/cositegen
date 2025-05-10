@@ -383,7 +383,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 		me.page.PageTitleTxt = hEsc(me.textStr("HomeTitleTxt"))
 		me.page.PageDesc = sIf(me.dummy, "Page Description", repl.Replace(hEsc(me.textStr("HomeDesc"))))
 		me.page.PageDescTxt = me.page.PageDesc
-		me.page.PageDescTitle = ` title="` + me.txtStats(App.Proj.numPages(true, me.lang), App.Proj.numPanels(true, me.lang), App.Proj.numSheets(true, me.lang), "2021-"+itoa(App.Proj.scanYearLatest(true, me.lang)), nil) + `"`
+		me.page.PageDescTitle = ` title="` + me.txtStats(App.Proj.numPages(true, me.lang), App.Proj.numPanels(true, me.lang), App.Proj.numSheets(true, me.lang), sIf(me.page.SiteTitle == "ducksfan", "2025-", "2021-")+itoa(App.Proj.scanYearLatest(true, me.lang)), nil) + `"`
 		me.page.PageCssClasses = App.Proj.Site.Gen.ClsChapter + "n"
 		if me.lang == App.Proj.Langs[0] {
 			me.page.HrefDirLtr = "./index.html"
@@ -547,7 +547,7 @@ func (me *siteGen) prepHomePage() {
 				s += "<h6>" + hEsc(sIf(me.dummy, "Chapter Title", locStr(chapter.Title, me.lang))) + "</h6>"
 				chapmins := iIf(me.dummy, 1, chapter.readDurationMinutes())
 				s += "<span><span>" + itoa(chapmins) + "-" + itoa(1+chapmins) + me.textStr("Mins") + "</span><span>" +
-					sIf(chapter.Year == 0, "&nbsp;", "&copy;"+itoa(iIf(me.dummy, 1234, chapter.Year))) + "&nbsp;" + sIf(me.dummy, "Author Name", chapter.author.str(true, true)) +
+					sIf(chapter.Year == 0 || me.page.SiteTitle == "ducksfan", "&nbsp;", "&copy;"+itoa(iIf(me.dummy, 1234, chapter.Year))) + "&nbsp;" + sIf(me.dummy, "Author Name", chapter.author.str(true, true)) +
 					"</span></span>"
 				s += "</a>"
 				chaps = chaps + s
@@ -555,7 +555,7 @@ func (me *siteGen) prepHomePage() {
 			s += chaps + "</span></span>"
 		}
 	}
-	if true && !me.dummy {
+	if false && !me.dummy {
 		s += "<h5 id='books' class='" + App.Proj.Site.Gen.ClsSeries + "'>Downloads</h5>"
 		if !me.dirRtl {
 			s += "<div>(" + me.textStr("DownloadAlt")
@@ -950,16 +950,18 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 			}
 		}
 	}
-	for _, bookpub := range App.Proj.Books.Pubs {
-		xml := "<entry><updated>" + bookpub.PubDate + "T11:22:44Z</updated>"
-		xml += `<title>Album: ` + xEsc(bookpub.Title) + `</title>`
-		xml += "<id>info:" + contentHashStr([]byte(strings.Join(bookpub.Series, "+")+"_"+bookpub.RepoName+"_"+bookpub.PubDate+"_"+"_"+me.lang)) + "</id>"
-		xml += `<link href="https://` + App.Proj.Site.Host + "/" + me.namePage(nil, 0, 0, "", "", "", 0, false) + `.html#book_` + bookpub.RepoName + `"/>`
-		xml += `<author><name>` + App.Proj.Site.Host + `</name></author>`
-		xml += `<content type="text">` + strings.NewReplacer(
-			"%REPONAME%", bookpub.RepoName,
-		).Replace(locStr(af.ContentTxtBook, me.lang)) + `</content>`
-		xmls = append(xmls, xml+`</entry>`)
+	if false {
+		for _, bookpub := range App.Proj.Books.Pubs {
+			xml := "<entry><updated>" + bookpub.PubDate + "T11:22:44Z</updated>"
+			xml += `<title>Album: ` + xEsc(bookpub.Title) + `</title>`
+			xml += "<id>info:" + contentHashStr([]byte(strings.Join(bookpub.Series, "+")+"_"+bookpub.RepoName+"_"+bookpub.PubDate+"_"+"_"+me.lang)) + "</id>"
+			xml += `<link href="https://` + App.Proj.Site.Host + "/" + me.namePage(nil, 0, 0, "", "", "", 0, false) + `.html#book_` + bookpub.RepoName + `"/>`
+			xml += `<author><name>` + App.Proj.Site.Host + `</name></author>`
+			xml += `<content type="text">` + strings.NewReplacer(
+				"%REPONAME%", bookpub.RepoName,
+			).Replace(locStr(af.ContentTxtBook, me.lang)) + `</content>`
+			xmls = append(xmls, xml+`</entry>`)
+		}
 	}
 	if len(xmls) > 0 && tlatest != "" {
 		filename := af.Name + "." + me.lang + ".atom"

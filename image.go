@@ -53,7 +53,7 @@ func imgPnmToPng(srcImgData io.ReadCloser, dstImgFile io.WriteCloser, ensureWide
 	_ = dstImgFile.Close()
 }
 
-func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile bool, tmpFileNamePrefix string) (writtenFilePath string) {
+func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile bool, tmpFileNamePrefix string, minFileSize int64) (writtenFilePath string) {
 	srcdata := fileRead(srcFilePath)
 	chash := contentHashStr(srcdata)
 	tmpfilepath := ".ccache/.pngtmp/" + tmpFileNamePrefix + chash + "." + itoa(reSize) + ".png"
@@ -61,7 +61,6 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 		tmpfilepath = outFilePath
 	}
 	if noTmpFile || fileStat(tmpfilepath) == nil {
-		// os.WriteFile("/home/_/tmp/pix/bla/"+strings.Replace(srcFilePath, "/", "_", -1)+"."+chash, srcdata, os.ModePerm)
 		if src := string(srcdata); strings.HasSuffix(srcFilePath, ".svg") {
 			sw, sh := src[7+strings.Index(src, "width=\""):], src[8+strings.Index(src, "height=\""):]
 			sw, sh = strings.TrimSuffix(sw[:strings.IndexByte(sw, '"')], "px"), strings.TrimSuffix(sh[:strings.IndexByte(sh, '"')], "px")
@@ -70,12 +69,15 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 				panic(sw + "x" + sh)
 			}
 			if s := osExec(false, nil, browserCmd[0], append(browserCmd[2:],
-				// "--headless",
-				"--window-size="+itoa(w)+","+itoa(h)+"",
+				"--headless", "--hide-scrollbars",
+				"--window-size="+itoa(w+77)+","+itoa(h+77)+"",
 				"--screenshot="+tmpfilepath, "--default-background-color=00000000", srcFilePath)...); strings.Contains(s, "tile memory limits") {
 				panic(s)
 			} else if fstat := fileStat(tmpfilepath); fstat == nil || fstat.Size() == 0 {
 				panic(s)
+			} else if minFileSize > 0 && fstat.Size() < minFileSize {
+				os.Remove(tmpfilepath)
+				return imgAnyToPng(srcFilePath, outFilePath, reSize, noTmpFile, tmpFileNamePrefix, minFileSize)
 			}
 			if reSize != 0 && reSize != w {
 				_ = osExec(true, nil, "mogrify",
@@ -90,7 +92,7 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 			if reSize != 0 {
 				cmdargs = append(cmdargs, "-resize", itoa(reSize))
 			}
-			_ = osExec(true, nil, "convert", append(cmdargs, tmpfilepath)...)
+			_ = osExec(true, nil, "magick", append(cmdargs, tmpfilepath)...)
 		}
 		writtenFilePath = tmpfilepath
 	}
