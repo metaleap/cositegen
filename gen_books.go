@@ -174,7 +174,7 @@ func (me *BookGen) genSheetSvgsAndPngs(dirRtl bool, lang string) {
 
 func (me *BookGen) genSheetSvgAndPng(sv *SheetVer, dstPngFilePath string, lang string) {
 	dst_svg_file_path := dstPngFilePath + ".svg"
-	me.genSheetSvg(sv, dst_svg_file_path, false, lang, true, "white")
+	me.genSheetSvg(sv, dst_svg_file_path, false, lang, true, "#ffffff")
 	imgAnyToPng(dst_svg_file_path, dstPngFilePath, 0, true, "foo", 1024*1024)
 	os.Remove(dst_svg_file_path)
 }
@@ -186,7 +186,7 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 	svgtxt := sv.parentSheet.parentChapter.GenPanelSvgText
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
         xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-        width="` + itoa(w/2) + `" height="` + itoa(h/2) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `">
+        width="` + itoa(w/2) + `" height="` + itoa(h/2) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `" fill="` + polyBgCol + `">
             <style type="text/css">` + App.Proj.cssFontFaces(bookGenCssRepl) + `
 				polygon.pt, polygon.ptb { stroke: black; fill: ` + polyBgCol + `; }
 				tspan.sidetxt { font-size: 177px; stroke-width: 22px !important; }

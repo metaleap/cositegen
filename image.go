@@ -71,13 +71,18 @@ func imgAnyToPng(srcFilePath string, outFilePath string, reSize int, noTmpFile b
 			if s := osExec(false, nil, browserCmd[0], append(browserCmd[2:],
 				"--headless", "--hide-scrollbars",
 				"--window-size="+itoa(w+77)+","+itoa(h+77)+"",
-				"--screenshot="+tmpfilepath, "--default-background-color=00000000", srcFilePath)...); strings.Contains(s, "tile memory limits") {
+				"--screenshot="+tmpfilepath /*, "--default-background-color=00000000"*/, srcFilePath)...); strings.Contains(s, "tile memory limits") {
 				panic(s)
 			} else if fstat := fileStat(tmpfilepath); fstat == nil || fstat.Size() == 0 {
 				panic(s)
 			} else if minFileSize > 0 && fstat.Size() < minFileSize {
 				os.Remove(tmpfilepath)
 				return imgAnyToPng(srcFilePath, outFilePath, reSize, noTmpFile, tmpFileNamePrefix, minFileSize)
+			}
+			if s := os.Getenv("PNGRES"); s != "" {
+				if i := atoi(s, 0, 987654321); i > 0 {
+					reSize = i
+				}
 			}
 			if reSize != 0 && reSize != w {
 				_ = osExec(true, nil, "mogrify",
