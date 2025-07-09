@@ -197,7 +197,6 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 		me.data.hasBgCol = true
 		me.data.PanelsTree.each(func(p *ImgPanel) {
 			gid, dstfilepath := "pnl"+itoa(pidx), filepath.Join(me.data.dirPath, "bg"+itoa(pidx)+".png")
-			println(me.id + "\t" + dstfilepath)
 			if s, svg := "", bgsvgsrc; force || (nil == fileStat(dstfilepath)) {
 				_ = os.Remove(dstfilepath)
 				if idx := strings.Index(svg, `id="`+gid+`"`); idx > 0 {
@@ -235,7 +234,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 					tmpfilepath := "/dev/shm/" + me.id + "_bg" + itoa(pidx) + ".svg"
 					fileWrite(tmpfilepath, []byte(s))
 					out, errprog := exec.Command("magick", tmpfilepath, "-resize", itoa(int(100.0*App.Proj.Sheets.Panel.BgScale))+"%", dstfilepath).CombinedOutput()
-					// _ = os.Remove(tmpfilepath)
+					_ = os.Remove(tmpfilepath)
 					if s := trim(string(out)); errprog != nil {
 						_ = os.Remove(dstfilepath)
 						panic(errprog.Error() + ">>>>" + s + "<<<<")

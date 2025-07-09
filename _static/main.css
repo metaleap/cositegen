@@ -226,3 +226,32 @@ input.collchk:checked~div.collchk {
 h4 small {
     font-weight: normal;
 }
+
+.colr .colcanvas {
+    margin-top: 1.23em;
+    overflow: auto;
+    position: absolute;
+    left: 0;
+    height: 92%;
+    width: 99%;
+    min-width: 55%;
+    max-width: 99%;
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position: left top;
+}
+
+.colr .colcanvas svg {
+    background-color: #ffffff;
+    width: 74%;
+}
+
+.colr .colgui {
+    margin-top: 1.23em;
+    overflow: auto;
+    position: absolute;
+    right: 0;
+    width: 26%;
+    height: 80%;
+    background: gold;
+}
