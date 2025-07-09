@@ -227,7 +227,7 @@ h4 small {
     font-weight: normal;
 }
 
-.colr .colcanvas {
+.colr .colrcanvas {
     margin-top: 1.23em;
     overflow: auto;
     position: absolute;
@@ -241,25 +241,46 @@ h4 small {
     background-position: left top;
 }
 
-.colr .colcanvas svg {
+.colr .colrcanvas svg {
     background-color: #ffffff;
     width: 74%;
 }
 
-.colr .colgui {
+.colr .colrgui {
+    font-size: 0.77em;
     margin-top: 1.23em;
     overflow: auto;
     position: absolute;
     right: 0;
     width: 26%;
-    height: 80%;
-    background: gold;
+    height: 88%;
+    background: #efe9e8;
+}
+
+.outlined {
+    color: white;
+    text-shadow:
+        -1px -1px 0 #000,
+        0 -1px 0 #000,
+        1px -1px 0 #000,
+        1px 0 0 #000,
+        1px 1px 0 #000,
+        0 1px 0 #000,
+        -1px 1px 0 #000,
+        -1px 0 0 #000;
+}
+
+.colr .colrgui .colsrow div {
+    display: inline-block;
+    width: 1em;
+    overflow: hidden;
+    padding: 0.22em 0.55em;
 }
 
 .colr textarea.dbgJson {
     position: absolute;
     height: 33em;
-    top: 99%;
+    top: 123%;
     width: 88%;
     font-family: monospace;
 }
