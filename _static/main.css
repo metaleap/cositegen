@@ -255,3 +255,11 @@ h4 small {
     height: 80%;
     background: gold;
 }
+
+.colr textarea.dbgJson {
+    position: absolute;
+    height: 33em;
+    top: 99%;
+    width: 88%;
+    font-family: monospace;
+}

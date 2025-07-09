@@ -163,7 +163,7 @@ func (me *Series) allSheetVersSortedByScanDate(skipPriv bool) (ret []*SheetVer) 
 			for _, sv := range sheet.versions {
 				var added bool
 				for i := range ret {
-					if added = (ret[i].dateTimeUnixNano > sv.dateTimeUnixNano); added {
+					if added = (ret[i].DateTimeUnixNano > sv.DateTimeUnixNano); added {
 						ret = append(append(append(make([]*SheetVer, 0, len(ret)+1), ret[:i]...), sv), ret[i:]...)
 						break
 					}
@@ -183,7 +183,7 @@ func (me *Series) allSheetVersSortedByScanDate(skipPriv bool) (ret []*SheetVer) 
 func (me *Series) dateRange() (dtOldest int64, dtNewest int64) {
 	for _, chap := range me.Chapters {
 		for _, sheet := range chap.sheets {
-			dt := sheet.versions[0].dateTimeUnixNano
+			dt := sheet.versions[0].DateTimeUnixNano
 			if dtOldest == 0 || dt < dtOldest {
 				dtOldest = dt
 			}
@@ -248,7 +248,7 @@ func (me *Chapter) homePic() (*SheetVer, int) {
 
 func (me *Chapter) scanYearLatest() (r int) {
 	for _, sheet := range me.sheets {
-		dt := time.Unix(0, sheet.versions[0].dateTimeUnixNano)
+		dt := time.Unix(0, sheet.versions[0].DateTimeUnixNano)
 		if dtyear := dt.Year(); dtyear > r {
 			r = dtyear
 		}
@@ -258,7 +258,7 @@ func (me *Chapter) scanYearLatest() (r int) {
 func (me *Chapter) scanYearHas(year int, latestSvOnly bool) bool {
 	for _, sheet := range me.sheets {
 		for _, sv := range sheet.versions {
-			if dt := time.Unix(0, sv.dateTimeUnixNano); dt.Year() == year {
+			if dt := time.Unix(0, sv.DateTimeUnixNano); dt.Year() == year {
 				return true
 			}
 			if latestSvOnly {
@@ -334,7 +334,7 @@ func (me *Chapter) storyboardFilePath() string {
 func (me *Chapter) hasBgCol() bool {
 	for _, sheet := range me.sheets {
 		for _, sv := range sheet.versions {
-			if sv.data.hasBgCol {
+			if sv.Data.hasBgCol {
 				return true
 			}
 		}
@@ -346,7 +346,7 @@ func (me *Chapter) percentColorized() float64 {
 	numsv, numbg := 0, 0
 	for _, sheet := range me.sheets {
 		for _, sv := range sheet.versions {
-			if numsv++; sv.data.hasBgCol {
+			if numsv++; sv.Data.hasBgCol {
 				numbg++
 			}
 		}
@@ -361,7 +361,7 @@ func (me *Chapter) dateRangeOfSheets(newestSheetVerOnly bool, onlyYear int) (tim
 	var dt1, dt2 int64
 	for _, sheet := range me.sheets {
 		for _, sv := range sheet.versions {
-			dt := sv.dateTimeUnixNano
+			dt := sv.DateTimeUnixNano
 			if onlyYear > 0 && time.Unix(0, dt).Year() != onlyYear {
 				continue
 			}

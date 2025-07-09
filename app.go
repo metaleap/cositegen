@@ -106,7 +106,7 @@ func appPrepWork(fromGui bool) {
 							if !sv.prep.done {
 								didwork := sv.ensurePrep(true, false)
 								if sv.prep.done, numjobs = true, numjobs+1; didwork {
-									printLn(time.Now().Format("15:04:05")+"\t#"+itoa(1+numwork)+"\t"+sv.fileName, "BW:", sv.bwThreshold())
+									printLn(time.Now().Format("15:04:05")+"\t#"+itoa(1+numwork)+"\t"+sv.FileName, "BW:", sv.bwThreshold())
 									numwork = numwork + 1
 								}
 							}
@@ -273,8 +273,8 @@ func pngOpt(pngFilePath string) bool {
 		} else if strings.Contains(pngFilePath, "/bwsmall.") && strings.HasSuffix(pngFilePath, "."+itoa(int(App.Proj.Sheets.Bw.SmallWidth))+".png") {
 			if hashid := filepath.Base(filepath.Dir(pngFilePath)); App.Proj.data.Sv.ById != nil {
 				if svdata := App.Proj.data.Sv.ById[hashid]; svdata != nil && svdata.parentSheetVer != nil {
-					_ = os.Remove(filepath.Join(svdata.dirPath, strings.TrimSuffix(
-						filepath.Base(svdata.parentSheetVer.fileName), ".png")+".svg"))
+					_ = os.Remove(filepath.Join(svdata.DirPath, strings.TrimSuffix(
+						filepath.Base(svdata.parentSheetVer.FileName), ".png")+".svg"))
 				}
 			}
 		}

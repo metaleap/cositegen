@@ -96,7 +96,7 @@ func (me *Chapter) panelsTreeFromStoryboard(sv *SheetVer) *ImgPanel {
 	me.loadStoryboard()
 	page := &me.storyboard.pages[indexOf(me.sheets, sv.parentSheet)]
 
-	img_bw, _, err := image.Decode(bytes.NewReader(fileRead(sv.data.bwFilePath)))
+	img_bw, _, err := image.Decode(bytes.NewReader(fileRead(sv.Data.BwFilePath)))
 	if err != nil {
 		panic(err)
 	}

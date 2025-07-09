@@ -281,7 +281,7 @@ func (me *siteGen) genOrCopyPanelPics() (numSvgs uint32, numPngs uint32, numShee
 					}(chapter, sheet)
 				}
 				sv := sheet.versions[0]
-				if pngfilepath := filepath.Join(sv.data.dirPath, "strip.1.png"); fileStat(pngfilepath) != nil {
+				if pngfilepath := filepath.Join(sv.Data.DirPath, "strip.1.png"); fileStat(pngfilepath) != nil {
 					if year, num, ok := strings.Cut(sv.parentSheet.name, "."); ok {
 						splits := strings.Split(num, "_")
 						for i, num := range splits {
@@ -305,7 +305,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 	atomic.StoreUint64(&totalSize, 0)
 	var pidx int
 	var work sync.WaitGroup
-	sv.data.PanelsTree.each(func(panel *ImgPanel) {
+	sv.Data.PanelsTree.each(func(panel *ImgPanel) {
 		work.Add(1)
 		numPanels++
 		go func(pidx int) {
@@ -314,7 +314,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 					continue
 				}
 				fext := sIf(quali.SizeHint == 0, ".svg", ".png")
-				srcpath := filepath.Join(sv.data.PicDirPath(quali.SizeHint), itoa(pidx)+fext)
+				srcpath := filepath.Join(sv.Data.PicDirPath(quali.SizeHint), itoa(pidx)+fext)
 				if fileinfo := fileStat(srcpath); fileinfo == nil && quali.SizeHint != 0 {
 					break
 				} else {
@@ -326,7 +326,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 					dstpath := filepath.Join(".build", App.Proj.Site.Gen.PicDirName, me.namePanelPic(sv, pidx, quali.SizeHint)+fext)
 					fileLinkOrCopy(srcpath, dstpath)
 					if me.onPicSize != nil {
-						me.onPicSize(sv.parentSheet.parentChapter, sv.id+itoa(pidx), qidx, fileinfo.Size())
+						me.onPicSize(sv.parentSheet.parentChapter, sv.ID+itoa(pidx), qidx, fileinfo.Size())
 					}
 					if quali.SizeHint == 0 {
 						atomic.AddUint32(&numSvgs, 1)
@@ -335,10 +335,10 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 					}
 				}
 			}
-			if srcpath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png"); sv.data.hasBgCol {
+			if srcpath := filepath.Join(sv.Data.DirPath, "bg"+itoa(pidx)+".png"); sv.Data.hasBgCol {
 				if fileinfo := fileStat(srcpath); fileinfo != nil {
 					atomic.AddUint64(&totalSize, uint64(fileinfo.Size()))
-					dstpath := filepath.Join(".build", App.Proj.Site.Gen.PicDirName, sv.DtStr()+sv.id+itoa(pidx)+"bg.png")
+					dstpath := filepath.Join(".build", App.Proj.Site.Gen.PicDirName, sv.DtStr()+sv.ID+itoa(pidx)+"bg.png")
 					fileLinkOrCopy(srcpath, dstpath)
 					atomic.AddUint32(&numPngs, 1)
 				}
@@ -348,8 +348,8 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 		pidx++
 	})
 
-	if homepicname := sv.homePicName(); homepicname != "" && fileStat(sv.data.HomePic) != nil {
-		fileLinkOrCopy(sv.data.HomePic, filepath.Join(".build", App.Proj.Site.Gen.PicDirName, homepicname))
+	if homepicname := sv.homePicName(); homepicname != "" && fileStat(sv.Data.HomePic) != nil {
+		fileLinkOrCopy(sv.Data.HomePic, filepath.Join(".build", App.Proj.Site.Gen.PicDirName, homepicname))
 		atomic.AddUint32(&numPngs, 1)
 	}
 	work.Wait()
@@ -454,7 +454,7 @@ func (me *siteGen) genPages(chapter *Chapter, pageNr int, totalSizeRec *uint64) 
 						var totalimgsize int64
 						for sv, maxpidx := range allpanels {
 							for pidx := 0; pidx <= maxpidx; pidx++ {
-								if bgfile := fileStat(".build/" + App.Proj.Site.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg.png"); bgfile != nil && me.bgCol {
+								if bgfile := fileStat(".build/" + App.Proj.Site.Gen.PicDirName + "/" + sv.DtStr() + sv.ID + itoa(pidx) + "bg.png"); bgfile != nil && me.bgCol {
 									totalimgsize += bgfile.Size()
 								}
 								name := me.namePanelPic(sv, pidx, q.SizeHint)
@@ -728,7 +728,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		if len(panel.SubRows) > 0 {
 			for i := range panel.SubRows {
 				sr := &panel.SubRows[i]
-				s += "<div id='" + firstrow + App.Proj.Site.Gen.ClsPanel + "r" + sv.id + itoa(i) + "' class='" + App.Proj.Site.Gen.ClsPanelRow
+				s += "<div id='" + firstrow + App.Proj.Site.Gen.ClsPanel + "r" + sv.ID + itoa(i) + "' class='" + App.Proj.Site.Gen.ClsPanelRow
 				if firstrow = ""; istop {
 					s += "' onfocus='" + App.Proj.Site.Gen.ClsPanel + "f(this)' tabindex='0"
 				}
@@ -757,7 +757,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				}
 			}
 
-			s += "<div id='" + firstpanel + App.Proj.Site.Gen.ClsPanel + "p" + sv.id + itoa(pidx) + "' class='" + App.Proj.Site.Gen.ClsPanel + "'"
+			s += "<div id='" + firstpanel + App.Proj.Site.Gen.ClsPanel + "p" + sv.ID + itoa(pidx) + "' class='" + App.Proj.Site.Gen.ClsPanel + "'"
 			firstpanel = ""
 			s += ">" + sv.genTextSvgForPanel(pidx, panel, me.lang, true, false)
 			me.sheetPgNrs[sv] = pageNr
@@ -769,9 +769,9 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				isfirstpanelonpage = false
 				s += " fetchpriority='high'"
 			}
-			if me.bgCol && sv.data.hasBgCol {
-				if bgsvg := fileStat(".build/" + App.Proj.Site.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg.png"); bgsvg != nil {
-					s += " style='background-image:url(\"./" + App.Proj.Site.Gen.PicDirName + "/" + sv.DtStr() + sv.id + itoa(pidx) + "bg.png\");'"
+			if me.bgCol && sv.Data.hasBgCol {
+				if bgsvg := fileStat(".build/" + App.Proj.Site.Gen.PicDirName + "/" + sv.DtStr() + sv.ID + itoa(pidx) + "bg.png"); bgsvg != nil {
+					s += " style='background-image:url(\"./" + App.Proj.Site.Gen.PicDirName + "/" + sv.DtStr() + sv.ID + itoa(pidx) + "bg.png\");'"
 				}
 			}
 			s += "/>"
@@ -786,15 +786,15 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 		sheetver := sheet.versions[0]
 		if svDt > 0 {
 			for i := range sheet.versions {
-				if sheet.versions[i].dateTimeUnixNano >= svDt {
+				if sheet.versions[i].DateTimeUnixNano >= svDt {
 					sheetver = sheet.versions[i]
 				}
 			}
 		}
 		_ = sheetver.ensurePrep(false, false)
 		pidx = 0
-		me.page.PageContent += "<div id='" + sheetver.id + "' class='" + App.Proj.Site.Gen.ClsSheet + "'>"
-		me.page.PageContent += iter(sheetver, sheetver.data.PanelsTree, true)
+		me.page.PageContent += "<div id='" + sheetver.ID + "' class='" + App.Proj.Site.Gen.ClsSheet + "'>"
+		me.page.PageContent += iter(sheetver, sheetver.Data.PanelsTree, true)
 		me.page.PageContent += "</div>"
 	}
 	me.page.PageContent += "</div>"
@@ -877,9 +877,9 @@ func (me *siteGen) genSvgTextsFile(chapter *Chapter) string {
 	for _, sheet := range chapter.sheets {
 		for _, sv := range sheet.versions {
 			pidx := 0
-			sv.data.PanelsTree.each(func(pnl *ImgPanel) {
+			sv.Data.PanelsTree.each(func(pnl *ImgPanel) {
 				for i, area := range sv.panelAreas(pidx) {
-					svg += "<symbol id=\"" + sv.id + "_" + itoa(pidx) + "t" + itoa(i+1) + "\">\t" +
+					svg += "<symbol id=\"" + sv.ID + "_" + itoa(pidx) + "t" + itoa(i+1) + "\">\t" +
 						sv.genTextSvgForPanelArea(pidx, i, &area, me.lang, false, false, area.PointTo != nil) + "</symbol>"
 				}
 				pidx++
@@ -913,7 +913,7 @@ func (me *siteGen) genAtomXml(totalSizeRec *uint64) (numFilesWritten int) {
 				pgnr, numpanels, numsheets, pages := -1, 0, 0, map[int]bool{}
 				for _, sheet := range chapter.sheets {
 					for _, sv := range sheet.versions {
-						if dtstr := time.Unix(0, sv.dateTimeUnixNano).Format("2006-01-02"); dtstr >= nextolderdate && dtstr < pubdate {
+						if dtstr := time.Unix(0, sv.DateTimeUnixNano).Format("2006-01-02"); dtstr >= nextolderdate && dtstr < pubdate {
 							pg := me.sheetPgNrs[sv]
 							pages[pg] = true
 							npnl, _ := sv.panelCount()
@@ -995,7 +995,7 @@ func (me *siteGen) txtStats(numPg int, numPnl int, numScn int, dtStr string, cha
 }
 
 func (siteGen) namePanelPic(sheetVer *SheetVer, pIdx int, qualiSizeHint int) string {
-	return sheetVer.DtStr() + sheetVer.id + itoa(pIdx) + "." + itoa(qualiSizeHint)
+	return sheetVer.DtStr() + sheetVer.ID + itoa(pIdx) + "." + itoa(qualiSizeHint)
 }
 
 func (me *siteGen) namePage(chapter *Chapter, qualiSizeHint int, pageNr int, viewMode string, dirMode string, langId string, svDt int64, bgCol bool) string {

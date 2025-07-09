@@ -247,9 +247,9 @@ func (me *ImgPanel) nextPanel(parent *Chapter) (foundSheet *SheetVer, foundPanel
 		assert(len(sheet.versions) == 1)
 		for _, sv := range sheet.versions {
 			_ = sv.ensurePrep(false, false)
-			if sv.data != nil && sv.data.PanelsTree != nil {
+			if sv.Data != nil && sv.Data.PanelsTree != nil {
 				pidx := 0
-				sv.data.PanelsTree.each(func(panel *ImgPanel) {
+				sv.Data.PanelsTree.each(func(panel *ImgPanel) {
 					if panel == me {
 						pastme, pgnrme = true, pgnr
 					} else if pastme && foundPanel == nil &&
@@ -289,17 +289,17 @@ func (me *SheetVer) imgSvgText(pidx int, tidx int, pta *ImgPanelArea, langId str
 		svgRepl = strings.NewReplacer(repls...)
 	}
 
-	pxfont, pxline, tspanstyle, tspancls := int(me.data.PxCm*fontSizeCmA4*0.995), int(me.data.PxCm*perLineDyCmA4), pta.SvgTextTspanStyleAttr, []string{svgtext.TspanCssCls}
+	pxfont, pxline, tspanstyle, tspancls := int(me.Data.PxCm*fontSizeCmA4*0.995), int(me.Data.PxCm*perLineDyCmA4), pta.SvgTextTspanStyleAttr, []string{svgtext.TspanCssCls}
 	if strings.HasPrefix(tspanstyle, ".") {
 		tspanstyle, tspancls = "", append(tspancls, strings.Split(tspanstyle[1:], ".")...)
 	}
 
 	if forHtml {
-		s += sIf(isstorytitle, ``, `<use id='_t_`+itoa(svgTxtCounter)+`' xlink:href="t.`+me.parentSheet.parentChapter.parentSeries.Name+`.`+me.parentSheet.parentChapter.Name+`.`+langId+`.svg#`+me.id+`_`+itoa(pidx)+`t`+itoa(tidx+1)+`"/>`)
+		s += sIf(isstorytitle, ``, `<use id='_t_`+itoa(svgTxtCounter)+`' xlink:href="t.`+me.parentSheet.parentChapter.parentSeries.Name+`.`+me.parentSheet.parentChapter.Name+`.`+langId+`.svg#`+me.ID+`_`+itoa(pidx)+`t`+itoa(tidx+1)+`"/>`)
 	} else {
 		mozscale := svgtext.MozScale > 0.01 && !forEbook
 		if mozscale {
-			s += `<svg class="mz" width="` + itoa(me.data.PanelsTree.Rect.Dx()) + `">`
+			s += `<svg class="mz" width="` + itoa(me.Data.PanelsTree.Rect.Dx()) + `">`
 		}
 		s += "<text " + sIf(isBorderAndFill, "y='"+itoa(svgtext.BoxPolyTopPx)+"px'", "") + " style='font-size: " + itoa(pxfont) + "px;' transform='" + trim(DeNewlineRepl.Replace(pta.SvgTextTransformAttr)) + "'>"
 		ts := "<tspan style='" + trim(DeNewlineRepl.Replace(tspanstyle)) + "' class='" + sIf(isstorytitle || strings.Contains(tspanstyle, "font-family"), "", "std") + "'>"

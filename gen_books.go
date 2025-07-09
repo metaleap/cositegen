@@ -95,7 +95,7 @@ func makeBook(flags map[string]bool) {
 					sv := sheet.versions[0]
 					gen.Sheets = append(gen.Sheets, sv)
 
-					rect := sv.data.pxBounds()
+					rect := sv.Data.pxBounds()
 					if w := rect.Dx(); w > gen.MaxSheetWidth {
 						gen.MaxSheetWidth = w
 					}
@@ -180,7 +180,7 @@ func (me *BookGen) genSheetSvgAndPng(sv *SheetVer, dstPngFilePath string, lang s
 }
 
 func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, lang string, skewForPrint bool, polyBgCol string) {
-	rectinner, lores := sv.data.pxBounds(), (os.Getenv("LORES") != "")
+	rectinner, lores := sv.Data.pxBounds(), (os.Getenv("LORES") != "")
 
 	w, h := rectinner.Dx(), rectinner.Dy()
 	svgtxt := sv.parentSheet.parentChapter.GenPanelSvgText
@@ -208,15 +208,15 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 	}
 	svg += `</style>`
 
-	for i := range sv.data.PanelsTree.SubRows {
-		if row := &sv.data.PanelsTree.SubRows[i]; len(row.SubCols) > 1 {
-			row.setTopLevelRowRecenteredX(sv.data.PanelsTree, w, h)
+	for i := range sv.Data.PanelsTree.SubRows {
+		if row := &sv.Data.PanelsTree.SubRows[i]; len(row.SubCols) > 1 {
+			row.setTopLevelRowRecenteredX(sv.Data.PanelsTree, w, h)
 		}
 	}
 
 	pidx, qidx := 0, iIf(lores, 0, App.Proj.maxQualiIdx(false))
 	rowmids, ymid := map[int]int{}, -1
-	sv.data.PanelsTree.each(func(p *ImgPanel) {
+	sv.Data.PanelsTree.each(func(p *ImgPanel) {
 		px, py, pw, ph := p.Rect.Min.X+p.recenteredXOffset, p.Rect.Min.Y-rectinner.Min.Y, p.Rect.Dx(), p.Rect.Dy()
 		if py != ymid && (len(rowmids) == 0 || !me.perRow.firstOnly) {
 			ymid = py
@@ -228,7 +228,7 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 		}
 		svg += `<g id="` + gid + `" clip-path="url(#c` + gid + `)" transform="translate(` + itoa(tx) + ` ` + itoa(py) + `)">`
 		svg += `<defs><clipPath id="c` + gid + `"><rect x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"></rect></clipPath></defs>`
-		if panelbgpngsrcfilepath := filepath.Join(sv.data.dirPath, "bg"+itoa(pidx)+".png"); fileStat(panelbgpngsrcfilepath) != nil {
+		if panelbgpngsrcfilepath := filepath.Join(sv.Data.DirPath, "bg"+itoa(pidx)+".png"); fileStat(panelbgpngsrcfilepath) != nil {
 			svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
 						xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(fileRead(panelbgpngsrcfilepath)) + `" />`
 		} else {
@@ -236,7 +236,7 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 						fill="#ffffff" stroke-width="0" />`
 		}
 		svg += `<image x="0" y="0" width="` + itoa(pw) + `" height="` + itoa(ph) + `"
-					xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(fileRead(filepath.Join(sv.data.PicDirPath(App.Proj.Qualis[qidx].SizeHint), itoa(pidx)+".png"))) + `" />
+					xlink:href="data:image/png;base64,` + base64.StdEncoding.EncodeToString(fileRead(filepath.Join(sv.Data.PicDirPath(App.Proj.Qualis[qidx].SizeHint), itoa(pidx)+".png"))) + `" />
 					`
 		if lang != "" {
 			svg += sv.genTextSvgForPanel(pidx, p, lang, false, true)
@@ -395,7 +395,7 @@ func (me *BookGen) genPrintVersion(dirRtl bool, lang string) (numPages int) {
 	dpbwidx, dpbwfilepaths := 0, make([]string, 0, len(me.Sheets))
 	if !dpnope {
 		for _, sv := range me.Sheets {
-			dpbwfilepaths = append(dpbwfilepaths, absPath(sv.data.bwSmallFilePath))
+			dpbwfilepaths = append(dpbwfilepaths, absPath(sv.Data.BwSmallFilePath))
 		}
 		rand.Seed(time.Now().UnixNano())
 		rand.Shuffle(len(dpbwfilepaths), func(i int, j int) {
@@ -623,12 +623,12 @@ func (me *BookGen) facesPicPaths() []string {
 		for _, sv := range me.Sheets {
 			var svimg *image.Gray
 			var pidx int
-			sv.data.PanelsTree.each(func(p *ImgPanel) {
+			sv.Data.PanelsTree.each(func(p *ImgPanel) {
 				for i, area := range sv.panelFaceAreas(pidx) {
-					rect, facefilepath := area.Rect, ".ccache/.pngtmp/face_"+sv.id+itoa0pref(pidx, 2)+itoa0pref(i, 2)+".png"
+					rect, facefilepath := area.Rect, ".ccache/.pngtmp/face_"+sv.ID+itoa0pref(pidx, 2)+itoa0pref(i, 2)+".png"
 					if fileStat(facefilepath) == nil {
 						if svimg == nil {
-							if img, _, err := image.Decode(bytes.NewReader(fileRead(sv.data.bwFilePath))); err != nil {
+							if img, _, err := image.Decode(bytes.NewReader(fileRead(sv.Data.BwFilePath))); err != nil {
 								panic(err)
 							} else {
 								svimg = img.(*image.Gray)

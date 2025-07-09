@@ -188,7 +188,7 @@ func (me *Project) percentTranslated(lang string, ser *Series, chap *Chapter, sh
 					if sheetVer != nil && sheetVer != sv {
 						continue
 					}
-					for _, areas := range me.data.Sv.textRects[sv.id] {
+					for _, areas := range me.data.Sv.textRects[sv.ID] {
 						for _, area := range areas {
 							if def := trim(area.Data[me.Langs[0]]); def != "" {
 								if numtotal++; trim(area.Data[lang]) != "" {
@@ -395,7 +395,7 @@ func (me *Project) load() (numSheetVers int) {
 						sheet = &Sheet{name: sheetname, parentChapter: chap}
 						chap.sheets = append(chap.sheets, sheet)
 					}
-					sheetver := &SheetVer{dateTimeUnixNano: dt, parentSheet: sheet, fileName: fname}
+					sheetver := &SheetVer{DateTimeUnixNano: dt, parentSheet: sheet, FileName: fname}
 					sheet.versions = append([]*SheetVer{sheetver}, sheet.versions...)
 					numSheetVers++
 
@@ -409,27 +409,27 @@ func (me *Project) load() (numSheetVers int) {
 						if modtime := svfileinfo.ModTime().UnixNano(); modtime < dtdatajson.UnixNano() {
 							work.Lock()
 							for id, filemeta := range oldIdsToFileMeta {
-								if filemeta.FilePath == sv.fileName && filemeta.ModTime == modtime && filemeta.Size == svfileinfo.Size() {
-									sv.id = id
+								if filemeta.FilePath == sv.FileName && filemeta.ModTime == modtime && filemeta.Size == svfileinfo.Size() {
+									sv.ID = id
 									break
 								}
 							}
 							work.Unlock()
 						}
-						if sv.id == "" {
-							data := fileRead(sv.fileName)
-							sv.id = contentHashStr(data)
+						if sv.ID == "" {
+							data := fileRead(sv.FileName)
+							sv.ID = contentHashStr(data)
 						}
 						work.Lock()
-						me.data.Sv.fileNamesToIds[sv.fileName] = sv.id
-						me.data.Sv.IdsToFileMeta[sv.id] = FileInfo{sv.fileName, svfileinfo.ModTime().UnixNano(), svfileinfo.Size()}
+						me.data.Sv.fileNamesToIds[sv.FileName] = sv.ID
+						me.data.Sv.IdsToFileMeta[sv.ID] = FileInfo{sv.FileName, svfileinfo.ModTime().UnixNano(), svfileinfo.Size()}
 						work.Unlock()
-						if sv.data = me.data.Sv.ById[sv.id]; sv.data != nil {
-							sv.data.parentSheetVer = sv
+						if sv.Data = me.data.Sv.ById[sv.ID]; sv.Data != nil {
+							sv.Data.parentSheetVer = sv
 						}
-						cachedirsymlinkpath := sv.fileName[:len(sv.fileName)-len(".png")]
+						cachedirsymlinkpath := sv.FileName[:len(sv.FileName)-len(".png")]
 						_ = os.Remove(cachedirsymlinkpath)
-						if err := os.Symlink("../../../.ccache/"+svCacheDirNamePrefix+sv.id, cachedirsymlinkpath); err != nil {
+						if err := os.Symlink("../../../.ccache/"+svCacheDirNamePrefix+sv.ID, cachedirsymlinkpath); err != nil {
 							panic(err)
 						}
 					}(sheetver, fileinfo)
@@ -444,16 +444,16 @@ func (me *Project) load() (numSheetVers int) {
 					for i, sheetver := range sheet.versions {
 						if i > 0 {
 							if len(chap.versions) <= i {
-								chap.versions = append(chap.versions, sheetver.dateTimeUnixNano)
-							} else if sheetver.dateTimeUnixNano < chap.versions[i] {
-								chap.versions[i] = sheetver.dateTimeUnixNano
+								chap.versions = append(chap.versions, sheetver.DateTimeUnixNano)
+							} else if sheetver.DateTimeUnixNano < chap.versions[i] {
+								chap.versions[i] = sheetver.DateTimeUnixNano
 							}
 						} else {
-							if sheetver.dateTimeUnixNano > chap.verDtLatest.until {
-								chap.verDtLatest.until = sheetver.dateTimeUnixNano
+							if sheetver.DateTimeUnixNano > chap.verDtLatest.until {
+								chap.verDtLatest.until = sheetver.DateTimeUnixNano
 							}
-							if sheetver.dateTimeUnixNano < chap.verDtLatest.from || chap.verDtLatest.from == 0 {
-								chap.verDtLatest.from = sheetver.dateTimeUnixNano
+							if sheetver.DateTimeUnixNano < chap.verDtLatest.from || chap.verDtLatest.from == 0 {
+								chap.verDtLatest.from = sheetver.DateTimeUnixNano
 							}
 						}
 					}
