@@ -1,0 +1,1 @@
+import o from"react";import t from"react-dom/client";function n(){return o.createElement("div",null,"Muh Appl")}const e=document.getElementById("uipane"),r=t.createRoot(e);r.render(o.createElement(n,null));

@@ -186,11 +186,12 @@ func (me *BookGen) genSheetSvg(sv *SheetVer, outFilePath string, dirRtl bool, la
 	svgtxt := sv.parentSheet.parentChapter.GenPanelSvgText
 	svg := `<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg
         xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-        width="` + itoa(w/2) + `" height="` + itoa(h/2) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `" fill="` + polyBgCol + `">
+        width="` + itoa(w/2) + `" height="` + itoa(h/2) + `" viewBox="0 0 ` + itoa(w) + ` ` + itoa(h) + `"><!--fill="` + polyBgCol + `"-->
             <style type="text/css">` + App.Proj.cssFontFaces(bookGenCssRepl) + `
 				polygon.pt, polygon.ptb { stroke: black; fill: ` + polyBgCol + `; }
 				tspan.sidetxt { font-size: 177px; stroke-width: 22px !important; }
 				text.sidetxt { transform: rotate(-90deg); }
+				image { image-rendering: smooth; }
 				g > svg > svg > text, g > svg > svg > text > tspan, tspan.sidetxt {
 					`
 	for _, k := range sortedMapKeys(svgtxt.Css[""]) {

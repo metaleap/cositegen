@@ -11,8 +11,9 @@ import (
 )
 
 type DirMode struct {
-	Name  string
-	Title map[string]string
+	Name     string
+	Title    map[string]string
+	Disabled bool
 }
 
 type Project struct {
@@ -148,7 +149,7 @@ func (me *Project) seriesByName(name string) *Series {
 }
 
 func (me *Project) dirMode(rtl bool) *DirMode {
-	if rtl {
+	if rtl && !me.DirModes.Rtl.Disabled {
 		return &me.DirModes.Rtl
 	}
 	return &me.DirModes.Ltr

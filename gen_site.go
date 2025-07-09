@@ -63,7 +63,7 @@ type PageGen struct {
 	SvgTextIdent   string
 }
 
-func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
+func (me siteGen) genSite(fromGui bool, _ map[string]bool) {
 	var err error
 	tstart := time.Now()
 	me.series, me.sheetPgNrs, me.dummy = App.Proj.Series, map[*SheetVer]int{}, (os.Getenv("DUMMY") != "")
@@ -145,6 +145,9 @@ func (me siteGen) genSite(fromGui bool, flags map[string]bool) {
 		}
 		for _, me.lang = range App.Proj.Langs {
 			for _, me.dirRtl = range []bool{false, true /*KEEP this order of bools*/} {
+				if me.dirRtl && App.Proj.DirModes.Rtl.Disabled {
+					continue
+				}
 				me.bgCol = false
 				numfileswritten += me.genPages(nil, 0, &totalsize)
 				for _, me.bgCol = range []bool{false, true} {

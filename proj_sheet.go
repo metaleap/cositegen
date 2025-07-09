@@ -197,6 +197,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 		me.data.hasBgCol = true
 		me.data.PanelsTree.each(func(p *ImgPanel) {
 			gid, dstfilepath := "pnl"+itoa(pidx), filepath.Join(me.data.dirPath, "bg"+itoa(pidx)+".png")
+			println(me.id + "\t" + dstfilepath)
 			if s, svg := "", bgsvgsrc; force || (nil == fileStat(dstfilepath)) {
 				_ = os.Remove(dstfilepath)
 				if idx := strings.Index(svg, `id="`+gid+`"`); idx > 0 {
@@ -234,7 +235,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 					tmpfilepath := "/dev/shm/" + me.id + "_bg" + itoa(pidx) + ".svg"
 					fileWrite(tmpfilepath, []byte(s))
 					out, errprog := exec.Command("magick", tmpfilepath, "-resize", itoa(int(100.0*App.Proj.Sheets.Panel.BgScale))+"%", dstfilepath).CombinedOutput()
-					_ = os.Remove(tmpfilepath)
+					// _ = os.Remove(tmpfilepath)
 					if s := trim(string(out)); errprog != nil {
 						_ = os.Remove(dstfilepath)
 						panic(errprog.Error() + ">>>>" + s + "<<<<")
@@ -531,9 +532,11 @@ func (me *SheetVer) ensurePanelsTree(force bool) (did bool) {
 			x, y, w, h := float64(p.Rect.Min.X)*scale, float64(p.Rect.Min.Y)*scale, float64(p.Rect.Dx())*scale, float64(p.Rect.Dy())*scale
 			gid := "pnl" + itoa(pidx)
 			svg += `<g id="` + gid + `" inkscape:label="` + gid + `" inkscape:groupmode="layer" transform="translate(` + itoa(int(x)) + ` ` + itoa(int(y)) + `)">`
-			svg += `<rect x="0" y="0" stroke="#000000" stroke-width="0" fill="#f7f2f0"
+			if false {
+				svg += `<rect x="0" y="0" stroke="#000000" stroke-width="0" fill="#f7f2f0"
 				width="` + itoa(int(w)) + `" height="` + itoa(int(h)) + `"></rect>
 			`
+			}
 			svg += "</g>\n"
 			pidx++
 		})

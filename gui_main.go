@@ -88,7 +88,13 @@ func guiMain(r *http.Request, notice string) []byte {
 				})
 				if sheetver := App.Gui.State.Sel.Ver; sheetver != nil {
 					havefullgui = true
-					s += "<hr/><div id='uipane'>" + guiSheetEdit(sheetver, fv, &shouldsavemeta) + "</div>"
+					s += "<hr/><div id='uipane' class='colorizer'>"
+					if r.URL.Query().Get("col") == "1" {
+						s += "<script src='/_esbuild/Application.js'></script>"
+					} else {
+						s += guiSheetEdit(sheetver, fv, &shouldsavemeta)
+					}
+					s += "</div>"
 				}
 			}
 		}
@@ -128,7 +134,8 @@ func guiStartView() (s string) {
 								s += "<hr/>"
 							}
 							numpanels, numpanelareas := sv.panelCount()
-							a := "<a href='./?series=" + url.QueryEscape(series.Name) + "&chapter=" + url.QueryEscape(chapter.Name) + "&sheet=" + url.QueryEscape(sheet.name) + "&sheetver=" + url.QueryEscape(sv.fileName) + "&t=" + itoa(int(time.Now().UnixNano())) + "'>"
+							svhref := "./?series=" + url.QueryEscape(series.Name) + "&chapter=" + url.QueryEscape(chapter.Name) + "&sheet=" + url.QueryEscape(sheet.name) + "&sheetver=" + url.QueryEscape(sv.fileName) + "&t=" + itoa(int(time.Now().UnixNano()))
+							a := "<a href='" + svhref + "'>"
 							if sv.data != nil {
 								if fi := fileStat(sv.data.bwSmallFilePath); fi != nil && fi.Size() > 0 {
 									s += a + "<img title='" + hEsc(sheet.name) + "' src='./" + sv.data.bwSmallFilePath + "' style='width: 11em;'/></a>"
@@ -144,6 +151,9 @@ func guiStartView() (s string) {
 							}
 							s += ">p" + itoa(pgnr) + "</span>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;" + a + hEsc(sheet.name) + "</a>"
 							if numpanels > 0 {
+								if sv.data.hasBgCol {
+									s += "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;<a href='" + svhref + "&col=1'>Colorize</a>"
+								}
 								s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(numpanelareas) + " </b> data-rect" + sIf(numpanelareas == 1, "", "s") + " in " + itoa(numpanels) + " panel/s"
 								if numpanelareas > 0 {
 									for _, langid := range App.Proj.Langs[1:] {
@@ -337,7 +347,6 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	for i := 0; i < numpanels; i++ {
 		s += "&nbsp;&nbsp;<a href='#pa" + sv.id + itoa(i) + "'>" + itoa(i+1) + "</a>"
 	}
-	s += "</h3>"
 	graydistrs, isbwlores := sv.grayDistrs(), (fv("srcpx") != sv.data.bwFilePath)
 	s += guiHtmlGrayDistrs(graydistrs)
 	s += "<div><select onchange='$.fsimg.style.backgroundImage=this.value;'><option value='none'>Black&amp;White</option>"
