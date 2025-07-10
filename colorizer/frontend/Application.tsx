@@ -1,4 +1,4 @@
-import React, { SyntheticEvent, JSX } from "react"
+import React, { SyntheticEvent, JSX, useState, useEffect } from "react"
 import ReactDOM from "react-dom/client"
 
 const domContainer = document.getElementById('uipane')!;
@@ -43,6 +43,7 @@ function init() {
     for (let r of n) for (let g of n) for (let b of n)
         colors.push('#' + r + g + b);
     let idx_color = 0;
+    colors[0] = '#ffffff';
 
     for (let letter = 1; letter <= 24; letter++) {
         let digs: string[] = [];
@@ -58,9 +59,23 @@ function init() {
 init();
 
 function Application() {
-    return <div className="colr" onLoad={(e: SyntheticEvent<HTMLDivElement>) => { alert(321); }}>
+    const [colorLetter, setColorLetter] = useState(0); // 0-23
+    const [colorDigit, setColorDigit] = useState(0); // 0-8
+    const onKeyUp = (evt: KeyboardEvent) => {
+        const anymod = evt.altKey || evt.ctrlKey || evt.metaKey || evt.shiftKey;
+        if ((!anymod) && (evt.key >= 'a') && (evt.key <= 'x'))
+            setColorLetter(evt.key.charCodeAt(0) - 'a'.charCodeAt(0));
+        else if ((!anymod) && (evt.key >= '1') && (evt.key <= '9'))
+            setColorDigit(evt.key.charCodeAt(0) - '1'.charCodeAt(0));
+    };
+    useEffect(() => {
+        document.addEventListener('keyup', onKeyUp);
+        return () => { document.removeEventListener('keyup', onKeyUp) };
+    }, []);
+
+    return <div className="colr">
         <ColrCanvas />
-        <ColrGui />
+        <ColrGui colorLetter={colorLetter} colorDigit={colorDigit} />
         <hr />
         <textarea className="dbgJson" spellCheck="false" autoCapitalize="false" autoComplete="false" autoCorrect="false" readOnly={true}>
             {JSON.stringify(ctx, null, "\t")}
@@ -69,12 +84,10 @@ function Application() {
 }
 
 function ColrCanvas() {
-    return <div className="colrcanvas"
-        /*style={{ backgroundImage: "url(" + ctx.bwImgUri + ")" }}*/
-        dangerouslySetInnerHTML={{ __html: ctx.svgSrc }} />;
+    return <div className="colrcanvas" dangerouslySetInnerHTML={{ __html: ctx.svgSrc }} />;
 }
 
-function ColrGui() { // 9*24
+function ColrGui(props: { colorLetter: number, colorDigit: number }) { // 9*24
     const rows: JSX.Element[] = [];
     for (let i = 0; i < keyedColors.length; i++) {
         const letter = String.fromCharCode('A'.charCodeAt(0) + i);
@@ -82,14 +95,16 @@ function ColrGui() { // 9*24
         const cols: JSX.Element[] = [];
         for (let j = 0; j < digits.length; j++) {
             const digit = (j + 1).toString();
-            cols.push(<div className="outlined" style={{ backgroundColor: digits[j] }} title={digits[j]}>{letter}{digit}</div>)
+            cols.push(<a className={(i === props.colorLetter && j === props.colorDigit) ? "outlinedtext selected" : "outlinedtext"} style={{ backgroundColor: digits[j] }} title={digits[j]}>{letter}{digit}</a>)
         }
         const row: JSX.Element = <div className="colsrow">{cols}</div>
         rows.push(row);
     }
 
     return <div className="colrgui">
-        the GUI<hr />
+        <label>F: <input type="number" value="0" /></label>
+        <label>B: <input type="number" value="0" /></label>
+        <hr />
         {rows}
     </div>;
 }

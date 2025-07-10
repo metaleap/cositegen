@@ -229,9 +229,10 @@ h4 small {
 
 .colr .colrcanvas {
     margin-top: 1.23em;
-    overflow: auto;
+    overflow: hidden;
     position: absolute;
-    left: 0;
+    left: 0.321em;
+    top: 1.5em;
     height: 92%;
     width: 99%;
     min-width: 55%;
@@ -243,21 +244,27 @@ h4 small {
 
 .colr .colrcanvas svg {
     background-color: #ffffff;
-    width: 74%;
+    width: 76%;
 }
 
 .colr .colrgui {
     font-size: 0.77em;
     margin-top: 1.23em;
+    padding-left: 0.789em;
+    padding-right: 0.321em;
     overflow: auto;
     position: absolute;
     right: 0;
-    width: 26%;
-    height: 88%;
+    width: 22%;
+    height: 92%;
     background: #efe9e8;
 }
 
-.outlined {
+.colr .colrgui input {
+    width: 3.21em;
+}
+
+.outlinedtext {
     color: white;
     text-shadow:
         -1px -1px 0 #000,
@@ -270,11 +277,20 @@ h4 small {
         -1px 0 0 #000;
 }
 
-.colr .colrgui .colsrow div {
+.colr .colrgui label {
+    padding: 0.321em 0.321em;
+}
+
+.colr .colrgui .colsrow a {
+    outline: thick none orangered;
     display: inline-block;
     width: 1em;
     overflow: hidden;
-    padding: 0.22em 0.55em;
+    padding: 0.22em 0.5em;
+}
+
+.colr .colrgui .colsrow a.selected {
+    outline-style: double;
 }
 
 .colr textarea.dbgJson {
