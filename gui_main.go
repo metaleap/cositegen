@@ -164,7 +164,7 @@ func guiStartView() (s string) {
 								s += "<small>&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(sv.Data.PanelsTree.Rect.Max.X) + "&times;" + itoa(sv.Data.PanelsTree.Rect.Max.Y) + "</b>px (" + ftoa(sv.Data.PxCm, 1) + "px/cm)&nbsp;&horbar;&nbsp;&nbsp;" + itoa(int(sv.Data.ColDarkestLightest[0])) + "-" + itoa(int(sv.Data.ColDarkestLightest[1])) + "</small>"
 							}
 							s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;from <b>" + time.Unix(0, sv.DateTimeUnixNano).Format("02 Jan 2006") + "</b></small>"
-							s += "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;<a href='" + svhref + "&colr=1'>Colorize</a> <small>(" + sIf(sv.Data.hasBgCol, "started", "monochrome") + ")</small>"
+							s += "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;<a href='" + svhref + "&colr=1'>Colorize</a> <small>(" + sIf(sv.Data != nil && sv.Data.hasBgCol, "started", "monochrome") + ")</small>"
 							s += "</h4>" + guiHtmlGrayDistrs(sv.grayDistrs()) + "</td></tr>"
 						}
 						pgprev = pgnr
