@@ -23,7 +23,7 @@ var (
 	imgScaleUp       draw.Interpolator = draw.CatmullRom
 	blurModeGaussian bool
 	blurSizeFactor   = 1.0
-	blurSizeFactors  = []float64{0.11, 0.44, 0.77, 1.1, 2.2, 3.3, 4.4}
+	blurSizeFactors  = []float64{0, 0.11, 0.44, 0.77, 1, 2, 3, 4}
 )
 
 func imgDstNew(size image.Rectangle) (ret *image.RGBA) {
@@ -79,6 +79,9 @@ func imgDstBrushHaltRec(apply bool) {
 }
 
 func imgDstFillPreview() {
+	if guiFill.move.Eq(ptZ) { // didnt yet press space
+		return
+	}
 	factor, size := 1.0, imgSrc[idxImgSrc].Bounds()
 	if idxImgSrc != 0 {
 		for i, idx := 0.9, 1; i >= 0.1; i, idx = i-0.1, idx+1 {
@@ -89,20 +92,20 @@ func imgDstFillPreview() {
 		}
 	}
 	img_small := image.NewRGBA(image.Rect(0, 0, size.Dx(), size.Dy()))
-	println(idxImgSrc, factor, size.String())
-	if guiFill.move.Eq(ptZ) {
-		guiFill.move = guiFill.prev
-	}
 	imgFloodFill(imgSrc[idxImgSrc], img_small, int(factor*float64(guiFill.move.X)), int(factor*float64(guiFill.move.Y)))
 
 	blur_do := If(blurModeGaussian, blur.Gaussian, blur.Box)
 	blur_size := blurSizeFactor * (float64(guiBrush.size) * factor)
-	img_small = blur_do(img_small, blur_size)
+	if blurSizeFactor > 0 {
+		img_small = blur_do(img_small, blur_size)
+	}
 	img_full := img_small
 	if idxImgSrc != 0 {
 		img_full = image.NewRGBA(image.Rect(0, 0, imgSize.Dx(), imgSize.Dy()))
 		imgScaleUp.Scale(img_full, img_full.Bounds(), img_small, img_small.Bounds(), draw.Src, nil)
-		img_full = blur_do(img_full, blur_size*0.5)
+		if blurSizeFactor > 0 {
+			img_full = blur_do(img_full, blur_size*0.5)
+		}
 	}
 	imgDstPreview = image.NewRGBA(image.Rect(0, 0, imgSize.Dx(), imgSize.Dy()))
 	draw.Copy(imgDstPreview, ptZ, imgDst, imgDst.Bounds(), draw.Src, nil)

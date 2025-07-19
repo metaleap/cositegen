@@ -242,7 +242,11 @@ func guiActionFzoomDecr() {
 func guiActionBrushIncr() {
 	if imgDstPreviewTex != nil {
 		guiBrush.size += 2
-		imgDstBrushHaltRec(true)
+		if guiMode == GuiModeBrush {
+			imgDstBrushHaltRec(true)
+		} else if guiMode == GuiModeFill {
+			imgDstFillPreview()
+		}
 	} else if !guiBrush.isRec {
 		guiBrush.size += 2
 	}
@@ -251,7 +255,11 @@ func guiActionBrushIncr() {
 func guiActionBrushDecr() {
 	if imgDstPreviewTex != nil && guiBrush.size > guiBrushSizeMin {
 		guiBrush.size -= 2
-		imgDstBrushHaltRec(true)
+		if guiMode == GuiModeBrush {
+			imgDstBrushHaltRec(true)
+		} else if guiMode == GuiModeFill {
+			imgDstFillPreview()
+		}
 	} else if !guiBrush.isRec {
 		guiBrush.size = If(guiBrush.size == guiBrushSizeMin, int(guiBrushSizeMin), guiBrush.size-2)
 	}
@@ -407,6 +415,7 @@ func guiActionOnKeySpace() {
 
 func guiActionOnKeyEnter() {
 	if imgDstPreview != nil {
+		guiFill.move = ptZ
 		guiRedoStack, guiUndoStack = nil, append(guiUndoStack, imgDst)
 		imgDst = imgDstPreview
 		imgDstPreview = nil

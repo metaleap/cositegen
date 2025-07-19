@@ -183,6 +183,10 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 	diritems, err := os.ReadDir(me.Data.DirPath)
 	bgsrcpath := strings.TrimSuffix(me.FileName, ".png") + ".svg"
 	bgsrcfile := fileStat(bgsrcpath)
+	if bgsrcfile == nil {
+		bgsrcpath = strings.TrimSuffix(me.FileName, ".png") + ".bg.png"
+		bgsrcfile = fileStat(bgsrcpath)
+	}
 	for _, direntry := range diritems {
 		if fileinfo, _ := direntry.Info(); (!direntry.IsDir()) && strings.HasPrefix(direntry.Name(), "bg") &&
 			(strings.HasSuffix(direntry.Name(), ".png") || strings.HasSuffix(direntry.Name(), ".svg")) &&
@@ -193,59 +197,72 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 		}
 	}
 	if bgsrcfile != nil {
-		pidx, bgsvgsrc := 0, string(fileRead(bgsrcpath))
-		me.Data.hasBgCol = true
-		me.Data.PanelsTree.each(func(p *ImgPanel) {
-			gid, dstfilepath := "pnl"+itoa(pidx), filepath.Join(me.Data.DirPath, "bg"+itoa(pidx)+".png")
-			if s, svg := "", bgsvgsrc; force || (nil == fileStat(dstfilepath)) {
-				_ = os.Remove(dstfilepath)
-				if idx := strings.Index(svg, `id="`+gid+`"`); idx > 0 {
-					svg = svg[idx+len(`id="`+gid+`"`):]
-					if idx = strings.Index(svg, `id="pnl`); idx > 0 {
-						svg = svg[:idx]
-						if idx = strings.Index(svg, ">"); idx > 0 {
-							svg = svg[idx+1:]
-							if idx = strings.LastIndex(svg, "</g>"); idx > 0 {
-								s = svg[:idx]
+		if strings.HasSuffix(bgsrcpath, ".bg.png") {
+			pidx := 0
+			me.Data.hasBgCol = true
+			me.Data.PanelsTree.each(func(p *ImgPanel) {
+				dstfilepath := filepath.Join(me.Data.DirPath, "bg"+itoa(pidx)+".png")
+				if force || (nil == fileStat(dstfilepath)) {
+					_ = os.Remove(dstfilepath)
+				}
+
+				pidx++
+			})
+		} else { // old legacy SVG mode
+			pidx, bgsvgsrc := 0, string(fileRead(bgsrcpath))
+			me.Data.hasBgCol = true
+			me.Data.PanelsTree.each(func(p *ImgPanel) {
+				gid, dstfilepath := "pnl"+itoa(pidx), filepath.Join(me.Data.DirPath, "bg"+itoa(pidx)+".png")
+				if s, svg := "", bgsvgsrc; force || (nil == fileStat(dstfilepath)) {
+					_ = os.Remove(dstfilepath)
+					if idx := strings.Index(svg, `id="`+gid+`"`); idx > 0 {
+						svg = svg[idx+len(`id="`+gid+`"`):]
+						if idx = strings.Index(svg, `id="pnl`); idx > 0 {
+							svg = svg[:idx]
+							if idx = strings.Index(svg, ">"); idx > 0 {
+								svg = svg[idx+1:]
+								if idx = strings.LastIndex(svg, "</g>"); idx > 0 {
+									s = svg[:idx]
+								}
 							}
 						}
 					}
-				}
-				if s != "" {
-					srcwidth := App.Proj.Sheets.Bw.SmallWidth
-					if idx := strings.Index(bgsvgsrc, `width="`); idx > 0 {
-						strw := bgsvgsrc[idx+len(`width="`):]
-						strw = strw[:strings.IndexByte(strw, '"')]
-						if sw, _ := strconv.ParseUint(strw, 10, 16); sw > 0 {
-							srcwidth = uint16(sw)
-						} else {
-							panic(strw)
+					if s != "" {
+						srcwidth := App.Proj.Sheets.Bw.SmallWidth
+						if idx := strings.Index(bgsvgsrc, `width="`); idx > 0 {
+							strw := bgsvgsrc[idx+len(`width="`):]
+							strw = strw[:strings.IndexByte(strw, '"')]
+							if sw, _ := strconv.ParseUint(strw, 10, 16); sw > 0 {
+								srcwidth = uint16(sw)
+							} else {
+								panic(strw)
+							}
+						}
+						scale := float64(srcwidth) / float64(me.Data.PanelsTree.Rect.Max.X)
+						pw, ph := int(float64(p.Rect.Dx())*scale), int(float64(p.Rect.Dy())*scale)
+						s = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+						<svg width="` + itoa(pw) + `" height="` + itoa(ph) + `" viewbox="0 0 ` + itoa(pw) + ` ` + itoa(ph) + `" xmlns="http://www.w3.org/2000/svg">` +
+							sIf(App.Proj.Sheets.Panel.BgBlur == 0, "",
+								`<filter id="leblur"><feGaussianBlur in="SourceGraphic" stdDeviation="`+itoa(App.Proj.Sheets.Panel.BgBlur)+`" /></filter>
+							<style type="text/css">path { filter: url(#leblur); }</style>`) +
+							s + "</svg>"
+
+						tmpfilepath := "/dev/shm/" + me.ID + "_bg" + itoa(pidx) + ".svg"
+						fileWrite(tmpfilepath, []byte(s))
+						out, errprog := exec.Command("magick", tmpfilepath, "-resize", itoa(int(100.0*App.Proj.Sheets.Panel.BgScale))+"%", dstfilepath).CombinedOutput()
+						_ = os.Remove(tmpfilepath)
+						if s := trim(string(out)); errprog != nil {
+							_ = os.Remove(dstfilepath)
+							panic(errprog.Error() + ">>>>" + s + "<<<<")
+						} else if len(s) != 0 {
+							_ = os.Remove(dstfilepath)
+							panic(s)
 						}
 					}
-					scale := float64(srcwidth) / float64(me.Data.PanelsTree.Rect.Max.X)
-					pw, ph := int(float64(p.Rect.Dx())*scale), int(float64(p.Rect.Dy())*scale)
-					s = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-						<svg width="` + itoa(pw) + `" height="` + itoa(ph) + `" viewbox="0 0 ` + itoa(pw) + ` ` + itoa(ph) + `" xmlns="http://www.w3.org/2000/svg">` +
-						sIf(App.Proj.Sheets.Panel.BgBlur == 0, "",
-							`<filter id="leblur"><feGaussianBlur in="SourceGraphic" stdDeviation="`+itoa(App.Proj.Sheets.Panel.BgBlur)+`" /></filter>
-							<style type="text/css">path { filter: url(#leblur); }</style>`) +
-						s + "</svg>"
-
-					tmpfilepath := "/dev/shm/" + me.ID + "_bg" + itoa(pidx) + ".svg"
-					fileWrite(tmpfilepath, []byte(s))
-					out, errprog := exec.Command("magick", tmpfilepath, "-resize", itoa(int(100.0*App.Proj.Sheets.Panel.BgScale))+"%", dstfilepath).CombinedOutput()
-					_ = os.Remove(tmpfilepath)
-					if s := trim(string(out)); errprog != nil {
-						_ = os.Remove(dstfilepath)
-						panic(errprog.Error() + ">>>>" + s + "<<<<")
-					} else if len(s) != 0 {
-						_ = os.Remove(dstfilepath)
-						panic(s)
-					}
 				}
-			}
-			pidx++
-		})
+				pidx++
+			})
+		}
 	}
 
 	if err != nil {
