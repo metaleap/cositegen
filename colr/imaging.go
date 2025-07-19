@@ -61,7 +61,7 @@ func imgDstReload() {
 	guiUpdateTex(&imgDstTex, imgDst)
 }
 
-func imgDstBrushLeave() {
+func imgDstBrushHaltRec() {
 	brushRecording.is = false
 	imgDstBrush()
 }

@@ -109,9 +109,8 @@ func guiLoop() {
 
 	if brushRecording.is {
 		if idxCurPanel != brushRecording.idxPanel {
-			imgDstBrushLeave()
+			imgDstBrushHaltRec()
 		} else if !brushRecording.prev.Eq(pos_in_img) {
-			println(pos_in_img.String(), brushRecording.prev.String())
 			brushRecording.moves = append(brushRecording.moves, pos_in_img)
 		}
 	}
@@ -204,24 +203,30 @@ func guiActionFzoomDecr() {
 }
 
 func guiActionBrushIncr() {
-	if !brushRecording.is {
-		brushSize++
+	if imgDstPreviewTex != nil {
+		brushSize += 2
+		imgDstBrushHaltRec()
+	} else if !brushRecording.is {
+		brushSize += 2
 	}
 }
 
 func guiActionBrushDecr() {
-	if !brushRecording.is {
-		brushSize = If(brushSize == brushSizeMin, int(brushSizeMin), brushSize-1)
+	if imgDstPreviewTex != nil && brushSize > brushSizeMin {
+		brushSize -= 2
+		imgDstBrushHaltRec()
+	} else if !brushRecording.is {
+		brushSize = If(brushSize == brushSizeMin, int(brushSizeMin), brushSize-2)
 	}
 }
 
 func guiActionFzoomToggle() {
 	imgSrcShowFzoom = !imgSrcShowFzoom
-	println(imgSrcShowFzoom)
 }
 
 func guiActionColSel(letter int, digit int) func() {
 	return func() {
+		idx_prev := idxColSelCur
 		if digit == 10 { // -1
 			idxColSelDigit = If(idxColSelDigit == 0, 8, idxColSelDigit-1)
 		} else if digit == 11 { // +1
@@ -238,10 +243,15 @@ func guiActionColSel(letter int, digit int) func() {
 			for d := 0; d < 9; d++ {
 				if l == idxColSelLetter && d == idxColSelDigit {
 					idxColSelCur = idx
-					return
+					goto end
 				}
 				idx++
 			}
+		}
+	end:
+		println(idxColSelCur, idx_prev, imgDstPreviewTex == nil)
+		if idxColSelCur != idx_prev && imgDstPreviewTex != nil {
+			imgDstBrushHaltRec()
 		}
 	}
 }
@@ -271,7 +281,7 @@ func guiActionOnKeySpace() {
 			imgDstPreview = nil
 			brushRecording.is, brushRecording.moves, brushRecording.idxPanel = true, nil, idxCurPanel
 		} else {
-			imgDstBrushLeave()
+			imgDstBrushHaltRec()
 		}
 	case ModeFill:
 	}
@@ -288,6 +298,6 @@ func guiActionOnKeyEnter() {
 
 func guiActionOnKeyEscape() {
 	if brushRecording.is {
-		imgDstBrushLeave()
+		imgDstBrushHaltRec()
 	}
 }
