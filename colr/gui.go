@@ -191,11 +191,15 @@ func guiActionFzoomDecr() {
 }
 
 func guiActionBrushIncr() {
-	brushSize++
+	if !brushRecording.is {
+		brushSize++
+	}
 }
 
 func guiActionBrushDecr() {
-	brushSize = If(brushSize == brushSizeMin, int(brushSizeMin), brushSize-1)
+	if !brushRecording.is {
+		brushSize = If(brushSize == brushSizeMin, int(brushSizeMin), brushSize-1)
+	}
 }
 
 func guiActionFzoomToggle() {
@@ -253,12 +257,8 @@ func guiActionOnKeySpace() {
 			brushRecording.is, brushRecording.moves, brushRecording.idxPanel = true, nil, idxCurPanel
 			break
 		}
-
 		brushRecording.is = false
-		for _, move := range brushRecording.moves {
-			println(move.String())
-		}
-		println(len(brushRecording.moves))
+		imgDstBrush()
 	case ModeFill:
 	}
 }

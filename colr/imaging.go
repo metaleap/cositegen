@@ -4,6 +4,7 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"math"
 	"os"
 
 	g "github.com/AllenDang/giu"
@@ -18,7 +19,8 @@ var (
 	imgSrcFilePath string
 	imgDstFilePath string
 	imgSize        image.Rectangle
-	imgScaler      draw.Interpolator = draw.BiLinear // dont change it!
+	imgScaleDown   draw.Interpolator = draw.BiLinear // dont change it!
+	imgScaleUp     draw.Interpolator = draw.CatmullRom
 )
 
 func imgDstNew(size image.Rectangle) (ret *image.RGBA) {
@@ -31,12 +33,12 @@ func imgDstNew(size image.Rectangle) (ret *image.RGBA) {
 	return
 }
 
-func imgDstSave() {
-	pngfile, err := os.Create(imgDstFilePath)
+func imgSave(img image.Image, filePath string) {
+	pngfile, err := os.Create(filePath)
 	if err != nil {
 		panic(err)
 	}
-	if err = png.Encode(pngfile, imgDst); err != nil {
+	if err = png.Encode(pngfile, img); err != nil {
 		panic(err)
 	}
 	if err = pngfile.Sync(); err != nil {
@@ -45,6 +47,38 @@ func imgDstSave() {
 	if err = pngfile.Close(); err != nil {
 		panic(err)
 	}
+}
+
+func imgDstSave() {
+	imgSave(imgDst, imgDstFilePath)
+}
+
+func imgDstBrush() {
+	width := float64(imgSize.Dx()) / float64(brushSize)
+	factor, col := (float64(imgSize.Dx()) / width), allColors[idxColSelCur]
+	img_small := image.NewRGBA(image.Rect(0, 0, int(width), int(float64(imgSize.Dy())/factor)))
+	for _, move := range brushRecording.moves {
+		at := image.Pt(int(float64(move.X)/factor), int(float64(move.Y)/factor))
+		img_small.SetRGBA(at.X, at.Y, col)
+	}
+	img_full := image.NewRGBA(image.Rect(0, 0, imgSize.Dx(), imgSize.Dy()))
+	if false {
+		imgScaleUp.Scale(img_full, img_full.Bounds(), img_small, img_small.Bounds(), draw.Src, nil)
+	} else {
+		for _, move := range brushRecording.moves {
+			img_full.Set(move.X, move.Y, col)
+			fac := 255.0 / (float64(brushSize) + 0.5)
+			for x := -brushSize; x <= brushSize; x++ {
+				for y := -brushSize; y <= brushSize; y++ {
+					a := fac*math.Abs(float64(x)) + math.Abs(float64(y))
+					alpha := color.RGBA{col.R, col.G, col.B, uint8(math.Abs(255.0 - a))}
+					img_full.Set(move.X+x, move.Y+y, alpha)
+				}
+			}
+		}
+	}
+
+	imgSave(img_full, "/dev/shm/tmp.png")
 }
 
 func imgSrcEnsurePanelBorders() {
@@ -79,7 +113,7 @@ func imgDownsized(imgSrc *image.RGBA, maxWidth int) (ret *image.RGBA) {
 	origwidth, origheight := imgSrc.Bounds().Max.X, imgSrc.Bounds().Max.Y
 	newheight := int(float64(origheight) / (float64(origwidth) / float64(maxWidth)))
 	ret = image.NewRGBA(image.Rect(0, 0, maxWidth, newheight))
-	imgScaler.Scale(ret, ret.Bounds(), imgSrc, imgSrc.Bounds(), draw.Src, nil)
+	imgScaleDown.Scale(ret, ret.Bounds(), imgSrc, imgSrc.Bounds(), draw.Src, nil)
 	// greys into blacks for our purposes here:
 	for x := 0; x < imgSize.Dx(); x++ {
 		for y := 0; y < imgSize.Dy(); y++ {
