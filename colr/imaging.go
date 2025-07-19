@@ -4,18 +4,16 @@ import (
 	"image"
 	"image/color"
 	"image/png"
-	"math"
 	"os"
 
 	g "github.com/AllenDang/giu"
+	"github.com/anthonynsimon/bild/blur"
 	"golang.org/x/image/draw"
 )
 
 var (
 	imgSrc         [10]*image.RGBA
 	imgDst         *image.RGBA
-	imgSrcTexture  [10]*g.Texture
-	imgDstTexture  *g.Texture
 	imgSrcFilePath string
 	imgDstFilePath string
 	imgSize        image.Rectangle
@@ -54,31 +52,48 @@ func imgDstSave() {
 }
 
 func imgDstBrush() {
-	width := float64(imgSize.Dx()) / float64(brushSize)
-	factor, col := (float64(imgSize.Dx()) / width), allColors[idxColSelCur]
-	img_small := image.NewRGBA(image.Rect(0, 0, int(width), int(float64(imgSize.Dy())/factor)))
-	for _, move := range brushRecording.moves {
-		at := image.Pt(int(float64(move.X)/factor), int(float64(move.Y)/factor))
-		img_small.SetRGBA(at.X, at.Y, col)
+	col, div := allColors[idxColSelCur], 2 // 2 means 1/4 orig size, better not go smaller, as curves become ever more angular turns
+	img_small := image.NewRGBA(image.Rect(0, 0, imgSize.Dx()/div, imgSize.Dy()/div))
+	moves := make([]image.Point, len(brushRecording.moves))
+	for i, move := range brushRecording.moves {
+		moves[i] = image.Pt(move.X/div, move.Y/div)
 	}
-	img_full := image.NewRGBA(image.Rect(0, 0, imgSize.Dx(), imgSize.Dy()))
-	if false {
-		imgScaleUp.Scale(img_full, img_full.Bounds(), img_small, img_small.Bounds(), draw.Src, nil)
-	} else {
-		for _, move := range brushRecording.moves {
-			img_full.Set(move.X, move.Y, col)
-			fac := 255.0 / (float64(brushSize) + 0.5)
-			for x := -brushSize; x <= brushSize; x++ {
-				for y := -brushSize; y <= brushSize; y++ {
-					a := fac*math.Abs(float64(x)) + math.Abs(float64(y))
-					alpha := color.RGBA{col.R, col.G, col.B, uint8(math.Abs(255.0 - a))}
-					img_full.Set(move.X+x, move.Y+y, alpha)
-				}
+	// first: connect the dots
+	for i := 1; i < len(moves); i++ {
+		cur, prev := moves[i], moves[i-1]
+		xdiff, ydiff := Max(cur.X, prev.X)-Min(cur.X, prev.X), Max(cur.Y, prev.Y)-Min(cur.Y, prev.Y)
+		if (xdiff > 1) || (ydiff > 1) {
+			move := image.Pt(
+				Min(cur.X, prev.X)+(Max(cur.X, prev.X)-Min(cur.X, prev.X))/2,
+				Min(cur.Y, prev.Y)+(Max(cur.Y, prev.Y)-Min(cur.Y, prev.Y))/2,
+			)
+			if !(move.Eq(prev) || move.Eq(cur)) {
+				moves = append(moves[:i], append([]image.Point{move}, moves[i:]...)...)
+				i--
 			}
 		}
 	}
-
-	imgSave(img_full, "/dev/shm/tmp.png")
+	// second: draw the dots and fill a circle around it
+	for _, move := range moves {
+		// draw the point
+		img_small.Set(move.X, move.Y, col)
+		// brush's circle around it
+		imgDrawCircle(img_small, &col, move, brushSize/div, true)
+	}
+	img_small = blur.Box(img_small, float64(brushSize/div))
+	img_full := image.NewRGBA(image.Rect(0, 0, imgSize.Dx(), imgSize.Dy()))
+	imgScaleUp.Scale(img_full, img_full.Bounds(), img_small, img_small.Bounds(), draw.Src, nil)
+	img_full = blur.Box(img_full, float64(brushSize/div/2))
+	img_dst := image.NewRGBA(image.Rect(0, 0, imgSize.Dx(), imgSize.Dy()))
+	draw.Copy(img_dst, image.Pt(0, 0), imgDst, imgDst.Bounds(), draw.Src, nil)
+	draw.Copy(img_dst, image.Pt(0, 0), img_full, img_full.Bounds(), draw.Over, nil)
+	// imgSave(img_dst, "/dev/shm/tmp.png")
+	if imgDstPreviewTex != nil {
+		imgDstPreviewTex = nil
+	}
+	g.EnqueueNewTextureFromRgba(img_dst, func(tex *g.Texture) {
+		imgDstPreviewTex = tex
+	})
 }
 
 func imgSrcEnsurePanelBorders() {
@@ -127,4 +142,33 @@ func imgDownsized(imgSrc *image.RGBA, maxWidth int) (ret *image.RGBA) {
 		}
 	}
 	return
+}
+
+// https://schwarzers.com/algorithms/ | https://en.wikipedia.org/wiki/Midpoint_circle_algorithm#Jesko's_Method
+func imgDrawCircle(img *image.RGBA, col *color.RGBA, pos image.Point, r int, filled bool) {
+	mx, my, t1, t2, x, y, pts := pos.X, pos.Y, r/16, 0, r, 0, make([]image.Point, 0, (r*2)*(r*2))
+	for x >= y {
+		pts = append(pts,
+			image.Pt(mx+x, my+y),
+			image.Pt(mx+x, my-y),
+			image.Pt(mx-x, my+y),
+			image.Pt(mx-x, my-y),
+			image.Pt(mx+y, my+x),
+			image.Pt(mx+y, my-x),
+			image.Pt(mx-y, my+x),
+			image.Pt(mx-y, my-x))
+		y = y + 1
+		t1 = t1 + y
+		t2 = t1 - x
+		if t2 >= 0 {
+			t1 = t2
+			x = x - 1
+		}
+	}
+	for _, pt := range pts {
+		img.Set(pt.X, pt.Y, col)
+	}
+	if filled && r > 1 {
+		imgDrawCircle(img, col, pos, r-1, true)
+	}
 }

@@ -19,6 +19,9 @@ const (
 )
 
 var (
+	imgSrcTex        [10]*g.Texture
+	imgDstTex        *g.Texture
+	imgDstPreviewTex *g.Texture
 	idxImgSrc        = 0
 	imgSrcShowFzoom  = false
 	imgScreenPosMin  image.Point
@@ -74,11 +77,11 @@ func guiMain() {
 
 	for i := 0; i < 10; i++ {
 		g.EnqueueNewTextureFromRgba(imgSrc[i], func(tex *g.Texture) {
-			imgSrcTexture[i] = tex
+			imgSrcTex[i] = tex
 		})
 	}
 	g.EnqueueNewTextureFromRgba(imgDst, func(tex *g.Texture) {
-		imgDstTexture = tex
+		imgDstTex = tex
 	})
 	wnd.SetTargetFPS(60)
 	go func() {
@@ -142,8 +145,8 @@ func guiLoop() {
 			if mode == ModeBrush {
 				canvas.AddRect(imgScreenPosMin, imgScreenPosMax, color.Black, 22, g.DrawFlagsRoundCornersAll, 22)
 			}
-			canvas.AddImage(imgDstTexture, imgScreenPosMin, imgScreenPosMax)
-			canvas.AddImage(imgSrcTexture[If(imgSrcShowFzoom, idxImgSrc, 0)], imgScreenPosMin, imgScreenPosMax)
+			canvas.AddImage(If(imgDstPreviewTex == nil, imgDstTex, imgDstPreviewTex), imgScreenPosMin, imgScreenPosMax)
+			canvas.AddImage(imgSrcTex[If(imgSrcShowFzoom, idxImgSrc, 0)], imgScreenPosMin, imgScreenPosMax)
 			if mode != ModeNone && cur_mouse_pointer == g.MouseCursorNone {
 				brush_size := brushSize
 				canvas.AddCircleFilled(pos_mouse, float32(brush_size), allColors[idxColSelCur])

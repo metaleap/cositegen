@@ -12,3 +12,10 @@ func If[T any](b bool, t T, f T) T {
 	}
 	return f
 }
+
+func Max(i int, j int) int {
+	return If(j > i, j, i)
+}
+func Min(i int, j int) int {
+	return If(j < i, j, i)
+}
