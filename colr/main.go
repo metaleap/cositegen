@@ -17,6 +17,7 @@ var (
 type PageLayout struct {
 	Page   image.Rectangle
 	Panels []image.Rectangle
+	panels []image.Rectangle
 }
 
 func main() {

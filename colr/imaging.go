@@ -49,9 +49,9 @@ func imgDstSave() {
 
 func imgSrcEnsurePanelBorders() {
 	factor := float64(pageLayout.Page.Dx()) / float64(imgSrc[0].Rect.Dx())
-	panelrects := make([]image.Rectangle, len(pageLayout.Panels))
+	pageLayout.panels = make([]image.Rectangle, len(pageLayout.Panels))
 	for i, panelrect := range pageLayout.Panels {
-		panelrects[i] = image.Rect(
+		pageLayout.panels[i] = image.Rect(
 			int(float64(panelrect.Min.X)/factor),
 			int(float64(panelrect.Min.Y)/factor),
 			int(float64(panelrect.Max.X)/factor),
@@ -61,7 +61,7 @@ func imgSrcEnsurePanelBorders() {
 	for x := 0; x < imgSize.Dx(); x++ {
 		for y := 0; y < imgSize.Dy(); y++ {
 			is_pixel_in_any_panel := false
-			for _, panelrect := range panelrects {
+			for _, panelrect := range pageLayout.panels {
 				if x >= panelrect.Min.X && x <= panelrect.Max.X &&
 					y >= panelrect.Min.Y && y <= panelrect.Max.Y {
 					is_pixel_in_any_panel = true

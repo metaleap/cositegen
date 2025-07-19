@@ -6,7 +6,7 @@ import (
 
 var i2s = strconv.Itoa
 
-func iIf(b bool, t int, f int) int {
+func If[T any](b bool, t T, f T) T {
 	if b {
 		return t
 	}
