@@ -133,7 +133,6 @@ func guiLoop() {
 	}
 
 	top_widget := "| M:" + If(guiMode == GuiModeBrush, "B", If(guiMode == GuiModeFill, "F", "_")) +
-		" | B:" + i2s(guiBrush.size) +
 		" | U:" + i2s(len(guiUndoStack)) + " R:" + i2s(len(guiRedoStack)) +
 		" | " + guiLastMsg
 
@@ -141,10 +140,10 @@ func guiLoop() {
 		g.Label(top_widget),
 		g.Separator(),
 		g.Label("F-Zoom: " + i2s(idxImgSrc) + "   [,][.][-]"),
-		g.Label("Bl:" + strconv.FormatFloat(blurSizeFactor, 'f', 2, 64) + If(blurModeGaussian, "G", "B") + " [F8][F9][F10]"),
-		g.Label("P" + If(idxCurPanel >= 0, i2s(idxCurPanel+1), "_") + ":" + i2s(pos_in_img.X) + "," + i2s(pos_in_img.Y)),
-		g.Label("_"),
-		g.Label("C:" + colorLabels[idxColSelCur]),
+		g.Label("B-Size: " + i2s(guiBrush.size) + " [PgDn][PgUp]"),
+		g.Label("Bl: " + strconv.FormatFloat(blurSizeFactor, 'f', 2, 64) + If(blurModeGaussian, "G", "B") + " [F8][F9][F10]"),
+		g.Label("Panel" + If(idxCurPanel >= 0, i2s(idxCurPanel+1), "_") + ": " + i2s(pos_in_img.X) + "," + i2s(pos_in_img.Y)),
+		g.Label("Color: " + colorLabels[idxColSelCur]),
 		g.Separator(),
 	}
 	widgets = append(widgets,

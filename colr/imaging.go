@@ -52,9 +52,11 @@ func imgSave(img image.Image, filePath string) {
 }
 
 func imgDstSave() {
-	imgSave(imgDst, imgDstFilePath)
-	imgDstOrig = imgDst
-	guiMsg("Saved: %s", imgDstFilePath)
+	if imgDst != imgDstOrig {
+		imgSave(imgDst, imgDstFilePath)
+		imgDstOrig = imgDst
+		guiMsg("Saved: %s", imgDstFilePath)
+	}
 }
 
 func imgDstReload() {
