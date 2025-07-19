@@ -3,6 +3,20 @@ package main
 import (
 	"image"
 	"image/color"
+
+	g "github.com/AllenDang/giu"
+	"golang.org/x/image/draw"
+)
+
+var (
+	imgSrc         [10]*image.RGBA
+	imgDst         *image.RGBA
+	imgSrcTexture  [10]*g.Texture
+	imgDstTexture  *g.Texture
+	imgSrcFilePath string
+	imgDstFilePath string
+	imgSize        image.Rectangle
+	imgScaler      draw.Interpolator = draw.BiLinear // dont change it!
 )
 
 func imgDstNew(size image.Rectangle) (ret *image.RGBA) {
@@ -16,7 +30,7 @@ func imgDstNew(size image.Rectangle) (ret *image.RGBA) {
 }
 
 func imgSrcEnsurePanelBorders() {
-	factor := float64(pageLayout.Page.Dx()) / float64(imgSrc.Rect.Dx())
+	factor := float64(pageLayout.Page.Dx()) / float64(imgSrc[0].Rect.Dx())
 	panelrects := make([]image.Rectangle, len(pageLayout.Panels))
 	for i, panelrect := range pageLayout.Panels {
 		panelrects[i] = image.Rect(
@@ -37,8 +51,28 @@ func imgSrcEnsurePanelBorders() {
 				}
 			}
 			if !is_pixel_in_any_panel {
-				imgSrc.SetRGBA(x, y, color.RGBA{A: 255})
+				imgSrc[0].SetRGBA(x, y, color.RGBA{A: 255})
 			}
 		}
 	}
+}
+
+func imgDownsized(imgSrc *image.RGBA, maxWidth int) (ret *image.RGBA) {
+	origwidth, origheight := imgSrc.Bounds().Max.X, imgSrc.Bounds().Max.Y
+	newheight := int(float64(origheight) / (float64(origwidth) / float64(maxWidth)))
+	ret = image.NewRGBA(image.Rect(0, 0, maxWidth, newheight))
+	imgScaler.Scale(ret, ret.Bounds(), imgSrc, imgSrc.Bounds(), draw.Src, nil)
+	// greys into blacks for our purposes here:
+	for x := 0; x < imgSize.Dx(); x++ {
+		for y := 0; y < imgSize.Dy(); y++ {
+			r, g, b, a := ret.At(x, y).RGBA()
+			if !(r == 0 && g == 0 && b == 0) {
+				panic("stuff has changed, update code!")
+			}
+			if a != 0 {
+				ret.Set(x, y, color.RGBA{A: 255})
+			}
+		}
+	}
+	return
 }

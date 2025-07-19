@@ -11,12 +11,7 @@ import (
 )
 
 var (
-	imgSrc, imgDst               *image.RGBA
-	imgSrcTexture, imgDstTexture *g.Texture
-	imgSrcFilePath               string
-	imgDstFilePath               string
-	imgSize                      image.Rectangle
-	pageLayout                   *PageLayout
+	pageLayout *PageLayout
 )
 
 type PageLayout struct {
@@ -34,12 +29,15 @@ func main() {
 	}
 
 	imgSrcFilePath, imgDstFilePath = os.Args[1], os.Args[2]
-	imgSrc, err = g.LoadImage(imgSrcFilePath)
+	imgSrc[0], err = g.LoadImage(imgSrcFilePath)
 	if err != nil {
 		panic(err)
 	}
-	imgSize = imgSrc.Bounds()
+	imgSize = imgSrc[0].Bounds()
 	imgSrcEnsurePanelBorders()
+	for i, idx := 9.0, 1; i >= 1.0; i, idx = i-1.0, idx+1 {
+		imgSrc[idx] = imgDownsized(imgSrc[0], int(float64(imgSize.Dx())*0.1*i))
+	}
 	imgDst, err = g.LoadImage(imgDstFilePath)
 	if err != nil {
 		imgDst = imgDstNew(imgSize)
