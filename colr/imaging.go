@@ -3,6 +3,8 @@ package main
 import (
 	"image"
 	"image/color"
+	"image/png"
+	"os"
 
 	g "github.com/AllenDang/giu"
 	"golang.org/x/image/draw"
@@ -27,6 +29,22 @@ func imgDstNew(size image.Rectangle) (ret *image.RGBA) {
 		}
 	}
 	return
+}
+
+func imgDstSave() {
+	pngfile, err := os.Create(imgDstFilePath)
+	if err != nil {
+		panic(err)
+	}
+	if err = png.Encode(pngfile, imgDst); err != nil {
+		panic(err)
+	}
+	if err = pngfile.Sync(); err != nil {
+		panic(err)
+	}
+	if err = pngfile.Close(); err != nil {
+		panic(err)
+	}
 }
 
 func imgSrcEnsurePanelBorders() {

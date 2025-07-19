@@ -5,10 +5,12 @@ import (
 )
 
 var (
-	allColors   []color.RGBA
-	keyedColors [][]color.RGBA
-	colorLabels [216]string
-	idxCurColor int
+	allColors       []color.RGBA
+	keyedColors     [][]color.RGBA
+	colorLabels     [216]string
+	idxColSelCur    = 0
+	idxColSelLetter = 0
+	idxColSelDigit  = 0
 )
 
 func init() {
