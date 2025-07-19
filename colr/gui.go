@@ -8,13 +8,30 @@ import (
 	g "github.com/AllenDang/giu"
 )
 
+type Mode int
+
+const (
+	brushSizeMin = 3
+
+	ModeNone Mode = iota
+	ModeBrush
+	ModeFill
+)
+
 var (
 	idxImgSrc        = 0
 	imgSrcShowFzoom  = false
 	imgScreenPosMin  image.Point
 	imgScreenPosMax  image.Point
 	imgScreenPosRect image.Rectangle
+	idxCurPanel      = -1
+	mode             = ModeNone
 	brushSize        = 11
+	brushRecording   struct {
+		is       bool
+		idxPanel int
+		moves    []image.Point
+	}
 )
 
 func guiMain() {
@@ -42,6 +59,10 @@ func guiMain() {
 		g.WindowShortcut{g.KeyDown, g.ModNone, guiActionColSel(26, -1)},
 		g.WindowShortcut{g.KeyPageDown, g.ModNone, guiActionBrushDecr},
 		g.WindowShortcut{g.KeyPageUp, g.ModNone, guiActionBrushIncr},
+		g.WindowShortcut{g.KeyTab, g.ModNone, guiActionModeToggle},
+		g.WindowShortcut{g.KeyEnter, g.ModNone, guiActionOnKeyEnter},
+		g.WindowShortcut{g.KeyEscape, g.ModNone, guiActionOnKeyEscape},
+		g.WindowShortcut{g.KeySpace, g.ModNone, guiActionOnKeySpace},
 	}
 	for letter := g.KeyA; letter <= g.KeyX; letter++ {
 		keybinds = append(keybinds, g.WindowShortcut{letter, g.ModNone, guiActionColSel(int(letter-g.KeyA), -1)})
@@ -77,20 +98,34 @@ func guiLoop() {
 		pos_in_img.X = int(float64(pos_in_img.X) * (float64(imgSize.Dx()) / float64(imgScreenPosRect.Dx())))
 		pos_in_img.Y = int(float64(pos_in_img.Y) * (float64(imgSize.Dy()) / float64(imgScreenPosRect.Dy())))
 	}
-	idx_panel := -1
+	idxCurPanel = -1
 	for i, panelrect := range pageLayout.panels {
 		if pos_in_img.X >= panelrect.Min.X && pos_in_img.X <= panelrect.Max.X &&
 			pos_in_img.Y >= panelrect.Min.Y && pos_in_img.Y <= panelrect.Max.Y {
-			idx_panel = i
+			idxCurPanel = i
 		}
 	}
-	cur_mouse_pointer := If(idx_panel >= 0, g.MouseCursorNone, g.MouseCursorArrow)
+
+	if brushRecording.is {
+		if idxCurPanel != brushRecording.idxPanel {
+			guiActionOnKeySpace()
+		} else if len(brushRecording.moves) == 0 || !brushRecording.moves[len(brushRecording.moves)-1].Eq(pos_in_img) {
+			brushRecording.moves = append(brushRecording.moves, pos_in_img)
+		}
+	}
+
+	cur_mouse_pointer := If(idxCurPanel >= 0, g.MouseCursorNone, g.MouseCursorArrow)
 	if cur_mouse_pointer != g.MouseCursorArrow {
 		g.SetMouseCursor(cur_mouse_pointer)
 	}
 
+	top_widget := "| M:" + If(mode == ModeBrush, "B", If(mode == ModeFill, "F", "_")) +
+		" | B:" + i2s(brushSize) +
+		" | P" + If(idxCurPanel >= 0, i2s(idxCurPanel+1), "_") + ":" + i2s(pos_in_img.X) + "," + i2s(pos_in_img.Y) +
+		" | "
+
 	widgets := []g.Widget{
-		g.Label("F:100% |  B:" + i2s(brushSize) + " | P" + If(idx_panel >= 0, i2s(idx_panel+1), "_") + ":" + i2s(pos_in_img.X) + "," + i2s(pos_in_img.Y)),
+		g.Label(top_widget),
 		g.Label("F-Zoom: " + i2s(idxImgSrc) + "   [,][.][-]"),
 		g.Separator(),
 		g.Label("Color: " + colorLabels[idxColSelCur]),
@@ -99,14 +134,25 @@ func guiLoop() {
 	widgets = append(widgets,
 		g.Custom(func() {
 			canvas := g.GetCanvas()
+			img_rect_color := If(mode == ModeNone, color.RGBA{0, 0, 0, 255}, color.RGBA{128, 128, 128, 255})
+			if brushRecording.is {
+				img_rect_color = color.RGBA{234, 123, 0, 255}
+			}
+			canvas.AddRect(imgScreenPosMin, imgScreenPosMax, img_rect_color, 22, g.DrawFlagsRoundCornersAll, 44)
+			if mode == ModeBrush {
+				canvas.AddRect(imgScreenPosMin, imgScreenPosMax, color.Black, 22, g.DrawFlagsRoundCornersAll, 22)
+			}
 			canvas.AddImage(imgDstTexture, imgScreenPosMin, imgScreenPosMax)
 			canvas.AddImage(imgSrcTexture[If(imgSrcShowFzoom, idxImgSrc, 0)], imgScreenPosMin, imgScreenPosMax)
-			if cur_mouse_pointer == g.MouseCursorNone {
-				canvas.AddCircleFilled(pos_mouse, float32(brushSize), allColors[idxColSelCur])
-				canvas.AddCircle(pos_mouse, float32(brushSize), color.Black, 22, 1)
+			if mode != ModeNone && cur_mouse_pointer == g.MouseCursorNone {
+				brush_size := brushSize
+				canvas.AddCircleFilled(pos_mouse, float32(brush_size), allColors[idxColSelCur])
+				if mode == ModeBrush {
+					canvas.AddCircle(pos_mouse, float32(brush_size), color.Black, 22, 1)
+				}
 			}
 			// colors swatch
-			idx_color, sc1, sc2 := 0, color.RGBA{R: 177, G: 77, B: 0, A: 255}, color.RGBA{R: 255, G: 188, B: 0, A: 255}
+			idx_color, sc1, sc2 := 0, color.RGBA{177, 77, 0, 255}, color.RGBA{255, 188, 0, 255}
 			for i, btnw, btnh, btnph, btnpv := 0, 37, 28, 1, 12; i < 24; i++ {
 				for j := 0; j < 9; j++ {
 					ptmin, ptmax := image.Pt(4+j*(btnw+btnph), 123+i*(btnh+btnpv)), image.Pt(4+j*(btnw+btnph)+btnw, 123+i*(btnh+btnpv)+btnh)
@@ -120,9 +166,6 @@ func guiLoop() {
 			}
 		}),
 	)
-	g.Event().OnMouseDown(g.MouseButtonLeft, func() {
-		println("MD!")
-	})
 	for i := 0; i < 24; i++ {
 		var cells []g.Widget
 		for j := 0; j < 9; j++ {
@@ -152,7 +195,7 @@ func guiActionBrushIncr() {
 }
 
 func guiActionBrushDecr() {
-	brushSize = If(brushSize == 3, 3, brushSize-1)
+	brushSize = If(brushSize == brushSizeMin, int(brushSizeMin), brushSize-1)
 }
 
 func guiActionFzoomToggle() {
@@ -160,8 +203,6 @@ func guiActionFzoomToggle() {
 	println(imgSrcShowFzoom)
 }
 
-func guiActionUndo() {}
-func guiActionRedo() {}
 func guiActionColSel(letter int, digit int) func() {
 	return func() {
 		if digit == 10 { // -1
@@ -185,5 +226,48 @@ func guiActionColSel(letter int, digit int) func() {
 				idx++
 			}
 		}
+	}
+}
+
+func guiActionUndo() {}
+func guiActionRedo() {}
+
+func guiActionModeToggle() {
+	brushRecording.is, brushRecording.moves, brushRecording.idxPanel = false, nil, -1
+	switch mode {
+	case ModeNone:
+		mode = ModeFill
+	case ModeFill:
+		mode = ModeBrush
+	case ModeBrush:
+		mode = ModeNone
+	default:
+		panic(mode)
+	}
+}
+
+func guiActionOnKeySpace() {
+	switch mode {
+	case ModeBrush:
+		if (!brushRecording.is) || len(brushRecording.moves) == 0 || brushRecording.idxPanel != idxCurPanel {
+			brushRecording.is, brushRecording.moves, brushRecording.idxPanel = true, nil, idxCurPanel
+			break
+		}
+
+		brushRecording.is = false
+		for _, move := range brushRecording.moves {
+			println(move.String())
+		}
+		println(len(brushRecording.moves))
+	case ModeFill:
+	}
+}
+
+func guiActionOnKeyEnter() {
+}
+
+func guiActionOnKeyEscape() {
+	if brushRecording.is {
+		brushRecording.moves, brushRecording.idxPanel = nil, idxCurPanel
 	}
 }
