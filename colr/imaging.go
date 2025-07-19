@@ -11,15 +11,18 @@ import (
 )
 
 var (
-	imgSrc         [10]*image.RGBA
-	imgDst         *image.RGBA
-	imgDstOrig     *image.RGBA
-	imgDstPreview  *image.RGBA
-	imgSrcFilePath string
-	imgDstFilePath string
-	imgSize        image.Rectangle
-	imgScaleDown   draw.Interpolator = draw.BiLinear // dont change it!
-	imgScaleUp     draw.Interpolator = draw.CatmullRom
+	imgSrc           [10]*image.RGBA
+	imgDst           *image.RGBA
+	imgDstOrig       *image.RGBA
+	imgDstPreview    *image.RGBA
+	imgSrcFilePath   string
+	imgDstFilePath   string
+	imgSize          image.Rectangle
+	imgScaleDown     draw.Interpolator = draw.BiLinear // dont change it!
+	imgScaleUp       draw.Interpolator = draw.CatmullRom
+	blurModeGaussian bool
+	blurSizeFactor   = 1.0
+	blurSizeFactors  = []float64{0.11, 0.44, 0.77, 1.0, 2.0, 3.0, 4.0, 5.0}
 )
 
 func imgDstNew(size image.Rectangle) (ret *image.RGBA) {
@@ -54,27 +57,27 @@ func imgDstSave() {
 }
 
 func imgDstReload() {
-	brushRecording.is, brushRecording.moves, brushRecording.idxPanel = false, nil, -1
+	guiBrush.isRec, guiBrush.moves, guiBrush.idxPanel = false, nil, -1
 	guiUpdateTex(&imgDstPreviewTex, nil)
 	imgDstPreview = nil
-	redoStack, undoStack = nil, append(undoStack, imgDst)
+	guiRedoStack, guiUndoStack = nil, append(guiUndoStack, imgDst)
 
 	imgDst = imgDstOrig
 	guiUpdateTex(&imgDstTex, imgDst)
 }
 
 func imgDstBrushHaltRec(apply bool) {
-	brushRecording.is = false
+	guiBrush.isRec = false
 	if apply {
-		imgDstBrush()
+		imgDstBrushPreview()
 	}
 }
 
-func imgDstBrush() {
-	col, div := allColors[idxColSelCur], 2 // 2 means 1/4 orig size, better not go smaller, as curves become ever more angular turns
+func imgDstBrushPreview() {
+	col, div := allColors[idxColSelCur], 2 // div:=2 means 1/4 orig size, better keep, since with bigger divs brush curves turn ever more angular
 	img_small := image.NewRGBA(image.Rect(0, 0, imgSize.Dx()/div, imgSize.Dy()/div))
-	moves := make([]image.Point, len(brushRecording.moves))
-	for i, move := range brushRecording.moves {
+	moves := make([]image.Point, len(guiBrush.moves))
+	for i, move := range guiBrush.moves {
 		moves[i] = image.Pt(move.X/div, move.Y/div)
 	}
 	// first: connect the dots
@@ -97,12 +100,14 @@ func imgDstBrush() {
 		// draw the point
 		img_small.Set(move.X, move.Y, col)
 		// brush's circle around it
-		imgDrawCircle(img_small, &col, move, brushSize/div, true)
+		imgDrawCircle(img_small, &col, move, guiBrush.size/div, true)
 	}
-	img_small = blur.Box(img_small, float64(brushSize/div))
+	blur_do := If(blurModeGaussian, blur.Gaussian, blur.Box)
+	blur_size := blurSizeFactor * (float64(guiBrush.size) / float64(div))
+	img_small = blur_do(img_small, blur_size)
 	img_full := image.NewRGBA(image.Rect(0, 0, imgSize.Dx(), imgSize.Dy()))
 	imgScaleUp.Scale(img_full, img_full.Bounds(), img_small, img_small.Bounds(), draw.Src, nil)
-	img_full = blur.Box(img_full, float64(brushSize/div/2))
+	img_full = blur_do(img_full, blur_size*0.5)
 	imgDstPreview = image.NewRGBA(image.Rect(0, 0, imgSize.Dx(), imgSize.Dy()))
 	draw.Copy(imgDstPreview, image.Pt(0, 0), imgDst, imgDst.Bounds(), draw.Src, nil)
 	draw.Copy(imgDstPreview, image.Pt(0, 0), img_full, img_full.Bounds(), draw.Over, nil)
