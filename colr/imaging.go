@@ -6,7 +6,6 @@ import (
 	"image/png"
 	"os"
 
-	g "github.com/AllenDang/giu"
 	"github.com/anthonynsimon/bild/blur"
 	"golang.org/x/image/draw"
 )
@@ -14,6 +13,8 @@ import (
 var (
 	imgSrc         [10]*image.RGBA
 	imgDst         *image.RGBA
+	imgDstOrig     *image.RGBA
+	imgDstPreview  *image.RGBA
 	imgSrcFilePath string
 	imgDstFilePath string
 	imgSize        image.Rectangle
@@ -49,6 +50,20 @@ func imgSave(img image.Image, filePath string) {
 
 func imgDstSave() {
 	imgSave(imgDst, imgDstFilePath)
+	imgDstOrig = imgDst
+}
+
+func imgDstReload() {
+	brushRecording.is, brushRecording.moves, brushRecording.idxPanel = false, nil, -1
+	guiUpdateTex(&imgDstPreviewTex, nil)
+	imgDstPreview = nil
+	imgDst = imgDstOrig
+	guiUpdateTex(&imgDstTex, imgDst)
+}
+
+func imgDstBrushLeave() {
+	brushRecording.is = false
+	imgDstBrush()
 }
 
 func imgDstBrush() {
@@ -84,16 +99,10 @@ func imgDstBrush() {
 	img_full := image.NewRGBA(image.Rect(0, 0, imgSize.Dx(), imgSize.Dy()))
 	imgScaleUp.Scale(img_full, img_full.Bounds(), img_small, img_small.Bounds(), draw.Src, nil)
 	img_full = blur.Box(img_full, float64(brushSize/div/2))
-	img_dst := image.NewRGBA(image.Rect(0, 0, imgSize.Dx(), imgSize.Dy()))
-	draw.Copy(img_dst, image.Pt(0, 0), imgDst, imgDst.Bounds(), draw.Src, nil)
-	draw.Copy(img_dst, image.Pt(0, 0), img_full, img_full.Bounds(), draw.Over, nil)
-	// imgSave(img_dst, "/dev/shm/tmp.png")
-	if imgDstPreviewTex != nil {
-		imgDstPreviewTex = nil
-	}
-	g.EnqueueNewTextureFromRgba(img_dst, func(tex *g.Texture) {
-		imgDstPreviewTex = tex
-	})
+	imgDstPreview = image.NewRGBA(image.Rect(0, 0, imgSize.Dx(), imgSize.Dy()))
+	draw.Copy(imgDstPreview, image.Pt(0, 0), imgDst, imgDst.Bounds(), draw.Src, nil)
+	draw.Copy(imgDstPreview, image.Pt(0, 0), img_full, img_full.Bounds(), draw.Over, nil)
+	guiUpdateTex(&imgDstPreviewTex, imgDstPreview)
 }
 
 func imgSrcEnsurePanelBorders() {

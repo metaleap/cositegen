@@ -49,6 +49,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+		imgDstOrig = imgDst
 	}
 	guiMain()
 }

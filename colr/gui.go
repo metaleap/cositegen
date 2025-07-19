@@ -34,6 +34,7 @@ var (
 		is       bool
 		idxPanel int
 		moves    []image.Point
+		prev     image.Point
 	}
 )
 
@@ -50,6 +51,7 @@ func guiMain() {
 	keybinds := []g.WindowShortcut{
 		g.WindowShortcut{g.KeyQ, g.ModControl, wnd.Close},
 		g.WindowShortcut{g.KeyS, g.ModControl, imgDstSave},
+		g.WindowShortcut{g.KeyR, g.ModControl | g.ModShift, imgDstReload},
 		g.WindowShortcut{g.KeyY, g.ModControl, guiActionUndo},
 		g.WindowShortcut{g.KeyY, g.ModControl | g.ModShift, guiActionRedo},
 		g.WindowShortcut{g.KeyZ, g.ModControl, guiActionRedo},
@@ -76,13 +78,9 @@ func guiMain() {
 	wnd.RegisterKeyboardShortcuts(keybinds...)
 
 	for i := 0; i < 10; i++ {
-		g.EnqueueNewTextureFromRgba(imgSrc[i], func(tex *g.Texture) {
-			imgSrcTex[i] = tex
-		})
+		guiUpdateTex(&imgSrcTex[i], imgSrc[i])
 	}
-	g.EnqueueNewTextureFromRgba(imgDst, func(tex *g.Texture) {
-		imgDstTex = tex
-	})
+	guiUpdateTex(&imgDstTex, imgDst)
 	wnd.SetTargetFPS(60)
 	go func() {
 		for range time.Tick(time.Millisecond * 16) {
@@ -111,11 +109,13 @@ func guiLoop() {
 
 	if brushRecording.is {
 		if idxCurPanel != brushRecording.idxPanel {
-			guiActionOnKeySpace()
-		} else if len(brushRecording.moves) == 0 || !brushRecording.moves[len(brushRecording.moves)-1].Eq(pos_in_img) {
+			imgDstBrushLeave()
+		} else if !brushRecording.prev.Eq(pos_in_img) {
+			println(pos_in_img.String(), brushRecording.prev.String())
 			brushRecording.moves = append(brushRecording.moves, pos_in_img)
 		}
 	}
+	brushRecording.prev = pos_in_img
 
 	cur_mouse_pointer := If(idxCurPanel >= 0, g.MouseCursorNone, g.MouseCursorArrow)
 	if cur_mouse_pointer != g.MouseCursorArrow {
@@ -151,6 +151,7 @@ func guiLoop() {
 				brush_size := brushSize
 				canvas.AddCircleFilled(pos_mouse, float32(brush_size), allColors[idxColSelCur])
 				if mode == ModeBrush {
+					canvas.AddCircle(pos_mouse, float32(brush_size+1), color.White, 22, 1)
 					canvas.AddCircle(pos_mouse, float32(brush_size), color.Black, 22, 1)
 				}
 			}
@@ -179,6 +180,15 @@ func guiLoop() {
 	}
 
 	g.SingleWindow().Layout(widgets...)
+}
+
+func guiUpdateTex(dst **g.Texture, src *image.RGBA) {
+	*dst = nil // TODO: dispose?
+	if src != nil {
+		g.EnqueueNewTextureFromRgba(src, func(tex *g.Texture) {
+			*dst = tex
+		})
+	}
 }
 
 func guiActionFzoomIncr() {
@@ -257,20 +267,27 @@ func guiActionOnKeySpace() {
 	switch mode {
 	case ModeBrush:
 		if (!brushRecording.is) || len(brushRecording.moves) == 0 || brushRecording.idxPanel != idxCurPanel {
+			guiUpdateTex(&imgDstPreviewTex, nil)
+			imgDstPreview = nil
 			brushRecording.is, brushRecording.moves, brushRecording.idxPanel = true, nil, idxCurPanel
-			break
+		} else {
+			imgDstBrushLeave()
 		}
-		brushRecording.is = false
-		imgDstBrush()
 	case ModeFill:
 	}
 }
 
 func guiActionOnKeyEnter() {
+	if imgDstPreview != nil {
+		imgDst = imgDstPreview
+		imgDstPreview = nil
+		guiUpdateTex(&imgDstPreviewTex, nil)
+		guiUpdateTex(&imgDstTex, imgDst)
+	}
 }
 
 func guiActionOnKeyEscape() {
 	if brushRecording.is {
-		brushRecording.moves, brushRecording.idxPanel = nil, idxCurPanel
+		imgDstBrushLeave()
 	}
 }
