@@ -11,6 +11,7 @@ import (
 )
 
 var (
+	ptZ              image.Point
 	imgSrc           [10]*image.RGBA
 	imgDst           *image.RGBA
 	imgDstOrig       *image.RGBA
@@ -22,7 +23,7 @@ var (
 	imgScaleUp       draw.Interpolator = draw.CatmullRom
 	blurModeGaussian bool
 	blurSizeFactor   = 1.0
-	blurSizeFactors  = []float64{0.11, 0.44, 0.77, 1.0, 2.0, 3.0, 4.0, 5.0}
+	blurSizeFactors  = []float64{0.11, 0.44, 0.77, 1.1, 2.2, 3.3, 4.4}
 )
 
 func imgDstNew(size image.Rectangle) (ret *image.RGBA) {
@@ -77,6 +78,38 @@ func imgDstBrushHaltRec(apply bool) {
 	}
 }
 
+func imgDstFillPreview() {
+	factor, size := 1.0, imgSrc[idxImgSrc].Bounds()
+	if idxImgSrc != 0 {
+		for i, idx := 0.9, 1; i >= 0.1; i, idx = i-0.1, idx+1 {
+			if idx == idxImgSrc {
+				factor = i
+				break
+			}
+		}
+	}
+	img_small := image.NewRGBA(image.Rect(0, 0, size.Dx(), size.Dy()))
+	println(idxImgSrc, factor, size.String())
+	if guiFill.move.Eq(ptZ) {
+		guiFill.move = guiFill.prev
+	}
+	imgFloodFill(imgSrc[idxImgSrc], img_small, int(factor*float64(guiFill.move.X)), int(factor*float64(guiFill.move.Y)))
+
+	blur_do := If(blurModeGaussian, blur.Gaussian, blur.Box)
+	blur_size := blurSizeFactor * (float64(guiBrush.size) * factor)
+	img_small = blur_do(img_small, blur_size)
+	img_full := img_small
+	if idxImgSrc != 0 {
+		img_full = image.NewRGBA(image.Rect(0, 0, imgSize.Dx(), imgSize.Dy()))
+		imgScaleUp.Scale(img_full, img_full.Bounds(), img_small, img_small.Bounds(), draw.Src, nil)
+		img_full = blur_do(img_full, blur_size*0.5)
+	}
+	imgDstPreview = image.NewRGBA(image.Rect(0, 0, imgSize.Dx(), imgSize.Dy()))
+	draw.Copy(imgDstPreview, ptZ, imgDst, imgDst.Bounds(), draw.Src, nil)
+	draw.Copy(imgDstPreview, ptZ, img_full, img_full.Bounds(), draw.Over, nil)
+	guiUpdateTex(&imgDstPreviewTex, imgDstPreview)
+}
+
 func imgDstBrushPreview() {
 	col, div := allColors[idxColSelCur], 2 // div:=2 means 1/4 orig size, better keep, since with bigger divs brush curves turn ever more angular
 	img_small := image.NewRGBA(image.Rect(0, 0, imgSize.Dx()/div, imgSize.Dy()/div))
@@ -113,8 +146,8 @@ func imgDstBrushPreview() {
 	imgScaleUp.Scale(img_full, img_full.Bounds(), img_small, img_small.Bounds(), draw.Src, nil)
 	img_full = blur_do(img_full, blur_size*0.5)
 	imgDstPreview = image.NewRGBA(image.Rect(0, 0, imgSize.Dx(), imgSize.Dy()))
-	draw.Copy(imgDstPreview, image.Pt(0, 0), imgDst, imgDst.Bounds(), draw.Src, nil)
-	draw.Copy(imgDstPreview, image.Pt(0, 0), img_full, img_full.Bounds(), draw.Over, nil)
+	draw.Copy(imgDstPreview, ptZ, imgDst, imgDst.Bounds(), draw.Src, nil)
+	draw.Copy(imgDstPreview, ptZ, img_full, img_full.Bounds(), draw.Over, nil)
 	guiUpdateTex(&imgDstPreviewTex, imgDstPreview)
 }
 
@@ -167,8 +200,8 @@ func imgDownsized(imgSrc *image.RGBA, maxWidth int) (ret *image.RGBA) {
 }
 
 // https://schwarzers.com/algorithms/ | https://en.wikipedia.org/wiki/Midpoint_circle_algorithm#Jesko's_Method
-func imgDrawCircle(img *image.RGBA, col *color.RGBA, pos image.Point, r int, filled bool) {
-	mx, my, t1, t2, x, y, pts := pos.X, pos.Y, r/16, 0, r, 0, make([]image.Point, 0, (r*2)*(r*2))
+func imgDrawCircle(img *image.RGBA, col *color.RGBA, at image.Point, r int, filled bool) {
+	mx, my, t1, t2, x, y, pts := at.X, at.Y, r/16, 0, r, 0, make([]image.Point, 0, (r*2)*(r*2))
 	for x >= y {
 		pts = append(pts,
 			image.Pt(mx+x, my+y),
@@ -191,6 +224,81 @@ func imgDrawCircle(img *image.RGBA, col *color.RGBA, pos image.Point, r int, fil
 		img.Set(pt.X, pt.Y, col)
 	}
 	if filled && r > 1 {
-		imgDrawCircle(img, col, pos, r-1, true)
+		imgDrawCircle(img, col, at, r-1, true)
+	}
+}
+
+// https://en.wikipedia.org/wiki/Flood_fill#Span_filling
+func imgFloodFill(imgLines *image.RGBA, imgFills *image.RGBA, x int, y int) {
+	img_lines := image.NewRGBA(imgLines.Bounds())
+	draw.Copy(img_lines, ptZ, imgLines, imgLines.Bounds(), draw.Over, nil)
+
+	inside := func(x int, y int) bool {
+		rgba := img_lines.RGBAAt(x, y)
+		return rgba.A < 111
+	}
+	set := func(x int, y int) {
+		imgFills.Set(x, y, allColors[idxColSelCur])
+		img_lines.Set(x, y, allColors[idxColSelCur])
+	}
+
+	if !inside(x, y) {
+		return
+	}
+	stack := make([]int, 0, 128)
+	stack = append(stack, x, x, y, 1)
+	stack = append(stack, x, x, y-1, -1)
+	for len(stack) > 0 {
+		// Remove an (x1, x2, y, dy) from s
+		popped := stack[len(stack)-4:]
+		stack = stack[:len(stack)-4]
+		assert(len(popped) == 4)
+		x1, x2, y, dy := popped[0], popped[1], popped[2], popped[3]
+		// let x = x1
+		x := x1
+		// if Inside(x, y):
+		if inside(x, y) {
+			//     while Inside(x - 1, y):
+			//         Set(x - 1, y)
+			//         x = x - 1
+			for inside(x-1, y) {
+				set(x-1, y)
+				x = x - 1
+			}
+			//     if x < x1:
+			//         Add (x, x1 - 1, y - dy, -dy) to s
+			if x < x1 {
+				stack = append(stack, x, x1-1, y-dy, -dy)
+			}
+		}
+		// while x1 <= x2:
+		for x1 <= x2 {
+			//     while Inside(x1, y):
+			//         Set(x1, y)
+			//         x1 = x1 + 1
+			for inside(x1, y) {
+				set(x1, y)
+				x1 = x1 + 1
+			}
+			//     if x1 > x:
+			//         Add (x, x1 - 1, y + dy, dy) to s
+			if x1 > x {
+				stack = append(stack, x, x1-1, y+dy, dy)
+			}
+			//     if x1 - 1 > x2:
+			//         Add (x2 + 1, x1 - 1, y - dy, -dy) to s
+			if x1-1 > x2 {
+				stack = append(stack, x2+1, x1-1, y-dy, -dy)
+			}
+			//     x1 = x1 + 1
+			//     while x1 < x2 and not Inside(x1, y):
+			//         x1 = x1 + 1
+			//     x = x1
+			x1 = x1 + 1
+			for x1 < x2 && !inside(x1, y) {
+				x1 = x1 + 1
+			}
+			x = x1
+		}
 	}
 }

@@ -36,8 +36,8 @@ func main() {
 	}
 	imgSize = imgSrc[0].Bounds()
 	imgSrcEnsurePanelBorders()
-	for i, idx := 9.0, 1; i >= 1.0; i, idx = i-1.0, idx+1 {
-		imgSrc[idx] = imgDownsized(imgSrc[0], int(float64(imgSize.Dx())*0.1*i))
+	for i, idx := 0.9, 1; i >= 0.1; i, idx = i-0.1, idx+1 {
+		imgSrc[idx] = imgDownsized(imgSrc[0], int(float64(imgSize.Dx())*i))
 	}
 
 	imgdstfile, _ := os.Stat(imgDstFilePath)

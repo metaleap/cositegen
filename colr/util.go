@@ -19,3 +19,9 @@ func Max(i int, j int) int {
 func Min(i int, j int) int {
 	return If(j < i, j, i)
 }
+
+func assert(b bool) {
+	if !b {
+		panic(b)
+	}
+}

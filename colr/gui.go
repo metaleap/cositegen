@@ -31,12 +31,18 @@ var (
 	imgScreenPosMax  image.Point
 	imgScreenPosRect image.Rectangle
 	idxCurPanel      = -1
+	guiShowImgDst    = true
 	guiMode          = GuiModeNone
 	guiBrush         struct {
 		size     int
 		isRec    bool
 		idxPanel int
 		moves    []image.Point
+		prev     image.Point
+	}
+	guiFill struct {
+		idxPanel int
+		move     image.Point
 		prev     image.Point
 	}
 	guiUndoStack []*image.RGBA
@@ -66,6 +72,7 @@ func guiMain() {
 		g.WindowShortcut{g.KeyF8, g.ModNone, guiActionBlurModeToggle},
 		g.WindowShortcut{g.KeyF9, g.ModNone, guiActionBlurSizeDecr},
 		g.WindowShortcut{g.KeyF10, g.ModNone, guiActionBlurSizeIncr},
+		g.WindowShortcut{g.KeyF12, g.ModNone, guiActionToggleShowDst},
 		g.WindowShortcut{g.KeyPeriod, g.ModNone, guiActionFzoomIncr},
 		g.WindowShortcut{g.KeyComma, g.ModNone, guiActionFzoomDecr},
 		g.WindowShortcut{g.KeySlash, g.ModNone, guiActionFzoomToggle},
@@ -126,6 +133,8 @@ func guiLoop() {
 		}
 	}
 	guiBrush.prev = pos_in_img
+	guiFill.idxPanel = idxCurPanel
+	guiFill.prev = pos_in_img
 
 	cur_mouse_pointer := If(idxCurPanel >= 0, g.MouseCursorNone, g.MouseCursorArrow)
 	if cur_mouse_pointer != g.MouseCursorArrow {
@@ -150,16 +159,18 @@ func guiLoop() {
 		g.Custom(func() {
 			canvas := g.GetCanvas()
 			img_rect_color := If(guiMode == GuiModeNone, color.RGBA{0, 0, 0, 255}, color.RGBA{128, 128, 128, 255})
-			if guiBrush.isRec {
+			if guiBrush.isRec { // orange
 				img_rect_color = color.RGBA{234, 123, 0, 255}
-			} else if imgDstPreviewTex != nil {
+			} else if imgDstPreviewTex != nil { // green
 				img_rect_color = color.RGBA{0, 234, 123, 255}
 			}
 			canvas.AddRect(imgScreenPosMin, imgScreenPosMax, img_rect_color, 22, g.DrawFlagsRoundCornersAll, 33)
 			if guiMode == GuiModeBrush {
 				canvas.AddRect(imgScreenPosMin, imgScreenPosMax, color.Black, 22, g.DrawFlagsRoundCornersAll, 22)
 			}
-			canvas.AddImage(If(imgDstPreviewTex == nil, imgDstTex, imgDstPreviewTex), imgScreenPosMin, imgScreenPosMax)
+			if guiShowImgDst {
+				canvas.AddImage(If(imgDstPreviewTex == nil, imgDstTex, imgDstPreviewTex), imgScreenPosMin, imgScreenPosMax)
+			}
 			canvas.AddImage(imgSrcTex[If(imgSrcShowFzoom, idxImgSrc, 0)], imgScreenPosMin, imgScreenPosMax)
 			if guiMode != GuiModeNone && cur_mouse_pointer == g.MouseCursorNone {
 				brush_size := guiBrush.size
@@ -213,12 +224,18 @@ func guiMsg(str string, args ...any) {
 func guiActionFzoomIncr() {
 	if idxImgSrc < 9 {
 		idxImgSrc++
+		if guiMode == GuiModeFill {
+			imgDstFillPreview()
+		}
 	}
 }
 
 func guiActionFzoomDecr() {
 	if idxImgSrc > 0 {
 		idxImgSrc--
+		if guiMode == GuiModeFill {
+			imgDstFillPreview()
+		}
 	}
 }
 
@@ -270,7 +287,11 @@ func guiActionColSel(letter int, digit int) func() {
 		}
 	end:
 		if idxColSelCur != idx_prev && imgDstPreviewTex != nil {
-			imgDstBrushHaltRec(true)
+			if guiMode == GuiModeBrush {
+				imgDstBrushHaltRec(true)
+			} else if guiMode == GuiModeFill {
+				imgDstFillPreview()
+			}
 		}
 	}
 }
@@ -282,6 +303,7 @@ func guiActionUndo() {
 		imgDst = guiUndoStack[len(guiUndoStack)-1]
 		guiUndoStack = guiUndoStack[:len(guiUndoStack)-1]
 		guiUpdateTex(&imgDstTex, imgDst)
+		imgDstPreview = nil
 		guiUpdateTex(&imgDstPreviewTex, nil)
 	}
 }
@@ -293,6 +315,7 @@ func guiActionRedo() {
 		imgDst = guiRedoStack[len(guiRedoStack)-1]
 		guiRedoStack = guiRedoStack[:len(guiRedoStack)-1]
 		guiUpdateTex(&imgDstTex, imgDst)
+		imgDstPreview = nil
 		guiUpdateTex(&imgDstPreviewTex, nil)
 	}
 }
@@ -307,16 +330,28 @@ func guiActionClear() {
 	guiUpdateTex(&imgDstPreviewTex, nil)
 }
 
+func guiActionToggleShowDst() {
+	guiShowImgDst = !guiShowImgDst
+}
+
 func guiActionBlurModeToggle() {
 	blurModeGaussian = !blurModeGaussian
-	imgDstBrushHaltRec(true)
+	if guiMode == GuiModeBrush {
+		imgDstBrushHaltRec(true)
+	} else if guiMode == GuiModeFill {
+		imgDstFillPreview()
+	}
 }
 
 func guiActionBlurSizeIncr() {
 	for _, bsf := range blurSizeFactors {
 		if bsf > blurSizeFactor {
 			blurSizeFactor = bsf
-			imgDstBrushHaltRec(true)
+			if guiMode == GuiModeBrush {
+				imgDstBrushHaltRec(true)
+			} else if guiMode == GuiModeFill {
+				imgDstFillPreview()
+			}
 			break
 		}
 	}
@@ -328,13 +363,19 @@ func guiActionBlurSizeDecr() {
 	for _, bsf := range factors {
 		if bsf < blurSizeFactor {
 			blurSizeFactor = bsf
-			imgDstBrushHaltRec(true)
+			if guiMode == GuiModeBrush {
+				imgDstBrushHaltRec(true)
+			} else if guiMode == GuiModeFill {
+				imgDstFillPreview()
+			}
 			break
 		}
 	}
 }
 
 func guiActionModeToggle() {
+	guiUpdateTex(&imgDstPreviewTex, nil)
+	imgDstPreview = nil
 	switch guiMode {
 	case GuiModeNone:
 		guiMode = GuiModeFill
@@ -350,6 +391,9 @@ func guiActionModeToggle() {
 
 func guiActionOnKeySpace() {
 	switch guiMode {
+	case GuiModeFill:
+		guiFill.move = guiFill.prev
+		imgDstFillPreview()
 	case GuiModeBrush:
 		if (!guiBrush.isRec) || len(guiBrush.moves) == 0 || guiBrush.idxPanel != idxCurPanel {
 			guiUpdateTex(&imgDstPreviewTex, nil)
@@ -358,7 +402,6 @@ func guiActionOnKeySpace() {
 		} else {
 			imgDstBrushHaltRec(true)
 		}
-	case GuiModeFill:
 	}
 }
 
@@ -375,4 +418,5 @@ func guiActionOnKeyEnter() {
 func guiActionOnKeyEscape() {
 	imgDstBrushHaltRec(false)
 	guiUpdateTex(&imgDstPreviewTex, nil)
+	imgDstPreview = nil
 }
