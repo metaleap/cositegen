@@ -120,6 +120,9 @@ func guiLoop() {
 			}
 		}),
 	)
+	g.Event().OnMouseDown(g.MouseButtonLeft, func() {
+		println("MD!")
+	})
 	for i := 0; i < 24; i++ {
 		var cells []g.Widget
 		for j := 0; j < 9; j++ {
