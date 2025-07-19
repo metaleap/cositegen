@@ -57,13 +57,17 @@ func imgDstReload() {
 	brushRecording.is, brushRecording.moves, brushRecording.idxPanel = false, nil, -1
 	guiUpdateTex(&imgDstPreviewTex, nil)
 	imgDstPreview = nil
+	redoStack, undoStack = nil, append(undoStack, imgDst)
+
 	imgDst = imgDstOrig
 	guiUpdateTex(&imgDstTex, imgDst)
 }
 
-func imgDstBrushHaltRec() {
+func imgDstBrushHaltRec(apply bool) {
 	brushRecording.is = false
-	imgDstBrush()
+	if apply {
+		imgDstBrush()
+	}
 }
 
 func imgDstBrush() {

@@ -36,6 +36,8 @@ var (
 		moves    []image.Point
 		prev     image.Point
 	}
+	undoStack []*image.RGBA
+	redoStack []*image.RGBA
 )
 
 func guiMain() {
@@ -55,6 +57,7 @@ func guiMain() {
 		g.WindowShortcut{g.KeyY, g.ModControl, guiActionUndo},
 		g.WindowShortcut{g.KeyY, g.ModControl | g.ModShift, guiActionRedo},
 		g.WindowShortcut{g.KeyZ, g.ModControl, guiActionRedo},
+		g.WindowShortcut{g.KeyDelete, g.ModControl | g.ModShift, guiActionClear},
 		g.WindowShortcut{g.KeyPeriod, g.ModNone, guiActionFzoomIncr},
 		g.WindowShortcut{g.KeyComma, g.ModNone, guiActionFzoomDecr},
 		g.WindowShortcut{g.KeySlash, g.ModNone, guiActionFzoomToggle},
@@ -109,7 +112,7 @@ func guiLoop() {
 
 	if brushRecording.is {
 		if idxCurPanel != brushRecording.idxPanel {
-			imgDstBrushHaltRec()
+			imgDstBrushHaltRec(true)
 		} else if !brushRecording.prev.Eq(pos_in_img) {
 			brushRecording.moves = append(brushRecording.moves, pos_in_img)
 		}
@@ -124,6 +127,7 @@ func guiLoop() {
 	top_widget := "| M:" + If(mode == ModeBrush, "B", If(mode == ModeFill, "F", "_")) +
 		" | B:" + i2s(brushSize) +
 		" | P" + If(idxCurPanel >= 0, i2s(idxCurPanel+1), "_") + ":" + i2s(pos_in_img.X) + "," + i2s(pos_in_img.Y) +
+		" | U:" + i2s(len(undoStack)) + " R:" + i2s(len(redoStack)) +
 		" | "
 
 	widgets := []g.Widget{
@@ -205,7 +209,7 @@ func guiActionFzoomDecr() {
 func guiActionBrushIncr() {
 	if imgDstPreviewTex != nil {
 		brushSize += 2
-		imgDstBrushHaltRec()
+		imgDstBrushHaltRec(true)
 	} else if !brushRecording.is {
 		brushSize += 2
 	}
@@ -214,7 +218,7 @@ func guiActionBrushIncr() {
 func guiActionBrushDecr() {
 	if imgDstPreviewTex != nil && brushSize > brushSizeMin {
 		brushSize -= 2
-		imgDstBrushHaltRec()
+		imgDstBrushHaltRec(true)
 	} else if !brushRecording.is {
 		brushSize = If(brushSize == brushSizeMin, int(brushSizeMin), brushSize-2)
 	}
@@ -249,15 +253,43 @@ func guiActionColSel(letter int, digit int) func() {
 			}
 		}
 	end:
-		println(idxColSelCur, idx_prev, imgDstPreviewTex == nil)
 		if idxColSelCur != idx_prev && imgDstPreviewTex != nil {
-			imgDstBrushHaltRec()
+			imgDstBrushHaltRec(true)
 		}
 	}
 }
 
-func guiActionUndo() {}
-func guiActionRedo() {}
+func guiActionUndo() {
+	if len(undoStack) > 0 {
+		imgDstBrushHaltRec(false)
+		redoStack = append(redoStack, imgDst)
+		imgDst = undoStack[len(undoStack)-1]
+		undoStack = undoStack[:len(undoStack)-1]
+		guiUpdateTex(&imgDstTex, imgDst)
+		guiUpdateTex(&imgDstPreviewTex, nil)
+	}
+}
+
+func guiActionRedo() {
+	if len(redoStack) > 0 {
+		imgDstBrushHaltRec(false)
+		undoStack = append(undoStack, imgDst)
+		imgDst = redoStack[len(redoStack)-1]
+		redoStack = redoStack[:len(redoStack)-1]
+		guiUpdateTex(&imgDstTex, imgDst)
+		guiUpdateTex(&imgDstPreviewTex, nil)
+	}
+}
+
+func guiActionClear() {
+	if len(undoStack) == 0 || imgDst != undoStack[len(undoStack)-1] {
+		undoStack = append(undoStack, imgDst)
+	}
+	redoStack = nil
+	imgDst = imgDstNew(imgSize)
+	guiUpdateTex(&imgDstTex, imgDst)
+	guiUpdateTex(&imgDstPreviewTex, nil)
+}
 
 func guiActionModeToggle() {
 	brushRecording.is, brushRecording.moves, brushRecording.idxPanel = false, nil, -1
@@ -281,7 +313,7 @@ func guiActionOnKeySpace() {
 			imgDstPreview = nil
 			brushRecording.is, brushRecording.moves, brushRecording.idxPanel = true, nil, idxCurPanel
 		} else {
-			imgDstBrushHaltRec()
+			imgDstBrushHaltRec(true)
 		}
 	case ModeFill:
 	}
@@ -289,6 +321,7 @@ func guiActionOnKeySpace() {
 
 func guiActionOnKeyEnter() {
 	if imgDstPreview != nil {
+		redoStack, undoStack = nil, append(undoStack, imgDst)
 		imgDst = imgDstPreview
 		imgDstPreview = nil
 		guiUpdateTex(&imgDstPreviewTex, nil)
@@ -297,7 +330,6 @@ func guiActionOnKeyEnter() {
 }
 
 func guiActionOnKeyEscape() {
-	if brushRecording.is {
-		imgDstBrushHaltRec()
-	}
+	imgDstBrushHaltRec(false)
+	guiUpdateTex(&imgDstPreviewTex, nil)
 }
