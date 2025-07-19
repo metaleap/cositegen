@@ -46,8 +46,8 @@ var (
 
 func guiMain() {
 	guiBrush.size = 11
-	imgScreenPosMin = image.Pt(imgSize.Dx()/5, 55)
-	imgScreenPosMax = image.Pt(5*(imgSize.Dx()/5), 55+4*(imgSize.Dy()/5))
+	imgScreenPosMin = image.Pt(imgSize.Dx()/5, 69)
+	imgScreenPosMax = image.Pt(5*(imgSize.Dx()/5), 69+4*(imgSize.Dy()/5))
 	imgScreenPosRect = image.Rect(imgScreenPosMin.X, imgScreenPosMin.Y, imgScreenPosMax.X, imgScreenPosMax.Y)
 
 	wnd := g.NewMasterWindow(imgDstFilePath, 1920, 1200, g.MasterWindowFlagsMaximized)
@@ -134,16 +134,17 @@ func guiLoop() {
 
 	top_widget := "| M:" + If(guiMode == GuiModeBrush, "B", If(guiMode == GuiModeFill, "F", "_")) +
 		" | B:" + i2s(guiBrush.size) +
-		" | P" + If(idxCurPanel >= 0, i2s(idxCurPanel+1), "_") + ":" + i2s(pos_in_img.X) + "," + i2s(pos_in_img.Y) +
-		// " | U:" + i2s(len(guiUndoStack)) + " R:" + i2s(len(guiRedoStack)) +
-		" | Bl:" + strconv.FormatFloat(blurSizeFactor, 'f', 2, 64) + If(blurModeGaussian, "G", "B") + " [F8][F9][F10]" +
+		" | U:" + i2s(len(guiUndoStack)) + " R:" + i2s(len(guiRedoStack)) +
 		" | " + guiLastMsg
 
 	widgets := []g.Widget{
 		g.Label(top_widget),
-		g.Label("F-Zoom: " + i2s(idxImgSrc) + "   [,][.][-]"),
 		g.Separator(),
-		g.Label("Color: " + colorLabels[idxColSelCur]),
+		g.Label("F-Zoom: " + i2s(idxImgSrc) + "   [,][.][-]"),
+		g.Label("Bl:" + strconv.FormatFloat(blurSizeFactor, 'f', 2, 64) + If(blurModeGaussian, "G", "B") + " [F8][F9][F10]"),
+		g.Label("P" + If(idxCurPanel >= 0, i2s(idxCurPanel+1), "_") + ":" + i2s(pos_in_img.X) + "," + i2s(pos_in_img.Y)),
+		g.Label("_"),
+		g.Label("C:" + colorLabels[idxColSelCur]),
 		g.Separator(),
 	}
 	widgets = append(widgets,
@@ -173,7 +174,8 @@ func guiLoop() {
 			idx_color, sc1, sc2 := 0, color.RGBA{177, 77, 0, 255}, color.RGBA{255, 188, 0, 255}
 			for i, btnw, btnh, btnph, btnpv := 0, 37, 28, 1, 12; i < 24; i++ {
 				for j := 0; j < 9; j++ {
-					ptmin, ptmax := image.Pt(4+j*(btnw+btnph), 123+i*(btnh+btnpv)), image.Pt(4+j*(btnw+btnph)+btnw, 123+i*(btnh+btnpv)+btnh)
+					const ymin = 224
+					ptmin, ptmax := image.Pt(4+j*(btnw+btnph), ymin+i*(btnh+btnpv)), image.Pt(4+j*(btnw+btnph)+btnw, ymin+i*(btnh+btnpv)+btnh)
 					canvas.AddRectFilled(ptmin, ptmax, allColors[idx_color], 11, g.DrawFlagsRoundCornersAll)
 					if idx_color == idxColSelCur {
 						canvas.AddRect(ptmin, ptmax, sc1, 11, g.DrawFlagsRoundCornersAll, 8)
@@ -206,7 +208,7 @@ func guiUpdateTex(dst **g.Texture, src *image.RGBA) {
 }
 
 func guiMsg(str string, args ...any) {
-	guiLastMsg = time.Now().Format("15:04:05") + " " + fmt.Sprintf(str, args...)
+	guiLastMsg = "(" + time.Now().Format("15:04:05") + ")" + " " + fmt.Sprintf(str, args...)
 }
 
 func guiActionFzoomIncr() {

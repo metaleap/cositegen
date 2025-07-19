@@ -6,7 +6,6 @@ import (
 	"image"
 	"io"
 	"os"
-	"strings"
 
 	g "github.com/AllenDang/giu"
 )
@@ -45,13 +44,13 @@ func main() {
 	if imgdstfile == nil || imgdstfile.Size() <= 0 || imgdstfile.IsDir() {
 		imgDst = imgDstNew(imgSize)
 		imgDstSave()
-		guiMsg("Created: %s", "~/"+strings.TrimPrefix(imgDstFilePath, "/home/_/"))
+		guiMsg("Created: %s", imgDstFilePath)
 	} else {
 		imgDst, err = g.LoadImage(imgDstFilePath)
 		if err != nil {
 			panic(err)
 		}
-		guiMsg("Loaded: %s", "~/"+strings.TrimPrefix(imgDstFilePath, "/home/_/"))
+		guiMsg("Loaded: %s", imgDstFilePath)
 		imgDstOrig = imgDst
 	}
 	guiMain()

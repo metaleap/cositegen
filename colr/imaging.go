@@ -54,6 +54,7 @@ func imgSave(img image.Image, filePath string) {
 func imgDstSave() {
 	imgSave(imgDst, imgDstFilePath)
 	imgDstOrig = imgDst
+	guiMsg("Saved: %s", imgDstFilePath)
 }
 
 func imgDstReload() {
@@ -67,8 +68,9 @@ func imgDstReload() {
 }
 
 func imgDstBrushHaltRec(apply bool) {
+	was_rec := guiBrush.isRec
 	guiBrush.isRec = false
-	if apply {
+	if apply && (was_rec || imgDstPreviewTex != nil) {
 		imgDstBrushPreview()
 	}
 }
