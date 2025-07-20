@@ -376,7 +376,9 @@ func (me *Project) load() (numSheetVers int) {
 					t, _ := time.Parse("20060102", versionname)
 					dt := t.UnixNano()
 					if dt <= 0 {
-						printLn("SkipWip: " + fname)
+						if !strings.HasSuffix(fname, ".bg.png") {
+							printLn("SkipWip: " + fname)
+						}
 						continue
 					}
 					sheetname := fnamebase[:strings.LastIndexByte(fnamebase, '.')]
