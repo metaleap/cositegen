@@ -354,6 +354,8 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 	s += "<div><select onchange='$.fsimg.style.backgroundImage=this.value;'><option value='none'>Black&amp;White</option>"
 	if bgfilename := sv.FileName[:len(sv.FileName)-len(".png")] + ".svg"; fileStat(bgfilename) != nil && isbwlores {
 		s += "<option value='url(\"/" + bgfilename + "\")'>Colorized</option>"
+	} else if bgfilename = sv.FileName[:len(sv.FileName)-len(".png")] + ".bg.png"; fileStat(bgfilename) != nil && isbwlores {
+		s += "<option value='url(\"/" + bgfilename + "\")'>Colorized</option>"
 	}
 	s += "</select> version at black-threshold of <select onchange='$.fsimg.src=this.value;'"
 	if isbwlores {

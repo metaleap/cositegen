@@ -208,7 +208,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 			bgsrcimg := img.(*image.RGBA)
 			factor := float64(bgsrcimg.Bounds().Dx()) / float64(me.Data.PanelsTree.Rect.Dx())
 			me.Data.PanelsTree.each(func(p *ImgPanel) {
-				dstfilepath := filepath.Join(me.Data.DirPath, "bg"+itoa(pidx)+".png")
+				dstfilepath := filepath.Join(me.Data.DirPath, "bg."+ftoa(App.Proj.Sheets.Panel.BgScale, 2)+"."+itoa(pidx)+".png")
 				if force || (nil == fileStat(dstfilepath)) {
 					_ = os.Remove(dstfilepath)
 					subimg := bgsrcimg.SubImage(image.Rect(int(factor*float64(p.Rect.Min.X)), int(factor*float64(p.Rect.Min.Y)), int(factor*float64(p.Rect.Max.X)), int(factor*float64(p.Rect.Max.Y))))
@@ -226,7 +226,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 		} else { // old legacy SVG mode
 			pidx, bgsvgsrc := 0, string(fileRead(bgsrcpath))
 			me.Data.PanelsTree.each(func(p *ImgPanel) {
-				gid, dstfilepath := "pnl"+itoa(pidx), filepath.Join(me.Data.DirPath, "bg"+itoa(pidx)+".png")
+				gid, dstfilepath := "pnl"+itoa(pidx), filepath.Join(me.Data.DirPath, "bg."+ftoa(App.Proj.Sheets.Panel.BgScale, 2)+"."+itoa(pidx)+".png")
 				if s, svg := "", bgsvgsrc; force || (nil == fileStat(dstfilepath)) {
 					_ = os.Remove(dstfilepath)
 					if idx := strings.Index(svg, `id="`+gid+`"`); idx > 0 {
