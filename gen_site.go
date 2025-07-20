@@ -335,7 +335,7 @@ func (me *siteGen) genOrCopyPanelPicsOf(sv *SheetVer) (numSvgs uint32, numPngs u
 					}
 				}
 			}
-			if srcpath := filepath.Join(sv.Data.DirPath, "bg"+itoa(pidx)+".png"); sv.Data.hasBgCol {
+			if srcpath := filepath.Join(sv.Data.DirPath, "bg"+itoa(pidx)+".png"); sv.Data.hasBgCol != "" {
 				if fileinfo := fileStat(srcpath); fileinfo != nil {
 					atomic.AddUint64(&totalSize, uint64(fileinfo.Size()))
 					dstpath := filepath.Join(".build", App.Proj.Site.Gen.PicDirName, sv.DtStr()+sv.ID+itoa(pidx)+"bg.png")
@@ -769,7 +769,7 @@ func (me *siteGen) prepSheetPage(qIdx int, viewMode string, chapter *Chapter, sv
 				isfirstpanelonpage = false
 				s += " fetchpriority='high'"
 			}
-			if me.bgCol && sv.Data.hasBgCol {
+			if me.bgCol && sv.Data.hasBgCol != "" {
 				if bgsvg := fileStat(".build/" + App.Proj.Site.Gen.PicDirName + "/" + sv.DtStr() + sv.ID + itoa(pidx) + "bg.png"); bgsvg != nil {
 					s += " style='background-image:url(\"./" + App.Proj.Site.Gen.PicDirName + "/" + sv.DtStr() + sv.ID + itoa(pidx) + "bg.png\");'"
 				}

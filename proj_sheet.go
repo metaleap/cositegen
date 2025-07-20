@@ -54,7 +54,7 @@ type SheetVerData struct {
 	DirPath         string `json:",omitempty"`
 	BwFilePath      string `json:",omitempty"`
 	BwSmallFilePath string `json:",omitempty"`
-	hasBgCol        bool
+	hasBgCol        string
 
 	PxCm               float64
 	BwThreshold        uint8     `json:",omitempty"`
@@ -197,20 +197,29 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 		}
 	}
 	if bgsrcfile != nil {
+		me.Data.hasBgCol = bgsrcpath
 		if strings.HasSuffix(bgsrcpath, ".bg.png") {
 			pidx := 0
-			me.Data.hasBgCol = true
+			data := fileRead(bgsrcpath)
+			img, _, err := image.Decode(bytes.NewReader(data))
+			if err != nil {
+				panic(err)
+			}
+			bgsrcimg := img.(*image.RGBA)
+			factor := float64(bgsrcimg.Bounds().Dx()) / float64(me.Data.PanelsTree.Rect.Dx())
 			me.Data.PanelsTree.each(func(p *ImgPanel) {
 				dstfilepath := filepath.Join(me.Data.DirPath, "bg"+itoa(pidx)+".png")
 				if force || (nil == fileStat(dstfilepath)) {
 					_ = os.Remove(dstfilepath)
+					subimg := bgsrcimg.SubImage(image.Rect(int(factor*float64(p.Rect.Min.X)), int(factor*float64(p.Rect.Min.Y)), int(factor*float64(p.Rect.Max.X)), int(factor*float64(p.Rect.Max.Y))))
+					data = pngEncode(subimg)
+					data = pngEncode(subimg)
+					fileWrite(dstfilepath, data)
 				}
-
 				pidx++
 			})
 		} else { // old legacy SVG mode
 			pidx, bgsvgsrc := 0, string(fileRead(bgsrcpath))
-			me.Data.hasBgCol = true
 			me.Data.PanelsTree.each(func(p *ImgPanel) {
 				gid, dstfilepath := "pnl"+itoa(pidx), filepath.Join(me.Data.DirPath, "bg"+itoa(pidx)+".png")
 				if s, svg := "", bgsvgsrc; force || (nil == fileStat(dstfilepath)) {

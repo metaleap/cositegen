@@ -334,7 +334,7 @@ func (me *Chapter) storyboardFilePath() string {
 func (me *Chapter) hasBgCol() bool {
 	for _, sheet := range me.sheets {
 		for _, sv := range sheet.versions {
-			if sv.Data.hasBgCol {
+			if sv.Data.hasBgCol != "" {
 				return true
 			}
 		}
@@ -346,7 +346,7 @@ func (me *Chapter) percentColorized() float64 {
 	numsv, numbg := 0, 0
 	for _, sheet := range me.sheets {
 		for _, sv := range sheet.versions {
-			if numsv++; sv.Data.hasBgCol {
+			if numsv++; sv.Data.hasBgCol != "" {
 				numbg++
 			}
 		}

@@ -4,6 +4,8 @@ import (
 	"image"
 	"net/http"
 	"net/url"
+	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -41,7 +43,7 @@ func guiMain(r *http.Request, notice string) []byte {
 		s += "}\n"
 	}
 	s += "</style><script type='text/javascript' language='javascript'>const $ = window, numImagePanelTextAreas = " + itoa(App.Proj.Sheets.Panel.MaxNumTextAreas) + ";</script><script src='/main.js' type='text/javascript' language='javascript'></script>"
-	s += "</head><body><form method='POST' action='/?colr=" + fv("colr") + "' id='main_form' novalidate='novalidate'>" + guiHtmlInput("hidden", "main_focus_id", fv("main_focus_id"), nil)
+	s += "</head><body><form method='POST' action='/' id='main_form' novalidate='novalidate'>" + guiHtmlInput("hidden", "main_focus_id", fv("main_focus_id"), nil)
 	if notice != "" {
 		s += "<div class='notice'>" + hEsc(notice) + "</div>"
 	}
@@ -89,13 +91,14 @@ func guiMain(r *http.Request, notice string) []byte {
 				})
 				if sheetver := App.Gui.State.Sel.Ver; sheetver != nil {
 					havefullgui = true
-					s += "<div id='uipane'>"
 					if fv("colr") == "1" {
-						s += guiColorizer(sheetver, fv, &shouldsavemeta)
+						// s += "<script>history.back();</script>"
+						guiLaunchColorizer(sheetver)
 					} else {
+						s += "<div id='uipane'>"
 						s += "<hr/>" + guiSheetEdit(sheetver, fv, &shouldsavemeta)
+						s += "</div>"
 					}
-					s += "</div>"
 				}
 			}
 		}
@@ -164,7 +167,7 @@ func guiStartView() (s string) {
 								s += "<small>&nbsp;&horbar;&nbsp;&nbsp;<b>" + itoa(sv.Data.PanelsTree.Rect.Max.X) + "&times;" + itoa(sv.Data.PanelsTree.Rect.Max.Y) + "</b>px (" + ftoa(sv.Data.PxCm, 1) + "px/cm)&nbsp;&horbar;&nbsp;&nbsp;" + itoa(int(sv.Data.ColDarkestLightest[0])) + "-" + itoa(int(sv.Data.ColDarkestLightest[1])) + "</small>"
 							}
 							s += "<small>&nbsp;&nbsp;&horbar;&nbsp;&nbsp;from <b>" + time.Unix(0, sv.DateTimeUnixNano).Format("02 Jan 2006") + "</b></small>"
-							s += "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;<a href='" + svhref + "&colr=1'>Colorize</a> <small>(" + sIf(sv.Data != nil && sv.Data.hasBgCol, "started", "monochrome") + ")</small>"
+							s += "&nbsp;&nbsp;&horbar;&nbsp;&nbsp;<a href='" + svhref + "&colr=1'>Colorize</a> <small>(" + sIf(sv.Data != nil && sv.Data.hasBgCol != "", "started", "monochrome") + ")</small>"
 							s += "</h4>" + guiHtmlGrayDistrs(sv.grayDistrs()) + "</td></tr>"
 						}
 						pgprev = pgnr
@@ -638,37 +641,36 @@ func guiSheetEdit(sv *SheetVer, fv func(string) string, shouldSaveMeta *bool) (s
 
 var replBackticks = strings.NewReplacer("`", "\\`")
 
-func guiColorizer(sv *SheetVer, _ func(string) string, shouldSaveMeta *bool) (s string) {
-	_ = sv.ensurePrep(false, false)
-
-	bgfilepath := strings.TrimSuffix(sv.FileName, ".png") + ".svg"
-	if bgfileinfo := fileStat(bgfilepath); bgfileinfo == nil {
-		origfilepath := filepath.Join(sv.Data.DirPath, filepath.Base(bgfilepath))
-		fileWrite(bgfilepath, fileRead(origfilepath))
-		sv.Data.hasBgCol = true
-		*shouldSaveMeta = true
+func guiLaunchColorizer(sv *SheetVer) {
+	bgsrcfilepath := sv.Data.hasBgCol
+	if bgsrcfilepath == "" {
+		bgsrcfilepath = strings.TrimSuffix(sv.FileName, ".png") + ".bg.png"
 	}
-
-	numpanels := 0
-	sv.Data.PanelsTree.each(func(panel *ImgPanel) {
-		numpanels++
+	bwfilepath, err := filepath.Abs(sv.Data.BwSmallFilePath)
+	if err != nil {
+		panic(err)
+	}
+	bgsrcfilepath, err = filepath.Abs(bgsrcfilepath)
+	if err != nil {
+		panic(err)
+	}
+	cmd := exec.Command("go", "run", "main.go", "colors.go", "gui.go", "imaging.go", "util.go", bwfilepath, bgsrcfilepath)
+	cmd.Dir = filepath.Join(os.Getenv("GOPATH"), "src/github.com/metaleap/cositegen/colr")
+	type PageLayout struct {
+		Page   image.Rectangle
+		Panels []image.Rectangle
+	}
+	pagelayout := PageLayout{
+		Page: sv.Data.PanelsTree.Rect,
+	}
+	sv.Data.PanelsTree.each(func(p *ImgPanel) {
+		pagelayout.Panels = append(pagelayout.Panels, p.Rect)
 	})
-	s += "<script>window.__ctxcolr = {};"
-	s += "window.__ctxcolr.numPanels = " + itoa(numpanels) + ";"
-	s += "window.__ctxcolr.sv = " + toJsonStr(sv) + ";"
-	svgsrc := string(fileRead(bgfilepath))
-	svgsrc = svgsrc[strings.Index(svgsrc, "<svg"):]
-	idxrootend := strings.IndexByte(svgsrc, '>')
-	for _, dropattr := range []string{" width", " height", "\twidth", "\theight"} {
-		needle := dropattr + "=\""
-		if idx := strings.Index(svgsrc, needle); idx > 0 && idx < idxrootend {
-			if idx2 := idx + len(needle) + strings.IndexByte(svgsrc[idx+len(needle):], '"'); idx2 >= 0 {
-				svgsrc = svgsrc[:idx] + svgsrc[idx2+1:]
-			}
-		}
+	cmd.Stdin = strings.NewReader(toJsonStr(pagelayout))
+	output, err := cmd.CombinedOutput()
+	os.Stdout.Write(output)
+	os.Stdout.Sync()
+	if err != nil {
+		panic(err)
 	}
-	s += "window.__ctxcolr.svgSrc = `" + replBackticks.Replace(svgsrc) + "`;"
-	s += "</script>"
-	s += "<script src='/_esbuild/Application.js'></script>"
-	return
 }
