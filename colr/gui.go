@@ -52,8 +52,11 @@ var (
 
 func guiMain() {
 	guiBrush.size = 11
-	imgScreenPosMin = image.Pt(imgSize.Dx()/5, 69)
-	imgScreenPosMax = image.Pt(5*(imgSize.Dx()/5), 69+4*(imgSize.Dy()/5))
+	imgScreenPosMin = image.Pt(375, 69)
+	imgScreenPosMax = image.Pt(1881, 0 /* Y fixed up below! */)
+	canvasratio, canvaswidth := float64(imgSize.Dx())/float64(imgSize.Dy()), imgScreenPosMax.X-imgScreenPosMin.X
+	canvasheight := int(float64(canvaswidth) / canvasratio)
+	imgScreenPosMax.Y = imgScreenPosMin.Y + canvasheight
 	imgScreenPosRect = image.Rect(imgScreenPosMin.X, imgScreenPosMin.Y, imgScreenPosMax.X, imgScreenPosMax.Y)
 
 	wnd := g.NewMasterWindow(imgDstFilePath, 1920, 1200, g.MasterWindowFlagsMaximized)
