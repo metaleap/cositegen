@@ -92,7 +92,7 @@ func guiMain(r *http.Request, notice string) []byte {
 				if sheetver := App.Gui.State.Sel.Ver; sheetver != nil {
 					havefullgui = true
 					if fv("colr") == "1" {
-						// s += "<script>history.back();</script>"
+						s += "<script>history.back();</script>"
 						guiLaunchColorizer(sheetver)
 					} else {
 						s += "<div id='uipane'>"

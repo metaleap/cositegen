@@ -212,8 +212,13 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 				if force || (nil == fileStat(dstfilepath)) {
 					_ = os.Remove(dstfilepath)
 					subimg := bgsrcimg.SubImage(image.Rect(int(factor*float64(p.Rect.Min.X)), int(factor*float64(p.Rect.Min.Y)), int(factor*float64(p.Rect.Max.X)), int(factor*float64(p.Rect.Max.Y))))
-					data = pngEncode(subimg)
-					data = pngEncode(subimg)
+					if false {
+						halfimg := image.NewRGBA(image.Rect(0, 0, subimg.Bounds().Dx()/2, subimg.Bounds().Dy()/2))
+						ImgScaler.Scale(halfimg, halfimg.Bounds(), subimg, subimg.Bounds(), draw.Over, nil)
+						data = pngEncode(halfimg)
+					} else {
+						data = pngEncode(subimg)
+					}
 					fileWrite(dstfilepath, data)
 				}
 				pidx++
