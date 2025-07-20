@@ -433,22 +433,18 @@ func guiActionOnModeDo() {
 			_, _, _, a := col_lineart.RGBA()
 			idx_closest, dist_closest, letter_closest, digit_closest := -1, math.MaxInt, -1, -1
 			if idx := 0; a == 0 {
-				println("Picked: ", c2s(col_bg))
 				for l := 0; l < 24; l++ {
 					for d := 0; d < 9; d++ {
 						dist := (max(int(allColors[idx].R), int(col_bg.R)) - min(int(allColors[idx].R), int(col_bg.R))) +
 							(max(int(allColors[idx].G), int(col_bg.G)) - min(int(allColors[idx].G), int(col_bg.G))) +
 							(max(int(allColors[idx].B), int(col_bg.B)) - min(int(allColors[idx].B), int(col_bg.B)))
 						if dist < dist_closest {
-							println(idx, l, d, "Dist", dist, "vs", dist_closest)
 							dist_closest, idx_closest, letter_closest, digit_closest = dist, idx, l, d
-							println(idx_closest)
 						}
 						idx++
 					}
 				}
 			}
-			println(idx_closest < 0)
 			guiMsg("Picked color is: " + If(a > 0, "(line art)", c2s(col_bg)+If(idx_closest < 0, "", ", closest match on swatch: "+string('A'+letter_closest)+string('1'+digit_closest)+" ("+c2s(allColors[If(idx_closest < 0, 0, idx_closest)])+")")))
 		} else {
 			guiMsg("Color-picking only happens inside panels!")
