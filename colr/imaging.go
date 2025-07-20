@@ -11,20 +11,19 @@ import (
 )
 
 var (
-	ptZ                     image.Point
-	imgSrc                  [10]*image.RGBA
-	imgDst                  *image.RGBA
-	imgDstOrig              *image.RGBA
-	imgDstPreview           *image.RGBA
-	imgSrcFilePath          string
-	imgDstFilePath          string
-	imgSize                 image.Rectangle
-	imgScaleDown            draw.Interpolator = draw.BiLinear // dont change it!
-	imgScaleUp              draw.Interpolator = draw.CatmullRom
-	blurModeGaussian        bool
-	blurSizeFactor          = 0.0
-	blurSizeFactors         = []float64{0, 0.11, 0.44, 0.77, 1, 2, 3, 4}
-	fillModeStatMaxStackLen = 8
+	ptZ              image.Point
+	imgSrc           [10]*image.RGBA
+	imgDst           *image.RGBA
+	imgDstOrig       *image.RGBA
+	imgDstPreview    *image.RGBA
+	imgSrcFilePath   string
+	imgDstFilePath   string
+	imgSize          image.Rectangle
+	imgScaleDown     draw.Interpolator = draw.BiLinear // dont change it!
+	imgScaleUp       draw.Interpolator = draw.CatmullRom
+	blurModeGaussian bool
+	blurSizeFactor   = 0.0
+	blurSizeFactors  = []float64{0, 0.11, 0.44, 0.77, 1, 2, 3, 4}
 )
 
 func imgDstNew(size image.Rectangle) (ret *image.RGBA) {
@@ -267,7 +266,6 @@ func imgFloodFill(imgLines *image.RGBA, imgFills *image.RGBA, x int, y int) {
 			}
 			if x < x1 {
 				stack = append(stack, x, x1-1, y-dy, -dy)
-				fillModeStatMaxStackLen = max(fillModeStatMaxStackLen, len(stack))
 			}
 		}
 		for x1 <= x2 {
@@ -277,11 +275,9 @@ func imgFloodFill(imgLines *image.RGBA, imgFills *image.RGBA, x int, y int) {
 			}
 			if x1 > x {
 				stack = append(stack, x, x1-1, y+dy, dy)
-				fillModeStatMaxStackLen = max(fillModeStatMaxStackLen, len(stack))
 			}
 			if x1-1 > x2 {
 				stack = append(stack, x2+1, x1-1, y-dy, -dy)
-				fillModeStatMaxStackLen = max(fillModeStatMaxStackLen, len(stack))
 			}
 			x1 = x1 + 1
 			for x1 < x2 && !inside(x1, y) {
