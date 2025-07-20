@@ -11,19 +11,20 @@ import (
 )
 
 var (
-	ptZ              image.Point
-	imgSrc           [10]*image.RGBA
-	imgDst           *image.RGBA
-	imgDstOrig       *image.RGBA
-	imgDstPreview    *image.RGBA
-	imgSrcFilePath   string
-	imgDstFilePath   string
-	imgSize          image.Rectangle
-	imgScaleDown     draw.Interpolator = draw.BiLinear // dont change it!
-	imgScaleUp       draw.Interpolator = draw.CatmullRom
-	blurModeGaussian bool
-	blurSizeFactor   = 1.0
-	blurSizeFactors  = []float64{0, 0.11, 0.44, 0.77, 1, 2, 3, 4}
+	ptZ                     image.Point
+	imgSrc                  [10]*image.RGBA
+	imgDst                  *image.RGBA
+	imgDstOrig              *image.RGBA
+	imgDstPreview           *image.RGBA
+	imgSrcFilePath          string
+	imgDstFilePath          string
+	imgSize                 image.Rectangle
+	imgScaleDown            draw.Interpolator = draw.BiLinear // dont change it!
+	imgScaleUp              draw.Interpolator = draw.CatmullRom
+	blurModeGaussian        bool
+	blurSizeFactor          = 0.0
+	blurSizeFactors         = []float64{0, 0.11, 0.44, 0.77, 1, 2, 3, 4}
+	fillModeStatMaxStackLen = 8
 )
 
 func imgDstNew(size image.Rectangle) (ret *image.RGBA) {
@@ -68,6 +69,7 @@ func imgDstReload() {
 
 	imgDst = imgDstOrig
 	guiUpdateTex(&imgDstTex, imgDst)
+	guiMsg("Background colors reloaded (not from disk, but from last save point or the initial load)")
 }
 
 func imgDstBrushHaltRec(apply bool) {
@@ -84,7 +86,7 @@ func imgDstFillPreview() {
 	}
 	factor, size := 1.0, imgSrc[idxImgSrc].Bounds()
 	if idxImgSrc != 0 {
-		for i, idx := 0.9, 1; i >= 0.1; i, idx = i-0.1, idx+1 {
+		for i, idx := 0.95, 1; i >= 0.15; i, idx = i-0.1, idx+1 {
 			if idx == idxImgSrc {
 				factor = i
 				break
@@ -123,11 +125,11 @@ func imgDstBrushPreview() {
 	// first: connect the dots
 	for i := 1; i < len(moves); i++ {
 		cur, prev := moves[i], moves[i-1]
-		xdiff, ydiff := Max(cur.X, prev.X)-Min(cur.X, prev.X), Max(cur.Y, prev.Y)-Min(cur.Y, prev.Y)
+		xdiff, ydiff := max(cur.X, prev.X)-min(cur.X, prev.X), max(cur.Y, prev.Y)-min(cur.Y, prev.Y)
 		if (xdiff > 1) || (ydiff > 1) {
 			move := image.Pt(
-				Min(cur.X, prev.X)+(Max(cur.X, prev.X)-Min(cur.X, prev.X))/2,
-				Min(cur.Y, prev.Y)+(Max(cur.Y, prev.Y)-Min(cur.Y, prev.Y))/2,
+				min(cur.X, prev.X)+(max(cur.X, prev.X)-min(cur.X, prev.X))/2,
+				min(cur.Y, prev.Y)+(max(cur.Y, prev.Y)-min(cur.Y, prev.Y))/2,
 			)
 			if !(move.Eq(prev) || move.Eq(cur)) {
 				moves = append(moves[:i], append([]image.Point{move}, moves[i:]...)...)
@@ -187,15 +189,16 @@ func imgDownsized(imgSrc *image.RGBA, maxWidth int) (ret *image.RGBA) {
 	newheight := int(float64(origheight) / (float64(origwidth) / float64(maxWidth)))
 	ret = image.NewRGBA(image.Rect(0, 0, maxWidth, newheight))
 	imgScaleDown.Scale(ret, ret.Bounds(), imgSrc, imgSrc.Bounds(), draw.Src, nil)
-	// greys into blacks for our purposes here:
-	for x := 0; x < imgSize.Dx(); x++ {
-		for y := 0; y < imgSize.Dy(); y++ {
-			r, g, b, a := ret.At(x, y).RGBA()
-			if !(r == 0 && g == 0 && b == 0) {
-				panic("stuff has changed, update code!")
-			}
-			if a != 0 {
-				ret.Set(x, y, color.RGBA{A: 255})
+	{ // greys into blacks for our purposes here:
+		for x := 0; x < imgSize.Dx(); x++ {
+			for y := 0; y < imgSize.Dy(); y++ {
+				r, g, b, a := ret.At(x, y).RGBA()
+				if !(r == 0 && g == 0 && b == 0) {
+					panic("stuff has changed, update code!")
+				}
+				if a > 1234 {
+					ret.Set(x, y, color.RGBA{A: 255})
+				}
 			}
 		}
 	}
@@ -238,7 +241,7 @@ func imgFloodFill(imgLines *image.RGBA, imgFills *image.RGBA, x int, y int) {
 
 	inside := func(x int, y int) bool {
 		rgba := img_lines.RGBAAt(x, y)
-		return rgba.A < 111
+		return rgba.A < 111 && x >= 0 && x < img_lines.Rect.Dx() && y >= 0 && y < img_lines.Rect.Dy()
 	}
 	set := func(x int, y int) {
 		imgFills.Set(x, y, allColors[idxColSelCur])
@@ -248,55 +251,38 @@ func imgFloodFill(imgLines *image.RGBA, imgFills *image.RGBA, x int, y int) {
 	if !inside(x, y) {
 		return
 	}
-	stack := make([]int, 0, 128)
+	stack := make([]int, 0, 512)
 	stack = append(stack, x, x, y, 1)
 	stack = append(stack, x, x, y-1, -1)
 	for len(stack) > 0 {
-		// Remove an (x1, x2, y, dy) from s
 		popped := stack[len(stack)-4:]
 		stack = stack[:len(stack)-4]
 		assert(len(popped) == 4)
 		x1, x2, y, dy := popped[0], popped[1], popped[2], popped[3]
-		// let x = x1
 		x := x1
-		// if Inside(x, y):
 		if inside(x, y) {
-			//     while Inside(x - 1, y):
-			//         Set(x - 1, y)
-			//         x = x - 1
 			for inside(x-1, y) {
 				set(x-1, y)
 				x = x - 1
 			}
-			//     if x < x1:
-			//         Add (x, x1 - 1, y - dy, -dy) to s
 			if x < x1 {
 				stack = append(stack, x, x1-1, y-dy, -dy)
+				fillModeStatMaxStackLen = max(fillModeStatMaxStackLen, len(stack))
 			}
 		}
-		// while x1 <= x2:
 		for x1 <= x2 {
-			//     while Inside(x1, y):
-			//         Set(x1, y)
-			//         x1 = x1 + 1
 			for inside(x1, y) {
 				set(x1, y)
 				x1 = x1 + 1
 			}
-			//     if x1 > x:
-			//         Add (x, x1 - 1, y + dy, dy) to s
 			if x1 > x {
 				stack = append(stack, x, x1-1, y+dy, dy)
+				fillModeStatMaxStackLen = max(fillModeStatMaxStackLen, len(stack))
 			}
-			//     if x1 - 1 > x2:
-			//         Add (x2 + 1, x1 - 1, y - dy, -dy) to s
 			if x1-1 > x2 {
 				stack = append(stack, x2+1, x1-1, y-dy, -dy)
+				fillModeStatMaxStackLen = max(fillModeStatMaxStackLen, len(stack))
 			}
-			//     x1 = x1 + 1
-			//     while x1 < x2 and not Inside(x1, y):
-			//         x1 = x1 + 1
-			//     x = x1
 			x1 = x1 + 1
 			for x1 < x2 && !inside(x1, y) {
 				x1 = x1 + 1

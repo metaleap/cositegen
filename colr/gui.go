@@ -143,6 +143,7 @@ func guiLoop() {
 
 	top_widget := "| M:" + If(guiMode == GuiModeBrush, "B", If(guiMode == GuiModeFill, "F", "_")) +
 		" | U:" + i2s(len(guiUndoStack)) + " R:" + i2s(len(guiRedoStack)) +
+		" | FMsl:" + i2s(fillModeStatMaxStackLen) +
 		" | " + guiLastMsg
 
 	widgets := []g.Widget{
@@ -164,6 +165,7 @@ func guiLoop() {
 			} else if imgDstPreviewTex != nil { // green
 				img_rect_color = color.RGBA{0, 234, 123, 255}
 			}
+			canvas.AddRectFilled(imgScreenPosMin, imgScreenPosMax, img_rect_color, 22, g.DrawFlagsRoundCornersAll)
 			canvas.AddRect(imgScreenPosMin, imgScreenPosMax, img_rect_color, 22, g.DrawFlagsRoundCornersAll, 33)
 			if guiMode == GuiModeBrush {
 				canvas.AddRect(imgScreenPosMin, imgScreenPosMax, color.Black, 22, g.DrawFlagsRoundCornersAll, 22)
@@ -267,6 +269,7 @@ func guiActionBrushDecr() {
 
 func guiActionFzoomToggle() {
 	imgSrcShowFzoom = !imgSrcShowFzoom
+	guiMsg(If(imgSrcShowFzoom, "Showing", "Hiding") + " current flood-fill line-art resolution, [-] to " + If(imgSrcShowFzoom, "hide", "show") + " again, [,][.] to change it")
 }
 
 func guiActionColSel(letter int, digit int) func() {
@@ -294,6 +297,7 @@ func guiActionColSel(letter int, digit int) func() {
 			}
 		}
 	end:
+		guiMsg("Current color: " + fmt.Sprintf("#%X%X%X", allColors[idxColSelCur].R, allColors[idxColSelCur].G, allColors[idxColSelCur].B))
 		if idxColSelCur != idx_prev && imgDstPreviewTex != nil {
 			if guiMode == GuiModeBrush {
 				imgDstBrushHaltRec(true)
@@ -336,14 +340,17 @@ func guiActionClear() {
 	imgDst = imgDstNew(imgSize)
 	guiUpdateTex(&imgDstTex, imgDst)
 	guiUpdateTex(&imgDstPreviewTex, nil)
+	guiMsg("All background colors cleared, [Ctrl+Z] to undo")
 }
 
 func guiActionToggleShowDst() {
 	guiShowImgDst = !guiShowImgDst
+	guiMsg(If(guiShowImgDst, "Showing", "Hiding") + " background colors, [F12] to " + If(guiShowImgDst, "hide", "show") + " them again")
 }
 
 func guiActionBlurModeToggle() {
 	blurModeGaussian = !blurModeGaussian
+	guiMsg("Blur mode changed to " + If(blurModeGaussian, "Gaussian", "Box") + " blur")
 	if guiMode == GuiModeBrush {
 		imgDstBrushHaltRec(true)
 	} else if guiMode == GuiModeFill {
@@ -387,11 +394,14 @@ func guiActionModeToggle() {
 	switch guiMode {
 	case GuiModeNone:
 		guiMode = GuiModeFill
+		guiMsg("Mode selected: Fill")
 	case GuiModeFill:
 		guiMode = GuiModeBrush
+		guiMsg("Mode selected: Brush")
 	case GuiModeBrush:
 		imgDstBrushHaltRec(false)
 		guiMode = GuiModeNone
+		guiMsg("Mode selected: None")
 	default:
 		panic(guiMode)
 	}
@@ -402,13 +412,16 @@ func guiActionOnKeySpace() {
 	case GuiModeFill:
 		guiFill.move = guiFill.prev
 		imgDstFillPreview()
+		guiMsg("[Enter] to keep, [Escape] or [Space] do discard")
 	case GuiModeBrush:
 		if (!guiBrush.isRec) || len(guiBrush.moves) == 0 || guiBrush.idxPanel != idxCurPanel {
 			guiUpdateTex(&imgDstPreviewTex, nil)
 			imgDstPreview = nil
 			guiBrush.isRec, guiBrush.moves, guiBrush.idxPanel = true, nil, idxCurPanel
+			guiMsg("Recording mouse-move brush strokes until the next [Space]...")
 		} else {
 			imgDstBrushHaltRec(true)
+			guiMsg("[Enter] to keep, [Escape] or [Space] do discard")
 		}
 	}
 }
@@ -421,6 +434,7 @@ func guiActionOnKeyEnter() {
 		imgDstPreview = nil
 		guiUpdateTex(&imgDstPreviewTex, nil)
 		guiUpdateTex(&imgDstTex, imgDst)
+		guiMsg("Change committed")
 	}
 }
 
@@ -428,4 +442,5 @@ func guiActionOnKeyEscape() {
 	imgDstBrushHaltRec(false)
 	guiUpdateTex(&imgDstPreviewTex, nil)
 	imgDstPreview = nil
+	guiMsg("Change discarded")
 }

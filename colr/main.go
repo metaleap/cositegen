@@ -36,7 +36,7 @@ func main() {
 	}
 	imgSize = imgSrc[0].Bounds()
 	imgSrcEnsurePanelBorders()
-	for i, idx := 0.9, 1; i >= 0.1; i, idx = i-0.1, idx+1 {
+	for i, idx := 0.95, 1; i >= 0.15; i, idx = i-0.1, idx+1 {
 		imgSrc[idx] = imgDownsized(imgSrc[0], int(float64(imgSize.Dx())*i))
 	}
 
