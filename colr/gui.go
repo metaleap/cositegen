@@ -5,7 +5,6 @@ import (
 	"image"
 	"image/color"
 	"slices"
-	"strconv"
 	"time"
 
 	g "github.com/AllenDang/giu"
@@ -16,7 +15,7 @@ type GuiMode int
 const (
 	guiBrushSizeMin = 3
 
-	GuiModeNone GuiMode = iota
+	GuiModeColPick GuiMode = iota
 	GuiModeBrush
 	GuiModeFill
 )
@@ -32,22 +31,21 @@ var (
 	imgScreenPosRect image.Rectangle
 	idxCurPanel      = -1
 	guiShowImgDst    = true
-	guiMode          = GuiModeNone
+	guiMode          = GuiModeColPick
 	guiBrush         struct {
 		size     int
 		isRec    bool
 		idxPanel int
 		moves    []image.Point
-		prev     image.Point
 	}
 	guiFill struct {
 		idxPanel int
 		move     image.Point
-		prev     image.Point
 	}
-	guiUndoStack []*image.RGBA
-	guiRedoStack []*image.RGBA
-	guiLastMsg   string
+	guiMousePosInImg image.Point
+	guiUndoStack     []*image.RGBA
+	guiRedoStack     []*image.RGBA
+	guiLastMsg       string
 )
 
 func guiMain() {
@@ -131,15 +129,15 @@ func guiLoop() {
 	if guiBrush.isRec {
 		if idxCurPanel != guiBrush.idxPanel {
 			imgDstBrushHaltRec(true)
-		} else if !guiBrush.prev.Eq(pos_in_img) {
+		} else if !guiMousePosInImg.Eq(pos_in_img) {
 			guiBrush.moves = append(guiBrush.moves, pos_in_img)
 		}
 	}
-	guiBrush.prev = pos_in_img
+	guiMousePosInImg = pos_in_img
 	guiFill.idxPanel = idxCurPanel
-	guiFill.prev = pos_in_img
+	guiMousePosInImg = pos_in_img
 
-	cur_mouse_pointer := If(idxCurPanel >= 0, g.MouseCursorNone, g.MouseCursorArrow)
+	cur_mouse_pointer := If(idxCurPanel < 0 || guiMode == GuiModeColPick, g.MouseCursorArrow, g.MouseCursorNone)
 	if cur_mouse_pointer != g.MouseCursorArrow {
 		g.SetMouseCursor(cur_mouse_pointer)
 	}
@@ -154,15 +152,15 @@ func guiLoop() {
 		g.Separator(),
 		g.Label("F-Zoom: " + i2s(idxImgSrc) + "   [,][.][-]"),
 		g.Label("B-Size: " + i2s(guiBrush.size) + " [PgDn][PgUp]"),
-		g.Label("Bl: " + strconv.FormatFloat(blurSizeFactor, 'f', 2, 64) + If(blurModeGaussian, "G", "B") + " [F8][F9][F10]"),
+		g.Label("Bl: " + f2s(blurSizeFactor) + If(blurModeGaussian, "G", "B") + " [F8][F9][F10]"),
 		g.Label("Panel" + If(idxCurPanel >= 0, i2s(idxCurPanel+1), "_") + ": " + i2s(pos_in_img.X) + "," + i2s(pos_in_img.Y)),
-		g.Label("Color: " + colorLabels[idxColSelCur]),
+		g.Label("Color: " + colorLabels[idxColSelCur] + " (" + c2s(allColors[idxColSelCur]) + ")"),
 		g.Separator(),
 	}
 	widgets = append(widgets,
 		g.Custom(func() {
 			canvas := g.GetCanvas()
-			img_rect_color := If(guiMode == GuiModeNone, color.RGBA{0, 0, 0, 255}, color.RGBA{128, 128, 128, 255})
+			img_rect_color := If(guiMode == GuiModeColPick, color.RGBA{123, 123, 123, 255}, color.RGBA{234, 234, 234, 255})
 			if guiBrush.isRec { // orange
 				img_rect_color = color.RGBA{234, 123, 0, 255}
 			} else if imgDstPreviewTex != nil { // green
@@ -177,7 +175,7 @@ func guiLoop() {
 				canvas.AddImage(If(imgDstPreviewTex == nil, imgDstTex, imgDstPreviewTex), imgScreenPosMin, imgScreenPosMax)
 			}
 			canvas.AddImage(imgSrcTex[If(imgSrcShowFzoom, idxImgSrc, 0)], imgScreenPosMin, imgScreenPosMax)
-			if guiMode != GuiModeNone && cur_mouse_pointer == g.MouseCursorNone {
+			if guiMode != GuiModeColPick && cur_mouse_pointer == g.MouseCursorNone {
 				brush_size := guiBrush.size
 				canvas.AddCircleFilled(pos_mouse, float32(brush_size), allColors[idxColSelCur])
 				if guiMode == GuiModeBrush {
@@ -300,7 +298,7 @@ func guiActionColSel(letter int, digit int) func() {
 			}
 		}
 	end:
-		guiMsg("Current color: " + fmt.Sprintf("#%X%X%X", allColors[idxColSelCur].R, allColors[idxColSelCur].G, allColors[idxColSelCur].B))
+		guiMsg("Current color: " + c2s(allColors[idxColSelCur]))
 		if idxColSelCur != idx_prev && imgDstPreviewTex != nil {
 			if guiMode == GuiModeBrush {
 				imgDstBrushHaltRec(true)
@@ -395,7 +393,7 @@ func guiActionModeToggle() {
 	guiUpdateTex(&imgDstPreviewTex, nil)
 	imgDstPreview = nil
 	switch guiMode {
-	case GuiModeNone:
+	case GuiModeColPick:
 		guiMode = GuiModeFill
 		guiMsg("Mode selected: Fill")
 	case GuiModeFill:
@@ -403,8 +401,8 @@ func guiActionModeToggle() {
 		guiMsg("Mode selected: Brush")
 	case GuiModeBrush:
 		imgDstBrushHaltRec(false)
-		guiMode = GuiModeNone
-		guiMsg("Mode selected: None")
+		guiMode = GuiModeColPick
+		guiMsg("Mode selected: Color-picking")
 	default:
 		panic(guiMode)
 	}
@@ -413,7 +411,7 @@ func guiActionModeToggle() {
 func guiActionOnKeySpace() {
 	switch guiMode {
 	case GuiModeFill:
-		guiFill.move = guiFill.prev
+		guiFill.move = guiMousePosInImg
 		imgDstFillPreview()
 		guiMsg("[Enter] to keep, [Escape] or [Space] do discard")
 	case GuiModeBrush:
@@ -425,6 +423,12 @@ func guiActionOnKeySpace() {
 		} else {
 			imgDstBrushHaltRec(true)
 			guiMsg("[Enter] to keep, [Escape] or [Space] do discard")
+		}
+	case GuiModeColPick:
+		if idxCurPanel >= 0 && !ptZ.Eq(guiMousePosInImg) {
+			img := If(imgDstPreviewTex != nil, imgDstPreview, imgDst)
+			col := img.At(guiMousePosInImg.X, guiMousePosInImg.Y)
+			guiMsg("Picked color is: " + c2s(col))
 		}
 	}
 }
