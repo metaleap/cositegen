@@ -251,7 +251,7 @@ func imgFloodFill(imgLines *image.RGBA, imgFills *image.RGBA, x int, y int) {
 	if !inside(x, y) {
 		return
 	}
-	stack := make([]int, 0, 512)
+	stack := make([]int, 0, 1536)
 	stack = append(stack, x, x, y, 1)
 	stack = append(stack, x, x, y-1, -1)
 	for len(stack) > 0 {
