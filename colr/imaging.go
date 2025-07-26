@@ -97,7 +97,7 @@ func imgDstFillPreview() {
 
 	blur_do := If(blurModeGaussian, blur.Gaussian, blur.Box)
 	blur_size := blurSizeFactor * (float64(guiBrush.size) * factor)
-	if blurSizeFactor > 0 {
+	if blurSizeFactor > 0.1 {
 		img_small = blur_do(img_small, blur_size)
 	}
 	img_full := img_small
@@ -240,7 +240,7 @@ func imgFloodFill(imgLines *image.RGBA, imgFills *image.RGBA, x int, y int) {
 
 	inside := func(x int, y int) bool {
 		rgba := img_lines.RGBAAt(x, y)
-		return rgba.A < 111 && x >= 0 && x < img_lines.Rect.Dx() && y >= 0 && y < img_lines.Rect.Dy()
+		return rgba.A < 123 && x >= 0 && x < img_lines.Rect.Dx() && y >= 0 && y < img_lines.Rect.Dy()
 	}
 	set := func(x int, y int) {
 		imgFills.Set(x, y, allColors[idxColSelCur])

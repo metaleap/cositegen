@@ -198,7 +198,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 	}
 	if bgsrcfile != nil {
 		me.Data.hasBgCol = bgsrcpath
-		if strings.HasSuffix(bgsrcpath, ".bg.png") {
+		if strings.HasSuffix(bgsrcpath, ".bg.png") { // new colr-driven bg mode
 			pidx := 0
 			data := fileRead(bgsrcpath)
 			img, _, err := image.Decode(bytes.NewReader(data))
@@ -224,7 +224,7 @@ func (me *SheetVer) ensurePanelPics(force bool) bool {
 					pidx++
 				})
 			}
-		} else { // old legacy SVG mode
+		} else { // old legacy SVG-based bg mode
 			pidx, bgsvgsrc := 0, string(fileRead(bgsrcpath))
 			me.Data.PanelsTree.each(func(p *ImgPanel) {
 				gid, dstfilepath := "pnl"+itoa(pidx), filepath.Join(me.Data.DirPath, "bg."+ftoa(App.Proj.Sheets.Panel.BgScale, 2)+"."+itoa(pidx)+".png")
