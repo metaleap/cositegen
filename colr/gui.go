@@ -32,6 +32,7 @@ var (
 	imgScreenPosRect image.Rectangle
 	idxCurPanel      = -1
 	guiShowImgDst    = true
+	guiShowImgSrc    = true
 	guiMode          = GuiModeColPick
 	guiBrush         struct {
 		size     int
@@ -74,6 +75,7 @@ func guiMain() {
 		g.WindowShortcut{g.KeyF8, g.ModNone, guiActionBlurModeToggle},
 		g.WindowShortcut{g.KeyF9, g.ModNone, guiActionBlurSizeDecr},
 		g.WindowShortcut{g.KeyF10, g.ModNone, guiActionBlurSizeIncr},
+		g.WindowShortcut{g.KeyF11, g.ModNone, guiActionToggleShowSrc},
 		g.WindowShortcut{g.KeyF12, g.ModNone, guiActionToggleShowDst},
 		g.WindowShortcut{g.KeyPeriod, g.ModNone, guiActionFzoomIncr},
 		g.WindowShortcut{g.KeyComma, g.ModNone, guiActionFzoomDecr},
@@ -84,6 +86,8 @@ func guiMain() {
 		g.WindowShortcut{g.KeyDown, g.ModNone, guiActionColSel(26, -1)},
 		g.WindowShortcut{g.KeyPageDown, g.ModNone, guiActionBrushDecr},
 		g.WindowShortcut{g.KeyPageUp, g.ModNone, guiActionBrushIncr},
+		g.WindowShortcut{g.KeySemicolon, g.ModNone, guiActionFSizeDecr},
+		g.WindowShortcut{g.KeyApostrophe, g.ModNone, guiActionFSizeIncr},
 		g.WindowShortcut{g.KeyEnter, g.ModNone, guiActionModeToggle},
 		g.WindowShortcut{g.KeyTab, g.ModNone, guiActionOnModeCommit},
 		g.WindowShortcut{g.KeyEscape, g.ModNone, guiActionOnModeDiscard},
@@ -151,7 +155,7 @@ func guiLoop() {
 	widgets := []g.Widget{
 		g.Label(top_widget),
 		g.Separator(),
-		g.Label("F-Zoom: " + i2s(idxImgSrc) + "   [,][.][-]"),
+		g.Label("F-Zoom: " + i2s(idxImgSrc) + " F-PxSize: " + i2s(fillPixelSize)),
 		g.Label("B-Size: " + i2s(guiBrush.size) + " [PgDn][PgUp]"),
 		g.Label("Bl: " + f2s(blurSizeFactor) + If(blurModeGaussian, "G", "B") + " [F8][F9][F10]"),
 		g.Label("Panel" + If(idxCurPanel >= 0, i2s(idxCurPanel+1), "_") + ": " + i2s(pos_in_img.X) + "," + i2s(pos_in_img.Y)),
@@ -175,7 +179,9 @@ func guiLoop() {
 			if guiShowImgDst {
 				canvas.AddImage(If(imgDstPreviewTex == nil, imgDstTex, imgDstPreviewTex), imgScreenPosMin, imgScreenPosMax)
 			}
-			canvas.AddImage(imgSrcTex[If(imgSrcShowFzoom, idxImgSrc, 0)], imgScreenPosMin, imgScreenPosMax)
+			if guiShowImgSrc {
+				canvas.AddImage(imgSrcTex[If(imgSrcShowFzoom, idxImgSrc, 0)], imgScreenPosMin, imgScreenPosMax)
+			}
 			if guiMode != GuiModeColPick && cur_mouse_pointer == g.MouseCursorNone {
 				brush_size := guiBrush.size
 				canvas.AddCircleFilled(pos_mouse, float32(brush_size), allColors[idxColSelCur])
@@ -253,6 +259,24 @@ func guiActionBrushIncr() {
 		}
 	} else if !guiBrush.isRec {
 		guiBrush.size += 2
+	}
+}
+
+func guiActionFSizeDecr() {
+	if fillPixelSize > 1 {
+		fillPixelSize -= 2
+		if guiMode == GuiModeFill {
+			imgDstFillPreview()
+		}
+	}
+}
+
+func guiActionFSizeIncr() {
+	if fillPixelSize < 21 {
+		fillPixelSize += 2
+		if guiMode == GuiModeFill {
+			imgDstFillPreview()
+		}
 	}
 }
 
@@ -348,6 +372,11 @@ func guiActionClear() {
 func guiActionToggleShowDst() {
 	guiShowImgDst = !guiShowImgDst
 	guiMsg(If(guiShowImgDst, "Showing", "Hiding") + " background colors, [F12] to " + If(guiShowImgDst, "hide", "show") + " them again")
+}
+
+func guiActionToggleShowSrc() {
+	guiShowImgSrc = !guiShowImgSrc
+	guiMsg(If(guiShowImgSrc, "Showing", "Hiding") + " line art, [F11] to " + If(guiShowImgSrc, "hide", "show") + " it again")
 }
 
 func guiActionBlurModeToggle() {

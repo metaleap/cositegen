@@ -24,6 +24,7 @@ var (
 	blurModeGaussian bool
 	blurSizeFactor   = 0.0
 	blurSizeFactors  = []float64{0, 0.11, 0.44, 0.77, 1, 2, 3, 4}
+	fillPixelSize    = 5
 )
 
 func imgDstNew(size image.Rectangle) (ret *image.RGBA) {
@@ -97,14 +98,14 @@ func imgDstFillPreview() {
 
 	blur_do := If(blurModeGaussian, blur.Gaussian, blur.Box)
 	blur_size := blurSizeFactor * (float64(guiBrush.size) * factor)
-	if blurSizeFactor > 0.1 {
+	if blurSizeFactor > 0.01 {
 		img_small = blur_do(img_small, blur_size)
 	}
 	img_full := img_small
 	if idxImgSrc != 0 {
 		img_full = image.NewRGBA(image.Rect(0, 0, imgSize.Dx(), imgSize.Dy()))
 		imgScaleUp.Scale(img_full, img_full.Bounds(), img_small, img_small.Bounds(), draw.Src, nil)
-		if blurSizeFactor > 0 {
+		if blurSizeFactor > 0.01 {
 			img_full = blur_do(img_full, blur_size*0.5)
 		}
 	}
@@ -145,10 +146,14 @@ func imgDstBrushPreview() {
 	}
 	blur_do := If(blurModeGaussian, blur.Gaussian, blur.Box)
 	blur_size := blurSizeFactor * (float64(guiBrush.size) / float64(div))
-	img_small = blur_do(img_small, blur_size)
+	if blurSizeFactor > 0.01 {
+		img_small = blur_do(img_small, blur_size)
+	}
 	img_full := image.NewRGBA(image.Rect(0, 0, imgSize.Dx(), imgSize.Dy()))
 	imgScaleUp.Scale(img_full, img_full.Bounds(), img_small, img_small.Bounds(), draw.Src, nil)
-	img_full = blur_do(img_full, blur_size*0.5)
+	if blurSizeFactor > 0.01 {
+		img_full = blur_do(img_full, blur_size*0.5)
+	}
 	imgDstPreview = image.NewRGBA(image.Rect(0, 0, imgSize.Dx(), imgSize.Dy()))
 	draw.Copy(imgDstPreview, ptZ, imgDst, imgDst.Bounds(), draw.Src, nil)
 	draw.Copy(imgDstPreview, ptZ, img_full, img_full.Bounds(), draw.Over, nil)
@@ -242,9 +247,20 @@ func imgFloodFill(imgLines *image.RGBA, imgFills *image.RGBA, x int, y int) {
 		rgba := img_lines.RGBAAt(x, y)
 		return rgba.A < 123 && x >= 0 && x < img_lines.Rect.Dx() && y >= 0 && y < img_lines.Rect.Dy()
 	}
-	set := func(x int, y int) {
-		imgFills.Set(x, y, allColors[idxColSelCur])
-		img_lines.Set(x, y, allColors[idxColSelCur])
+	set := func(atX int, atY int) {
+		if fillPixelSize <= 1 || blurSizeFactor > 0.01 {
+			imgFills.Set(atX, atY, allColors[idxColSelCur])
+			img_lines.Set(atX, atY, allColors[idxColSelCur])
+		} else {
+			img_lines.Set(atX, atY, allColors[idxColSelCur])
+			for x := atX - (fillPixelSize / 2); x <= atX+(fillPixelSize/2); x++ {
+				for y := atY - (fillPixelSize / 2); y <= atY+(fillPixelSize/2); y++ {
+					if x >= 0 && x < img_lines.Rect.Dx() && y >= 0 && y < img_lines.Rect.Dy() {
+						imgFills.Set(x, y, allColors[idxColSelCur])
+					}
+				}
+			}
+		}
 	}
 
 	if !inside(x, y) {
