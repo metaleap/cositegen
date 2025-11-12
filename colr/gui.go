@@ -30,7 +30,8 @@ var (
 	imgScreenPosMin  image.Point
 	imgScreenPosMax  image.Point
 	imgScreenPosRect image.Rectangle
-	idxCurPanel      = -1
+	idxCurPanel      = -1 // >=0 only if mouse hovers over a panel
+	guiOnlyPanel     = -1 // -1 if full page shown, else >=0 if only single panel shown
 	guiShowImgDst    = true
 	guiShowImgSrc    = true
 	guiMode          = GuiModeColPick
@@ -98,6 +99,9 @@ func guiMain() {
 	}
 	for digit := g.Key1; digit <= g.Key9; digit++ {
 		keybinds = append(keybinds, g.WindowShortcut{digit, g.ModNone, guiActionColSel(-1, int(digit-g.Key1))})
+	}
+	for digit := g.Key0; digit <= g.Key9; digit++ {
+		keybinds = append(keybinds, g.WindowShortcut{digit, g.ModControl, guiActionPanelSel(int(digit - g.Key0))})
 	}
 	wnd.RegisterKeyboardShortcuts(keybinds...)
 
@@ -331,6 +335,12 @@ func guiActionColSel(letter int, digit int) func() {
 				imgDstFillPreview()
 			}
 		}
+	}
+}
+
+func guiActionPanelSel(digit int) func() {
+	return func() {
+		guiOnlyPanel = digit - 1
 	}
 }
 
